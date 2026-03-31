@@ -1,0 +1,97 @@
+<mxfile host="65bd71144e" compressed="false">
+    <diagram id="chemunited-core-architecture" name="Architecture">
+        <mxGraphModel dx="1426" dy="861" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="900" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="title" value="chemunited-core architecture" style="text;html=1;strokeColor=none;fillColor=none;align=left;verticalAlign=middle;fontSize=24;fontStyle=1;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="20" width="320" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="summary" value="Consumer flow: Mode -&gt; from_mode() -&gt; Data -&gt; inspect topology -&gt; update(patch)" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=14;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="70" width="1220" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="consumer" value="Consumer package&#xa;&#xa;- imports from subpackages&#xa;- builds Mode objects from config, UI, or protocol data&#xa;- compiles runtime Data objects&#xa;- reads topology for orchestration, visualization, or simulation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;" parent="1" vertex="1">
+                    <mxGeometry x="40" y="260" width="240" height="210" as="geometry"/>
+                </mxCell>
+                <mxCell id="components" value="chemunited_core.components&#xa;&#xa;Public model pairs&#xa;- ComponentMode / ComponentData&#xa;- FlowSource, Junction, PlugFlow&#xa;- PressureControl, BPR, Valve, Vessel&#xa;&#xa;Each Data object compiles ports, internal edges, and optional inventory" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;" parent="1" vertex="1">
+                    <mxGeometry x="360" y="140" width="320" height="220" as="geometry"/>
+                </mxCell>
+                <mxCell id="connections" value="chemunited_core.connections&#xa;&#xa;- EdgeMode validates external connections&#xa;- EdgeData stores runtime geometry&#xa;- ConnectionType classifies hydraulic, heat, movement, or electronic links" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=14;" parent="1" vertex="1">
+                    <mxGeometry x="340" y="410" width="320" height="160" as="geometry"/>
+                </mxCell>
+                <mxCell id="common" value="chemunited_core.common&#xa;&#xa;- Element provides from_mode() and update()&#xa;- enums define shared categories and stable identifiers&#xa;- common metadata keeps Mode/Data behavior aligned" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=14;" parent="1" vertex="1">
+                    <mxGeometry x="50" y="650" width="320" height="150" as="geometry"/>
+                </mxCell>
+                <mxCell id="internals" value="chemunited_core.components.internals&#xa;&#xa;Compiled topology objects&#xa;- Port&#xa;- InternalEdge&#xa;- InventoryNode&#xa;&#xa;Read by graph, GUI, and simulation layers" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d4e1f5;strokeColor=#6c8ebf;fontSize=14;" parent="1" vertex="1">
+                    <mxGeometry x="810" y="155" width="260" height="190" as="geometry"/>
+                </mxCell>
+                <mxCell id="quantities" value="chemunited_core.utils&#xa;&#xa;- ChemUnitQuantity&#xa;- ChemQuantityValidator&#xa;- shared ureg&#xa;&#xa;Mode inputs can be strings like 250 ml, 1.2 bar, or 500 mm" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=14;" parent="1" vertex="1">
+                    <mxGeometry x="810" y="380" width="260" height="170" as="geometry"/>
+                </mxCell>
+                <mxCell id="compounds" value="chemunited_core.compounds&#xa;&#xa;- VolumeContentBase&#xa;&#xa;Used by InventoryNode to store initial gas and liquid inventory state" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=14;" parent="1" vertex="1">
+                    <mxGeometry x="1210" y="175" width="260" height="150" as="geometry"/>
+                </mxCell>
+                <mxCell id="downstream" value="Downstream runtime uses&#xa;&#xa;- build process graphs&#xa;- render component ports&#xa;- evaluate hydraulic state&#xa;- inspect connection geometry&#xa;- serialize validated project state" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=14;" parent="1" vertex="1">
+                    <mxGeometry x="1140" y="420" width="220" height="220" as="geometry"/>
+                </mxCell>
+                <mxCell id="note" value="Key consumer contract&#xa;&#xa;1. Construct Mode objects&#xa;2. Call from_mode() for full runtime state&#xa;3. Read public fields such as ports_by_number, internal_edges, and internal_inventory&#xa;4. Use update(mode_patch) instead of mutating derived state directly" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#ffffff;strokeColor=#666666;fontSize=13;" parent="1" vertex="1">
+                    <mxGeometry x="550" y="600" width="220" height="220" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeWidth=2;curved=1;" parent="1" source="consumer" target="components" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeWidth=2;curved=1;" parent="1" source="consumer" target="connections" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" value="inherits bridge behavior" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeWidth=2;entryX=0;entryY=0.25;entryDx=0;entryDy=0;" parent="1" source="common" target="components" edge="1">
+                    <mxGeometry x="0.5227" relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="30" y="725"/>
+                            <mxPoint x="30" y="195"/>
+                        </Array>
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e4" value="inherits bridge behavior" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeWidth=2;curved=1;" parent="1" source="common" target="connections" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e5" value="builds" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeWidth=2;" parent="1" source="components" target="internals" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e6" value="uses unit-aware fields" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeWidth=2;entryX=0.5;entryY=0;entryDx=0;entryDy=0;" parent="1" source="components" target="quantities" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="720" y="250"/>
+                            <mxPoint x="720" y="360"/>
+                            <mxPoint x="940" y="360"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e7" value="uses unit-aware fields" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeWidth=2;curved=1;" parent="1" source="connections" target="quantities" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e8" value="stores inventory payloads" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeWidth=2;" parent="1" source="compounds" target="internals" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e9" value="process connections" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeWidth=2;curved=1;" parent="1" source="connections" target="downstream" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="720" y="490"/>
+                            <mxPoint x="720" y="580"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="e10" value="runtime topology" style="edgeStyle=orthogonalEdgeStyle;rounded=1;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeWidth=2;exitX=0.75;exitY=0;exitDx=0;exitDy=0;entryX=0.5;entryY=0;entryDx=0;entryDy=0;curved=0;" parent="1" source="components" target="downstream" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <Array as="points">
+                            <mxPoint x="600" y="130"/>
+                            <mxPoint x="1160" y="130"/>
+                            <mxPoint x="1160" y="360"/>
+                            <mxPoint x="1250" y="360"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>
