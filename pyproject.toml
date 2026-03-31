@@ -1,0 +1,77 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chemunited"
+version = "0.0.1"
+description = "Visual interface for designing and executing chemistry automation workflows on top of FlowChem."
+readme = "README.md"
+requires-python = ">=3.13"
+license =  { text = "MIT" }
+keywords = ["control", "automation", "process"]
+authors = [
+    { name = "Samuel Vitor Saraiva", email = "samuel.saraiva@mpikg.mpg.de" }
+]
+maintainers = [
+  { name = "Samuel Vitor Saraiva", email = "samuel.saraiva@mpikg.mpg.de" }
+]
+classifiers = [
+    "License :: OSI Approved :: MIT License"
+]
+dependencies = [
+    "PyQt-Fluent-Widgets",
+    "networkx",
+    "numpy",
+    "pint",
+    "pydantic_pint",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black>=25.1.0",
+    "mypy>=1.19.1",
+    "pre-commit>=4.0.0",
+    "ruff>=0.15.7",
+]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["chemunited*"]
+namespaces = true
+
+[tool.black]
+line-length = 88
+target-version = ["py310"]
+extend-exclude = '''
+(
+    ^/.venv
+  | ^/build
+  | ^/src/chemunited/qt/shared/resources
+)
+'''
+
+[tool.ruff]
+line-length = 88
+target-version = "py310"
+extend-exclude = [
+    ".venv",
+    "build",
+    "src/chemunited/qt/shared/resources",
+]
+
+[tool.ruff.lint]
+extend-select = ["I"]
+
+[tool.mypy]
+python_version = "3.13"
+files = ["src/chemunited"]
+exclude = '(^\.venv/|^build/|^src/chemunited/qt/shared/resources/)'
+pretty = true
+show_error_codes = true
+warn_redundant_casts = true
+warn_unused_ignores = false
+explicit_package_bases = true
