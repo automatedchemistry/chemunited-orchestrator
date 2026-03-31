@@ -1,5 +1,24 @@
-from chemunited.shared.graph import GraphCore
-from chemunited.shared.enums import SetupStepMode
+from PyQt5.QtCore import QMimeData, QObject
+
+from chemunited.qt.shared.enums import SetupStepMode
+from chemunited.qt.shared.graph import GraphCore
+
+
+class TreeAddItem(QObject):
+    MIME = "application/x-tree-add-item"
+
+    def __init__(self, group: str, component: str, parent: QObject | None = None):
+        super().__init__(parent)
+        self.group = group
+        self.component = component
+
+    def mimeData(self) -> QMimeData:
+        data = QMimeData()
+        data.setData(self.MIME, f"{self.group}|{self.component}".encode("utf-8"))
+        return data
+
+    def mimeType(self) -> str:
+        return self.MIME
 
 
 class DrawGraphicView(GraphCore):
@@ -21,7 +40,7 @@ class DrawGraphicView(GraphCore):
         if not event.mimeData().hasFormat(TreeAddItem.MIME):
             event.ignore()
             return
-        
+
         data = bytes(event.mimeData().data(TreeAddItem.MIME)).decode(
             "utf-8"
         )  # "group|component"
@@ -36,4 +55,3 @@ class DrawGraphicView(GraphCore):
         print(f"Component: {component}, Group: {group}, Position: {scene_pos}")
 
         event.acceptProposedAction()
-

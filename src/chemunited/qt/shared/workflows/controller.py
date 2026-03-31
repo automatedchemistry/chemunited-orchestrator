@@ -2,13 +2,13 @@ from __future__ import annotations
 
 from PyQt5.QtCore import QObject, pyqtSignal
 
-from chemunited.shared.enums.protocols_enum import ProtocolBlock
-from chemunited.shared.workflows.process_workflow import (
+from chemunited.qt.shared.enums.protocols_enum import ProtocolBlock
+from chemunited.qt.shared.workflows.process_workflow import (
     BlockData,
     ConnectionData,
     ProcessWorkflow,
 )
-from chemunited.shared.workflows.workflow_rules import (
+from chemunited.qt.shared.workflows.workflow_rules import (
     derive_connection_attributes,
     generate_block_name,
     incoming_port_count,

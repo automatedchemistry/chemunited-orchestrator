@@ -10,9 +10,9 @@ from qfluentwidgets import (
 )
 from qframelesswindow import FramelessWindow, StandardTitleBar
 
-from chemunited.shared.enums import WindowCategory
-from chemunited.shared.icon import OrchestratorIcon
-from chemunited.shared.widgets.loggings_widget import FrameLoggings
+from chemunited.qt.shared.enums import WindowCategory
+from chemunited.qt.shared.icon import OrchestratorIcon
+from chemunited.qt.shared.widgets.loggings_widget import FrameLoggings
 
 
 class MainWindowBase(FramelessWindow):

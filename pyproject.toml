@@ -70,8 +70,31 @@ extend-select = ["I"]
 python_version = "3.13"
 files = ["src/chemunited"]
 exclude = '(^\.venv/|^build/|^src/chemunited/qt/shared/resources/)'
+mypy_path = "src"
+namespace_packages = true
 pretty = true
 show_error_codes = true
 warn_redundant_casts = true
 warn_unused_ignores = false
 explicit_package_bases = true
+
+[[tool.mypy.overrides]]
+module = [
+    "PyQt5",
+    "PyQt5.*",
+    "qfluentwidgets",
+    "qframelesswindow",
+    "networkx",
+    "numpy",
+    "loguru",
+    "pyvis",
+    "pyvis.*",
+    "rich",
+    "rich.*",
+    "pydantic_pint",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = ["chemunited.qt.shared.resources.resources_rc"]
+ignore_errors = true

@@ -6,9 +6,9 @@ from typing import Any, Iterator
 
 from networkx import DiGraph
 
-from chemunited.shared.enums.protocols_enum import ProtocolBlock
-from chemunited.shared.workflows.exceptions import WorkflowRuleViolation
-from chemunited.shared.workflows.workflow_rules import default_terminal_block_specs
+from chemunited.qt.shared.enums.protocols_enum import ProtocolBlock
+from chemunited.qt.shared.workflows.exceptions import WorkflowRuleViolation
+from chemunited.qt.shared.workflows.workflow_rules import default_terminal_block_specs
 
 
 @dataclass(slots=True)
@@ -236,8 +236,7 @@ class ProcessWorkflow:
             )
 
         normalized_points = [
-            (float(point[0]), float(point[1]))
-            for point in (inflection_points or [])
+            (float(point[0]), float(point[1])) for point in (inflection_points or [])
         ]
         if bend_point is not None and not normalized_points:
             normalized_points = [(float(bend_point[0]), float(bend_point[1]))]

@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import (
     QGraphicsView,
 )
 
-from chemunited.shared.enums import SetupStepMode
+from chemunited.qt.shared.enums import SetupStepMode
 
 from .scene_core import SceneCore
 

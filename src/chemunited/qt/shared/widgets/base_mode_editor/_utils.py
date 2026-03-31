@@ -10,9 +10,15 @@ _CURATED: list[tuple[frozenset, list[str]]] = [
     # Length:  [length]^1
     (frozenset({("[length]", 1)}), ["mm", "cm", "m", "um", "nm", "inch"]),
     # Flow rate:  [length]^3 / [time]
-    (frozenset({("[length]", 3), ("[time]", -1)}), ["ml/min", "ul/min", "ml/s", "L/min", "ul/s", "L/h"]),
+    (
+        frozenset({("[length]", 3), ("[time]", -1)}),
+        ["ml/min", "ul/min", "ml/s", "L/min", "ul/s", "L/h"],
+    ),
     # Pressure:  [mass] / ([length] * [time]^2)
-    (frozenset({("[mass]", 1), ("[length]", -1), ("[time]", -2)}), ["bar", "mbar", "Pa", "kPa", "MPa", "psi"]),
+    (
+        frozenset({("[mass]", 1), ("[length]", -1), ("[time]", -2)}),
+        ["bar", "mbar", "Pa", "kPa", "MPa", "psi"],
+    ),
     # Time:  [time]^1
     (frozenset({("[time]", 1)}), ["s", "min", "h", "ms"]),
     # Temperature:  [temperature]^1
@@ -20,7 +26,10 @@ _CURATED: list[tuple[frozenset, list[str]]] = [
     # Mass:  [mass]^1
     (frozenset({("[mass]", 1)}), ["g", "mg", "kg", "ug"]),
     # Concentration (amount/volume):  [substance] / [length]^3
-    (frozenset({("[substance]", 1), ("[length]", -3)}), ["mol/L", "mmol/L", "umol/L", "mol/ml"]),
+    (
+        frozenset({("[substance]", 1), ("[length]", -3)}),
+        ["mol/L", "mmol/L", "umol/L", "mol/ml"],
+    ),
 ]
 
 
@@ -50,7 +59,11 @@ def units_for_dimension(dimensions, ureg: UnitRegistry) -> list[str]:
 
     # Fallback: return the canonical unit for the dimensionality
     try:
-        q = ureg.Quantity(1, ureg.get_compatible_units(dimensions).pop())
+        compatible_units = ureg.get_compatible_units(dimensions)
+        canonical_unit = next(iter(compatible_units), None)
+        if canonical_unit is None:
+            return []
+        q = ureg.Quantity(1, canonical_unit)
         return [str(q.units)]
     except Exception:
         return []

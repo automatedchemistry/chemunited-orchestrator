@@ -1,10 +1,10 @@
 from dataclasses import dataclass, field
 
-from chemunited_core.common.constant import (
+from chemunited.core.common.constant import (
     AMBIENT_TEMPERATURE_K,
     ATMOSPHERE_PRESSURE_PA,
 )
-from chemunited_core.common.enums import PhaseKind
+from chemunited.core.common.enums import PhaseKind
 
 
 @dataclass(slots=True)

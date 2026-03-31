@@ -3,8 +3,8 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Iterable, TypedDict
 
-from chemunited.shared.enums.protocols_enum import ProtocolBlock
-from chemunited.shared.workflows.exceptions import WorkflowRuleViolation
+from chemunited.qt.shared.enums.protocols_enum import ProtocolBlock
+from chemunited.qt.shared.workflows.exceptions import WorkflowRuleViolation
 
 
 @dataclass(frozen=True, slots=True)
@@ -37,16 +37,16 @@ def default_terminal_block_specs() -> tuple[TerminalBlockSpec, ...]:
     )
 
 
-def generate_block_name(
-    existing_names: Iterable[str], block_tag: ProtocolBlock
-) -> str:
+def generate_block_name(existing_names: Iterable[str], block_tag: ProtocolBlock) -> str:
     prefix = {
         ProtocolBlock.SCRIPT: "script",
         ProtocolBlock.LOOP: "loop",
         ProtocolBlock.IF: "conditional",
     }.get(block_tag)
     if prefix is None:
-        raise WorkflowRuleViolation(f"Cannot auto-generate a block name for {block_tag}")
+        raise WorkflowRuleViolation(
+            f"Cannot auto-generate a block name for {block_tag}"
+        )
 
     existing = set(existing_names)
     index = 1

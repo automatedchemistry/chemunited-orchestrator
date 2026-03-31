@@ -1,9 +1,9 @@
 from typing import ClassVar
-from PyQt5.QtCore import QRectF, QTimer, Qt, QPointF
-from PyQt5.QtGui import QColor, QPen, QBrush, QPainterPath, QFont
+
+from PyQt5.QtCore import QPointF, QRectF, Qt, QTimer
+from PyQt5.QtGui import QBrush, QColor, QFont, QPainterPath, QPen
 from PyQt5.QtWidgets import QGraphicsObject
 from qfluentwidgets import isDarkTheme
-
 
 PATTERN_DIMENSION = 50
 
@@ -23,7 +23,6 @@ SOLID_LIGHT_DARKER = "#D8E0EA"
 
 
 class SceneItem(QGraphicsObject):
-
     theme_colors: ClassVar[dict[str, dict[str, QColor]]] = {
         "dark": {
             "contour": QColor(CONTOUR_DARK),
@@ -100,10 +99,10 @@ class ConnectivityBadge(SceneItem):
     Offline → red arcs + diagonal strike + API address below (muted)
     """
 
-    COLOR_ONLINE:  QColor = QColor("#4CAF50")   # green
-    COLOR_OFFLINE: QColor = QColor("#F44336")   # red
-    COLOR_API_ON:  QColor = QColor("#4CAF50")
-    COLOR_API_OFF: QColor = QColor("#888888")   # muted gray when offline
+    COLOR_ONLINE: QColor = QColor("#4CAF50")  # green
+    COLOR_OFFLINE: QColor = QColor("#F44336")  # red
+    COLOR_API_ON: QColor = QColor("#4CAF50")
+    COLOR_API_OFF: QColor = QColor("#888888")  # muted gray when offline
 
     def __init__(self, dimension: int = PATTERN_DIMENSION, parent=None):
         super().__init__(width=dimension, height=dimension, parent=parent)
@@ -137,8 +136,8 @@ class ConnectivityBadge(SceneItem):
         if not self._status:
             painter.setPen(QPen(self.COLOR_OFFLINE, max(1, int(self.radius * 0.15))))
             painter.drawLine(
-                QPointF(-self.radius * 0.6,  self.radius * 0.6),
-                QPointF( self.radius * 0.6, -self.radius * 0.6),
+                QPointF(-self.radius * 0.6, self.radius * 0.6),
+                QPointF(self.radius * 0.6, -self.radius * 0.6),
             )
 
         # API address — always shown, colour indicates state
@@ -149,8 +148,12 @@ class ConnectivityBadge(SceneItem):
             font.setPointSizeF(max(6.0, self.radius * 0.4))
             painter.setFont(font)
             painter.drawText(
-                QRectF(-self.radius * 2, self.radius * 0.7,
-                        self.radius * 4,  self.radius * 0.8),
+                QRectF(
+                    -self.radius * 2,
+                    self.radius * 0.7,
+                    self.radius * 4,
+                    self.radius * 0.8,
+                ),
                 Qt.AlignHCenter | Qt.AlignTop,
                 self._api,
             )
@@ -166,11 +169,11 @@ class WarningDisplay(SceneItem):
         self._warning.show_warning(False)  # hide and stop
     """
 
-    COLOR        = QColor("RGB(255, 0, 0)")
-    ALPHA_ON     = 255
-    ALPHA_OFF    = 70
-    BLINK_FPS    = 2          # 2 toggles/sec = 500 ms interval
-    CORNER_RATIO = 1.8 / 14   # corner radius as fraction of size
+    COLOR = QColor("RGB(255, 0, 0)")
+    ALPHA_ON = 255
+    ALPHA_OFF = 70
+    BLINK_FPS = 2  # 2 toggles/sec = 500 ms interval
+    CORNER_RATIO = 1.8 / 14  # corner radius as fraction of size
 
     def __init__(self, size: int = 14, parent=None):
         super().__init__(width=size, height=size, parent=parent)
@@ -251,9 +254,9 @@ class StatusOverlay(SceneItem):
         self._overlay.setVisible(True)
     """
 
-    COLOR_ACTIVE: QColor = QColor(0, 200, 83, 120)    # semi-transparent green
-    COLOR_ERROR:  QColor = QColor(229, 57, 53, 120)   # semi-transparent red
-    COLOR_IDLE:   QColor = QColor(158, 158, 158, 80)  # semi-transparent grey
+    COLOR_ACTIVE: QColor = QColor(0, 200, 83, 120)  # semi-transparent green
+    COLOR_ERROR: QColor = QColor(229, 57, 53, 120)  # semi-transparent red
+    COLOR_IDLE: QColor = QColor(158, 158, 158, 80)  # semi-transparent grey
 
     def __init__(self, dimension: int = PATTERN_DIMENSION, parent=None):
         super().__init__(width=dimension, height=dimension, parent=parent)

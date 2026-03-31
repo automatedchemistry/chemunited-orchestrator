@@ -14,42 +14,44 @@ NOT responsible for:
   - Theme management (delegated to each child item's paint method).
   - Creating or destroying connections between components.
 """
+
 from __future__ import annotations
 
-from chemunited_core.components import ComponentData
-from chemunited_core.common.enums import ConnectionType as CoreConnectionType
-
-from PyQt5.QtWidgets import (
-    QGraphicsItemGroup,
-    QGraphicsItem,
-    QGraphicsRectItem,
-    QGraphicsDropShadowEffect,
-)
 from PyQt5.QtGui import QColor
+from PyQt5.QtWidgets import (
+    QGraphicsDropShadowEffect,
+    QGraphicsItem,
+    QGraphicsItemGroup,
+    QGraphicsRectItem,
+)
 
-from chemunited.shared.enums import SetupStepMode
-from chemunited.shared.elements.access import get_svg_path
-from .parts import (
+from chemunited.core.common.enums import ConnectionType as CoreConnectionType
+from chemunited.core.components import ComponentData
+from chemunited.qt.shared.elements.access import get_svg_path
+from chemunited.qt.shared.elements.component.component_parts import (
     ConnectionPoint,
+    ConnectivityBadge,
+    ElectronicConnectionPoint,
     FlowConnectionPoint,
     HeatConnectionPoint,
-    ElectronicConnectionPoint,
     MoveConnectionPoint,
-    TextElement,
-    ConnectivityBadge,
-    WarningDisplay,
     StatusOverlay,
     SvgLayer,
+    TextElement,
+    WarningDisplay,
 )
-from .parts.scene_item import PATTERN_DIMENSION
+from chemunited.qt.shared.elements.component.component_parts.scene_item import (
+    PATTERN_DIMENSION,
+)
+from chemunited.qt.shared.enums import SetupStepMode
 
 # Maps chemunited_core ConnectionType values to their visual point classes.
 # HYDRAULIC is the core counterpart of what the UI layer calls FLOW.
 _POINT_FACTORY: dict[CoreConnectionType, type[ConnectionPoint]] = {
-    CoreConnectionType.HYDRAULIC:  FlowConnectionPoint,
-    CoreConnectionType.HEAT:       HeatConnectionPoint,
+    CoreConnectionType.HYDRAULIC: FlowConnectionPoint,
+    CoreConnectionType.HEAT: HeatConnectionPoint,
     CoreConnectionType.ELECTRONIC: ElectronicConnectionPoint,
-    CoreConnectionType.MOVEMENT:   MoveConnectionPoint,
+    CoreConnectionType.MOVEMENT: MoveConnectionPoint,
 }
 
 # Radius used for FlowConnectionPoints (Heat/Electronic/Move derive their own
@@ -313,8 +315,11 @@ class GraphComponent(QGraphicsItemGroup):
 
 if __name__ == "__main__":
     import sys
-    from PyQt5.QtWidgets import QApplication, QGraphicsView, QGraphicsScene
-    from chemunited_core.elements import ComponentData
+
+    from PyQt5.QtGui import QPainter
+    from PyQt5.QtWidgets import QApplication, QGraphicsScene, QGraphicsView
+
+    from chemunited.core.components import ComponentData
 
     app = QApplication(sys.argv)
     scene = QGraphicsScene()
@@ -330,6 +335,6 @@ if __name__ == "__main__":
     scene.addItem(component)
 
     view = QGraphicsView(scene)
-    view.setRenderHint(view.Antialiasing)
+    view.setRenderHint(QPainter.Antialiasing)
     view.show()
     sys.exit(app.exec_())

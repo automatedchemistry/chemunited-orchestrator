@@ -5,20 +5,19 @@ from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import QHBoxLayout, QStackedWidget, QVBoxLayout, QWidget
 from qfluentwidgets import StrongBodyLabel
 
-from chemunited.shared.enums import WindowCategory
-from chemunited.shared.workflows.controller import WorkflowController
-from chemunited.shared.workflows.process_workflow import ProcessWorkflow
-from chemunited.shared.workflows.workflow_frames import WorkflowGraph
+from chemunited.qt.shared.enums import WindowCategory
+from chemunited.qt.shared.workflows.controller import WorkflowController
+from chemunited.qt.shared.workflows.process_workflow import ProcessWorkflow
+from chemunited.qt.shared.workflows.workflow_frames import WorkflowGraph
 
 if TYPE_CHECKING:
-    from chemunited.ui.GuiSetup import GuiSetup
+    pass
 
 
 class WorkflowsWidget(QWidget):
-
     def __init__(
         self,
-        parent = None,
+        parent=None,
         window: WindowCategory = WindowCategory.SETUP,
     ):
         super().__init__(parent=parent)
@@ -65,7 +64,8 @@ class WorkflowsWidget(QWidget):
         self.label_process.setFont(font)
         self.label_process.setTextColor("#1B5E20", "#BDCDBE")
         self.vBoxlayout.addWidget(
-            self.label_process, alignment=Qt.AlignHCenter  # type: ignore[attr-defined]
+            self.label_process,
+            alignment=Qt.AlignHCenter,  # type: ignore[attr-defined]
         )
 
         # The core stacked widget natively handling visual switching

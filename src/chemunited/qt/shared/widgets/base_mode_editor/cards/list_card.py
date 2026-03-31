@@ -3,7 +3,12 @@ from __future__ import annotations
 import typing
 
 from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
-from qfluentwidgets import FluentIcon, LineEdit, PrimaryPushButton, TransparentToolButton
+from qfluentwidgets import (
+    FluentIcon,
+    LineEdit,
+    PrimaryPushButton,
+    TransparentToolButton,
+)
 
 from .base_card import BaseFieldCard
 
@@ -55,7 +60,9 @@ class ListFieldCard(BaseFieldCard):
         self._row_widgets.append((edit, row_widget))
 
     def _remove_row(self, row_widget: QWidget, edit: LineEdit) -> None:
-        self._row_widgets = [(e, w) for e, w in self._row_widgets if w is not row_widget]
+        self._row_widgets = [
+            (e, w) for e, w in self._row_widgets if w is not row_widget
+        ]
         self._rows_layout.removeWidget(row_widget)
         row_widget.deleteLater()
         self._clear_error()
@@ -78,7 +85,7 @@ class ListFieldCard(BaseFieldCard):
             row_widget.deleteLater()
         self._row_widgets = []
 
-        for item in (value or []):
+        for item in value or []:
             self._add_row(str(item))
 
     def validate(self) -> bool:

@@ -2,11 +2,17 @@
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import networkx as nx
 
-from .models import CompiledWorkflow, LoopBackSpec, NodeConfig, WorkflowEdgeSpec, WorkflowNodeSpec
+from .models import (
+    CompiledWorkflow,
+    LoopBackSpec,
+    NodeConfig,
+    WorkflowEdgeSpec,
+    WorkflowNodeSpec,
+)
 
 
 def compile_workflow(user_graph: nx.DiGraph) -> CompiledWorkflow:
@@ -52,13 +58,15 @@ def compile_workflow(user_graph: nx.DiGraph) -> CompiledWorkflow:
             f"Cycle detected in executable edges: {cycle_text}."
         )
 
-    return CompiledWorkflow(user_graph=user_graph_copy, exec_graph=exec_graph, loopbacks=loopbacks)
+    return CompiledWorkflow(
+        user_graph=user_graph_copy, exec_graph=exec_graph, loopbacks=loopbacks
+    )
 
 
 def _validate_node(node_id: str, attrs: dict[str, Any]) -> None:
     WorkflowNodeSpec(
         node_id=node_id,
-        method=attrs.get("method"),
+        method=cast(Any, attrs.get("method")),
         label=attrs.get("label"),
         description=attrs.get("description"),
         position=attrs.get("position"),

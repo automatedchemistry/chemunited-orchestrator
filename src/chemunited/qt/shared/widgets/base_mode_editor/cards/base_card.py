@@ -3,7 +3,7 @@ from __future__ import annotations
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QColor, QPainter
 from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
-from qfluentwidgets import CardWidget, CaptionLabel, StrongBodyLabel
+from qfluentwidgets import CaptionLabel, CardWidget, StrongBodyLabel
 
 
 class BaseFieldCard(CardWidget):

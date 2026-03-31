@@ -9,14 +9,19 @@ GUI: exposes length and diameter in the properties widget.
 Sim: InternalEdge.length and diameter are the primary inputs to the
      resistance calculation and the parcel travel-time estimate.
 """
+
 from dataclasses import dataclass
 from typing import Annotated
 
 import numpy as np
 from pydantic import Field
 
-from chemunited_core.common.enums import GroupParameterCategory
-from chemunited_core.utils.internal_quantity import ChemQuantityValidator, ChemUnitQuantity
+from chemunited.core.common.enums import GroupParameterCategory
+from chemunited.core.utils.internal_quantity import (
+    ChemQuantityValidator,
+    ChemUnitQuantity,
+)
+
 from .component import ComponentData, ComponentMode
 from .internals import InternalEdge, Port
 
@@ -26,6 +31,7 @@ class PlugFlowMode(ComponentMode):
     length   — channel length (default 100 mm).
     diameter — channel inner diameter (default 1 mm).
     """
+
     length: Annotated[ChemUnitQuantity, ChemQuantityValidator("mm")] = Field(
         default=ChemUnitQuantity("100 mm"),
         title="Length",
@@ -52,6 +58,7 @@ class PlugFlowComponentData(ComponentData):
     port 2 (outlet). Edge length and diameter are updated by
     sync_internal_state() when the user changes geometry in the GUI.
     """
+
     length: ChemUnitQuantity = ChemUnitQuantity("100 mm")
     diameter: ChemUnitQuantity = ChemUnitQuantity("1 mm")
 

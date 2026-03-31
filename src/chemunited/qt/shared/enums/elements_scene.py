@@ -6,4 +6,3 @@ class ConnectionType(Enum):
     MOVEMENT = auto()
     HEAT = auto()
     ELECTRONIC = auto()
-    

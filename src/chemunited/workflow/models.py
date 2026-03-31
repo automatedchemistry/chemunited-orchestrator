@@ -80,8 +80,12 @@ class WorkflowExecutorState:
     node_state: dict[tuple[str, int], NodeState] = field(default_factory=dict)
     node_result: dict[tuple[str, int], bool | None] = field(default_factory=dict)
     node_runtime: dict[tuple[str, int], NodeRuntime] = field(default_factory=dict)
-    active_predecessors: dict[tuple[str, int], set[tuple[str, int]]] = field(default_factory=dict)
-    completed_predecessors: dict[tuple[str, int], set[tuple[str, int]]] = field(default_factory=dict)
+    active_predecessors: dict[tuple[str, int], set[tuple[str, int]]] = field(
+        default_factory=dict
+    )
+    completed_predecessors: dict[tuple[str, int], set[tuple[str, int]]] = field(
+        default_factory=dict
+    )
     scheduled: dict[tuple[str, int], bool] = field(default_factory=dict)
     errors: dict[tuple[str, int], Exception] = field(default_factory=dict)
 

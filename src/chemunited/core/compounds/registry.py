@@ -7,7 +7,7 @@ The registry is populated at project load time by the GUI (Setup Manager)
 and read by chemunited-sim during simulation to retrieve physical properties.
 
 Usage:
-    from chemunited_core.compounds import COMPOUNDS
+    from chemunted.core.compounds import COMPOUNDS
 
     # Register a compound (done at project load time by the GUI)
     COMPOUNDS.register(ChemicalEntity(

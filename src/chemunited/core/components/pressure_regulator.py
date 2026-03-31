@@ -11,13 +11,20 @@ GUI: exposes setpoint in the properties widget.
 Sim: setpoint_pa is read by the adapter each time step to evaluate the
      open/close condition. Edge resistance is set via close() / open().
 """
-from chemunited_core.utils.internal_quantity import ChemQuantityValidator, ChemUnitQuantity
-from chemunited_core.common.enums import GroupParameterCategory
-from pydantic import Field
-from .component import ComponentData, ComponentMode
-from .internals import Port, InternalEdge
-from typing import Annotated
+
 from dataclasses import dataclass
+from typing import Annotated
+
+from pydantic import Field
+
+from chemunited.core.common.enums import GroupParameterCategory
+from chemunited.core.utils.internal_quantity import (
+    ChemQuantityValidator,
+    ChemUnitQuantity,
+)
+
+from .component import ComponentData, ComponentMode
+from .internals import InternalEdge, Port
 
 
 class BackPressureRegulatorMode(ComponentMode):
@@ -30,6 +37,7 @@ class BackPressureRegulatorMode(ComponentMode):
         },
     )
 
+
 @dataclass
 class BackPressureRegulatorData(ComponentData):
     """Structural definition of a back-pressure regulator.
@@ -38,7 +46,8 @@ class BackPressureRegulatorData(ComponentData):
     TRANSPORT edge. Edge starts closed — the sim adapter toggles it each
     time step based on the upstream pressure vs. setpoint comparison.
     """
-    setpoint: ChemUnitQuantity
+
+    setpoint: ChemUnitQuantity = ChemUnitQuantity("1 bar")
 
     @property
     def setpoint_pa(self) -> float:

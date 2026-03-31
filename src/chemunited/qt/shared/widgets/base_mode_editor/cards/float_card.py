@@ -32,11 +32,15 @@ class FloatFieldCard(BaseFieldCard):
         except ImportError:
             return
 
-        for constraint in (self._field_info.metadata or []):
+        for constraint in self._field_info.metadata or []:
             if isinstance(constraint, Ge):
-                self._spinbox.setMinimum(float(constraint.ge))
+                minimum = constraint.ge
+                if isinstance(minimum, (int, float)):
+                    self._spinbox.setMinimum(float(minimum))
             elif isinstance(constraint, Le):
-                self._spinbox.setMaximum(float(constraint.le))
+                maximum = constraint.le
+                if isinstance(maximum, (int, float)):
+                    self._spinbox.setMaximum(float(maximum))
 
     def get_value(self) -> float:
         return self._spinbox.value()
@@ -57,7 +61,7 @@ class FloatFieldCard(BaseFieldCard):
             self._mark_valid()
             return True
 
-        for constraint in (self._field_info.metadata or []):
+        for constraint in self._field_info.metadata or []:
             if isinstance(constraint, Ge) and value < constraint.ge:
                 self._set_error(f"Value must be \u2265 {constraint.ge}")
                 return False

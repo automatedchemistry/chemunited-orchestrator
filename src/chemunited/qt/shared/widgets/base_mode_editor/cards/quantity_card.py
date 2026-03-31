@@ -5,10 +5,10 @@ import math
 from PyQt5.QtWidgets import QHBoxLayout, QWidget
 from qfluentwidgets import ComboBox, DoubleSpinBox
 
-from chemunited_core.utils import ChemUnitQuantity, ureg
+from chemunited.core.utils import ChemQuantityValidator, ChemUnitQuantity, ureg
 
-from .base_card import BaseFieldCard
 from .._utils import units_for_dimension
+from .base_card import BaseFieldCard
 
 _FLOAT_MAX = 1e18
 
@@ -58,9 +58,7 @@ class ChemUnitQuantityCard(BaseFieldCard):
 
     def _find_validator(self):
         """Return the first ChemQuantityValidator found in field_info.metadata."""
-        from chemunited_core.utils import ChemQuantityValidator
-
-        for meta in (self._field_info.metadata or []):
+        for meta in self._field_info.metadata or []:
             if isinstance(meta, ChemQuantityValidator):
                 return meta
         return None
@@ -100,7 +98,9 @@ class ChemUnitQuantityCard(BaseFieldCard):
             try:
                 q = ureg.Quantity(magnitude, unit_str)
                 if q.dimensionality != self._expected_dims:
-                    self._set_error("Unit dimensionality does not match the required dimension")
+                    self._set_error(
+                        "Unit dimensionality does not match the required dimension"
+                    )
                     return False
             except Exception as exc:
                 self._set_error(f"Invalid unit: {exc}")

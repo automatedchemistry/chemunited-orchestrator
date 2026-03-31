@@ -7,14 +7,14 @@ from PyQt5.QtGui import QColor, QPainter, QPen
 from PyQt5.QtWidgets import QFrame, QGraphicsItem, QGraphicsView
 from qfluentwidgets import Action, RoundMenu, isDarkTheme
 
-from chemunited.shared.enums import SetupStepMode, WindowCategory
-from chemunited.shared.enums.protocols_enum import ProtocolBlock
-from chemunited.shared.graph import GraphCore, SceneCore
-from chemunited.shared.icon import OrchestratorIcon
-from chemunited.shared.workflows.controller import WorkflowController
-from chemunited.shared.workflows.exceptions import WorkflowRuleViolation
-from chemunited.shared.workflows.process_workflow import BlockData, ConnectionData
-from chemunited.shared.workflows.workflow_rules import resolve_render_start_role
+from chemunited.qt.shared.enums import SetupStepMode, WindowCategory
+from chemunited.qt.shared.enums.protocols_enum import ProtocolBlock
+from chemunited.qt.shared.graph import GraphCore, SceneCore
+from chemunited.qt.shared.icon import OrchestratorIcon
+from chemunited.qt.shared.workflows.controller import WorkflowController
+from chemunited.qt.shared.workflows.exceptions import WorkflowRuleViolation
+from chemunited.qt.shared.workflows.process_workflow import BlockData, ConnectionData
+from chemunited.qt.shared.workflows.workflow_rules import resolve_render_start_role
 
 from .elements.access_point import WorkflowAccessPoints
 from .elements.work_connection import WorkflowConnection
@@ -440,10 +440,7 @@ class WorkflowGraph(GraphCore):
         self.controller.update_connection_geometry(
             connection.start_node,
             connection.end_node,
-            [
-                (point.x(), point.y())
-                for point in connection.inflection_points
-            ],
+            [(point.x(), point.y()) for point in connection.inflection_points],
         )
 
     def _on_block_added(self, name: str):

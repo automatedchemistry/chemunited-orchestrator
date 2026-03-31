@@ -5,7 +5,6 @@ ureg: UnitRegistry = UnitRegistry()
 
 
 class ChemUnitQuantity(Quantity):
-
     # ----------- Construction Helpers -----------
 
     @classmethod
@@ -120,7 +119,6 @@ class ChemUnitQuantity(Quantity):
 
 
 class ChemQuantityValidator(PydanticPintQuantity):
-
     def __init__(self, _arg, **kwargs):
         kwargs.update(strict=False, ser_mode="str", ureg=ureg)
         super().__init__(_arg, **kwargs)

@@ -2,13 +2,14 @@
 and chemunited-sim. All values are stable identifiers — do not rename them
 without updating serialised project files."""
 
-from enum import Enum, auto, StrEnum
+from enum import Enum, StrEnum, auto
 
 
 class ComponentType(Enum):
     """Classifies a component as electronically controlled or a passive utensil.
     Determines which runtime manager (ElectronicManager / UtensilManager) the
     factory assigns during GUI assembly."""
+
     ELECTRONIC = auto()
     UTENSIL = auto()
 
@@ -16,6 +17,7 @@ class ComponentType(Enum):
 class PortAccess(Enum):
     """Physical mounting position of a hydraulic port on a component body.
     Used by VesselComponentData to distinguish top from bottom ports."""
+
     BOTTOM = auto()
     TOP = auto()
 
@@ -25,6 +27,7 @@ class InternalEdgeRole(Enum):
 
     TRANSPORT — physical channel; resistance computed from geometry (Hagen-Poiseuille).
     JUNCTION  — lossless connection linking a port to an inventory node or hub port."""
+
     TRANSPORT = auto()
     JUNCTION = auto()
 
@@ -34,6 +37,7 @@ class PortClosure(Enum):
 
     OPEN   — port connects to external tubing or another component.
     CAPPED — physically sealed; solver imposes zero flow, pressure floats."""
+
     CAPPED = auto()
     OPEN = auto()
 
@@ -46,6 +50,7 @@ class BoundaryConditionKind(StrEnum):
     PRESSURE — fixed pressure (Pa); flow direction and magnitude are solved.
     FLOW     — fixed flow rate (m³/s); pressure is solved.
                A value of zero acts as a closed dead-end node."""
+
     NONE = "none"
     PRESSURE = "pressure"
     FLOW = "flow"

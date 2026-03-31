@@ -9,18 +9,19 @@ Sim: DigitalTwinAdapter reads InventoryNode initial conditions to seed runtime
      phase inventories; port access (TOP/BOTTOM) is available for future
      phase-preferential routing extensions.
 """
+
 from dataclasses import dataclass
 from typing import Annotated
 
 from pydantic import Field
 
-from chemunited_core.common.enums import (
+from chemunited.core.common.enums import (
     ConnectionType,
     GroupParameterCategory,
     PhaseKind,
 )
-from chemunited_core.compounds import VolumeContentBase
-from chemunited_core.utils.internal_quantity import (
+from chemunited.core.compounds import VolumeContentBase
+from chemunited.core.utils.internal_quantity import (
     ChemQuantityValidator,
     ChemUnitQuantity,
 )
@@ -36,6 +37,7 @@ class VesselMode(ComponentMode):
     top_access   — number of hydraulic ports at the top (gas side).
     bottom_access — number of hydraulic ports at the bottom (liquid side).
     """
+
     capacity: Annotated[ChemUnitQuantity, ChemQuantityValidator("ml")] = Field(
         default=ChemUnitQuantity("1 ml"),
         title="Component Capacity",
@@ -84,10 +86,11 @@ class VesselComponentData(ComponentData):
 
     A HEAT port is always added as the last port for thermal connections.
     """
+
     COMPONENT_TYPE = ComponentType.UTENSIL
-    capacity: ChemUnitQuantity
-    top_access: int
-    bottom_access: int
+    capacity: ChemUnitQuantity = ChemUnitQuantity("1 ml")
+    top_access: int = 1
+    bottom_access: int = 1
 
     @property
     def capacity_value(self) -> float:

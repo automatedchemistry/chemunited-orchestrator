@@ -3,6 +3,7 @@
 Provides path resolution for component figures so that callers never
 need to hard-code directory structures or naming conventions.
 """
+
 import os
 
 # Absolute path to the bundled components image directory.

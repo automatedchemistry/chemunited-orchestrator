@@ -13,22 +13,22 @@
                 <mxCell id="consumer" value="Consumer package&#xa;&#xa;- imports from subpackages&#xa;- builds Mode objects from config, UI, or protocol data&#xa;- compiles runtime Data objects&#xa;- reads topology for orchestration, visualization, or simulation" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=14;" parent="1" vertex="1">
                     <mxGeometry x="40" y="260" width="240" height="210" as="geometry"/>
                 </mxCell>
-                <mxCell id="components" value="chemunited_core.components&#xa;&#xa;Public model pairs&#xa;- ComponentMode / ComponentData&#xa;- FlowSource, Junction, PlugFlow&#xa;- PressureControl, BPR, Valve, Vessel&#xa;&#xa;Each Data object compiles ports, internal edges, and optional inventory" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;" parent="1" vertex="1">
+                <mxCell id="components" value="chemunted.core.components&#xa;&#xa;Public model pairs&#xa;- ComponentMode / ComponentData&#xa;- FlowSource, Junction, PlugFlow&#xa;- PressureControl, BPR, Valve, Vessel&#xa;&#xa;Each Data object compiles ports, internal edges, and optional inventory" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=14;" parent="1" vertex="1">
                     <mxGeometry x="360" y="140" width="320" height="220" as="geometry"/>
                 </mxCell>
-                <mxCell id="connections" value="chemunited_core.connections&#xa;&#xa;- EdgeMode validates external connections&#xa;- EdgeData stores runtime geometry&#xa;- ConnectionType classifies hydraulic, heat, movement, or electronic links" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=14;" parent="1" vertex="1">
+                <mxCell id="connections" value="chemunted.core.connections&#xa;&#xa;- EdgeMode validates external connections&#xa;- EdgeData stores runtime geometry&#xa;- ConnectionType classifies hydraulic, heat, movement, or electronic links" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f8cecc;strokeColor=#b85450;fontSize=14;" parent="1" vertex="1">
                     <mxGeometry x="340" y="410" width="320" height="160" as="geometry"/>
                 </mxCell>
-                <mxCell id="common" value="chemunited_core.common&#xa;&#xa;- Element provides from_mode() and update()&#xa;- enums define shared categories and stable identifiers&#xa;- common metadata keeps Mode/Data behavior aligned" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=14;" parent="1" vertex="1">
+                <mxCell id="common" value="chemunted.core.common&#xa;&#xa;- Element provides from_mode() and update()&#xa;- enums define shared categories and stable identifiers&#xa;- common metadata keeps Mode/Data behavior aligned" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;fontSize=14;" parent="1" vertex="1">
                     <mxGeometry x="50" y="650" width="320" height="150" as="geometry"/>
                 </mxCell>
-                <mxCell id="internals" value="chemunited_core.components.internals&#xa;&#xa;Compiled topology objects&#xa;- Port&#xa;- InternalEdge&#xa;- InventoryNode&#xa;&#xa;Read by graph, GUI, and simulation layers" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d4e1f5;strokeColor=#6c8ebf;fontSize=14;" parent="1" vertex="1">
+                <mxCell id="internals" value="chemunted.core.components.internals&#xa;&#xa;Compiled topology objects&#xa;- Port&#xa;- InternalEdge&#xa;- InventoryNode&#xa;&#xa;Read by graph, GUI, and simulation layers" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d4e1f5;strokeColor=#6c8ebf;fontSize=14;" parent="1" vertex="1">
                     <mxGeometry x="810" y="155" width="260" height="190" as="geometry"/>
                 </mxCell>
-                <mxCell id="quantities" value="chemunited_core.utils&#xa;&#xa;- ChemUnitQuantity&#xa;- ChemQuantityValidator&#xa;- shared ureg&#xa;&#xa;Mode inputs can be strings like 250 ml, 1.2 bar, or 500 mm" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=14;" parent="1" vertex="1">
+                <mxCell id="quantities" value="chemunted.core.utils&#xa;&#xa;- ChemUnitQuantity&#xa;- ChemQuantityValidator&#xa;- shared ureg&#xa;&#xa;Mode inputs can be strings like 250 ml, 1.2 bar, or 500 mm" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;fontSize=14;" parent="1" vertex="1">
                     <mxGeometry x="810" y="380" width="260" height="170" as="geometry"/>
                 </mxCell>
-                <mxCell id="compounds" value="chemunited_core.compounds&#xa;&#xa;- VolumeContentBase&#xa;&#xa;Used by InventoryNode to store initial gas and liquid inventory state" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=14;" parent="1" vertex="1">
+                <mxCell id="compounds" value="chemunted.core.compounds&#xa;&#xa;- VolumeContentBase&#xa;&#xa;Used by InventoryNode to store initial gas and liquid inventory state" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=14;" parent="1" vertex="1">
                     <mxGeometry x="1210" y="175" width="260" height="150" as="geometry"/>
                 </mxCell>
                 <mxCell id="downstream" value="Downstream runtime uses&#xa;&#xa;- build process graphs&#xa;- render component ports&#xa;- evaluate hydraulic state&#xa;- inspect connection geometry&#xa;- serialize validated project state" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=14;" parent="1" vertex="1">

@@ -1,8 +1,10 @@
 from __future__ import annotations
 
 import typing
+from collections.abc import Mapping
 
 from pydantic.fields import FieldInfo
+from PyQt5.QtWidgets import QWidget
 
 from .cards.base_card import BaseFieldCard
 from .cards.bool_card import BoolFieldCard
@@ -12,6 +14,11 @@ from .cards.int_card import IntFieldCard
 from .cards.list_card import ListFieldCard
 from .cards.quantity_card import ChemUnitQuantityCard
 from .cards.str_card import StrFieldCard
+
+
+def _field_extras(field_info: FieldInfo) -> Mapping[str, object]:
+    extras = field_info.json_schema_extra
+    return extras if isinstance(extras, dict) else {}
 
 
 class CardFactory:
@@ -31,12 +38,12 @@ class CardFactory:
     def build(
         field_name: str,
         field_info: FieldInfo,
-        parent: "QWidget | None" = None,
+        parent: QWidget | None = None,
     ) -> BaseFieldCard:
         card = CardFactory._make_card(field_name, field_info, parent)
 
         # Apply visibility / editability from json_schema_extra
-        extras = field_info.json_schema_extra or {}
+        extras = _field_extras(field_info)
         card.setVisible(bool(extras.get("visible", True)))
         card.setEnabled(bool(extras.get("editable", True)))
 
@@ -46,20 +53,20 @@ class CardFactory:
     def _make_card(
         field_name: str,
         field_info: FieldInfo,
-        parent: "QWidget | None" = None,
+        parent: QWidget | None = None,
     ) -> BaseFieldCard:
         # 1. ChemQuantityValidator in metadata
         try:
-            from chemunited_core.utils import ChemQuantityValidator
+            from chemunited.core.utils import ChemQuantityValidator
 
-            for meta in (field_info.metadata or []):
+            for meta in field_info.metadata or []:
                 if isinstance(meta, ChemQuantityValidator):
                     return ChemUnitQuantityCard(field_name, field_info, parent)
         except ImportError:
             pass
 
         # 2. Options in json_schema_extra
-        extras = field_info.json_schema_extra or {}
+        extras = _field_extras(field_info)
         if "Options" in extras:
             return ChoiceFieldCard(field_name, field_info, parent)
 

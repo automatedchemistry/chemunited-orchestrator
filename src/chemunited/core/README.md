@@ -37,15 +37,15 @@ Pydantic *Mode -> Element.from_mode(...) -> dataclass *Data -> consumer package
 
 ## Public API
 
-Import public symbols from subpackages such as `chemunited_core.components` and `chemunited_core.connections`. There is currently no single top-level export module intended to be the main public surface.
+Import public symbols from subpackages such as `chemunted.core.components` and `chemunted.core.connections`. There is currently no single top-level export module intended to be the main public surface.
 
 | Module | Purpose | Main public objects |
 | --- | --- | --- |
-| `chemunited_core.components` | Process equipment models | `ComponentMode`, `ComponentData`, `FlowSourceMode`, `FlowSourceData`, `JunctionMode`, `JunctionData`, `PlugFlowMode`, `PlugFlowComponentData`, `PressureControlMode`, `PressureControlData`, `BackPressureRegulatorMode`, `BackPressureRegulatorData`, `ValveMode`, `ValveComponentData`, `VesselMode`, `VesselComponentData` |
-| `chemunited_core.connections` | Inter-component edges | `EdgeMode`, `EdgeData`, `ConnectionType` |
-| `chemunited_core.common` | Shared enums and mode-to-data bridge | `Element`, `ConnectionType`, `GroupParameterCategory` |
-| `chemunited_core.utils` | Unit-aware physical quantities | `ChemUnitQuantity`, `ChemQuantityValidator`, `ureg` |
-| `chemunited_core.compounds` | Inventory payload objects | `VolumeContentBase` |
+| `chemunted.core.components` | Process equipment models | `ComponentMode`, `ComponentData`, `FlowSourceMode`, `FlowSourceData`, `JunctionMode`, `JunctionData`, `PlugFlowMode`, `PlugFlowComponentData`, `PressureControlMode`, `PressureControlData`, `BackPressureRegulatorMode`, `BackPressureRegulatorData`, `ValveMode`, `ValveComponentData`, `VesselMode`, `VesselComponentData` |
+| `chemunted.core.connections` | Inter-component edges | `EdgeMode`, `EdgeData`, `ConnectionType` |
+| `chemunted.core.common` | Shared enums and mode-to-data bridge | `Element`, `ConnectionType`, `GroupParameterCategory` |
+| `chemunted.core.utils` | Unit-aware physical quantities | `ChemUnitQuantity`, `ChemQuantityValidator`, `ureg` |
+| `chemunted.core.compounds` | Inventory payload objects | `VolumeContentBase` |
 
 ## Component Catalog
 
@@ -81,7 +81,7 @@ Another package can safely rely on the following behavior:
 Create validated `*Mode` objects, compile them to `*Data`, then read the runtime topology.
 
 ```python
-from chemunited_core.components import (
+from chemunted.core.components import (
     FlowSourceData,
     FlowSourceMode,
     PlugFlowComponentData,
@@ -89,7 +89,7 @@ from chemunited_core.components import (
     VesselComponentData,
     VesselMode,
 )
-from chemunited_core.connections import EdgeData, EdgeMode
+from chemunted.core.connections import EdgeData, EdgeMode
 
 source = FlowSourceData.from_mode(
     FlowSourceMode(
@@ -179,7 +179,7 @@ For downstream packages, the most important compiled objects are:
 - `InternalEdge`: the directed edge inside a component. Simulation packages usually read `length`, `diameter`, `role`, and `resistance_override`.
 - `InventoryNode`: the lumped storage node for vessels and similar components.
 
-These objects live in `chemunited_core.components.internals` and are populated by each component's `internal_structure()` implementation.
+These objects live in `chemunted.core.components.internals` and are populated by each component's `internal_structure()` implementation.
 
 ## Units and Quantities
 
@@ -187,7 +187,7 @@ These objects live in `chemunited_core.components.internals` and are populated b
 
 - Mode fields accept strings such as `"5 ml/min"`, `"250 ml"`, `"1.2 bar"`, or `"500 mm"`.
 - Runtime helpers such as `flow_rate_si`, `setpoint_pa`, `length_value`, `diameter_value`, and `capacity_value` expose SI magnitudes where needed.
-- Shared unit conversions should use `chemunited_core.utils.ureg`.
+- Shared unit conversions should use `chemunted.core.utils.ureg`.
 
 ## Examples
 
@@ -212,7 +212,7 @@ pre-commit run --all-files
 Useful local checks:
 
 ```bash
-python -c "import sys; from pathlib import Path; sys.path.insert(0, str(Path('src').resolve())); import chemunited_core.components"
+python -c "import sys; from pathlib import Path; sys.path.insert(0, str(Path('src').resolve())); import chemunted.core.components"
 python examples/build_valve_graph.py
 ```
 

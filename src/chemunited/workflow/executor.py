@@ -69,7 +69,9 @@ class WorkflowExecutor:
         """Execute the compiled workflow starting from ``start_node``."""
 
         if start_node not in self._compiled.exec_graph:
-            raise ValueError(f"Start node {start_node!r} is not present in the executable graph.")
+            raise ValueError(
+                f"Start node {start_node!r} is not present in the executable graph."
+            )
 
         self._state = WorkflowExecutorState()
         self._reachable_nodes = {}
@@ -81,7 +83,8 @@ class WorkflowExecutor:
         self._stop_scheduling = False
         self._process = process
         self._loopbacks_by_trigger = {
-            (loopback.source, loopback.trigger_on): loopback for loopback in self._compiled.loopbacks
+            (loopback.source, loopback.trigger_on): loopback
+            for loopback in self._compiled.loopbacks
         }
         self._emit_event(
             event_type=WorkflowEventType.EXECUTION_STARTED,
@@ -92,12 +95,16 @@ class WorkflowExecutor:
 
         execution_error: Exception | None = None
         try:
-            with ThreadPoolExecutor(max_workers=self._max_workers, thread_name_prefix="workflow") as pool:
+            with ThreadPoolExecutor(
+                max_workers=self._max_workers, thread_name_prefix="workflow"
+            ) as pool:
                 self._pool = pool
                 self._initialize_iteration(start_node=start_node, iteration=0)
 
                 while self._future_to_key:
-                    done, _ = wait(tuple(self._future_to_key), return_when=FIRST_COMPLETED)
+                    done, _ = wait(
+                        tuple(self._future_to_key), return_when=FIRST_COMPLETED
+                    )
                     for future in done:
                         node_key = self._future_to_key.pop(future)
                         self._handle_completed_future(node_key=node_key, future=future)
@@ -135,7 +142,9 @@ class WorkflowExecutor:
 
     def _initialize_iteration(self, start_node: str, iteration: int) -> None:
         if self._process is None or self._pool is None:
-            raise RuntimeError("WorkflowExecutor.execute() must be called before scheduling iterations.")
+            raise RuntimeError(
+                "WorkflowExecutor.execute() must be called before scheduling iterations."
+            )
 
         if iteration in self._iteration_roots:
             existing_root = self._iteration_roots[iteration]
@@ -234,7 +243,9 @@ class WorkflowExecutor:
 
     def _submit_node(self, node_key: NodeKey) -> None:
         if self._process is None or self._pool is None:
-            raise RuntimeError("WorkflowExecutor.execute() must be called before submitting nodes.")
+            raise RuntimeError(
+                "WorkflowExecutor.execute() must be called before submitting nodes."
+            )
 
         node_id, _ = node_key
         method_name = self._compiled.exec_graph.nodes[node_id].get("method")
@@ -252,7 +263,9 @@ class WorkflowExecutor:
 
     def _execute_node(self, node_key: NodeKey) -> _NodeOutcome:
         if self._process is None:
-            raise RuntimeError("WorkflowExecutor.execute() must be called before running nodes.")
+            raise RuntimeError(
+                "WorkflowExecutor.execute() must be called before running nodes."
+            )
 
         node_id, iteration = node_key
         node_data = self._compiled.exec_graph.nodes[node_id]
@@ -301,7 +314,9 @@ class WorkflowExecutor:
             with self._lock:
                 runtime.result = result
                 runtime.error = None
-                runtime.status_message = f"Method '{method_name}' completed with result {result}."
+                runtime.status_message = (
+                    f"Method '{method_name}' completed with result {result}."
+                )
             return _NodeOutcome(node_key=node_key, result=result)
         except Exception as exc:
             with self._lock:
@@ -312,7 +327,9 @@ class WorkflowExecutor:
             with self._lock:
                 runtime.finished_at = perf_counter()
 
-    def _handle_completed_future(self, node_key: NodeKey, future: Future[_NodeOutcome]) -> None:
+    def _handle_completed_future(
+        self, node_key: NodeKey, future: Future[_NodeOutcome]
+    ) -> None:
         try:
             outcome = future.result()
         except Exception as exc:
@@ -342,7 +359,9 @@ class WorkflowExecutor:
         node_id, iteration = node_key
         loopback = self._loopbacks_by_trigger.get((node_id, result))
 
-        for _, successor, edge_data in self._compiled.exec_graph.out_edges(node_id, data=True):
+        for _, successor, edge_data in self._compiled.exec_graph.out_edges(
+            node_id, data=True
+        ):
             successor_key = (successor, iteration)
             condition = edge_data["condition"]
             should_activate = condition is result and loopback is None
@@ -354,7 +373,10 @@ class WorkflowExecutor:
 
         if loopback is not None:
             next_iteration = iteration + 1
-            if loopback.max_iterations is not None and next_iteration > loopback.max_iterations:
+            if (
+                loopback.max_iterations is not None
+                and next_iteration > loopback.max_iterations
+            ):
                 raise RuntimeError(
                     "Loopback iteration guard exceeded. "
                     f"Loopback {loopback.source!r} -> {loopback.target!r} requested iteration "
@@ -374,9 +396,13 @@ class WorkflowExecutor:
                 source=loopback.source,
                 target=loopback.target,
             )
-            self._initialize_iteration(start_node=loopback.target, iteration=next_iteration)
+            self._initialize_iteration(
+                start_node=loopback.target, iteration=next_iteration
+            )
 
-    def _resolve_predecessor(self, node_key: NodeKey, predecessor_key: NodeKey, is_active: bool) -> None:
+    def _resolve_predecessor(
+        self, node_key: NodeKey, predecessor_key: NodeKey, is_active: bool
+    ) -> None:
         expected = self._expected_predecessors.get(node_key)
         if expected is None or predecessor_key not in expected:
             return
@@ -478,7 +504,9 @@ class WorkflowExecutor:
             source=source,
             target=target,
             active_predecessor_count=(
-                len(self._state.active_predecessors.get(node_key, set())) if node_key is not None else None
+                len(self._state.active_predecessors.get(node_key, set()))
+                if node_key is not None
+                else None
             ),
             completed_predecessor_count=(
                 len(self._state.completed_predecessors.get(node_key, set()))

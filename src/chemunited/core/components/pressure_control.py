@@ -8,20 +8,28 @@ GUI: exposes setpoint in the properties widget; updated via sync_internal_state(
 Sim: port.boundary.value (Pa) is read by the hydraulic solver as a Dirichlet
      boundary condition — the strongest constraint in the network.
 """
-from chemunited_core.utils.internal_quantity import ChemQuantityValidator, ChemUnitQuantity
-from chemunited_core.common.enums import GroupParameterCategory
-from pydantic import Field
-from .component import ComponentData, ComponentMode
-from .internals import Port, PortBoundaryCondition
-from .enums import BoundaryConditionKind
-from typing import Annotated
+
 from dataclasses import dataclass
+from typing import Annotated
+
+from pydantic import Field
+
+from chemunited.core.common.enums import GroupParameterCategory
+from chemunited.core.utils.internal_quantity import (
+    ChemQuantityValidator,
+    ChemUnitQuantity,
+)
+
+from .component import ComponentData, ComponentMode
+from .enums import BoundaryConditionKind
+from .internals import Port, PortBoundaryCondition
 
 
 class PressureControlMode(ComponentMode):
     """User-configurable pressure setpoint.
     setpoint — absolute pressure imposed at the port (default 1 bar).
     """
+
     setpoint: Annotated[ChemUnitQuantity, ChemQuantityValidator("bar")] = Field(
         default=ChemUnitQuantity("1 bar"),
         title="Pressure Setpoint",
@@ -40,7 +48,8 @@ class PressureControlData(ComponentData):
     sync_internal_state() updates the port boundary value when the
     user changes setpoint in the GUI.
     """
-    setpoint: ChemUnitQuantity
+
+    setpoint: ChemUnitQuantity = ChemUnitQuantity("1 bar")
 
     @property
     def setpoint_pa(self) -> float:
@@ -53,9 +62,8 @@ class PressureControlData(ComponentData):
                 number=1,
                 component=self.name,
                 boundary=PortBoundaryCondition(
-                    kind=BoundaryConditionKind.PRESSURE,
-                    value=self.setpoint_pa
-                )
+                    kind=BoundaryConditionKind.PRESSURE, value=self.setpoint_pa
+                ),
             )
         }
         self.internal_edges = {}

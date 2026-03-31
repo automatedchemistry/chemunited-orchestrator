@@ -12,6 +12,7 @@ Sim: sync_internal_state() re-derives active connections from the current
      rotor layout; the DigitalTwinAdapter reads InternalEdge.is_active to
      build the active hydraulic assembly each time step.
 """
+
 from copy import copy
 from dataclasses import dataclass, field
 from typing import TypeAlias
@@ -19,7 +20,7 @@ from typing import TypeAlias
 import numpy as np
 from pydantic import Field
 
-from chemunited_core.common.enums import GroupParameterCategory
+from chemunited.core.common.enums import GroupParameterCategory
 
 from .component import ComponentData, ComponentMode
 from .enums import ComponentType, InternalEdgeRole
@@ -113,6 +114,7 @@ class ValveMode(ComponentMode):
     stator_ports — layout of external ports on the valve body.
     rotor_ports  — rotor channel layout used to derive active connections.
     """
+
     stator_ports: ValvePortLayout = Field(
         default_factory=lambda: _copy_port_layout(DEFAULT_STATOR_PORTS),
         title="Valve stator ports",
@@ -142,6 +144,7 @@ class ValveComponentData(ComponentData):
     Switching is performed by calling sync_internal_state() after updating
     the rotor layout — the sim adapter calls this on each protocol switch command.
     """
+
     COMPONENT_TYPE = ComponentType.UTENSIL
     # Internally properties (It will be overwritten according to the valve topology)
     stator_ports: ValvePortLayout = field(

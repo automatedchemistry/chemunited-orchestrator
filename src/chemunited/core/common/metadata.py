@@ -85,5 +85,5 @@ class Element:
         self.sync_internal_state()
 
         return self
-    
-    def sync_internal_state(self):...
+
+    def sync_internal_state(self): ...

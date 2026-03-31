@@ -1,6 +1,6 @@
-from PyQt5.QtWidgets import QGraphicsTextItem
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
+from PyQt5.QtWidgets import QGraphicsTextItem
 from qfluentwidgets import isDarkTheme
 
 

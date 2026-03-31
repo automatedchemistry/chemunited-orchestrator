@@ -12,13 +12,14 @@ Every concrete component subclasses both and implements internal_structure()
 to populate ports, internal edges, and the inventory node.
 sync_internal_state() is called when the user updates parameters via the GUI.
 """
+
 from dataclasses import dataclass, field
 from typing import ClassVar, Literal
 
 from pydantic import BaseModel, Field, field_validator
 
-from chemunited_core.common.enums import GroupParameterCategory
-from chemunited_core.common.metadata import Element
+from chemunited.core.common.enums import GroupParameterCategory
+from chemunited.core.common.metadata import Element
 
 from .enums import ComponentType
 from .internals import InternalEdge, InventoryNode, Port
@@ -33,6 +34,7 @@ class ComponentMode(BaseModel, populate_by_name=True):
     Serialised to project configuration files alongside ComponentData.
     Subclass this for each concrete component to declare its configurable fields.
     """
+
     name: str = Field(
         default="",
         title="Component Name",
@@ -96,6 +98,7 @@ class ComponentData(Element):
         internal_edges:     Internal channels keyed by (origin, destination).
         internal_inventory: Lumped control volume; None for non-storage components.
     """
+
     name: str = ""
     figure: str = ""
     position: tuple[float, float] = (0, 0)

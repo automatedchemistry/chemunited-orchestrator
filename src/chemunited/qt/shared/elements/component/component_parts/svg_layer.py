@@ -1,7 +1,8 @@
 from __future__ import annotations
+
 from PyQt5.QtSvg import QGraphicsSvgItem, QSvgRenderer
 from PyQt5.QtWidgets import QGraphicsItem
-from PyQt5.QtCore import QRectF
+
 from .scene_item import PATTERN_DIMENSION
 
 
@@ -71,6 +72,6 @@ class SvgLayer(QGraphicsSvgItem):
         br = self.boundingRect()
         self.setTransformOriginPoint(br.center())
         self.setPos(
-            -br.width()  * self.scale() / 2,
+            -br.width() * self.scale() / 2,
             -br.height() * self.scale() / 2,
         )

@@ -102,14 +102,19 @@ class TerminalWorkflowObserver:
                 )
                 if event.state is not None:
                     row["state"] = event.state
-                if event.result is not None or event.event_type == WorkflowEventType.NODE_COMPLETED:
+                if (
+                    event.result is not None
+                    or event.event_type == WorkflowEventType.NODE_COMPLETED
+                ):
                     row["result"] = event.result
                 if event.method is not None:
                     row["method"] = event.method
                 if event.active_predecessor_count is not None:
                     row["active_predecessor_count"] = event.active_predecessor_count
                 if event.completed_predecessor_count is not None:
-                    row["completed_predecessor_count"] = event.completed_predecessor_count
+                    row["completed_predecessor_count"] = (
+                        event.completed_predecessor_count
+                    )
                 row["message"] = event.message
 
             formatted_message = self._format_event_message(event)
@@ -136,11 +141,17 @@ class TerminalWorkflowObserver:
 
         if show_authored_graph and authored_graph is not None:
             self._console.print(
-                Panel.fit(self._format_graph_edges(authored_graph), title="Authored Graph Edges")
+                Panel.fit(
+                    self._format_graph_edges(authored_graph),
+                    title="Authored Graph Edges",
+                )
             )
         if show_exec_graph:
             self._console.print(
-                Panel.fit(self._format_graph_edges(self._compiled.exec_graph), title="Executable DAG Edges")
+                Panel.fit(
+                    self._format_graph_edges(self._compiled.exec_graph),
+                    title="Executable DAG Edges",
+                )
             )
 
         self._console.print(self.build_loopbacks_table())
@@ -212,8 +223,14 @@ class TerminalWorkflowObserver:
 
     def _render_live_layout(self) -> Group:
         return Group(
-            Panel(self._build_summary_table(), title="Workflow Summary", border_style="blue"),
-            Panel(self._build_nodes_table(), title="Node States", border_style="magenta"),
+            Panel(
+                self._build_summary_table(),
+                title="Workflow Summary",
+                border_style="blue",
+            ),
+            Panel(
+                self._build_nodes_table(), title="Node States", border_style="magenta"
+            ),
             Panel(self._build_event_log(), title="Recent Events", border_style="green"),
         )
 
@@ -231,13 +248,21 @@ class TerminalWorkflowObserver:
         for state in NodeState:
             if state_text.plain:
                 state_text.append("  ")
-            state_text.append(f"{state.value}: {counts[state]}", style=_STATE_STYLES[state])
+            state_text.append(
+                f"{state.value}: {counts[state]}", style=_STATE_STYLES[state]
+            )
 
-        loopback_text = ", ".join(
-            f"{spec.source}->{spec.target} on {spec.trigger_on}" for spec in self._compiled.loopbacks
-        ) or "none"
+        loopback_text = (
+            ", ".join(
+                f"{spec.source}->{spec.target} on {spec.trigger_on}"
+                for spec in self._compiled.loopbacks
+            )
+            or "none"
+        )
 
-        summary.add_row("Tracked nodes", str(len(self._node_rows)), f"Loopbacks: {loopback_text}")
+        summary.add_row(
+            "Tracked nodes", str(len(self._node_rows)), f"Loopbacks: {loopback_text}"
+        )
         summary.add_row("State counts", state_text, "")
         return summary
 
@@ -271,7 +296,16 @@ class TerminalWorkflowObserver:
             )
 
         if not self._node_rows:
-            table.add_row("-", "-", "NOT_STARTED", "-", "-", "-", "-", "Waiting for execution start.")
+            table.add_row(
+                "-",
+                "-",
+                "NOT_STARTED",
+                "-",
+                "-",
+                "-",
+                "-",
+                "Waiting for execution start.",
+            )
 
         return table
 
@@ -305,4 +339,3 @@ class TerminalWorkflowObserver:
 
 
 RichWorkflowMonitor = TerminalWorkflowObserver
-

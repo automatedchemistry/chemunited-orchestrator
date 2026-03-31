@@ -219,13 +219,13 @@ class FrameLoggings(QFrame):
         html = f"""
         <div style="
             margin:6px 0; padding:8px 10px; border-radius:10px;
-            background:{s['bg']}; color:{s['fg']};
+            background:{s["bg"]}; color:{s["fg"]};
             border:1px solid rgba(0,0,0,0.10);
         ">
           <div style="display:flex; align-items:center; gap:8px;">
             <span style="
                 display:inline-block; padding:2px 8px; border-radius:999px;
-                background:{s['badge']}; color:white; font-size:11px; font-weight:600;">
+                background:{s["badge"]}; color:white; font-size:11px; font-weight:600;">
               {sev_key.upper()}
             </span>
             <span class="small">{ts_str}</span>
@@ -304,13 +304,13 @@ class FrameLoggings(QFrame):
         html = f"""
         <div style="
             margin:6px 0; padding:10px; border-radius:12px;
-            border:1px solid {s['developer_border']};
-            background:{s['developer_bg']};
+            border:1px solid {s["developer_border"]};
+            background:{s["developer_bg"]};
         ">
           <div style="display:flex; align-items:center; gap:8px;">
             <span style="
                 display:inline-block; padding:2px 8px; border-radius:999px;
-                background:{s['badge']}; color:white; font-size:11px; font-weight:600;">
+                background:{s["badge"]}; color:white; font-size:11px; font-weight:600;">
               {sev_key.upper()}
             </span>
             <span class="small">{ts_str}</span>
@@ -319,7 +319,7 @@ class FrameLoggings(QFrame):
 
           <div class="msg">{msg}</div>
 
-          <div class="small" style="margin-top:6px; color:{s['meta_fg']};">
+          <div class="small" style="margin-top:6px; color:{s["meta_fg"]};">
             File: {file_path}<br>
             Thread: {thread_info}<br>
             Process: {process_info}<br>

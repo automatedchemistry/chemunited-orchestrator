@@ -13,11 +13,13 @@ GUI: exposes number_ports in the properties widget (minimum 3, not editable
 Sim: all JUNCTION edges are always active — no switching logic required.
      The hub port (0) is a lossless internal node in the hydraulic matrix.
 """
+
 from dataclasses import dataclass
+
 import numpy as np
 from pydantic import Field
 
-from chemunited_core.common.enums import GroupParameterCategory
+from chemunited.core.common.enums import GroupParameterCategory
 
 from .component import ComponentData, ComponentMode
 from .enums import InternalEdgeRole
@@ -45,7 +47,8 @@ class JunctionData(ComponentData):
     via a JUNCTION edge. Hub port 0 is always open and never carries an
     explicit boundary condition — its pressure is solved by the network.
     """
-    number_ports: int
+
+    number_ports: int = 3
     internal_radius: float = 1
 
     def internal_structure(self):
@@ -60,14 +63,10 @@ class JunctionData(ComponentData):
                 number=i + 1,
                 component=self.name,
                 relative_position=(
-                    self.internal_radius * np.cos(angles[i]), 
-                    self.internal_radius * np.sin(angles[i])
-                    )
+                    self.internal_radius * np.cos(angles[i]),
+                    self.internal_radius * np.sin(angles[i]),
+                ),
             )
             self.internal_edges[(i + 1, 0)] = InternalEdge(
-                origin_port=i + 1,
-                destination_port=0,
-                role=InternalEdgeRole.JUNCTION
+                origin_port=i + 1, destination_port=0, role=InternalEdgeRole.JUNCTION
             )
-
-

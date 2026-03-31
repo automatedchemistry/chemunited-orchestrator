@@ -13,8 +13,8 @@ from PyQt5.QtWidgets import (
 )
 from qfluentwidgets import IndeterminateProgressBar, isDarkTheme
 
-from chemunited.shared.enums.protocols_enum import ProtocolBlock
-from chemunited.shared.icon import OrchestratorIcon
+from chemunited.qt.shared.enums.protocols_enum import ProtocolBlock
+from chemunited.qt.shared.icon import OrchestratorIcon
 
 from .access_point import WorkflowAccessPoints
 from .style import WorkflowColorStyle

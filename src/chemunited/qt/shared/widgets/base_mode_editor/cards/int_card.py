@@ -28,11 +28,15 @@ class IntFieldCard(BaseFieldCard):
         except ImportError:
             return
 
-        for constraint in (self._field_info.metadata or []):
+        for constraint in self._field_info.metadata or []:
             if isinstance(constraint, Ge):
-                self._spinbox.setMinimum(int(constraint.ge))
+                minimum = constraint.ge
+                if isinstance(minimum, (int, float)):
+                    self._spinbox.setMinimum(int(minimum))
             elif isinstance(constraint, Le):
-                self._spinbox.setMaximum(int(constraint.le))
+                maximum = constraint.le
+                if isinstance(maximum, (int, float)):
+                    self._spinbox.setMaximum(int(maximum))
 
     def get_value(self) -> int:
         return self._spinbox.value()
@@ -49,7 +53,7 @@ class IntFieldCard(BaseFieldCard):
             self._mark_valid()
             return True
 
-        for constraint in (self._field_info.metadata or []):
+        for constraint in self._field_info.metadata or []:
             if isinstance(constraint, Ge) and value < constraint.ge:
                 self._set_error(f"Value must be \u2265 {constraint.ge}")
                 return False

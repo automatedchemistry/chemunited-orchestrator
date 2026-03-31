@@ -37,9 +37,9 @@ class ChemicalEntity:
     """
 
     name: str
-    molecular_weight: float          # g/mol
-    cp_liquid: float | None = None   # J/(mol·K)
-    cp_gas: float | None = None      # J/(mol·K)
+    molecular_weight: float  # g/mol
+    cp_liquid: float | None = None  # J/(mol·K)
+    cp_gas: float | None = None  # J/(mol·K)
     density_liquid: float | None = None  # kg/m³
 
     # ── Derived quantities ────────────────────────────────────────────────
@@ -91,8 +91,6 @@ class ChemicalEntity:
             return self.cp_liquid
         if phase == "gas":
             if self.cp_gas is None:
-                raise ValueError(
-                    f"cp_gas is not defined for compound '{self.name}'."
-                )
+                raise ValueError(f"cp_gas is not defined for compound '{self.name}'.")
             return self.cp_gas
         raise ValueError(f"Unknown phase '{phase}'. Expected 'liquid' or 'gas'.")

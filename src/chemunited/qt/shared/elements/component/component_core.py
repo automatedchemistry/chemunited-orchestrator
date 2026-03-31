@@ -1,22 +1,23 @@
-from chemunited_core.elements.metadata import ComponentData
-from .graph import GraphComponent
+from chemunited.core.components import ComponentData, NeutralComponentData
+
+from .graph_item import GraphComponent
 
 
 class UtensilManager:
-    def __init__(self):
+    def __init__(self, data: ComponentData | None = None):
         """Figure"""
-        self.graph: GraphComponent = GraphComponent()
+        self.graph = GraphComponent(data or NeutralComponentData())
 
     @property
     def name(self) -> str:
-        return self.graph.mdata.name
+        return self.graph._data.name
 
     @property
     def inf(self) -> ComponentData:
         """Metadata information"""
-        return self.graph.mdata
+        return self.graph._data
 
 
 class ElectronicManager(UtensilManager):
-    def __init__(self):
-        super().__init__()
+    def __init__(self, data: ComponentData | None = None):
+        super().__init__(data)

@@ -1,0 +1,49 @@
+# See https://pre-commit.com for more information
+# See https://pre-commit.com/hooks.html for more hooks
+# The name of this file must be .pre-commit-config.yaml
+# Run pre-commit: pre-commit run --all-files
+# Run mypy: mypy ./src
+# Run ruff: ruff check src/chemunited
+fail_fast: false
+exclude: |
+  (?x)^(
+    .*\.drawio|
+    .*\.qss|
+    .*\.qrc|
+    src/chemunited/qt/shared/resources/resources_rc\.py
+  )$
+
+repos:
+  - repo: https://github.com/psf/black
+    rev: 25.1.0  # Replace with latest version
+    hooks:
+      - id: black
+        language_version: python3
+        exclude: '.*\.svg$'
+
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-added-large-files
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.11.2
+    hooks:
+      # Lint + auto-fix
+      - id: ruff
+        args: [--fix]
+      # Format (replaces black)
+      - id: ruff-format
+
+  - repo: https://github.com/pre-commit/mirrors-mypy
+    rev: v1.15.0
+    hooks:
+      - id: mypy
+        args: [--config-file, pyproject.toml]
+        additional_dependencies:
+          - pydantic
+          - pint
+          - types-PyYAML

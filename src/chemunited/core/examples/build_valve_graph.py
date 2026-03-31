@@ -5,13 +5,12 @@ import sys
 from dataclasses import dataclass
 from pathlib import Path
 
-ROOT_DIR = Path(__file__).resolve().parents[1]
-SRC_DIR = ROOT_DIR / "src"
+SRC_DIR = Path(__file__).resolve().parents[3]
 if str(SRC_DIR) not in sys.path:
     sys.path.insert(0, str(SRC_DIR))
 
-from chemunited_core.common.enums import ConnectionType
-from chemunited_core.components import (
+from chemunited.core.common.enums import ConnectionType
+from chemunited.core.components import (
     BackPressureRegulatorData,
     BackPressureRegulatorMode,
     ComponentData,
@@ -28,7 +27,8 @@ from chemunited_core.components import (
     VesselComponentData,
     VesselMode,
 )
-from chemunited_core.connections import EdgeData, EdgeMode
+from chemunited.core.connections import EdgeData, EdgeMode
+from chemunited.core.utils import ChemUnitQuantity
 
 OUTPUT_HTML = Path(__file__).resolve().parent / "output" / "valve_flow_graph.html"
 POSITION_SCALE = 220
@@ -40,6 +40,10 @@ class ExampleGraph:
     connections: list[EdgeData]
 
 
+def qty(value: str) -> ChemUnitQuantity:
+    return ChemUnitQuantity(value)
+
+
 def build_example_graph() -> ExampleGraph:
     flow_source = FlowSourceData.from_mode(
         FlowSourceMode(
@@ -47,7 +51,7 @@ def build_example_graph() -> ExampleGraph:
             figure="PumpFigure",
             position=(-2.0, 0.0),
             angle=0,
-            flow_rate="5 ml/min",
+            flow_rate=qty("5 ml/min"),
         )
     )
     pressure_control = PressureControlData.from_mode(
@@ -56,7 +60,7 @@ def build_example_graph() -> ExampleGraph:
             figure="PressureFigure",
             position=(0.0, -2.0),
             angle=0,
-            setpoint="1.2 bar",
+            setpoint=qty("1.2 bar"),
         )
     )
     feed_vessel = VesselComponentData.from_mode(
@@ -65,7 +69,7 @@ def build_example_graph() -> ExampleGraph:
             figure="FlaskFigure",
             position=(0.0, 0.0),
             angle=0,
-            capacity="250 ml",
+            capacity=qty("250 ml"),
             top_access=3,
             bottom_access=2,
         )
@@ -93,8 +97,8 @@ def build_example_graph() -> ExampleGraph:
             figure="TubeFigure",
             position=(6.0, 0.0),
             angle=0,
-            length="500 mm",
-            diameter="2 mm",
+            length=qty("500 mm"),
+            diameter=qty("2 mm"),
         )
     )
     pressure_regulator = BackPressureRegulatorData.from_mode(
@@ -103,7 +107,7 @@ def build_example_graph() -> ExampleGraph:
             figure="BprFigure",
             position=(8.0, 0.0),
             angle=0,
-            setpoint="1.5 bar",
+            setpoint=qty("1.5 bar"),
         )
     )
     product_vessel = VesselComponentData.from_mode(
@@ -112,7 +116,7 @@ def build_example_graph() -> ExampleGraph:
             figure="FlaskFigure",
             position=(10.0, 1.0),
             angle=0,
-            capacity="250 ml",
+            capacity=qty("250 ml"),
             top_access=3,
             bottom_access=2,
         )
@@ -123,7 +127,7 @@ def build_example_graph() -> ExampleGraph:
             figure="FlaskFigure",
             position=(10.0, -1.0),
             angle=0,
-            capacity="250 ml",
+            capacity=qty("250 ml"),
             top_access=3,
             bottom_access=2,
         )
@@ -136,8 +140,8 @@ def build_example_graph() -> ExampleGraph:
                 destination=feed_vessel.name,
                 origin_port=1,
                 destination_port=1,
-                length="80 mm",
-                diameter="1.6 mm",
+                length=qty("80 mm"),
+                diameter=qty("1.6 mm"),
             )
         ),
         EdgeData.from_mode(
@@ -146,8 +150,8 @@ def build_example_graph() -> ExampleGraph:
                 destination=feed_vessel.name,
                 origin_port=1,
                 destination_port=5,
-                length="60 mm",
-                diameter="1.0 mm",
+                length=qty("60 mm"),
+                diameter=qty("1.0 mm"),
             )
         ),
         EdgeData.from_mode(
@@ -156,8 +160,8 @@ def build_example_graph() -> ExampleGraph:
                 destination=junction.name,
                 origin_port=1,
                 destination_port=1,
-                length="120 mm",
-                diameter="1.6 mm",
+                length=qty("120 mm"),
+                diameter=qty("1.6 mm"),
             )
         ),
         EdgeData.from_mode(
@@ -166,8 +170,8 @@ def build_example_graph() -> ExampleGraph:
                 destination=selector_valve.name,
                 origin_port=2,
                 destination_port=0,
-                length="80 mm",
-                diameter="1.6 mm",
+                length=qty("80 mm"),
+                diameter=qty("1.6 mm"),
             )
         ),
         EdgeData.from_mode(
@@ -176,8 +180,8 @@ def build_example_graph() -> ExampleGraph:
                 destination=waste_vessel.name,
                 origin_port=3,
                 destination_port=1,
-                length="140 mm",
-                diameter="1.6 mm",
+                length=qty("140 mm"),
+                diameter=qty("1.6 mm"),
             )
         ),
         EdgeData.from_mode(
@@ -186,8 +190,8 @@ def build_example_graph() -> ExampleGraph:
                 destination=reactor.name,
                 origin_port=1,
                 destination_port=1,
-                length="90 mm",
-                diameter="1.6 mm",
+                length=qty("90 mm"),
+                diameter=qty("1.6 mm"),
             )
         ),
         EdgeData.from_mode(
@@ -196,8 +200,8 @@ def build_example_graph() -> ExampleGraph:
                 destination=pressure_regulator.name,
                 origin_port=2,
                 destination_port=1,
-                length="90 mm",
-                diameter="1.6 mm",
+                length=qty("90 mm"),
+                diameter=qty("1.6 mm"),
             )
         ),
         EdgeData.from_mode(
@@ -206,8 +210,8 @@ def build_example_graph() -> ExampleGraph:
                 destination=product_vessel.name,
                 origin_port=2,
                 destination_port=1,
-                length="120 mm",
-                diameter="1.6 mm",
+                length=qty("120 mm"),
+                diameter=qty("1.6 mm"),
             )
         ),
         EdgeData.from_mode(
@@ -216,8 +220,8 @@ def build_example_graph() -> ExampleGraph:
                 destination=waste_vessel.name,
                 origin_port=6,
                 destination_port=2,
-                length="120 mm",
-                diameter="1.6 mm",
+                length=qty("120 mm"),
+                diameter=qty("1.6 mm"),
             )
         ),
     ]
@@ -302,8 +306,7 @@ def _port_title(component: ComponentData, port_number: int) -> str:
             f"access: {port.access.name.lower()}",
             f"closure: {port.closure.name.lower()}",
             (
-                "boundary: "
-                f"{port.boundary.kind.name.lower()}={port.boundary.value}"
+                f"boundary: {port.boundary.kind.name.lower()}={port.boundary.value}"
                 if port.boundary is not None
                 else "boundary: none"
             ),

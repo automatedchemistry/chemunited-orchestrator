@@ -9,21 +9,28 @@ GUI: exposes flow_rate in the properties widget; updated via sync_internal_state
 Sim: port.boundary.value (m³/s) is read directly by the hydraulic solver
      as a Neumann boundary condition.
 """
-from chemunited_core.utils.internal_quantity import ChemQuantityValidator, ChemUnitQuantity
-from chemunited_core.common.enums import GroupParameterCategory
-from pydantic import Field
-from .component import ComponentData, ComponentMode
-from .internals import Port, PortBoundaryCondition
-from .enums import BoundaryConditionKind
-from typing import Annotated
-from dataclasses import dataclass
 
+from dataclasses import dataclass
+from typing import Annotated
+
+from pydantic import Field
+
+from chemunited.core.common.enums import GroupParameterCategory
+from chemunited.core.utils.internal_quantity import (
+    ChemQuantityValidator,
+    ChemUnitQuantity,
+)
+
+from .component import ComponentData, ComponentMode
+from .enums import BoundaryConditionKind
+from .internals import Port, PortBoundaryCondition
 
 
 class FlowSourceMode(ComponentMode):
     """User-configurable flow rate for a flow source.
     flow_rate — volumetric flow rate in ml/min (default 0 — idle).
     """
+
     flow_rate: Annotated[ChemUnitQuantity, ChemQuantityValidator("ml/min")] = Field(
         default=ChemUnitQuantity("0 ml/min"),
         title="Flow Rate",
@@ -33,6 +40,7 @@ class FlowSourceMode(ComponentMode):
         },
     )
 
+
 @dataclass
 class FlowSourceData(ComponentData):
     """Structural definition of a terminal flow source node.
@@ -41,7 +49,8 @@ class FlowSourceData(ComponentData):
     sync_internal_state() updates the port boundary value when the
     user changes flow_rate in the GUI or via a protocol command.
     """
-    flow_rate: ChemUnitQuantity
+
+    flow_rate: ChemUnitQuantity = ChemUnitQuantity("0 ml/min")
 
     @property
     def flow_rate_si(self) -> float:
@@ -54,11 +63,10 @@ class FlowSourceData(ComponentData):
                 number=1,
                 component=self.name,
                 boundary=PortBoundaryCondition(
-                    kind=BoundaryConditionKind.FLOW,
-                    value=self.flow_rate_si
-                )
+                    kind=BoundaryConditionKind.FLOW, value=self.flow_rate_si
+                ),
             )
         }
-    
+
     def sync_internal_state(self):
         self.ports_by_number[1].boundary.value = self.flow_rate_si

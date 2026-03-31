@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+from pydantic import BaseModel, ValidationError
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QColor, QPainter
 from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
-from pydantic import BaseModel, ValidationError
 from qfluentwidgets import (
     CaptionLabel,
     PrimaryPushButton,
@@ -14,6 +14,11 @@ from qfluentwidgets import (
 
 from .card_factory import CardFactory
 from .cards.base_card import BaseFieldCard
+
+
+def _field_extras(field_info) -> dict[str, object]:
+    extras = field_info.json_schema_extra
+    return extras if isinstance(extras, dict) else {}
 
 
 class _GroupSeparator(QWidget):
@@ -30,9 +35,7 @@ class _GroupSeparator(QWidget):
 
     def paintEvent(self, event) -> None:
         painter = QPainter(self)
-        color = (
-            QColor(255, 255, 255, 30) if isDarkTheme() else QColor(0, 0, 0, 25)
-        )
+        color = QColor(255, 255, 255, 30) if isDarkTheme() else QColor(0, 0, 0, 25)
         painter.setPen(color)
         mid_y = self.height() // 2
         painter.drawLine(0, mid_y, self.width(), mid_y)
@@ -51,7 +54,7 @@ class BaseModeEditorWidget(QWidget):
         widget.cancelled.connect(on_cancel)
     """
 
-    saved = pyqtSignal(object)    # emits the updated BaseModel instance
+    saved = pyqtSignal(object)  # emits the updated BaseModel instance
     cancelled = pyqtSignal()
 
     def __init__(
@@ -116,8 +119,9 @@ class BaseModeEditorWidget(QWidget):
         groups: list[str] = []
         by_group: dict[str, list[str]] = {}
         for name, field_info in fields.items():
-            extras = field_info.json_schema_extra or {}
-            group = extras.get("group", "")
+            extras = _field_extras(field_info)
+            group_value = extras.get("group", "")
+            group = group_value if isinstance(group_value, str) else ""
             if group not in by_group:
                 groups.append(group)
                 by_group[group] = []

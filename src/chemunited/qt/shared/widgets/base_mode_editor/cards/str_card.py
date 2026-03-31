@@ -26,17 +26,22 @@ class StrFieldCard(BaseFieldCard):
 
     def validate(self) -> bool:
         value = self._line_edit.text()
+        min_len_type = None
+        max_len_type = None
         try:
             from annotated_types import MaxLen, MinLen
-        except ImportError:
-            MinLen = MaxLen = None  # type: ignore[assignment]
 
-        for constraint in (self._field_info.metadata or []):
-            if MinLen is not None and isinstance(constraint, MinLen):
+            min_len_type = MinLen
+            max_len_type = MaxLen
+        except ImportError:
+            pass
+
+        for constraint in self._field_info.metadata or []:
+            if min_len_type is not None and isinstance(constraint, min_len_type):
                 if len(value) < constraint.min_length:
                     self._set_error(f"Minimum length is {constraint.min_length}")
                     return False
-            if MaxLen is not None and isinstance(constraint, MaxLen):
+            if max_len_type is not None and isinstance(constraint, max_len_type):
                 if len(value) > constraint.max_length:
                     self._set_error(f"Maximum length is {constraint.max_length}")
                     return False
