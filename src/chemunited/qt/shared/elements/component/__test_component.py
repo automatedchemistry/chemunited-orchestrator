@@ -51,16 +51,15 @@ LAYOUT: dict[str, list[type[GraphComponent]]] = {
 }
 
 if __name__ == "__main__":
+    from chemunited.qt.shared.graph import GraphCore, SceneCore
+    from PyQt5.QtWidgets import QApplication
     import sys
-
-    from PyQt5.QtGui import QPainter
-    from PyQt5.QtWidgets import QApplication, QGraphicsScene, QGraphicsView
-
+    
     SPACING_X = 200
     SPACING_Y = 180
 
     app = QApplication(sys.argv)
-    scene = QGraphicsScene()
+    scene = SceneCore()
 
     for row, (category, classes) in enumerate(LAYOUT.items()):
         for col, cls in enumerate(classes):
@@ -74,7 +73,6 @@ if __name__ == "__main__":
             )
             scene.addItem(component)
 
-    view = QGraphicsView(scene)
-    view.setRenderHint(QPainter.Antialiasing)
+    view = GraphCore(scene)
     view.show()
     sys.exit(app.exec_())

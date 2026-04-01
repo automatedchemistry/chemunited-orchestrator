@@ -21,6 +21,7 @@ import numpy as np
 from pydantic import Field
 
 from chemunited.core.common.enums import GroupParameterCategory
+from chemunited.core.common.constant import PATTERN_DIMENSION
 
 from ..component import ComponentData, ComponentMode
 from ..enums import ComponentType, InternalEdgeRole
@@ -153,17 +154,15 @@ class ValveComponentData(ComponentData):
     rotor_ports: ValvePortLayout = field(
         default_factory=lambda: _copy_port_layout(DEFAULT_ROTOR_PORTS)
     )
-    internal_radius = 1
+    internal_radius = PATTERN_DIMENSION
 
     @override
     def internal_structure(self):
-        valve_port_pairs: list[tuple[int, ...]]
         connections = possibles_connections_pairs(
             stator_ports=self.stator_ports,
             rotor_ports=self.rotor_ports,
         )
-        valve_port_pairs = [pair for pair in connections]
-        self.port_pairs = valve_port_pairs
+        self.port_pairs = connections
         self.ports_by_number = {
             number: Port(number=number, component=self.name)
             for number in _port_numbers_from_stator(self.stator_ports)

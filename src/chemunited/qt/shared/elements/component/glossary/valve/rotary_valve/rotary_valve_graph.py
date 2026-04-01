@@ -1,7 +1,13 @@
 from chemunited.core.components.glossary.rotary_valve import ValveComponentData, ValvePortLayout
 from chemunited.qt.shared.elements.component.graph_item import GraphComponent
 from dataclasses import dataclass, field
-from typing import ClassVar
+from typing import ClassVar, Generic, TypeVar
+
+ValveT = TypeVar("ValveT", bound=ValveComponentData)
+
+
+class RotaryValveGraph(GraphComponent[ValveT], Generic[ValveT]):
+    SVG_SCALE: ClassVar[float] = 3.0
 
 
 @dataclass
@@ -10,7 +16,7 @@ class ThreePortTwoPositionValveData(ValveComponentData):
     rotor_ports: ValvePortLayout = field(default_factory=lambda: [(4, 4, None, None), (None,)])
 
 
-class ThreePortTwoPositionValve(GraphComponent[ThreePortTwoPositionValveData]):
+class ThreePortTwoPositionValve(RotaryValveGraph[ThreePortTwoPositionValveData]):
     METADATA: ClassVar[type[ThreePortTwoPositionValveData]] = ThreePortTwoPositionValveData
 
 @dataclass
@@ -19,7 +25,7 @@ class ThreePortFourPositionValveData(ValveComponentData):
     rotor_ports: ValvePortLayout = field(default_factory=lambda: [(4, 4, 5, 5), (4,)])
 
 
-class ThreePortFourPositionValve(GraphComponent[ThreePortFourPositionValveData]):
+class ThreePortFourPositionValve(RotaryValveGraph[ThreePortFourPositionValveData]):
     METADATA: ClassVar[type[ThreePortFourPositionValveData]] = ThreePortFourPositionValveData
 
 @dataclass
@@ -41,7 +47,7 @@ class FourPortFivePositionValveData(ValveComponentData):
     rotor_ports: ValvePortLayout = field(default_factory=lambda: [(None, 5, None, None, 4, None, 4, None), (5,)])
 
 
-class FourPortFivePositionValve(GraphComponent[FourPortFivePositionValveData]):
+class FourPortFivePositionValve(RotaryValveGraph[FourPortFivePositionValveData]):
     METADATA: ClassVar[type[FourPortFivePositionValveData]] = FourPortFivePositionValveData
 
 
@@ -51,7 +57,7 @@ class SixPortTwoPositionValveData(ValveComponentData):
     rotor_ports: ValvePortLayout = field(default_factory=lambda: [(7, 7, 8, 8, 9, 9), (None,)])
 
 
-class SixPortTwoPositionValve(GraphComponent[SixPortTwoPositionValveData]):
+class SixPortTwoPositionValve(RotaryValveGraph[SixPortTwoPositionValveData]):
     METADATA: ClassVar[type[SixPortTwoPositionValveData]] = SixPortTwoPositionValveData
 
 
@@ -63,7 +69,7 @@ class TwoPortDistributionValveData(ValveComponentData):
     rotor_ports: ValvePortLayout = field(default_factory=lambda: [(3, None), (3,)])
 
 
-class TwoPortDistributionValve(GraphComponent[TwoPortDistributionValveData]):
+class TwoPortDistributionValve(RotaryValveGraph[TwoPortDistributionValveData]):
     METADATA: ClassVar[type[TwoPortDistributionValveData]] = TwoPortDistributionValveData
 
 
@@ -73,7 +79,7 @@ class FourPortDistributionValveData(ValveComponentData):
     rotor_ports: ValvePortLayout = field(default_factory=lambda: [(5, None, None, None), (5,)])
 
 
-class FourPortDistributionValve(GraphComponent[FourPortDistributionValveData]):
+class FourPortDistributionValve(RotaryValveGraph[FourPortDistributionValveData]):
     METADATA: ClassVar[type[FourPortDistributionValveData]] = FourPortDistributionValveData
 
 
@@ -83,7 +89,7 @@ class SixPortDistributionValveData(ValveComponentData):
     rotor_ports: ValvePortLayout = field(default_factory=lambda: [(7, None, None, None, None, None), (7,)])
 
 
-class SixPortDistributionValve(GraphComponent[SixPortDistributionValveData]):
+class SixPortDistributionValve(RotaryValveGraph[SixPortDistributionValveData]):
     METADATA: ClassVar[type[SixPortDistributionValveData]] = SixPortDistributionValveData
 
 
@@ -93,8 +99,8 @@ class TwelvePortDistributionValveData(ValveComponentData):
     rotor_ports: ValvePortLayout = field(default_factory=lambda: [(13, None, None, None, None, None, None, None, None, None, None, None), (13,)])
 
 
-class TwelvePortDistributionValve(GraphComponent[ValveComponentData]):
-    METADATA: ClassVar[type[ValveComponentData]] = ValveComponentData
+class TwelvePortDistributionValve(RotaryValveGraph[TwelvePortDistributionValveData]):
+    METADATA: ClassVar[type[TwelvePortDistributionValveData]] = TwelvePortDistributionValveData
 
 
 @dataclass
@@ -103,5 +109,5 @@ class SixteenPortDistributionValveData(ValveComponentData):
     rotor_ports: ValvePortLayout = field(default_factory=lambda: [(17, None, None, None, None, None, None, None, None, None, None, None, None, None, None, None), (17,)])
 
 
-class SixteenPortDistributionValve(GraphComponent[ValveComponentData]):
-    METADATA: ClassVar[type[ValveComponentData]] = ValveComponentData
+class SixteenPortDistributionValve(RotaryValveGraph[SixteenPortDistributionValveData]):
+    METADATA: ClassVar[type[SixteenPortDistributionValveData]] = SixteenPortDistributionValveData

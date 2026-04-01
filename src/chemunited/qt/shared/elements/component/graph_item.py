@@ -94,9 +94,11 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
         class MyComponent(GraphComponent[MyData]):
             METADATA: ClassVar[type[MyData]] = MyData
             BASEMODE: ClassVar[type[MyMode]] = MyMode
+            SVG_SCALE: ClassVar[float] = 2.0
     """
     METADATA: ClassVar[type[ComponentData]] = ComponentData
     BASEMODE: ClassVar[type[ComponentMode]] = ComponentMode  # used by the property widget
+    SVG_SCALE: ClassVar[float] = 2.0
 
     def __init__(self, data: DataT) -> None:
         super().__init__()
@@ -136,7 +138,11 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
         # SVG figure, or fallback rect when no SVG asset is available.
         svg_path = f":/components_icons/components/{self._data.figure}{"DARK" if isDarkTheme() else "LIGHT"}.svg"
         if QFile.exists(svg_path):
-            self._svg = SvgLayer(svg_path, angle=self._data.angle)
+            self._svg = SvgLayer(
+                svg_path, 
+                angle=self._data.angle, 
+                scale=PATTERN_DIMENSION * self.SVG_SCALE
+            )
         else:
             self._svg = QGraphicsRectItem(
                 -PATTERN_DIMENSION / 2,
