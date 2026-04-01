@@ -14,7 +14,6 @@ NOT responsible for:
   - Theme management (delegated to each child item's paint method).
   - Creating or destroying connections between components.
 """
-
 from __future__ import annotations
 
 from PyQt5.QtGui import QColor
@@ -24,10 +23,10 @@ from PyQt5.QtWidgets import (
     QGraphicsItemGroup,
     QGraphicsRectItem,
 )
+from PyQt5.QtCore import QFile
 
 from chemunited.core.common.enums import ConnectionType as CoreConnectionType
 from chemunited.core.components import ComponentData
-from chemunited.qt.shared.elements.access import get_svg_path
 from chemunited.qt.shared.elements.component.component_parts import (
     ConnectionPoint,
     ConnectivityBadge,
@@ -40,10 +39,10 @@ from chemunited.qt.shared.elements.component.component_parts import (
     TextElement,
     WarningDisplay,
 )
-from chemunited.qt.shared.elements.component.component_parts.scene_item import (
-    PATTERN_DIMENSION,
-)
+from chemunited.core.common.constant import PATTERN_DIMENSION
 from chemunited.qt.shared.enums import SetupStepMode
+from qfluentwidgets import isDarkTheme
+from chemunited.qt import resources_rc
 
 # Maps chemunited_core ConnectionType values to their visual point classes.
 # HYDRAULIC is the core counterpart of what the UI layer calls FLOW.
@@ -120,8 +119,8 @@ class GraphComponent(QGraphicsItemGroup):
         a custom layout — call super().build() or fully replace it.
         """
         # SVG figure, or fallback rect when no SVG asset is available.
-        svg_path = get_svg_path(self._data.figure)
-        if svg_path:
+        svg_path = f":/components_icons/components/{self._data.figure}{"DARK" if isDarkTheme() else "LIGHT"}.svg"
+        if QFile.exists(svg_path):
             self._svg = SvgLayer(svg_path, angle=self._data.angle)
         else:
             self._svg = QGraphicsRectItem(
@@ -134,28 +133,22 @@ class GraphComponent(QGraphicsItemGroup):
 
         # Connection points — one per port.
         for port_num, port in self._data.ports_by_number.items():
-            pos = (
-                port.relative_position[0] * PATTERN_DIMENSION / 2,
-                port.relative_position[1] * PATTERN_DIMENSION / 2,
-            )
             cls = _POINT_FACTORY.get(port.category, FlowConnectionPoint)
             if cls is FlowConnectionPoint:
                 point: ConnectionPoint = cls(
-                    position=pos,
+                    position=port.relative_position,
                     radius=_FLOW_RADIUS,
                     id_connection=str(port_num),
                 )
             else:
-                point = cls(position=pos, id_connection=str(port_num))
+                point = cls(position=port.relative_position, id_connection=str(port_num))
             self._points[port_num] = point
             self.addToGroup(point)
 
         # Port labels — positioned outward from the connection point.
         for port_num, port in self._data.ports_by_number.items():
-            label_x = port.relative_position[0] * PATTERN_DIMENSION / 2 * 1.5
-            label_y = port.relative_position[1] * PATTERN_DIMENSION / 2 * 1.5
             label = TextElement(str(port_num))
-            label.setPos(label_x, label_y)
+            label.setPos(*port.relative_position)
             self._port_labels[port_num] = label
             self.addToGroup(label)
 

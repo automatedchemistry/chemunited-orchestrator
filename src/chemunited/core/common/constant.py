@@ -1,3 +1,4 @@
 ATMOSPHERE_PRESSURE_PA = 101325
 AMBIENT_TEMPERATURE_K = 298.15
 R_MAX_HYDRAULIC = 1e15  # Pa·s/m³
+PATTERN_DIMENSION = 50  # size of the component pattern in the scene

@@ -3,7 +3,7 @@ from __future__ import annotations
 from PyQt5.QtSvg import QGraphicsSvgItem, QSvgRenderer
 from PyQt5.QtWidgets import QGraphicsItem
 
-from .scene_item import PATTERN_DIMENSION
+from chemunited.core.common.constant import PATTERN_DIMENSION
 
 
 class SvgLayer(QGraphicsSvgItem):
