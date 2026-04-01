@@ -1,8 +1,9 @@
 from typing import ClassVar
-from chemunited.core.components import VesselComponentData, VesselMode
-from chemunited.qt.shared.elements.component.graph_item import GraphComponent
+
+from chemunited.core.components import PlugFlowComponentData, PlugFlowMode
+from chemunited.qt.draw.elements.component.graph_item import GraphComponent
 
 
-class Photoreactor(GraphComponent[VesselComponentData]):
-    METADATA: ClassVar[type[VesselComponentData]] = VesselComponentData
-    BASEMODE: ClassVar[type[VesselMode]] = VesselMode
+class Photoreactor(GraphComponent[PlugFlowComponentData]):
+    METADATA: ClassVar[type[PlugFlowComponentData]] = PlugFlowComponentData
+    BASEMODE: ClassVar[type[PlugFlowMode]] = PlugFlowMode

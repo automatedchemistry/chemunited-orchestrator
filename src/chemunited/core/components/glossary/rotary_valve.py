@@ -20,8 +20,8 @@ from typing import TypeAlias, override
 import numpy as np
 from pydantic import Field
 
-from chemunited.core.common.enums import GroupParameterCategory
 from chemunited.core.common.constant import PATTERN_DIMENSION
+from chemunited.core.common.enums import GroupParameterCategory
 
 from ..component import ComponentData, ComponentMode
 from ..enums import ComponentType, InternalEdgeRole

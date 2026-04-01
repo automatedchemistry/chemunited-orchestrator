@@ -6,9 +6,10 @@ from PyQt5.QtWidgets import QHBoxLayout, QStackedWidget, QVBoxLayout, QWidget
 from qfluentwidgets import StrongBodyLabel
 
 from chemunited.qt.shared.enums import WindowCategory
-from chemunited.qt.shared.workflows.controller import WorkflowController
-from chemunited.qt.shared.workflows.process_workflow import ProcessWorkflow
-from chemunited.qt.shared.workflows.workflow_frames import WorkflowGraph
+
+from .controller import WorkflowController
+from .process_workflow import ProcessWorkflow
+from .workflow_frames import WorkflowGraph
 
 if TYPE_CHECKING:
     pass

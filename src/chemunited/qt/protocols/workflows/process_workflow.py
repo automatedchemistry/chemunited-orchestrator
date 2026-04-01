@@ -7,8 +7,9 @@ from typing import Any, Iterator
 from networkx import DiGraph
 
 from chemunited.qt.shared.enums.protocols_enum import ProtocolBlock
-from chemunited.qt.shared.workflows.exceptions import WorkflowRuleViolation
-from chemunited.qt.shared.workflows.workflow_rules import default_terminal_block_specs
+
+from .exceptions import WorkflowRuleViolation
+from .workflow_rules import default_terminal_block_specs
 
 
 @dataclass(slots=True)

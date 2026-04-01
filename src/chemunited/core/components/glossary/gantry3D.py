@@ -1,13 +1,15 @@
+from dataclasses import dataclass
+from typing import override
+
+from pydantic import Field, field_validator
+
+from chemunited.core.common.constant import PATTERN_DIMENSION
+from chemunited.core.common.enums import ConnectionType, GroupParameterCategory
 from chemunited.core.components.component import (
     ComponentData,
     ComponentMode,
 )
-from chemunited.core.common.enums import GroupParameterCategory, ConnectionType
-from chemunited.core.common.constant import PATTERN_DIMENSION
 from chemunited.core.components.internals import Port
-from dataclasses import dataclass
-from typing import override
-from pydantic import Field, field_validator
 
 
 class gantry3DMode(ComponentMode):
@@ -79,11 +81,17 @@ class gantry3DData(ComponentData):
     @override
     def internal_structure(self):
         self.port_pairs = [(1, i + 2) for i in range(self.connections_number)]
-        self.ports_by_number = {1: Port(number=1, component=self.name, relative_position=(-PATTERN_DIMENSION / 2, 0))}
+        self.ports_by_number = {
+            1: Port(
+                number=1,
+                component=self.name,
+                relative_position=(-PATTERN_DIMENSION / 2, 0),
+            )
+        }
         for i in range(self.connections_number):
             self.ports_by_number[i + 2] = Port(
-                number=i + 2, 
-                component=self.name, 
+                number=i + 2,
+                component=self.name,
                 category=ConnectionType.MOVEMENT,
-                relative_position=(PATTERN_DIMENSION / 2, 0)
+                relative_position=(PATTERN_DIMENSION / 2, 0),
             )

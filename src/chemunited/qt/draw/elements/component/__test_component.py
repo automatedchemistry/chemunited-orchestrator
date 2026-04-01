@@ -1,60 +1,115 @@
-from chemunited.qt.shared.elements.component.glossary import (
-    # analytics
-    HPLCControl, IRControl, MSControl, NMRControl,
-    # assembly
-    Gantry3D, LengthControl,
+from chemunited.qt.draw.elements.component.glossary import (
     # pipes
-    BackPressureRegulator, Distributor, MFCComponent, Sink, Source,
-    # pumps
-    HPLCPump, SyringePump,
-    # sensors
-    FlowMeter, PhidgetBubbleSensorComponent, PhotoSensor, PressureControl, PressureSensor,
-    # technical — multichannel
-    MultiChannelADC, MultiChannelDAC, MultiChannelRelay,
-    # technical — powers
-    PowerControl, PowerSwitch, PhidgetBubbleSensorPowerComponent,
-    # thermal
-    PeltierCoolerTemperatureControl, TemperatureControl,
-    # valve — rotary
-    FourPortDistributionValve, FourPortFivePositionValve,
-    SixPortDistributionValve, SixPortTwoPositionValve,
-    SixteenPortDistributionValve, ThreePortFourPositionValve,
-    ThreePortTwoPositionValve, TwelvePortDistributionValve, TwoPortDistributionValve,
-    # valve — solenoid
-    SolenoidValve, SolenoidValve2Way,
+    BackPressureRegulator,
     # vessels
-    BathReactor, CustomFlask, FlowReactor, GlassBottle, Loop,
-    Photoreactor, Pool, PressureGlassBottle, Reactor, Vial,
+    BathReactor,
+    CustomFlask,
+    Distributor,
+    # sensors
+    FlowMeter,
+    FlowReactor,
+    # valve — rotary
+    FourPortDistributionValve,
+    FourPortFivePositionValve,
+    # assembly
+    Gantry3D,
+    GlassBottle,
+    # analytics
+    HPLCControl,
+    # pumps
+    HPLCPump,
+    IRControl,
+    LengthControl,
+    Loop,
+    MFCComponent,
+    MSControl,
+    # technical — multichannel
+    MultiChannelADC,
+    MultiChannelDAC,
+    MultiChannelRelay,
+    NMRControl,
+    # thermal
+    PeltierCoolerTemperatureControl,
+    PhidgetBubbleSensorComponent,
+    PhidgetBubbleSensorPowerComponent,
+    Photoreactor,
+    PhotoSensor,
+    Pool,
+    # technical — powers
+    PowerControl,
+    PowerSwitch,
+    PressureControl,
+    PressureGlassBottle,
+    PressureSensor,
+    Reactor,
+    Sink,
+    SixPortDistributionValve,
+    SixPortTwoPositionValve,
+    SixteenPortDistributionValve,
+    # valve — solenoid
+    SolenoidValve,
+    SolenoidValve2Way,
+    Source,
+    SyringePump,
+    TemperatureControl,
+    ThreePortFourPositionValve,
+    ThreePortTwoPositionValve,
+    TwelvePortDistributionValve,
+    TwoPortDistributionValve,
+    Vial,
 )
-from chemunited.qt.shared.elements.component.graph_item import GraphComponent
+from chemunited.qt.draw.elements.component.graph_item import GraphComponent
 
 # Category grouping for scene layout (row = category, col = component).
 # Each entry is the GraphComponent subclass; figure/data come from cls.METADATA.
 LAYOUT: dict[str, list[type[GraphComponent]]] = {
-    "analytics":   [HPLCControl, IRControl, MSControl, NMRControl],
-    "assembly":    [Gantry3D, LengthControl],
-    "pipes":       [BackPressureRegulator, Distributor, MFCComponent, Sink, Source],
-    "pumps":       [HPLCPump, SyringePump],
-    "sensors":     [FlowMeter, PhidgetBubbleSensorComponent, PhotoSensor, PressureControl, PressureSensor],
-    "multichannel":[MultiChannelADC, MultiChannelDAC, MultiChannelRelay],
-    "powers":      [PowerControl, PowerSwitch, PhidgetBubbleSensorPowerComponent],
-    "thermal":     [PeltierCoolerTemperatureControl, TemperatureControl],
-    "valve_rotary":[
-        FourPortDistributionValve, FourPortFivePositionValve,
-        SixPortDistributionValve, SixPortTwoPositionValve,
-        SixteenPortDistributionValve, ThreePortFourPositionValve,
-        ThreePortTwoPositionValve, TwelvePortDistributionValve, TwoPortDistributionValve,
+    "analytics": [HPLCControl, IRControl, MSControl, NMRControl],
+    "assembly": [Gantry3D, LengthControl],
+    "pipes": [BackPressureRegulator, Distributor, MFCComponent, Sink, Source],
+    "pumps": [HPLCPump, SyringePump],
+    "sensors": [
+        FlowMeter,
+        PhidgetBubbleSensorComponent,
+        PhotoSensor,
+        PressureControl,
+        PressureSensor,
+    ],
+    "multichannel": [MultiChannelADC, MultiChannelDAC, MultiChannelRelay],
+    "powers": [PowerControl, PowerSwitch, PhidgetBubbleSensorPowerComponent],
+    "thermal": [PeltierCoolerTemperatureControl, TemperatureControl],
+    "valve_rotary": [
+        FourPortDistributionValve,
+        FourPortFivePositionValve,
+        SixPortDistributionValve,
+        SixPortTwoPositionValve,
+        SixteenPortDistributionValve,
+        ThreePortFourPositionValve,
+        ThreePortTwoPositionValve,
+        TwelvePortDistributionValve,
+        TwoPortDistributionValve,
     ],
     "valve_solenoid": [SolenoidValve, SolenoidValve2Way],
-    "vessels":     [BathReactor, CustomFlask, FlowReactor, GlassBottle, Loop,
-                    Photoreactor, Pool, PressureGlassBottle, Reactor, Vial],
+    "vessels": [
+        BathReactor,
+        CustomFlask,
+        FlowReactor,
+        GlassBottle,
+        Loop,
+        Photoreactor,
+        Pool,
+        PressureGlassBottle,
+        Reactor,
+        Vial,
+    ],
 }
 
 if __name__ == "__main__":
-    from chemunited.qt.shared.graph import GraphCore, SceneCore
-    from PyQt5.QtWidgets import QApplication
     import sys
-    
+
+    from PyQt5.QtWidgets import QApplication
+
+    from chemunited.qt.shared.graph import GraphCore, SceneCore
+
     SPACING_X = 200
     SPACING_Y = 180
 

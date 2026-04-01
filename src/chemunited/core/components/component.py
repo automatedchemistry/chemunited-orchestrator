@@ -131,8 +131,16 @@ class ComponentData(Element):
     def internal_structure(self):
         self.port_pairs = [(1, 2)]
         self.ports_by_number = {
-            1: Port(number=1, component=self.name, relative_position=(-PATTERN_DIMENSION / 2, 0)),
-            2: Port(number=2, component=self.name, relative_position=(PATTERN_DIMENSION / 2, 0)),
+            1: Port(
+                number=1,
+                component=self.name,
+                relative_position=(-PATTERN_DIMENSION / 2, 0),
+            ),
+            2: Port(
+                number=2,
+                component=self.name,
+                relative_position=(PATTERN_DIMENSION / 2, 0),
+            ),
         }
         self.internal_edges = {}
         self.internal_inventory = None

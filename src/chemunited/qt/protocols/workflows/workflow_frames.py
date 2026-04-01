@@ -11,14 +11,14 @@ from chemunited.qt.shared.enums import SetupStepMode, WindowCategory
 from chemunited.qt.shared.enums.protocols_enum import ProtocolBlock
 from chemunited.qt.shared.graph import GraphCore, SceneCore
 from chemunited.qt.shared.icon import OrchestratorIcon
-from chemunited.qt.shared.workflows.controller import WorkflowController
-from chemunited.qt.shared.workflows.exceptions import WorkflowRuleViolation
-from chemunited.qt.shared.workflows.process_workflow import BlockData, ConnectionData
-from chemunited.qt.shared.workflows.workflow_rules import resolve_render_start_role
 
+from .controller import WorkflowController
 from .elements.access_point import WorkflowAccessPoints
 from .elements.work_connection import WorkflowConnection
 from .elements.work_node import WorkflowNode
+from .exceptions import WorkflowRuleViolation
+from .process_workflow import BlockData, ConnectionData
+from .workflow_rules import resolve_render_start_role
 
 
 class WorkflowGraph(GraphCore):

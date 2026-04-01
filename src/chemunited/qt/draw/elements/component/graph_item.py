@@ -14,10 +14,12 @@ NOT responsible for:
   - Theme management (delegated to each child item's paint method).
   - Creating or destroying connections between components.
 """
+
 from __future__ import annotations
 
 from typing import ClassVar, Generic, TypeVar
 
+from PyQt5.QtCore import QFile
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import (
     QGraphicsDropShadowEffect,
@@ -25,11 +27,12 @@ from PyQt5.QtWidgets import (
     QGraphicsItemGroup,
     QGraphicsRectItem,
 )
-from PyQt5.QtCore import QFile
+from qfluentwidgets import isDarkTheme
 
+from chemunited.core.common.constant import PATTERN_DIMENSION
 from chemunited.core.common.enums import ConnectionType as CoreConnectionType
 from chemunited.core.components import ComponentData, ComponentMode
-from chemunited.qt.shared.elements.component.component_parts import (
+from chemunited.qt.draw.elements.component.component_parts import (
     ConnectionPoint,
     ConnectivityBadge,
     ElectronicConnectionPoint,
@@ -41,10 +44,7 @@ from chemunited.qt.shared.elements.component.component_parts import (
     TextElement,
     WarningDisplay,
 )
-from chemunited.core.common.constant import PATTERN_DIMENSION
 from chemunited.qt.shared.enums import SetupStepMode
-from qfluentwidgets import isDarkTheme
-from chemunited.qt import resources_rc
 
 # Maps chemunited_core ConnectionType values to their visual point classes.
 # HYDRAULIC is the core counterpart of what the UI layer calls FLOW.
@@ -96,8 +96,11 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
             BASEMODE: ClassVar[type[MyMode]] = MyMode
             SVG_SCALE: ClassVar[float] = 2.0
     """
+
     METADATA: ClassVar[type[ComponentData]] = ComponentData
-    BASEMODE: ClassVar[type[ComponentMode]] = ComponentMode  # used by the property widget
+    BASEMODE: ClassVar[type[ComponentMode]] = (
+        ComponentMode  # used by the property widget
+    )
     SVG_SCALE: ClassVar[float] = 2.0
 
     def __init__(self, data: DataT) -> None:
@@ -136,12 +139,12 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
         a custom layout — call super().build() or fully replace it.
         """
         # SVG figure, or fallback rect when no SVG asset is available.
-        svg_path = f":/components_icons/components/{self._data.figure}{"DARK" if isDarkTheme() else "LIGHT"}.svg"
+        svg_path = f":/components_icons/components/{self._data.figure}{'DARK' if isDarkTheme() else 'LIGHT'}.svg"
         if QFile.exists(svg_path):
             self._svg = SvgLayer(
-                svg_path, 
-                angle=self._data.angle, 
-                scale=PATTERN_DIMENSION * self.SVG_SCALE
+                svg_path,
+                angle=self._data.angle,
+                scale=PATTERN_DIMENSION * self.SVG_SCALE,
             )
         else:
             self._svg = QGraphicsRectItem(
@@ -162,7 +165,9 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
                     id_connection=str(port_num),
                 )
             else:
-                point = cls(position=port.relative_position, id_connection=str(port_num))
+                point = cls(
+                    position=port.relative_position, id_connection=str(port_num)
+                )
             self._points[port_num] = point
             self.addToGroup(point)
 
@@ -325,4 +330,3 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
             for point in self._points.values():
                 point.connectionMove()
         return super().itemChange(change, value)
-

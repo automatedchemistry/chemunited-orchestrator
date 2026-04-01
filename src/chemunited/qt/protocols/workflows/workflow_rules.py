@@ -4,7 +4,8 @@ from dataclasses import dataclass
 from typing import Iterable, TypedDict
 
 from chemunited.qt.shared.enums.protocols_enum import ProtocolBlock
-from chemunited.qt.shared.workflows.exceptions import WorkflowRuleViolation
+
+from .exceptions import WorkflowRuleViolation
 
 
 @dataclass(frozen=True, slots=True)

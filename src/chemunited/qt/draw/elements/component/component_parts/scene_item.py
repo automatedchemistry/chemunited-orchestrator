@@ -1,11 +1,11 @@
-from chemunited.core.common.constant import PATTERN_DIMENSION
+from typing import ClassVar
+
 from PyQt5.QtCore import QPointF, QRectF, Qt, QTimer
 from PyQt5.QtGui import QBrush, QColor, QFont, QPainterPath, QPen
 from PyQt5.QtWidgets import QGraphicsObject
 from qfluentwidgets import isDarkTheme
-from typing import ClassVar
 
-
+from chemunited.core.common.constant import PATTERN_DIMENSION
 
 CONTOUR_DARK = "#3A3A3A"
 SOLID_DARK = "#525252"

@@ -1,6 +1,7 @@
 from typing import ClassVar
+
 from chemunited.core.components import gantry3DData, gantry3DMode
-from chemunited.qt.shared.elements.component.graph_item import GraphComponent
+from chemunited.qt.draw.elements.component.graph_item import GraphComponent
 
 
 class Gantry3D(GraphComponent[gantry3DData]):

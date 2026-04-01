@@ -1,6 +1,7 @@
 from typing import ClassVar
-from chemunited.core.components import NeutralComponentData, ComponentMode
-from chemunited.qt.shared.elements.component.graph_item import GraphComponent
+
+from chemunited.core.components import ComponentMode, NeutralComponentData
+from chemunited.qt.draw.elements.component.graph_item import GraphComponent
 
 
 class PeltierCoolerTemperatureControl(GraphComponent[NeutralComponentData]):

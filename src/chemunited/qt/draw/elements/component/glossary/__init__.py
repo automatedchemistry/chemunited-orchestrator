@@ -9,7 +9,9 @@ from .assembly.gantry3d.gantry3d_graph import Gantry3D
 from .assembly.lengthcontrol.lengthcontrol_graph import LengthControl
 
 # pipes
-from .pipes.backpressureregulator.backpressureregulator_graph import BackPressureRegulator
+from .pipes.backpressureregulator.backpressureregulator_graph import (
+    BackPressureRegulator,
+)
 from .pipes.distributor.distributor_graph import Distributor
 from .pipes.mfccomponent.mfccomponent_graph import MFCComponent
 from .pipes.sink.sink_graph import Sink
@@ -21,17 +23,29 @@ from .pumps.syringepump.syringepump_graph import SyringePump
 
 # sensors
 from .sensors.flowmeter.flowmeter_graph import FlowMeter
-from .sensors.phidgetbubblesensorcomponent.phidgetbubblesensorcomponent_graph import PhidgetBubbleSensorComponent
+from .sensors.phidgetbubblesensorcomponent.phidgetbubblesensorcomponent_graph import (
+    PhidgetBubbleSensorComponent,
+)
 from .sensors.photosensor.photosensor_graph import PhotoSensor
 from .sensors.pressurecontrol.pressurecontrol_graph import PressureControl
 from .sensors.pressuresensor.pressuresensor_graph import PressureSensor
 
 # technical
-from .technical.multichannel.multichannel_graph import MultiChannelADC, MultiChannelDAC, MultiChannelRelay
-from .technical.powers.powers_graph import PowerControl, PowerSwitch, PhidgetBubbleSensorPowerComponent
+from .technical.multichannel.multichannel_graph import (
+    MultiChannelADC,
+    MultiChannelDAC,
+    MultiChannelRelay,
+)
+from .technical.powers.powers_graph import (
+    PhidgetBubbleSensorPowerComponent,
+    PowerControl,
+    PowerSwitch,
+)
 
 # thermal
-from .thermal.peltiercoolertemperaturecontrol.peltiercoolertemperaturecontrol_graph import PeltierCoolerTemperatureControl
+from .thermal.peltiercoolertemperaturecontrol.peltiercoolertemperaturecontrol_graph import (
+    PeltierCoolerTemperatureControl,
+)
 from .thermal.temperaturecontrol.temperaturecontrol_graph import TemperatureControl
 
 # valve — rotary
@@ -61,7 +75,6 @@ from .vessels.pool.pool_graph import Pool
 from .vessels.pressureglasbottle.pressureglasbottle_graph import PressureGlassBottle
 from .vessels.reactor.reactor_graph import Reactor
 from .vessels.vial.vial_graph import Vial
-
 
 __all__ = [
     # analytics

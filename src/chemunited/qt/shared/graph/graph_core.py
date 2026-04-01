@@ -8,9 +8,9 @@ from chemunited.qt.shared.enums import SetupStepMode
 
 from .scene_core import SceneCore
 
-_ZOOM_FACTOR   = 1.15   # scale multiplier per wheel step
-_ZOOM_MIN      = 0.05   # 5 % — maximum zoom out
-_ZOOM_MAX      = 10.0   # 1000 % — maximum zoom in
+_ZOOM_FACTOR = 1.15  # scale multiplier per wheel step
+_ZOOM_MIN = 0.05  # 5 % — maximum zoom out
+_ZOOM_MAX = 10.0  # 1000 % — maximum zoom in
 
 
 class GraphCore(QGraphicsView):
@@ -64,7 +64,6 @@ class GraphCore(QGraphicsView):
             return
 
         self.scale(factor, factor)
-
 
     def contextMenuEvent(self, event):
         # Show custom right-click menus

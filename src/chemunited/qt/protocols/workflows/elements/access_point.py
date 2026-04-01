@@ -5,7 +5,7 @@ from PyQt5.QtGui import QColor, QPainter, QPainterPath
 from PyQt5.QtWidgets import QGraphicsItem, QStyleOptionGraphicsItem, QWidget
 from qfluentwidgets import isDarkTheme
 
-from chemunited.qt.shared.workflows.design import NodeState, get_node_color
+from ..design import NodeState, get_node_color
 
 if TYPE_CHECKING:
     from .work_node import WorkflowNode
