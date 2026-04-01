@@ -11,7 +11,7 @@ Sim: DigitalTwinAdapter reads InventoryNode initial conditions to seed runtime
 """
 
 from dataclasses import dataclass
-from typing import Annotated
+from typing import Annotated, override
 
 from pydantic import Field
 
@@ -26,9 +26,9 @@ from chemunited.core.utils.internal_quantity import (
     ChemUnitQuantity,
 )
 
-from .component import ComponentData, ComponentMode
-from .enums import ComponentType, InternalEdgeRole, PortAccess
-from .internals import InternalEdge, InventoryNode, Port
+from ..component import ComponentData, ComponentMode
+from ..enums import ComponentType, InternalEdgeRole, PortAccess
+from ..internals import InternalEdge, InventoryNode, Port
 
 
 class VesselMode(ComponentMode):
@@ -96,6 +96,7 @@ class VesselComponentData(ComponentData):
     def capacity_value(self) -> float:
         return self.capacity.to_base_units().magnitude
 
+    @override
     def internal_structure(self):
         n = self.top_access + self.bottom_access
         self.port_pairs = [(i + 1,) for i in range(n + 1)]
@@ -142,5 +143,6 @@ class VesselComponentData(ComponentData):
             ),  # init empty
         )
 
+    @override
     def sync_internal_state(self):
         self.internal_inventory.gas_content.volume = self.capacity_value

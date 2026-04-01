@@ -136,8 +136,3 @@ class ComponentData(Element):
         }
         self.internal_edges = {}
         self.internal_inventory = None
-
-
-@dataclass
-class NeutralComponentData(ComponentData):
-    def __post_init__(self): ...

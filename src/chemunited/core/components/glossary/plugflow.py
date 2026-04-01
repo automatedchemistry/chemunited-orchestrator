@@ -11,7 +11,7 @@ Sim: InternalEdge.length and diameter are the primary inputs to the
 """
 
 from dataclasses import dataclass
-from typing import Annotated
+from typing import Annotated, override
 
 import numpy as np
 from pydantic import Field
@@ -22,8 +22,8 @@ from chemunited.core.utils.internal_quantity import (
     ChemUnitQuantity,
 )
 
-from .component import ComponentData, ComponentMode
-from .internals import InternalEdge, Port
+from ..component import ComponentData, ComponentMode
+from ..internals import InternalEdge, Port
 
 
 class PlugFlowMode(ComponentMode):
@@ -74,6 +74,7 @@ class PlugFlowComponentData(ComponentData):
     def diameter_value(self) -> float:
         return self.diameter.to_base_units().magnitude
 
+    @override
     def internal_structure(self):
         self.port_pairs = [(1, 2)]
         self.ports_by_number = {
@@ -89,6 +90,7 @@ class PlugFlowComponentData(ComponentData):
             )
         }
 
+    @override
     def sync_internal_state(self):
         edge = self.internal_edges.get((1, 2))
         edge.length = self.length_value

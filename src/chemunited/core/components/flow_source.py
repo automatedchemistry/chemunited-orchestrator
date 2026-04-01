@@ -11,7 +11,7 @@ Sim: port.boundary.value (m³/s) is read directly by the hydraulic solver
 """
 
 from dataclasses import dataclass
-from typing import Annotated
+from typing import Annotated, override
 
 from pydantic import Field
 
@@ -56,6 +56,7 @@ class FlowSourceData(ComponentData):
     def flow_rate_si(self) -> float:
         return self.flow_rate.to_base_units().magnitude  # m³/s
 
+    @override
     def internal_structure(self):
         self.port_pairs = [(1,)]
         self.ports_by_number = {
@@ -68,5 +69,6 @@ class FlowSourceData(ComponentData):
             )
         }
 
+    @override
     def sync_internal_state(self):
         self.ports_by_number[1].boundary.value = self.flow_rate_si

@@ -15,16 +15,16 @@ Sim: sync_internal_state() re-derives active connections from the current
 
 from copy import copy
 from dataclasses import dataclass, field
-from typing import TypeAlias
+from typing import TypeAlias, override
 
 import numpy as np
 from pydantic import Field
 
 from chemunited.core.common.enums import GroupParameterCategory
 
-from .component import ComponentData, ComponentMode
-from .enums import ComponentType, InternalEdgeRole
-from .internals import InternalEdge, Port
+from ..component import ComponentData, ComponentMode
+from ..enums import ComponentType, InternalEdgeRole
+from ..internals import InternalEdge, Port
 
 ValvePortRow: TypeAlias = tuple[int | None, ...]
 ValvePortLayout: TypeAlias = list[ValvePortRow]
@@ -155,12 +155,14 @@ class ValveComponentData(ComponentData):
     )
     internal_radius = 1
 
+    @override
     def internal_structure(self):
+        valve_port_pairs: list[tuple[int, ...]]
         connections = possibles_connections_pairs(
             stator_ports=self.stator_ports,
             rotor_ports=self.rotor_ports,
         )
-        valve_port_pairs: list[tuple[int, ...]] = [pair for pair in connections]
+        valve_port_pairs = [pair for pair in connections]
         self.port_pairs = valve_port_pairs
         self.ports_by_number = {
             number: Port(number=number, component=self.name)
@@ -193,6 +195,7 @@ class ValveComponentData(ComponentData):
                     self.internal_radius * np.sin(phi),
                 )
 
+    @override
     def sync_internal_state(self):
         for edge in self.internal_edges.values():
             edge.close()

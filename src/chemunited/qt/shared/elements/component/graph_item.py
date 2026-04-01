@@ -16,6 +16,8 @@ NOT responsible for:
 """
 from __future__ import annotations
 
+from typing import ClassVar, Generic, TypeVar
+
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import (
     QGraphicsDropShadowEffect,
@@ -26,7 +28,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import QFile
 
 from chemunited.core.common.enums import ConnectionType as CoreConnectionType
-from chemunited.core.components import ComponentData
+from chemunited.core.components import ComponentData, ComponentMode
 from chemunited.qt.shared.elements.component.component_parts import (
     ConnectionPoint,
     ConnectivityBadge,
@@ -58,6 +60,9 @@ _POINT_FACTORY: dict[CoreConnectionType, type[ConnectionPoint]] = {
 _FLOW_RADIUS: int = PATTERN_DIMENSION // 10
 
 
+DataT = TypeVar("DataT", bound=ComponentData)
+
+
 def _make_shadow(blur: int = 12, color: str = "#1E88E5") -> QGraphicsDropShadowEffect:
     """Return a pre-configured drop-shadow effect."""
     fx = QGraphicsDropShadowEffect()
@@ -67,7 +72,7 @@ def _make_shadow(blur: int = 12, color: str = "#1E88E5") -> QGraphicsDropShadowE
     return fx
 
 
-class GraphComponent(QGraphicsItemGroup):
+class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
     """Visual representation of a ComponentData in the platform scene.
 
     Each instance is a QGraphicsItemGroup whose bounding rect is contributed
@@ -83,12 +88,20 @@ class GraphComponent(QGraphicsItemGroup):
         # later …
         component.sync(updated_data)
         component.set_frame_mode(SetupStepMode.CONNECTIVITY)
-    """
 
-    def __init__(self, data: ComponentData) -> None:
+    Subclasses narrow the data type by declaring::
+
+        class MyComponent(GraphComponent[MyData]):
+            METADATA: ClassVar[type[MyData]] = MyData
+            BASEMODE: ClassVar[type[MyMode]] = MyMode
+    """
+    METADATA: ClassVar[type[ComponentData]] = ComponentData
+    BASEMODE: ClassVar[type[ComponentMode]] = ComponentMode  # used by the property widget
+
+    def __init__(self, data: DataT) -> None:
         super().__init__()
 
-        self._data: ComponentData = data
+        self._data: DataT = data
         self._mode: SetupStepMode = SetupStepMode.DESIGN
         self._deletable: bool = True
         self._warning_active: bool = False
@@ -109,6 +122,8 @@ class GraphComponent(QGraphicsItemGroup):
 
         self.build()
         self.post_layout()
+        self.setPos(*data.position)
+        self.set_frame_mode(SetupStepMode.DESIGN)  # initialise badge/warning visibility
 
     # ── construction ───────────────────────────────────────────────
 
@@ -201,18 +216,18 @@ class GraphComponent(QGraphicsItemGroup):
 
     # ── public API ─────────────────────────────────────────────────
 
-    def sync(self, data: ComponentData) -> None:
+    def sync(self, **kwargs) -> None:
         """Reconcile visuals when ComponentData is updated externally.
 
         Only position and angle are expected to change after construction.
         Rebuilding the full item tree on every sync would be wasteful.
         """
-        self._data = data
-        self.setPos(data.position[0], data.position[1])
+        self._data.update(**kwargs)
+        self.setPos(self._data.position[0], self._data.position[1])
         if isinstance(self._svg, SvgLayer):
-            self._svg.update_angle(data.angle)
+            self._svg.update_angle(self._data.angle)
         else:
-            self._svg.setRotation(data.angle)
+            self._svg.setRotation(self._data.angle)
         # Rotation changes the bounding rect, so re-position plain children.
         self.post_layout()
 
@@ -305,29 +320,3 @@ class GraphComponent(QGraphicsItemGroup):
                 point.connectionMove()
         return super().itemChange(change, value)
 
-
-if __name__ == "__main__":
-    import sys
-
-    from PyQt5.QtGui import QPainter
-    from PyQt5.QtWidgets import QApplication, QGraphicsScene, QGraphicsView
-
-    from chemunited.core.components import ComponentData
-
-    app = QApplication(sys.argv)
-    scene = QGraphicsScene()
-
-    data = ComponentData(
-        name="TestPump",
-        figure="SyringePump",
-        position=(0.0, 0.0),
-        angle=0,
-    )
-
-    component = GraphComponent(data)
-    scene.addItem(component)
-
-    view = QGraphicsView(scene)
-    view.setRenderHint(QPainter.Antialiasing)
-    view.show()
-    sys.exit(app.exec_())

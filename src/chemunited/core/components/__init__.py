@@ -1,11 +1,13 @@
-from .component import ComponentData, ComponentMode, NeutralComponentData
+from .component import ComponentData, ComponentMode
 from .flow_source import FlowSourceData, FlowSourceMode
-from .junction import JunctionData, JunctionMode
-from .plugflow import PlugFlowComponentData, PlugFlowMode
-from .pressure_control import PressureControlData, PressureControlMode
-from .pressure_regulator import BackPressureRegulatorData, BackPressureRegulatorMode
-from .valve import ValveComponentData, ValveMode
-from .vessel import VesselComponentData, VesselMode
+from .glossary.junction import JunctionData, JunctionMode
+from .glossary.plugflow import PlugFlowComponentData, PlugFlowMode
+from .glossary.pressure_control import PressureControlData, PressureControlMode
+from .glossary.pressure_regulator import BackPressureRegulatorData, BackPressureRegulatorMode
+from .glossary.rotary_valve import ValveComponentData, ValveMode
+from .glossary.vessel import VesselComponentData, VesselMode
+from .glossary.neutral import NeutralComponentData
+from .glossary.gantry3D import gantry3DData, gantry3DMode
 
 __all__ = [
     "ComponentData",
@@ -25,4 +27,6 @@ __all__ = [
     "ValveMode",
     "VesselComponentData",
     "VesselMode",
+    "gantry3DMode",
+    "gantry3DData",
 ]

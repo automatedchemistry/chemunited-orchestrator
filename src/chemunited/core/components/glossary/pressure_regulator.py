@@ -13,7 +13,7 @@ Sim: setpoint_pa is read by the adapter each time step to evaluate the
 """
 
 from dataclasses import dataclass
-from typing import Annotated
+from typing import Annotated, override
 
 from pydantic import Field
 
@@ -23,8 +23,8 @@ from chemunited.core.utils.internal_quantity import (
     ChemUnitQuantity,
 )
 
-from .component import ComponentData, ComponentMode
-from .internals import InternalEdge, Port
+from ..component import ComponentData, ComponentMode
+from ..internals import InternalEdge, Port
 
 
 class BackPressureRegulatorMode(ComponentMode):
@@ -54,6 +54,7 @@ class BackPressureRegulatorData(ComponentData):
         """Setpoint in Pascals for the hydraulic solver."""
         return self.setpoint.to_base_units().magnitude
 
+    @override
     def internal_structure(self):
         self.port_pairs = [(1, 2)]
         self.ports_by_number = {

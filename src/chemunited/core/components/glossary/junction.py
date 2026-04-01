@@ -15,15 +15,16 @@ Sim: all JUNCTION edges are always active — no switching logic required.
 """
 
 from dataclasses import dataclass
+from typing import override
 
 import numpy as np
 from pydantic import Field
 
 from chemunited.core.common.enums import GroupParameterCategory
 
-from .component import ComponentData, ComponentMode
-from .enums import InternalEdgeRole
-from .internals import InternalEdge, Port
+from ..component import ComponentData, ComponentMode
+from ..enums import InternalEdgeRole
+from ..internals import InternalEdge, Port
 
 
 class JunctionMode(ComponentMode):
@@ -51,6 +52,7 @@ class JunctionData(ComponentData):
     number_ports: int = 3
     internal_radius: float = 1
 
+    @override
     def internal_structure(self):
         self.port_pairs = [(i + 1, 0) for i in range(self.number_ports)]
         self.ports_by_number = {0: Port(number=0, component=self.name)}

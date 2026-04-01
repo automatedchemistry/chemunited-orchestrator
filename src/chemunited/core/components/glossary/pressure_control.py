@@ -10,7 +10,7 @@ Sim: port.boundary.value (Pa) is read by the hydraulic solver as a Dirichlet
 """
 
 from dataclasses import dataclass
-from typing import Annotated
+from typing import Annotated, override
 
 from pydantic import Field
 
@@ -20,9 +20,9 @@ from chemunited.core.utils.internal_quantity import (
     ChemUnitQuantity,
 )
 
-from .component import ComponentData, ComponentMode
-from .enums import BoundaryConditionKind
-from .internals import Port, PortBoundaryCondition
+from ..component import ComponentData, ComponentMode
+from ..enums import BoundaryConditionKind
+from ..internals import Port, PortBoundaryCondition
 
 
 class PressureControlMode(ComponentMode):
@@ -55,6 +55,7 @@ class PressureControlData(ComponentData):
     def setpoint_pa(self) -> float:
         return self.setpoint.to_base_units().magnitude
 
+    @override
     def internal_structure(self):
         self.port_pairs = [(1,)]
         self.ports_by_number = {
@@ -69,6 +70,7 @@ class PressureControlData(ComponentData):
         self.internal_edges = {}
         self.internal_inventory = None
 
+    @override
     def sync_internal_state(self):
         port = self.ports_by_number.get(1)
         port.boundary.kind = BoundaryConditionKind.PRESSURE
