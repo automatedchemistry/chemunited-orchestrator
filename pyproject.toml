@@ -25,6 +25,7 @@ dependencies = [
     "numpy",
     "pint",
     "pydantic_pint",
+    "loguru",
 ]
 
 [project.optional-dependencies]

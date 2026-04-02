@@ -1,12 +1,13 @@
 from chemunited.core.components import ComponentData, NeutralComponentData
-
 from . import glossary
 from .graph_item import GraphComponent
+from typing import Union
+from loguru import logger
 
 class UtensilManager:
-    def __init__(self, data: ComponentData | None = None):
+    def __init__(self):
         """Figure"""
-        self.graph = GraphComponent(data or NeutralComponentData())
+        self.graph: GraphComponent = GraphComponent()
 
     @property
     def name(self) -> str:
@@ -19,8 +20,8 @@ class UtensilManager:
 
 
 class ElectronicManager(UtensilManager):
-    def __init__(self, data: ComponentData | None = None):
-        super().__init__(data)
+    def __init__(self):
+        super().__init__()
 
 
 def list_components() -> tuple[dict[str, list[str]], dict[str, type[GraphComponent]]]:
@@ -54,3 +55,22 @@ def list_components() -> tuple[dict[str, list[str]], dict[str, type[GraphCompone
     }
 
     return ordered_categories, components
+
+
+def create_component(figure: str, **kwargs) -> Union[UtensilManager, ElectronicManager]:
+    
+    component: Union[UtensilManager, ElectronicManager]
+    _, components = list_components()
+    if figure not in components:
+        logger.error(f"Component {figure} not found, assuming generic component")
+        component = ElectronicManager()
+        component.graph = GraphComponent(ComponentData(name=figure, **kwargs))
+        return component
+    mdata = components[figure].METADATA(figure=figure, **kwargs)
+    if mdata.is_electronic:
+        component = ElectronicManager()
+    else:
+        component = UtensilManager()
+    component.graph = components[figure](mdata)
+    return component
+    

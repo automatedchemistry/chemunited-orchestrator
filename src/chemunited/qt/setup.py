@@ -1,13 +1,13 @@
-from typing import override
-
 from qfluentwidgets import FluentIcon, NavigationItemPosition
-
+from .orchestrator import Orchestrator
+from .draw.graph import DrawGraphicView
 from .shared.enums import WindowCategory
-from .shared.graph import GraphCore, SceneCore
+from .shared.graph import SceneCore
 from .shared.icon import OrchestratorIcon
 from .shared.widgets.frame_base import FrameBase
 from .shared.widgets.main_window import MainWindowBase
 from .shared.widgets.segment_widget import SegmentWindow
+from typing import override
 
 
 class MainWindow(MainWindowBase):
@@ -21,8 +21,11 @@ class MainWindow(MainWindowBase):
         self.SegmentWindow = SegmentWindow(self)
 
         # Draw frame
-        self.drawGraph = GraphCore(self.scene_attribute, self)
+        self.drawGraph = DrawGraphicView(self.scene_attribute, self)
         self.drawFrame = FrameBase(parent=self)
+        
+        # Main Orchestrator Object
+        self.orchestrator = Orchestrator(self)
 
     @override
     def initNavigation(self):

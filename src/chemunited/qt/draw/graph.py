@@ -1,24 +1,6 @@
-from PyQt5.QtCore import QMimeData, QObject
-
 from chemunited.qt.shared.enums import SetupStepMode
 from chemunited.qt.shared.graph import GraphCore
-
-
-class TreeAddItem(QObject):
-    MIME = "application/x-tree-add-item"
-
-    def __init__(self, group: str, component: str, parent: QObject | None = None):
-        super().__init__(parent)
-        self.group = group
-        self.component = component
-
-    def mimeData(self) -> QMimeData:
-        data = QMimeData()
-        data.setData(self.MIME, f"{self.group}|{self.component}".encode("utf-8"))
-        return data
-
-    def mimeType(self) -> str:
-        return self.MIME
+from .tree_add import TreeAddItem
 
 
 class DrawGraphicView(GraphCore):
