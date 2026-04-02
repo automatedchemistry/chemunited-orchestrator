@@ -210,3 +210,6 @@ __marimo__/
 .pre-commit-home-run/
 
 .vscode/
+.claude/
+CLAUDE.md
+tests/screenshots/

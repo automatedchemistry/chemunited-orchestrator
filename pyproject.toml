@@ -34,7 +34,13 @@ dev = [
     "mypy>=1.19.1",
     "pre-commit>=4.0.0",
     "ruff>=0.15.7",
+    "pytest>=8.0",
+    "pytest-qt>=4.4",
 ]
+
+[tool.pytest.ini_options]
+qt_api = "pyqt5"
+testpaths = ["tests"]
 
 [tool.setuptools]
 package-dir = {"" = "src"}
