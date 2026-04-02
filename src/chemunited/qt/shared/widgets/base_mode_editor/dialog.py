@@ -1,12 +1,14 @@
 from collections.abc import Mapping
 
 from pydantic import BaseModel
-from qfluentwidgets import Dialog
+from PyQt5.QtWidgets import QVBoxLayout
+from qfluentwidgets import BodyLabel
+from qframelesswindow import FramelessDialog
 
 from .editor_widget import BaseModeEditorWidget
 
 
-class BaseModeDialog(Dialog):
+class BaseModeDialog(FramelessDialog):
     def __init__(
         self,
         model_class: type[BaseModel],
@@ -16,19 +18,30 @@ class BaseModeDialog(Dialog):
         content: str = "",
         parent=None,
     ):
-        super().__init__(title or model_class.__name__, content, parent)
+        super().__init__(parent=parent)
+        self.setWindowTitle(title or model_class.__name__)
+        self.setResizeEnabled(False)
+
         self.editor_widget = BaseModeEditorWidget(
             model_class=model_class,
             instance=instance,
             field_overrides=field_overrides,
+            parent=self,
         )
-        self.contentLabel.hide()
-        self.hideYesButton()
-        self.hideCancelButton()
-        self.textLayout.addWidget(self.editor_widget)
         self.editor_widget.saved.connect(self.on_save)
         self.editor_widget.cancelled.connect(self.reject)
         self._result_instance: BaseModel | None = None
+
+        self.vBoxLayout = QVBoxLayout(self)
+        self.vBoxLayout.setContentsMargins(16, self.titleBar.height() + 16, 16, 16)
+        self.vBoxLayout.setSpacing(12)
+
+        if content:
+            self.contentLabel = BodyLabel(content, self)
+            self.contentLabel.setWordWrap(True)
+            self.vBoxLayout.addWidget(self.contentLabel)
+
+        self.vBoxLayout.addWidget(self.editor_widget)
 
     def on_save(self, instance: BaseModel):
         self._result_instance = instance

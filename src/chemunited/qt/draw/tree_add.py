@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 
 from PyQt5.QtCore import QFile, QMimeData, QSize, Qt
-from PyQt5.QtGui import QDrag, QIcon
+from PyQt5.QtGui import QDrag, QIcon, QFont
 from PyQt5.QtWidgets import (
     QAbstractItemView,
     QFrame,
@@ -111,15 +111,18 @@ class AppCard(QFrame):
         self.titleLabel = QLabel(component, self)
         self.titleLabel.setObjectName("appCardTitle")
         self.titleLabel.setAttribute(Qt.WA_TransparentForMouseEvents, True)  # type: ignore[attr-defined]
+        #self.titleLabel.setFont(QFont("", 12, QFont.Bold))
 
-        self.groupLabel = QLabel(group, self)
+        self.groupLabel = QLabel(group, self)       
         self.groupLabel.setObjectName("appCardGroup")
         self.groupLabel.setAttribute(Qt.WA_TransparentForMouseEvents, True)  # type: ignore[attr-defined]
+        #self.groupLabel.setFont(QFont("", 10, QFont.Normal))
 
         self.descriptionLabel = QLabel(description, self)
         self.descriptionLabel.setObjectName("appCardDescription")
         self.descriptionLabel.setWordWrap(True)
         self.descriptionLabel.setAttribute(Qt.WA_TransparentForMouseEvents, True)  # type: ignore[attr-defined]
+        #self.descriptionLabel.setFont(QFont("", 10, QFont.Normal))
 
         text_layout.addWidget(self.titleLabel)
         text_layout.addWidget(self.groupLabel)
@@ -185,7 +188,7 @@ class TreeAddItem(TreeWidget):
             category_item.setText(0, _humanize(category))
             category_item.setData(0, self.ROLE_KIND, "category")
             category_item.setData(0, self.ROLE_PAYLOAD, category)
-            category_item.setFlags(Qt.ItemIsEnabled)  # type: ignore[attr-type]
+            category_item.setFlags(Qt.ItemIsEnabled)  # type: ignore[attr-defined]
             category_item.setExpanded(True)
 
             for component_name in component_names:
