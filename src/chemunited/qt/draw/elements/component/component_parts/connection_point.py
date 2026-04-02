@@ -48,6 +48,7 @@ class ConnectionPoint(SceneItem):
         self.id_connection = id_connection
         self._evidence: bool = False
         self.update_callback: Optional[Callable] | None = None
+        self.setAcceptHoverEvents(True)
 
     def _current_color(self) -> QColor:
         if self._evidence:
@@ -133,7 +134,7 @@ class HeatConnectionPoint(ConnectionPoint):
 
 class ElectronicConnectionPoint(ConnectionPoint):
     CONNECTION_TYPE = ConnectionType.ELECTRONIC
-    RESTING_COLOR = QColor(Qt.darkYellow)
+    RESTING_COLOR = QColor(Qt.darkYellow)  # type: ignore
 
     def __init__(self, position, id_connection="1", parent=None):
         super().__init__(

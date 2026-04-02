@@ -19,8 +19,8 @@ from __future__ import annotations
 
 from typing import ClassVar, Generic, TypeVar
 
-from PyQt5.QtCore import QFile
-from PyQt5.QtGui import QColor
+from PyQt5.QtCore import QFile, Qt
+from PyQt5.QtGui import QColor, QPen
 from PyQt5.QtWidgets import (
     QGraphicsDropShadowEffect,
     QGraphicsItem,
@@ -121,12 +121,16 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
         self._badge: ConnectivityBadge | None = None
         self._warning: WarningDisplay
         self._overlay: StatusOverlay
+        self._bounding_rect: QGraphicsRectItem
 
         self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)  # type: ignore
         self.setFlag(QGraphicsItem.ItemIsMovable, True)  # type: ignore
+        self.setFiltersChildEvents(False)  # ports receive their own events
+        self.setAcceptHoverEvents(True)    # needed for child hover to work
 
         self.build()
         self.post_layout()
+        self.build_bounding_rect()
         self.setPos(*data.position)
         self.set_frame_mode(SetupStepMode.DESIGN)  # initialise badge/warning visibility
 
@@ -168,6 +172,7 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
                 point = cls(
                     position=port.relative_position, id_connection=str(port_num)
                 )
+            point.setZValue(1)
             self._points[port_num] = point
             self.addToGroup(point)
 
@@ -224,6 +229,13 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
 
         # Overlay: centred over the figure.
         self._overlay.setPos(0, 0)
+
+    def build_bounding_rect(self) -> None:
+        self._bounding_rect = QGraphicsRectItem(self.boundingRect())
+        self._bounding_rect.setParentItem(self)
+        self._bounding_rect.setPen(QPen(Qt.black, 1))  # type: ignore
+        self._bounding_rect.setBrush(Qt.transparent)  # type: ignore
+        self._bounding_rect.setVisible(False)
 
     # ── public API ─────────────────────────────────────────────────
 
@@ -322,7 +334,18 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
             for pt in self._points.values():
                 pt.setGraphicsEffect(None)
 
+    def show_bounding_rect(self, visible: bool) -> None:
+        self._bounding_rect.setVisible(visible)
+    
     # ── Qt overrides ───────────────────────────────────────────────
+
+    def hoverEnterEvent(self, event):
+        self.highlight(True)
+        super().hoverEnterEvent(event)
+
+    def hoverLeaveEvent(self, event):
+        self.highlight(False)
+        super().hoverLeaveEvent(event)
 
     def itemChange(self, change, value):
         """Notify connected edges when position changes."""

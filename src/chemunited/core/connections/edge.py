@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Annotated
 
 import numpy as np
@@ -143,6 +143,17 @@ class EdgeMode(BaseModel, populate_by_name=True):
             "off_text": "Liquid",
         },
     )
+    inflection_points: list[tuple[float, float]] = Field(
+        default_factory=list,
+        title="Inflection points",
+        description="Inflection points of the connection",
+        json_schema_extra={
+            "group": GroupParameterCategory.PROPERTY.value,
+            "editable": False,
+            "visible": False,
+            "lock_reason": "Graph built internally",
+        },
+    )
 
     @model_validator(mode="after")
     def check_flow_rules(self) -> "EdgeMode":
@@ -173,6 +184,9 @@ class EdgeData(Element):
     diameter: ChemUnitQuantity
     straight_path: bool = True
     air_pressure_line: bool = False
+    inflection_points: list[tuple[float, float]] = field(
+        default_factory=list,
+    )
 
     @property
     def name(self) -> str:

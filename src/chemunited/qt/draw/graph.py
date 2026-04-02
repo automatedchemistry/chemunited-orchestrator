@@ -1,6 +1,6 @@
 from chemunited.qt.shared.enums import SetupStepMode
 from chemunited.qt.shared.graph import GraphCore, SceneCore
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, override
 from .tree_add import TreeAddItem
 
 if TYPE_CHECKING:
@@ -16,18 +16,21 @@ class DrawGraphicView(GraphCore):
         if parent is not None:
             self.parent_ref: SetupWindow = parent
 
+    @override
     def dragEnterEvent(self, event):
         if event.mimeData().hasFormat(TreeAddItem.MIME):
             event.acceptProposedAction()
         else:
             event.ignore()
 
+    @override
     def dragMoveEvent(self, event):
         if event.mimeData().hasFormat(TreeAddItem.MIME):
             event.acceptProposedAction()
         else:
             event.ignore()
 
+    @override
     def dropEvent(self, event):
         if not event.mimeData().hasFormat(TreeAddItem.MIME):
             event.ignore()
