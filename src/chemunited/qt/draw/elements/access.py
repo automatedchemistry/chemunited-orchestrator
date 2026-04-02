@@ -1,5 +1,6 @@
-from .component.component_factory import UtensilManager, ElectronicManager
 from typing import Union
+
+from .component.component_factory import ElectronicManager, UtensilManager
 
 
 class Components:

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from PyQt5.QtCore import QFile, QMimeData, QSize, Qt, QFile
+from PyQt5.QtCore import QFile, QMimeData, QSize, Qt
 from PyQt5.QtGui import QDrag, QIcon
 from PyQt5.QtWidgets import (
     QAbstractItemView,
@@ -17,10 +17,8 @@ from PyQt5.QtWidgets import (
 from qfluentwidgets import TreeWidget, isDarkTheme
 
 from chemunited.core.components.enums import ComponentType
-from chemunited.qt.shared.icon import OrchestratorIcon
-
 from chemunited.qt.draw.elements.component import list_components
-from chemunited.qt import resources_rc
+from chemunited.qt.shared.icon import OrchestratorIcon
 
 _COMPONENTS_DIR = (
     Path(__file__).resolve().parents[1] / "shared" / "resources" / "components"
@@ -49,9 +47,7 @@ def _figure_name_candidates(component_name: str) -> list[str]:
     candidates = [component_name]
 
     if component_name.endswith("Component"):
-        candidates.append(
-            f"{component_name[:-len('Component')]}component"
-        )
+        candidates.append(f"{component_name[: -len('Component')]}component")
 
     if component_name:
         candidates.append(f"{component_name[0].lower()}{component_name[1:]}")
@@ -63,7 +59,9 @@ def _component_icon(component_name: str) -> QIcon:
     themed_suffix = "DARK" if isDarkTheme() else "LIGHT"
 
     for figure_name in _figure_name_candidates(component_name):
-        resource_path = f":/components_icons/components/{figure_name}{themed_suffix}.svg"
+        resource_path = (
+            f":/components_icons/components/{figure_name}{themed_suffix}.svg"
+        )
         if _path_exists(resource_path):
             return QIcon(resource_path)
 
@@ -91,9 +89,7 @@ class AppCard(QFrame):
 
         self.setObjectName("appCard")
         self.setAttribute(Qt.WA_StyledBackground, True)  # type: ignore[attr-defined]
-        self.setAttribute(
-            Qt.WA_TransparentForMouseEvents, True
-        )  # type: ignore[attr-defined]
+        self.setAttribute(Qt.WA_TransparentForMouseEvents, True)  # type: ignore[attr-defined]
         self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
         self.setMinimumHeight(72)
 
@@ -106,9 +102,7 @@ class AppCard(QFrame):
         self.iconLabel.setFixedSize(40, 40)
         self.iconLabel.setAlignment(Qt.AlignCenter)  # type: ignore[attr-defined]
         self.iconLabel.setPixmap(icon.pixmap(36, 36))
-        self.iconLabel.setAttribute(
-            Qt.WA_TransparentForMouseEvents, True
-        )  # type: ignore[attr-defined]
+        self.iconLabel.setAttribute(Qt.WA_TransparentForMouseEvents, True)  # type: ignore[attr-defined]
 
         text_layout = QVBoxLayout()
         text_layout.setContentsMargins(0, 0, 0, 0)
@@ -116,22 +110,16 @@ class AppCard(QFrame):
 
         self.titleLabel = QLabel(component, self)
         self.titleLabel.setObjectName("appCardTitle")
-        self.titleLabel.setAttribute(
-            Qt.WA_TransparentForMouseEvents, True
-        )  # type: ignore[attr-defined]
+        self.titleLabel.setAttribute(Qt.WA_TransparentForMouseEvents, True)  # type: ignore[attr-defined]
 
         self.groupLabel = QLabel(group, self)
         self.groupLabel.setObjectName("appCardGroup")
-        self.groupLabel.setAttribute(
-            Qt.WA_TransparentForMouseEvents, True
-        )  # type: ignore[attr-defined]
+        self.groupLabel.setAttribute(Qt.WA_TransparentForMouseEvents, True)  # type: ignore[attr-defined]
 
         self.descriptionLabel = QLabel(description, self)
         self.descriptionLabel.setObjectName("appCardDescription")
         self.descriptionLabel.setWordWrap(True)
-        self.descriptionLabel.setAttribute(
-            Qt.WA_TransparentForMouseEvents, True
-        )  # type: ignore[attr-defined]
+        self.descriptionLabel.setAttribute(Qt.WA_TransparentForMouseEvents, True)  # type: ignore[attr-defined]
 
         text_layout.addWidget(self.titleLabel)
         text_layout.addWidget(self.groupLabel)
@@ -217,7 +205,8 @@ class TreeAddItem(TreeWidget):
                 )
 
                 item = QTreeWidgetItem(category_item)
-                item.setText(0, component_name)
+                item.setText(0, "")
+                item.setData(0, Qt.DisplayRole, "")
                 item.setData(0, self.ROLE_KIND, "component")
                 item.setData(0, self.ROLE_PAYLOAD, f"{category}|{component_name}")
                 item.setToolTip(
@@ -243,11 +232,7 @@ class TreeAddItem(TreeWidget):
 
     def mimeData(self, items: list[QTreeWidgetItem]) -> QMimeData | None:
         component_item = next(
-            (
-                item
-                for item in items
-                if item.data(0, self.ROLE_KIND) == "component"
-            ),
+            (item for item in items if item.data(0, self.ROLE_KIND) == "component"),
             None,
         )
         if component_item is None:
@@ -288,10 +273,11 @@ class TreeAddItem(TreeWidget):
 
 
 if __name__ == "__main__":
-    from PyQt5.QtWidgets import QApplication
     import sys
+
+    from PyQt5.QtWidgets import QApplication
+
     app = QApplication(sys.argv)
     tree = TreeAddItem()
     tree.show()
     sys.exit(app.exec_())
-    

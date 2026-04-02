@@ -1,8 +1,12 @@
-from chemunited.core.components import ComponentData, NeutralComponentData
+from typing import Union
+
+from loguru import logger
+
+from chemunited.core.components import ComponentData
+
 from . import glossary
 from .graph_item import GraphComponent
-from typing import Union
-from loguru import logger
+
 
 class UtensilManager:
     def __init__(self):
@@ -58,7 +62,6 @@ def list_components() -> tuple[dict[str, list[str]], dict[str, type[GraphCompone
 
 
 def create_component(figure: str, **kwargs) -> Union[UtensilManager, ElectronicManager]:
-    
     component: Union[UtensilManager, ElectronicManager]
     _, components = list_components()
     if figure not in components:
@@ -73,4 +76,3 @@ def create_component(figure: str, **kwargs) -> Union[UtensilManager, ElectronicM
         component = UtensilManager()
     component.graph = components[figure](mdata)
     return component
-    

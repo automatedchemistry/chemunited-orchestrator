@@ -1,17 +1,18 @@
-from chemunited.qt.draw.elements.component import Components
-from PyQt5.QtCore import QObject
-from loguru import logger
 from typing import TYPE_CHECKING
 
+from PyQt5.QtCore import QObject
+
+from chemunited.qt.draw.elements.component import Components
+
 if TYPE_CHECKING:
-    from chemunited.qt.setup import MainWindow
+    from chemunited.qt.setup import SetupWindow
 
 
 class OrchestratorCore(QObject):
-    def __init__(self, parent: MainWindow):
+    def __init__(self, parent: "SetupWindow"):
         super().__init__(parent)
         self.parent_ref = parent
-        
+
         """Basic attributes"""
 
         # Components used in the platform (devices and utensils)

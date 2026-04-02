@@ -89,10 +89,13 @@ class MainWindowBase(FramelessWindow):
     def addSubInterface(
         self, interface, icon, text: str, position=NavigationItemPosition.TOP
     ):
-        """add sub interface"""
+        """Add a top-level page to the main window navigation."""
+        route_key = interface.objectName() or text
+        interface.setObjectName(route_key)
+
         self.stackWidget.addWidget(interface)
         self.navigationInterface.addItem(
-            routeKey=text,
+            routeKey=route_key,
             icon=icon,
             text=text,
             onClick=lambda: self.switchTo(interface),
