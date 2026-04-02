@@ -126,7 +126,7 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
         self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)  # type: ignore
         self.setFlag(QGraphicsItem.ItemIsMovable, True)  # type: ignore
         self.setFiltersChildEvents(False)  # ports receive their own events
-        self.setAcceptHoverEvents(True)    # needed for child hover to work
+        self.setAcceptHoverEvents(True)  # needed for child hover to work
 
         self.build()
         self.post_layout()
@@ -149,6 +149,7 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
                 svg_path,
                 angle=self._data.angle,
                 scale=PATTERN_DIMENSION * self.SVG_SCALE,
+                parent=self,
             )
         else:
             self._svg = QGraphicsRectItem(
@@ -156,6 +157,7 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
                 -PATTERN_DIMENSION / 2,
                 PATTERN_DIMENSION,
                 PATTERN_DIMENSION,
+                parent=self,
             )
         self.addToGroup(self._svg)
 
@@ -167,10 +169,13 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
                     position=port.relative_position,
                     radius=_FLOW_RADIUS,
                     id_connection=str(port_num),
+                    parent=self,
                 )
             else:
                 point = cls(
-                    position=port.relative_position, id_connection=str(port_num)
+                    position=port.relative_position,
+                    id_connection=str(port_num),
+                    parent=self,
                 )
             point.setZValue(1)
             self._points[port_num] = point
@@ -178,26 +183,29 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
 
         # Port labels — positioned outward from the connection point.
         for port_num, port in self._data.ports_by_number.items():
-            label = TextElement(str(port_num))
+            label = TextElement(str(port_num), parent=self)
             label.setPos(*port.relative_position)
             self._port_labels[port_num] = label
             self.addToGroup(label)
 
         # Plain children — follow the group but don't affect its bounding rect.
-        self._name = TextElement(self._data.name)
-        self._name.setParentItem(self)
+        self._name = TextElement(self._data.name, parent=self)
 
         if self._data.is_electronic:
-            self._badge = ConnectivityBadge(dimension=PATTERN_DIMENSION // 3)
-            self._badge.setParentItem(self)
+            self._badge = ConnectivityBadge(
+                dimension=PATTERN_DIMENSION // 3,
+                parent=self,
+            )
+            self._badge.setVisible(False)
 
-        self._warning = WarningDisplay()
-        self._warning.setParentItem(self)
+        self._warning = WarningDisplay(parent=self)
         self._warning.setVisible(False)
 
-        self._overlay = StatusOverlay(dimension=PATTERN_DIMENSION)
-        self._overlay.setParentItem(self)
+        self._overlay = StatusOverlay(dimension=PATTERN_DIMENSION, parent=self)
         self._overlay.setVisible(False)
+        self.addToGroup(self._name)
+        self.addToGroup(self._warning)
+        self.addToGroup(self._overlay)
 
     def post_layout(self) -> None:
         """Position name, badge, warning, and overlay relative to the group boundingRect.
@@ -336,7 +344,7 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
 
     def show_bounding_rect(self, visible: bool) -> None:
         self._bounding_rect.setVisible(visible)
-    
+
     # ── Qt overrides ───────────────────────────────────────────────
 
     def hoverEnterEvent(self, event):

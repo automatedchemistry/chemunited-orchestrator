@@ -45,6 +45,7 @@ class SceneItem(QGraphicsObject):
         parent=None,
     ):
         super().__init__(parent)
+        self.parent_ref = parent
         self.width = width
         self.height = height if height is not None else width
 

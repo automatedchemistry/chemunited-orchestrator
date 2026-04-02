@@ -2,6 +2,7 @@ import re
 
 from loguru import logger
 from pydantic import BaseModel
+from PyQt5.QtCore import pyqtSlot
 
 from chemunited.qt.draw.elements.component import create_component, list_components
 from chemunited.qt.shared.widgets.base_mode_editor import BaseModeDialog
@@ -17,6 +18,12 @@ def call_component_model(figure: str) -> type[BaseModel]:
 
 
 class OrchestratorDraw(OrchestratorCore):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.parent_ref.drawGraph.connection_requested.connect(
+            self.request_add_connection
+        )
+
     def _suggest_name(self, figure: str) -> str:
         base = re.sub(r"[^A-Za-z0-9]", "", figure) or "Component"
         existing = set(self.components.keys())
@@ -79,3 +86,25 @@ class OrchestratorDraw(OrchestratorCore):
         logger.bind(window=self.parent_ref.WINDOW_TYPE).info(
             f"Component {component.inf.COMPONENT_TYPE.name} name '{name}' was successfully created."
         )
+
+    @pyqtSlot(str, str, str, str)
+    def request_add_connection(
+        self, origin: str, destiny: str, origin_port: str, destiny_port: str
+    ):
+        self.add_connection(
+            origin=origin,
+            destiny=destiny,
+            origin_port=int(origin_port),
+            destiny_port=int(destiny_port),
+        )
+
+    def add_connection(
+        self,
+        origin: str,
+        destiny: str,
+        origin_port: int = 2,
+        destiny_port: int = 1,
+        **kwargs,
+    ):
+        print(origin, destiny, origin_port, destiny_port)
+        ...

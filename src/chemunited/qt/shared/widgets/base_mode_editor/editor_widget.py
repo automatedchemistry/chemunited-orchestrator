@@ -162,8 +162,13 @@ class BaseModeEditorWidget(QWidget):
         errors: list[str] = []
         values: dict = {}
 
+        if self._instance is not None:
+            values.update(self._instance.model_dump())
+
         for name, card in self._cards.items():
             if not card.isVisible():
+                if name not in values:
+                    values[name] = card.get_value()
                 continue
             if not card.validate():
                 errors.append(name)
