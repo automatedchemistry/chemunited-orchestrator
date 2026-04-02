@@ -10,3 +10,12 @@ Widget {
     border-left: none;
     background-color: rgb(249, 249, 249);
 }
+
+
+QGraphicsView {
+    border-right: none;
+    border-bottom: none;
+    border-top: none;
+    border-left: none;
+    background-color: rgb(249, 249, 249);
+}

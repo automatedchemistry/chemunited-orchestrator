@@ -42,6 +42,8 @@ class MainWindowBase(FramelessWindow):
 
         self.initWindow()
 
+        self.setTheme()
+
     def initLayout(self):
         """Initialize the layout"""
         self.hBoxLayout.setSpacing(0)
@@ -84,7 +86,6 @@ class MainWindowBase(FramelessWindow):
         desktop = QApplication.desktop().availableGeometry()  # type: ignore[union-attr]
         w, h = desktop.width(), desktop.height()
         self.move(w // 2 - self.width() // 2, h // 2 - self.height() // 2)
-        self.setTheme()
 
     def addSubInterface(
         self, interface, icon, text: str, position=NavigationItemPosition.TOP

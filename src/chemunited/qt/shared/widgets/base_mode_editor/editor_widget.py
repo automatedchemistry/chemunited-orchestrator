@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+from collections.abc import Mapping
+
 from pydantic import BaseModel, ValidationError
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QColor, QPainter
@@ -50,7 +52,7 @@ class BaseModeEditorWidget(QWidget):
     Usage::
 
         widget = BaseModeEditorWidget(MyModel, instance=existing)
-        widget.saved.connect(on_save)
+        widget.saved.connect()
         widget.cancelled.connect(on_cancel)
     """
 
@@ -61,11 +63,13 @@ class BaseModeEditorWidget(QWidget):
         self,
         model_class: type[BaseModel],
         instance: BaseModel | None = None,
+        field_overrides: dict[str, Mapping[str, object]] | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
         self._model_class = model_class
         self._instance = instance
+        self._field_overrides = field_overrides or {}
         self._cards: dict[str, BaseFieldCard] = {}
         self._setup_ui()
 
@@ -135,7 +139,14 @@ class BaseModeEditorWidget(QWidget):
                 layout.addWidget(_GroupSeparator(group, scroll_content))
             for name in by_group[group]:
                 field_info = fields[name]
-                card = CardFactory.build(name, field_info, scroll_content)
+                extras = dict(_field_extras(field_info))
+                extras.update(self._field_overrides.get(name, {}))
+                card = CardFactory.build(
+                    name,
+                    field_info,
+                    scroll_content,
+                    extras_override=extras,
+                )
                 if self._instance is not None:
                     value = getattr(self._instance, name, None)
                     if value is not None:

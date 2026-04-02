@@ -11,7 +11,7 @@ from .graph_item import GraphComponent
 class UtensilManager:
     def __init__(self):
         """Figure"""
-        self.graph: GraphComponent = GraphComponent()
+        self.graph: GraphComponent = GraphComponent(data=ComponentData())
 
     @property
     def name(self) -> str:

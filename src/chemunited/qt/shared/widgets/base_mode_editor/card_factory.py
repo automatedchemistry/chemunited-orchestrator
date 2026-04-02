@@ -39,11 +39,12 @@ class CardFactory:
         field_name: str,
         field_info: FieldInfo,
         parent: QWidget | None = None,
+        extras_override: Mapping[str, object] | None = None,
     ) -> BaseFieldCard:
         card = CardFactory._make_card(field_name, field_info, parent)
 
         # Apply visibility / editability from json_schema_extra
-        extras = _field_extras(field_info)
+        extras = extras_override or _field_extras(field_info)
         card.setVisible(bool(extras.get("visible", True)))
         card.setEnabled(bool(extras.get("editable", True)))
 

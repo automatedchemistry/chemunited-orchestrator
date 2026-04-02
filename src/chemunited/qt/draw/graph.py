@@ -1,11 +1,20 @@
 from chemunited.qt.shared.enums import SetupStepMode
-from chemunited.qt.shared.graph import GraphCore
-
+from chemunited.qt.shared.graph import GraphCore, SceneCore
+from typing import TYPE_CHECKING
 from .tree_add import TreeAddItem
+
+if TYPE_CHECKING:
+    from ..setup import SetupWindow
 
 
 class DrawGraphicView(GraphCore):
     MODE = SetupStepMode.DESIGN
+
+    def __init__(self, scene: SceneCore | None = None, parent=None):
+        super().__init__(scene, parent)
+        self.setObjectName("drawGraph")
+        if parent is not None:
+            self.parent_ref: SetupWindow = parent
 
     def dragEnterEvent(self, event):
         if event.mimeData().hasFormat(TreeAddItem.MIME):
@@ -35,6 +44,9 @@ class DrawGraphicView(GraphCore):
 
         scene_pos = self.mapToScene(event.pos())
 
-        print(f"Component: {component}, Group: {group}, Position: {scene_pos}")
+        if self.parent_ref is not None:
+            self.parent_ref.orchestrator.request_add_component(
+                figure=component, position=(scene_pos.x(), scene_pos.y())
+            )
 
         event.acceptProposedAction()

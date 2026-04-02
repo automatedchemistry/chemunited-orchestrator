@@ -1,6 +1,5 @@
-from typing import Union
-
 from .component.component_factory import ElectronicManager, UtensilManager
+from typing import Union
 
 
 class Components:
@@ -11,6 +10,10 @@ class Components:
     @property
     def utensil(self) -> dict[str, UtensilManager]:
         return self._utensil
+
+    @property
+    def electronic(self) -> dict[str, ElectronicManager]:
+        return self._electronic
 
     def __getitem__(self, item: str):
         if item in self._utensil:

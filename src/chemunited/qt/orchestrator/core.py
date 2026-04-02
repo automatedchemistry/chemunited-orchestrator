@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING
 
 from PyQt5.QtCore import QObject
 
-from chemunited.qt.draw.elements.component import Components
+from chemunited.qt.draw.elements.access import Components
 
 if TYPE_CHECKING:
     from chemunited.qt.setup import SetupWindow
