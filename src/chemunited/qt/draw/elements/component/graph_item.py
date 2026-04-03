@@ -17,6 +17,7 @@ NOT responsible for:
 
 from __future__ import annotations
 
+from dataclasses import asdict
 from typing import ClassVar, Generic, TypeVar
 
 from PyQt5.QtCore import QFile, Qt
@@ -140,6 +141,16 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
     @property
     def inf(self) -> DataT:
         return self._data
+
+    @property
+    def base_mode_instance(self) -> ComponentMode:
+        data = asdict(self._data)
+        mode_data = {
+            name: value
+            for name, value in data.items()
+            if name in self.BASEMODE.model_fields
+        }
+        return self.BASEMODE.model_validate(mode_data)
 
     # ── construction ───────────────────────────────────────────────
 

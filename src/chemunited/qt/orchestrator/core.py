@@ -3,6 +3,7 @@ from typing import TYPE_CHECKING
 from PyQt5.QtCore import QObject
 
 from chemunited.qt.draw.elements.access import Components, Connections
+from chemunited.qt.protocols.workflows import ProcessWorkflow
 
 if TYPE_CHECKING:
     from chemunited.qt.setup import SetupWindow
@@ -18,3 +19,6 @@ class OrchestratorCore(QObject):
 
         # Connections used in the platform (hydraulic, heat, electronic, movement)
         self.connections: Connections = Connections()
+
+        # Protocols used in the platform
+        self.protocols: dict[str, ProcessWorkflow] = {}

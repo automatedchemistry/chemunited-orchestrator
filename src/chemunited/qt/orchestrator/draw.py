@@ -253,27 +253,3 @@ class OrchestratorDraw(OrchestratorCore):
         logger.bind(window=self.parent_ref.WINDOW_TYPE).info(
             f"Component '{name}' was successfully removed."
         )
-
-    def remove_selected_items(self, items: list[QGraphicsItem] | None = None) -> None:
-        if items is None:
-            items = list(self.parent_ref.scene_attribute.selectedItems())
-
-        selected_components = {
-            name for name, comp in self.components.items() if comp.graph in items
-        }
-        connections_to_remove = {
-            name
-            for name, conn in self.connections.items()
-            if conn in items
-            or conn.inf.origin in selected_components
-            or conn.inf.destination in selected_components
-        }
-
-        for name in connections_to_remove:
-            self.remove_connection(name)
-        for name in selected_components:
-            if name in self.components:
-                self.remove_component(name)
-
-        self.parent_ref.scene_attribute.clearSelection()
-        self.parent_ref.scene_attribute.update()

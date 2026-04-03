@@ -6,12 +6,16 @@ from chemunited.core.components import ComponentData
 
 from . import glossary
 from .graph_item import GraphComponent
+from .widgets import ComponentWidget
 
 
 class UtensilManager:
     def __init__(self):
         """Figure"""
         self.graph: GraphComponent = GraphComponent(data=ComponentData())
+
+        """ properties widget """
+        self.widget: ComponentWidget = ComponentWidget(self)
 
     @property
     def name(self) -> str:

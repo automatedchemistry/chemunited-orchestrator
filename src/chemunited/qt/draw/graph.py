@@ -10,6 +10,7 @@ from chemunited.qt.draw.elements.component.component_parts.connection_point impo
 from chemunited.qt.draw.elements.component.graph_item import GraphComponent
 from chemunited.qt.draw.elements.connection.connection import (
     BaseConnectionItem,
+    HydraulicConnectionItem,
     TemporaryConnectionItem,
 )
 from chemunited.qt.shared.enums import SetupStepMode
@@ -160,7 +161,21 @@ class DrawGraphicView(GraphCore):
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Delete and not self._connecting:
             if self.parent_ref is not None:
-                self.parent_ref.orchestrator.remove_selected_items()
+                for item in self.scene().selectedItems():
+                    if isinstance(item, GraphComponent):
+                        QTimer.singleShot(
+                            0,
+                            lambda name=item.inf.name: self.parent_ref.orchestrator.remove_component(
+                                name
+                            ),
+                        )
+                    elif isinstance(item, BaseConnectionItem):
+                        QTimer.singleShot(
+                            0,
+                            lambda name=item.inf.name: self.parent_ref.orchestrator.remove_connection(
+                                name
+                            ),
+                        )
             event.accept()
             return
         super().keyPressEvent(event)
@@ -179,6 +194,63 @@ class DrawGraphicView(GraphCore):
         component_names, connection_names = self._snapshot_delete_names(target)
 
         menu = RoundMenu(parent=self)
+
+        if isinstance(target, BaseConnectionItem):
+            shape_action = Action(menu)
+            shape_action.setText(
+                "Switch to Curved" if target._straight else "Switch to Straight"
+            )
+            shape_action.setIcon(OrchestratorIcon.CONNECTION.icon())
+            shape_action.triggered.connect(
+                lambda checked=False, t=target: QTimer.singleShot(
+                    0, lambda: t.setStraight(not t._straight)
+                )
+            )
+            menu.addAction(shape_action)
+
+            add_inflection_action = Action(menu)
+            add_inflection_action.setText("Add Inflection Point")
+            add_inflection_action.setIcon(OrchestratorIcon.MOVE.icon())
+            add_inflection_action.triggered.connect(
+                lambda checked=False, t=target: QTimer.singleShot(
+                    0, lambda: t.addInflectionPoint()
+                )
+            )
+            menu.addAction(add_inflection_action)
+
+            remove_inflection_action = Action(menu)
+            remove_inflection_action.setText("Remove Inflection Point")
+            remove_inflection_action.setIcon(OrchestratorIcon.SCISSOR.icon())
+            remove_inflection_action.setEnabled(bool(target._inflection_points))
+            remove_inflection_action.triggered.connect(
+                lambda checked=False, t=target: QTimer.singleShot(
+                    0, lambda: t.removeInflectionPoint()
+                )
+            )
+            menu.addAction(remove_inflection_action)
+
+            if isinstance(target, HydraulicConnectionItem):
+                menu.addSeparator()
+                is_air = target._data.air_pressure_line
+                air_action = Action(menu)
+                air_action.setText(
+                    "Switch to Liquid" if is_air else "Switch to Air Pressure"
+                )
+                air_action.setIcon(
+                    OrchestratorIcon.WATER.icon()
+                    if is_air
+                    else OrchestratorIcon.PRESSURE_LINE.icon()
+                )
+                air_action.triggered.connect(
+                    lambda checked=False, t=target: QTimer.singleShot(
+                        0,
+                        lambda: t.set_air_pressure_line(not t._data.air_pressure_line),
+                    )
+                )
+                menu.addAction(air_action)
+
+            menu.addSeparator()
+
         delete_action = Action(menu)
         delete_action.setText("Delete")
         delete_action.setIcon(OrchestratorIcon.TRASH.icon())

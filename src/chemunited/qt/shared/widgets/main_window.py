@@ -1,6 +1,8 @@
+from typing import override
+
 from PyQt5.QtCore import QFile, Qt, QTextStream, QTimer
 from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QApplication, QHBoxLayout, QStackedWidget
+from PyQt5.QtWidgets import QApplication, QHBoxLayout, QStackedWidget, QWidget
 from qfluentwidgets import (
     FluentIcon,
     NavigationInterface,
@@ -15,22 +17,17 @@ from chemunited.qt.shared.icon import OrchestratorIcon
 from chemunited.qt.shared.widgets.loggings_widget import FrameLoggings
 
 
-class MainWindowBase(FramelessWindow):
-    TITLE: str = "Chemunited Orchestration Software"
-    WINDOW_TYPE: WindowCategory = WindowCategory.SETUP
+class WindowBase(FramelessWindow):
+    QSS_FILE: str = ""
+    TITLE: str = ""
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, parent: QWidget | None = None):
+        super().__init__(parent)
         self.setTitleBar(StandardTitleBar(self))
 
         self.hBoxLayout = QHBoxLayout(self)
         self.navigationInterface = NavigationInterface(self, showMenuButton=True)
         self.stackWidget = QStackedWidget(self)
-
-        """ Error handle Qtimer """
-
-        # Timer to drain bus in the GUI thread safely
-        self.drain_bus_timer = QTimer(self)
 
     def buildUi(self):
         """Build the UI"""
@@ -52,9 +49,6 @@ class MainWindowBase(FramelessWindow):
         self.hBoxLayout.addWidget(self.stackWidget)
         self.hBoxLayout.setStretchFactor(self.stackWidget, 1)
 
-        # Frames
-        self.FrameLoggings = FrameLoggings(self)
-
         self.titleBar.raise_()
         self.navigationInterface.displayModeChanged.connect(self.titleBar.raise_)
 
@@ -62,13 +56,6 @@ class MainWindowBase(FramelessWindow):
         """Initialize the navigation interface"""
         # enable acrylic effect
         # self.navigationInterface.setAcrylicEnabled(True)
-
-        self.addSubInterface(
-            self.FrameLoggings,
-            FluentIcon.MESSAGE,
-            "Loggings Console",
-            NavigationItemPosition.BOTTOM,
-        )
 
         # set the maximum width
         self.navigationInterface.setExpandWidth(300)
@@ -78,14 +65,9 @@ class MainWindowBase(FramelessWindow):
 
     def initWindow(self):
         """Initialize the window"""
-        self.resize(900, 700)
         self.setWindowIcon(QIcon(OrchestratorIcon.CHEMUNITED.path()))
         self.setWindowTitle(self.TITLE)
         self.titleBar.setAttribute(Qt.WA_StyledBackground)  # type: ignore[attr-defined]
-
-        desktop = QApplication.desktop().availableGeometry()  # type: ignore[union-attr]
-        w, h = desktop.width(), desktop.height()
-        self.move(w // 2 - self.width() // 2, h // 2 - self.height() // 2)
 
     def addSubInterface(
         self, interface, icon, text: str, position=NavigationItemPosition.TOP
@@ -107,7 +89,7 @@ class MainWindowBase(FramelessWindow):
     def setQss(self):
         """Set the QSS"""
         color = "dark" if isDarkTheme() else "light"
-        path = f":/styles/qss/{color}/main_window.qss"
+        path = f":/styles/qss/{color}/{self.QSS_FILE}"
 
         file = QFile(path)
         if file.open(QFile.ReadOnly | QFile.Text):  # type: ignore[attr-defined]
@@ -139,6 +121,45 @@ class MainWindowBase(FramelessWindow):
     def setTheme(self):
         """Handle theme change"""
         self.setQss()
+
+
+class MainWindowBase(WindowBase):
+    TITLE: str = "Chemunited Orchestration Software"
+    WINDOW_TYPE: WindowCategory = WindowCategory.SETUP
+    QSS_FILE: str = "main_window.qss"
+
+    def __init__(self):
+        super().__init__()
+        # Timer to drain bus in the GUI thread safely
+        self.drain_bus_timer = QTimer(self)
+
+    @override
+    def initLayout(self):
+        """Initialize the layout"""
+        super().initLayout()
+        # Frames
+        self.FrameLoggings = FrameLoggings(self)
+
+    @override
+    def initNavigation(self):
+        """Initialize the navigation interface"""
+        super().initNavigation()
+
+        self.addSubInterface(
+            self.FrameLoggings,
+            FluentIcon.MESSAGE,
+            "Loggings Console",
+            NavigationItemPosition.BOTTOM,
+        )
+
+    @override
+    def initWindow(self):
+        """Initialize the window"""
+        super().initWindow()
+        self.resize(900, 700)
+        desktop = QApplication.desktop().availableGeometry()  # type: ignore[union-attr]
+        w, h = desktop.width(), desktop.height()
+        self.move(w // 2 - self.width() // 2, h // 2 - self.height() // 2)
 
 
 if __name__ == "__main__":

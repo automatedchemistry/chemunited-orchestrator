@@ -13,7 +13,7 @@ class PathElementItem(QGraphicsPathItem):
 
     DEFAULT_COLOR: QColor = QColor("black")
     DEFAULT_LINE_WIDTH: float = 2.0
-    DEFAULT_PATH_STYLE = None
+    DEFAULT_PATH_STYLE: Qt.PenStyle = Qt.SolidLine
 
     def __init__(self, parent=None):
         super().__init__(parent)

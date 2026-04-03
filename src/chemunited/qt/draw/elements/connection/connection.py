@@ -117,6 +117,7 @@ class HydraulicConnectionItem(BaseConnectionItem):
 
     DEFAULT_OUTER_COLOR: QColor = QColor("#555555")  # tube wall
     DEFAULT_INNER_COLOR: QColor = QColor("#aaddff")  # fluid
+    AIR_INNER_COLOR: QColor = QColor("#aaaaaa")  # air / pneumatic
     DEFAULT_OUTER_WIDTH: float = 5.0
     DEFAULT_INNER_WIDTH: float = 3.0
     CATEGORY: ConnectionType = ConnectionType.HYDRAULIC
@@ -132,6 +133,20 @@ class HydraulicConnectionItem(BaseConnectionItem):
         self._inner_color = self.DEFAULT_INNER_COLOR
         self._outer_width = self.DEFAULT_OUTER_WIDTH
         self._inner_width = self.DEFAULT_INNER_WIDTH
+
+    def set_air_pressure_line(self, value: bool) -> None:
+        self._data.air_pressure_line = value
+        if value:
+            self._inner_width = 1
+            self._outer_width = 3
+            self._inner_color = QColor("#aaaaaa")
+            self._outer_color = QColor(100, 100, 100)
+        else:
+            self._inner_width = self.DEFAULT_INNER_WIDTH
+            self._outer_width = self.DEFAULT_OUTER_WIDTH
+            self._inner_color = self.DEFAULT_INNER_COLOR
+            self._outer_color = self.DEFAULT_OUTER_COLOR
+        self.update()
 
     def paint(self, painter, option, widget=None):
         painter.setPen(
