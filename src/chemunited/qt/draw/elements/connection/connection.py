@@ -2,6 +2,7 @@ from typing import override
 
 from PyQt5.QtCore import QPointF, Qt
 from PyQt5.QtGui import QColor, QPainterPath, QPen
+from PyQt5.QtWidgets import QGraphicsItem
 
 from chemunited.core.connections import ConnectionType, EdgeData
 from chemunited.qt.draw.elements.component.component_parts.connection_point import (
@@ -49,6 +50,7 @@ class BaseConnectionItem(MovablePathItem):
         p2 = destination_port.scenePos()
         super().__init__((p1.x(), p1.y()), (p2.x(), p2.y()))
         self.setZValue(10)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, True)  # type: ignore
         self._attach_ports()
 
     def _attach_ports(self) -> None:
@@ -84,6 +86,22 @@ class BaseConnectionItem(MovablePathItem):
             for p in self._handles:
                 p.show()
         self.rebuild_path()
+
+    def _draw_selection(self, painter) -> None:
+        """Draw a blue dashed overlay when the connection is selected."""
+        if not self.isSelected():
+            return
+        pen = QPen(QColor("#1E88E5"), 4.0, Qt.DashLine)
+        pen.setCapStyle(Qt.RoundCap)
+        pen.setJoinStyle(Qt.RoundJoin)
+        painter.setPen(pen)
+        painter.drawPath(self.path())
+
+    def paint(self, painter, option, widget=None):
+        painter.setPen(self.pen())
+        painter.setBrush(self.brush())
+        painter.drawPath(self.path())
+        self._draw_selection(painter)
 
     def remove(self) -> None:
         """Detach position callbacks from both ports.
@@ -137,6 +155,7 @@ class HydraulicConnectionItem(BaseConnectionItem):
             )
         )
         painter.drawPath(self.path())
+        self._draw_selection(painter)
 
 
 class HeatConnectionItem(BaseConnectionItem):

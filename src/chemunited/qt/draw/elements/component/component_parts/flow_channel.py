@@ -1,1 +1,0 @@
-from chemunited.qt.utils.math_functions import build_straight_path, build_smooth_path

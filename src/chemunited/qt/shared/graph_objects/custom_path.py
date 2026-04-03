@@ -1,11 +1,12 @@
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QPen, QColor, QPainterPath, QBrush
+from PyQt5.QtGui import QBrush, QColor, QPainterPath, QPen
 from PyQt5.QtWidgets import (
-    QGraphicsPathItem,
     QGraphicsEllipseItem,
     QGraphicsItem,
+    QGraphicsPathItem,
 )
-from chemunited.qt.utils.math_functions import build_straight_path, build_smooth_path
+
+from chemunited.qt.utils.math_functions import build_smooth_path, build_straight_path
 
 
 class PathElementItem(QGraphicsPathItem):

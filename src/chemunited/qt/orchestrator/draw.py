@@ -191,3 +191,47 @@ class OrchestratorDraw(OrchestratorCore):
 
         self.parent_ref.scene_attribute.addItem(connection)
         self.connections[data.name] = connection
+
+    def remove_connection(self, name: str) -> None:
+        if name not in self.connections:
+            raise ValueError(f"Connection '{name}' does not exist")
+        connection = self.connections.pop(name)
+        connection.remove()
+        self.parent_ref.scene_attribute.removeItem(connection)
+
+    def remove_component(self, name: str) -> None:
+        if name not in self.components:
+            raise ValueError(f"Component '{name}' does not exist")
+        # Remove any connections that reference this component before removing it,
+        # otherwise their port callbacks will dangle on a deleted graph item.
+        attached = [
+            conn_name
+            for conn_name, conn in self.connections.items()
+            if conn.inf.origin == name or conn.inf.destination == name
+        ]
+        for conn_name in attached:
+            self.remove_connection(conn_name)
+        component = self.components.pop(name)
+        self.parent_ref.scene_attribute.removeItem(component.graph)
+
+    def remove_selected_items(self, items: list | None = None) -> None:
+        if items is None:
+            items = self.parent_ref.scene_attribute.selectedItems()
+
+        selected_components = {
+            name for name, comp in self.components.items() if comp.graph in items
+        }
+        connections_to_remove = {
+            name
+            for name, conn in self.connections.items()
+            if conn in items
+            or conn.inf.origin in selected_components
+            or conn.inf.destination in selected_components
+        }
+
+        for name in connections_to_remove:
+            self.remove_connection(name)
+        for name in selected_components:
+            self.remove_component(name)
+
+        self.parent_ref.scene_attribute.update()

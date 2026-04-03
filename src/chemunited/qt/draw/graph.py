@@ -1,14 +1,19 @@
 from typing import TYPE_CHECKING, override
 
-from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtCore import Qt, pyqtSignal
+from qfluentwidgets import Action, RoundMenu
 
 from chemunited.qt.draw.elements.component.component_parts.connection_point import (
     ConnectionPoint,
 )
 from chemunited.qt.draw.elements.component.graph_item import GraphComponent
-from chemunited.qt.draw.elements.connection.connection import TemporaryConnectionItem
+from chemunited.qt.draw.elements.connection.connection import (
+    BaseConnectionItem,
+    TemporaryConnectionItem,
+)
 from chemunited.qt.shared.enums import SetupStepMode
 from chemunited.qt.shared.graph import GraphCore, SceneCore
+from chemunited.qt.shared.icon import OrchestratorIcon
 
 from .tree_add import TreeAddItem
 
@@ -114,6 +119,52 @@ class DrawGraphicView(GraphCore):
             event.acceptProposedAction()
         else:
             event.ignore()
+
+    # ── keyboard / context menu ───────────────────────────────────
+
+    @override
+    def keyPressEvent(self, event):
+        if event.key() == Qt.Key_Delete and not self._connecting:
+            if self.parent_ref is not None:
+                self.parent_ref.orchestrator.remove_selected_items()
+            event.accept()
+            return
+        super().keyPressEvent(event)
+
+    @override
+    def contextMenuEvent(self, event):
+        scene_pos = self.mapToScene(event.pos())
+        target = next(
+            (
+                item
+                for item in self.scene().items(scene_pos)
+                if isinstance(item, (GraphComponent, BaseConnectionItem))
+            ),
+            None,
+        )
+        if target is None:
+            super().contextMenuEvent(event)
+            return
+
+        if not target.isSelected():
+            self.scene().clearSelection()
+            target.setSelected(True)
+
+        # Snapshot selection now — exec_() may clear it before the action fires.
+        items_snapshot = list(self.scene().selectedItems())
+
+        menu = RoundMenu(parent=self)
+        delete_action = Action(self)
+        delete_action.setText("Delete")
+        delete_action.setIcon(OrchestratorIcon.TRASH.icon())
+        delete_action.triggered.connect(
+            lambda checked=False, snap=items_snapshot: self.parent_ref.orchestrator.remove_selected_items(
+                snap
+            )
+        )
+        menu.addAction(delete_action)
+        menu.exec_(event.globalPos())
+        event.accept()
 
     @override
     def dropEvent(self, event):

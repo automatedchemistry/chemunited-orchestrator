@@ -1,10 +1,10 @@
 from .connection import (
     BaseConnectionItem,
-    TemporaryConnectionItem,
-    HydraulicConnectionItem,
-    HeatConnectionItem,
     ElectricalConnectionItem,
+    HeatConnectionItem,
+    HydraulicConnectionItem,
     MovementConnectionItem,
+    TemporaryConnectionItem,
 )
 
 __all__ = [

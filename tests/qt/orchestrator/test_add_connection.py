@@ -1,16 +1,22 @@
-"""Tests for OrchestratorDraw.add_connection.
+"""Tests for OrchestratorDraw.add_connection / remove_connection.
 
 What is tested:
 - add_connection registers the connection in orchestrator.connections
 - add_connection places the connection's graph item in the scene
+- remove_connection unregisters the connection from orchestrator.connections
+- remove_connection removes the graph item from the scene
+- Removing a non-existent connection raises ValueError
 - Non-existent origin or destiny raises ValueError
 - Non-existent port number on either side raises ValueError
 - Adding a duplicate connection raises ValueError
 """
+
 import pytest
 from pytestqt.qtbot import QtBot
 
 from chemunited.qt.setup import SetupWindow
+
+CONNECTION_NAME = "PumpA_2_PumpB_1"
 
 
 class TestAddConnection:
@@ -34,7 +40,18 @@ class TestAddConnection:
         )
         return window
 
-    # ── happy path ─────────────────────────────────────────────────────────
+    @pytest.fixture
+    def two_pumps_connected(self, two_pumps: SetupWindow):
+        """Window with two HPLCPumps connected on port 2→1."""
+        two_pumps.orchestrator.add_connection(
+            origin="PumpA",
+            destiny="PumpB",
+            origin_port=2,
+            destiny_port=1,
+        )
+        return two_pumps
+
+    # ── add: happy path ────────────────────────────────────────────────────
 
     def test_connection_registered_in_orchestrator(
         self, two_pumps: SetupWindow, screenshot
@@ -50,11 +67,9 @@ class TestAddConnection:
 
         screenshot(two_pumps, "after_connection")
 
-        assert "PumpA_2_PumpB_1" in two_pumps.orchestrator.connections
+        assert CONNECTION_NAME in two_pumps.orchestrator.connections
 
-    def test_connection_graph_item_in_scene(
-        self, two_pumps: SetupWindow, screenshot
-    ):
+    def test_connection_graph_item_in_scene(self, two_pumps: SetupWindow, screenshot):
         two_pumps.orchestrator.add_connection(
             origin="PumpA",
             destiny="PumpB",
@@ -64,10 +79,51 @@ class TestAddConnection:
 
         screenshot(two_pumps, "connection_in_scene")
 
-        connection = two_pumps.orchestrator.connections["PumpA_2_PumpB_1"]
+        connection = two_pumps.orchestrator.connections[CONNECTION_NAME]
         assert connection in two_pumps.scene_attribute.items()
 
-    # ── validation errors ──────────────────────────────────────────────────
+    # ── remove: happy path ─────────────────────────────────────────────────
+
+    def test_remove_connection_unregisters_from_orchestrator(
+        self, two_pumps_connected: SetupWindow, screenshot
+    ):
+        screenshot(two_pumps_connected, "before_remove")
+
+        two_pumps_connected.orchestrator.remove_connection(CONNECTION_NAME)
+
+        screenshot(two_pumps_connected, "after_remove")
+
+        assert CONNECTION_NAME not in two_pumps_connected.orchestrator.connections
+
+    def test_remove_connection_removes_graph_item_from_scene(
+        self, two_pumps_connected: SetupWindow, screenshot
+    ):
+        connection = two_pumps_connected.orchestrator.connections[CONNECTION_NAME]
+
+        two_pumps_connected.orchestrator.remove_connection(CONNECTION_NAME)
+
+        screenshot(two_pumps_connected, "after_remove")
+
+        assert connection not in two_pumps_connected.scene_attribute.items()
+
+    def test_remove_component_cascades_connection_removal(
+        self, two_pumps_connected: SetupWindow
+    ):
+        """Removing a component must also remove any connections attached to it."""
+        connection = two_pumps_connected.orchestrator.connections[CONNECTION_NAME]
+
+        two_pumps_connected.orchestrator.remove_component("PumpA")
+
+        assert CONNECTION_NAME not in two_pumps_connected.orchestrator.connections
+        assert connection not in two_pumps_connected.scene_attribute.items()
+
+    # ── remove: validation errors ──────────────────────────────────────────
+
+    def test_remove_nonexistent_connection_raises(self, two_pumps: SetupWindow):
+        with pytest.raises(ValueError, match="does not exist"):
+            two_pumps.orchestrator.remove_connection("no_such_connection")
+
+    # ── add: validation errors ─────────────────────────────────────────────
 
     def test_nonexistent_origin_raises(self, two_pumps: SetupWindow):
         with pytest.raises(ValueError, match="does not exist"):
@@ -101,16 +157,9 @@ class TestAddConnection:
                 destiny_port=99,
             )
 
-    def test_duplicate_connection_raises(self, two_pumps: SetupWindow):
-        two_pumps.orchestrator.add_connection(
-            origin="PumpA",
-            destiny="PumpB",
-            origin_port=2,
-            destiny_port=1,
-        )
-
+    def test_duplicate_connection_raises(self, two_pumps_connected: SetupWindow):
         with pytest.raises(ValueError, match="already exists"):
-            two_pumps.orchestrator.add_connection(
+            two_pumps_connected.orchestrator.add_connection(
                 origin="PumpA",
                 destiny="PumpB",
                 origin_port=2,

@@ -1,6 +1,6 @@
 import numpy as np
 from numpy import ndarray
-from scipy.interpolate import splprep, splev
+from scipy.interpolate import splev, splprep
 
 _CURVE_RESOLUTION = 30
 _CORNER_RADIUS = 10
@@ -31,13 +31,14 @@ def _round_corner(
 
     t_vals = np.linspace(0, 1, _CURVE_RESOLUTION)
     bezier_points = [
-        (1 - t) ** 2 * p_start + 2 * (1 - t) * t * p1 + t**2 * p_end
-        for t in t_vals
+        (1 - t) ** 2 * p_start + 2 * (1 - t) * t * p1 + t**2 * p_end for t in t_vals
     ]
     return p_start, bezier_points, p_end
 
 
-def build_straight_path(points: list | ndarray, radius: float = _CORNER_RADIUS) -> ndarray:
+def build_straight_path(
+    points: list | ndarray, radius: float = _CORNER_RADIUS
+) -> ndarray:
     """Polyline with rounded corners via quadratic Bezier.
 
     Args:

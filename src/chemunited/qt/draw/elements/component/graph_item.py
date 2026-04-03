@@ -125,6 +125,7 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
 
         self.setFlag(QGraphicsItem.ItemSendsGeometryChanges, True)  # type: ignore
         self.setFlag(QGraphicsItem.ItemIsMovable, True)  # type: ignore
+        self.setFlag(QGraphicsItem.ItemIsSelectable, True)  # type: ignore
         self.setFiltersChildEvents(False)  # ports receive their own events
         self.setAcceptHoverEvents(True)  # needed for child hover to work
 
@@ -365,8 +366,14 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
         super().hoverLeaveEvent(event)
 
     def itemChange(self, change, value):
-        """Notify connected edges when position changes."""
+        """Notify connected edges when position changes; toggle selection visual."""
         if change == QGraphicsItem.ItemPositionHasChanged:
             for point in self._points.values():
                 point.connectionMove()
+        elif change == QGraphicsItem.ItemSelectedHasChanged:
+            selected = bool(value)
+            self._bounding_rect.setPen(
+                QPen(QColor("#1E88E5"), 2) if selected else QPen(Qt.black, 1)  # type: ignore
+            )
+            self.show_bounding_rect(selected)
         return super().itemChange(change, value)

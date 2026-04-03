@@ -1,14 +1,17 @@
-"""Test that every registered component can be added to the scene without overlap.
+"""Test that every registered component can be added and removed from the scene.
 
 Layout:
   - One row per category (sorted alphabetically)
   - One column per component within the category
-  - 200 px horizontal spacing, 180 px vertical spacing (matches __test_component.py)
+  - 200 px horizontal spacing, 180 px vertical spacing
 
 What is tested:
 - Every component returned by list_components() can be added via orchestrator.add_component
 - Each component is registered in orchestrator.components under its name
 - Each component's graph item is present in the scene after adding
+- Every component can be removed via orchestrator.remove_component
+- After removing all components, orchestrator.components is empty
+- After removing all components, no graph items remain in the scene
 """
 
 import pytest
@@ -42,15 +45,25 @@ def _grid_positions() -> list[tuple[str, float, float]]:
     return positions
 
 
+def _add_all(window: SetupWindow) -> None:
+    for name, x, y in _grid_positions():
+        window.orchestrator.add_component(name=name, figure=name, position=(x, y))
+
+
+def _remove_all(window: SetupWindow) -> None:
+    for name in list(window.orchestrator.components.keys()):
+        window.orchestrator.remove_component(name)
+
+
 class TestAllComponents:
+
+    # ── add ────────────────────────────────────────────────────────────────
+
     def test_all_components_added_to_orchestrator(
         self, window: SetupWindow, screenshot
     ):
         screenshot(window, "initial")
-
-        for name, x, y in _grid_positions():
-            window.orchestrator.add_component(name=name, figure=name, position=(x, y))
-
+        _add_all(window)
         screenshot(window, "all_components_added")
 
         categories, _ = list_components()
@@ -61,9 +74,7 @@ class TestAllComponents:
             ), f"Component '{name}' missing from orchestrator.components"
 
     def test_all_components_graph_items_in_scene(self, window: SetupWindow, screenshot):
-        for name, x, y in _grid_positions():
-            window.orchestrator.add_component(name=name, figure=name, position=(x, y))
-
+        _add_all(window)
         screenshot(window, "scene_after_all_added")
 
         scene_items = set(window.scene_attribute.items())
@@ -77,7 +88,39 @@ class TestAllComponents:
         categories, _ = list_components()
         expected_count = sum(len(names) for names in categories.values())
 
-        for name, x, y in _grid_positions():
-            window.orchestrator.add_component(name=name, figure=name, position=(x, y))
+        _add_all(window)
 
         assert len(window.orchestrator.components) == expected_count
+
+    # ── remove ─────────────────────────────────────────────────────────────
+
+    def test_all_components_removed_from_orchestrator(
+        self, window: SetupWindow, screenshot
+    ):
+        _add_all(window)
+        screenshot(window, "before_remove")
+
+        _remove_all(window)
+        screenshot(window, "after_remove")
+
+        assert len(window.orchestrator.components) == 0
+
+    def test_all_components_graph_items_removed_from_scene(
+        self, window: SetupWindow, screenshot
+    ):
+        _add_all(window)
+        graph_items = [
+            window.orchestrator.components[name].graph
+            for name in window.orchestrator.components
+        ]
+
+        _remove_all(window)
+        screenshot(window, "scene_after_all_removed")
+
+        scene_items = set(window.scene_attribute.items())
+        for item in graph_items:
+            assert item not in scene_items
+
+    def test_remove_nonexistent_component_raises(self, window: SetupWindow):
+        with pytest.raises(ValueError, match="does not exist"):
+            window.orchestrator.remove_component("NoSuchComponent")
