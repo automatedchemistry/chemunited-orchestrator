@@ -247,9 +247,17 @@ class OrchestratorDraw(OrchestratorCore):
         for conn_name in attached:
             self.remove_connection(conn_name)
         component = self.components.pop(name)
+        if component._widget is not None:
+            component._widget.close()
         self._prepare_item_for_removal(component.graph)
         self.parent_ref.scene_attribute.removeItem(component.graph)
         self.parent_ref.scene_attribute.update()
         logger.bind(window=self.parent_ref.WINDOW_TYPE).info(
             f"Component '{name}' was successfully removed."
         )
+
+    def show_properties(self, name: str) -> None:
+        if name not in self.components:
+            raise ValueError(f"Component '{name}' does not exist")
+        component = self.components[name]
+        component.widget.show()

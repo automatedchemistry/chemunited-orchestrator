@@ -20,6 +20,7 @@ from __future__ import annotations
 from dataclasses import asdict
 from typing import ClassVar, Generic, TypeVar
 
+from pydantic import BaseModel
 from PyQt5.QtCore import QFile, Qt
 from PyQt5.QtGui import QColor, QPen
 from PyQt5.QtWidgets import (
@@ -265,13 +266,13 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
 
     # ── public API ─────────────────────────────────────────────────
 
-    def sync(self, **kwargs) -> None:
+    def sync(self, mode: BaseModel) -> None:
         """Reconcile visuals when ComponentData is updated externally.
 
         Only position and angle are expected to change after construction.
         Rebuilding the full item tree on every sync would be wasteful.
         """
-        self._data.update(**kwargs)
+        self._data.update(mode)
         self.setPos(self._data.position[0], self._data.position[1])
         if isinstance(self._svg, SvgLayer):
             self._svg.update_angle(self._data.angle)

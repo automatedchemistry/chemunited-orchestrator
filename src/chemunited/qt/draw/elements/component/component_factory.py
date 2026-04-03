@@ -11,11 +11,14 @@ from .widgets import ComponentWidget
 
 class UtensilManager:
     def __init__(self):
-        """Figure"""
         self.graph: GraphComponent = GraphComponent(data=ComponentData())
+        self._widget: ComponentWidget | None = None  # lazy — created on first access
 
-        """ properties widget """
-        self.widget: ComponentWidget = ComponentWidget(self)
+    @property
+    def widget(self) -> ComponentWidget:
+        if self._widget is None:
+            self._widget = ComponentWidget(self)
+        return self._widget
 
     @property
     def name(self) -> str:
@@ -23,7 +26,6 @@ class UtensilManager:
 
     @property
     def inf(self) -> ComponentData:
-        """Metadata information"""
         return self.graph._data
 
 

@@ -1,8 +1,9 @@
+from functools import partial
 from typing import TYPE_CHECKING, override
 
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PyQt5.QtWidgets import QGraphicsItem
-from qfluentwidgets import Action, RoundMenu
+from qfluentwidgets import Action, FluentIcon, RoundMenu
 
 from chemunited.qt.draw.elements.component.component_parts.connection_point import (
     ConnectionPoint,
@@ -120,6 +121,17 @@ class DrawGraphicView(GraphCore):
             event.accept()
             return
         super().mousePressEvent(event)
+
+    @override
+    def mouseDoubleClickEvent(self, event):
+        target = self._resolve_context_target(self.itemAt(event.pos()))
+        if target is None:
+            super().mouseDoubleClickEvent(event)
+            return
+
+        if isinstance(target, GraphComponent):
+            self.parent_ref.orchestrator.show_properties(target.inf.name)
+        event.accept()
 
     @override
     def mouseMoveEvent(self, event):
@@ -249,6 +261,16 @@ class DrawGraphicView(GraphCore):
                 )
                 menu.addAction(air_action)
 
+            menu.addSeparator()
+
+        if isinstance(target, GraphComponent):
+            properties_action = Action(menu)
+            properties_action.setText("Properties")
+            properties_action.setIcon(FluentIcon.EDIT.icon())
+            properties_action.triggered.connect(
+                partial(self.parent_ref.orchestrator.show_properties, target.inf.name)
+            )
+            menu.addAction(properties_action)
             menu.addSeparator()
 
         delete_action = Action(menu)
