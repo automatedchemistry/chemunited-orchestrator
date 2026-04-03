@@ -182,16 +182,13 @@ class DrawGraphicView(GraphCore):
         delete_action = Action(menu)
         delete_action.setText("Delete")
         delete_action.setIcon(OrchestratorIcon.TRASH.icon())
-        menu.addAction(delete_action)
-        selected_action = menu.exec_(event.globalPos())
-
-        if selected_action is delete_action:
-            QTimer.singleShot(
-                0,
-                lambda comps=component_names, conns=connection_names: self._delete_snapshot(
-                    comps, conns
-                ),
+        delete_action.triggered.connect(
+            lambda checked=False, comps=component_names, conns=connection_names: QTimer.singleShot(
+                0, lambda: self._delete_snapshot(comps, conns)
             )
+        )
+        menu.addAction(delete_action)
+        menu.exec_(event.globalPos())
 
         event.accept()
 
