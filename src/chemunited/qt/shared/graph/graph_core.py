@@ -26,6 +26,7 @@ class GraphCore(QGraphicsView):
         # Zoom anchored to the position of the mouse cursor.
         self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
         self.setResizeAnchor(QGraphicsView.AnchorUnderMouse)
+        self.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
         self.setRenderHint(QPainter.Antialiasing)
         self.setRenderHint(QPainter.SmoothPixmapTransform)
 
@@ -136,7 +137,7 @@ class GraphCore(QGraphicsView):
             self.draw_grid_background(painter, rect)
             return
 
-        super().drawBackground(painter, rect)
+        painter.fillRect(rect, self._default_grid_background_color())
 
     # === Utility ===
     def recenter_view(self):

@@ -131,8 +131,10 @@ class MainWindowBase(FramelessWindow):
 
     def resizeEvent(self, e):
         """Handle resize event"""
+        super().resizeEvent(e)
         self.titleBar.move(46, 0)
         self.titleBar.resize(self.width() - 46, self.titleBar.height())
+        self.titleBar.raise_()
 
     def setTheme(self):
         """Handle theme change"""
