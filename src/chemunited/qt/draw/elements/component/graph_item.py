@@ -135,6 +135,12 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
         self.setPos(*data.position)
         self.set_frame_mode(SetupStepMode.DESIGN)  # initialise badge/warning visibility
 
+    # -- properties --
+
+    @property
+    def inf(self) -> DataT:
+        return self._data
+
     # ── construction ───────────────────────────────────────────────
 
     def build(self) -> None:

@@ -1,6 +1,7 @@
 from typing import TYPE_CHECKING, override
 
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import Qt, QTimer, pyqtSignal
+from PyQt5.QtWidgets import QGraphicsItem
 from qfluentwidgets import Action, RoundMenu
 
 from chemunited.qt.draw.elements.component.component_parts.connection_point import (
@@ -29,6 +30,7 @@ class DrawGraphicView(GraphCore):
     def __init__(self, scene: SceneCore | None = None, parent=None):
         super().__init__(scene, parent)
         self.setObjectName("drawGraph")
+        self.setFocusPolicy(Qt.StrongFocus)
         if parent is not None:
             self.parent_ref: SetupWindow = parent
 
@@ -36,8 +38,6 @@ class DrawGraphicView(GraphCore):
         self._origin_port: ConnectionPoint | None = None
         self._temp_connection: TemporaryConnectionItem | None = None
         self._candidate: ConnectionPoint | None = None
-
-    # ── connection helpers ────────────────────────────────────────
 
     def _port_at(self, scene_pos) -> ConnectionPoint | None:
         for item in self.scene().items(scene_pos):
@@ -61,18 +61,54 @@ class DrawGraphicView(GraphCore):
         self._temp_connection = None
         self._candidate = None
 
-    def _component_at(self, scene_pos) -> str:
-        for item in self.scene().items(scene_pos):
-            if hasattr(item, "parent_ref") and isinstance(
-                item.parent_ref, GraphComponent
-            ):
-                return item.parent_ref._data.name
-        return ""
+    def _resolve_context_target(
+        self, item: QGraphicsItem | None
+    ) -> GraphComponent | BaseConnectionItem | None:
+        current = item
+        while current is not None:
+            if isinstance(current, (GraphComponent, BaseConnectionItem)):
+                return current
+            current = current.parentItem()
+        return None
 
-    # ── mouse overrides ───────────────────────────────────────────
+    def _snapshot_delete_names(
+        self, target: GraphComponent | BaseConnectionItem
+    ) -> tuple[tuple[str, ...], tuple[str, ...]]:
+        scene_items = (
+            set(self.scene().selectedItems()) if target.isSelected() else {target}
+        )
+
+        component_names = tuple(
+            name
+            for name, comp in self.parent_ref.orchestrator.components.items()
+            if comp.graph in scene_items
+        )
+        connection_names = tuple(
+            name
+            for name, conn in self.parent_ref.orchestrator.connections.items()
+            if conn in scene_items
+            or conn.inf.origin in component_names
+            or conn.inf.destination in component_names
+        )
+        return component_names, connection_names
+
+    def _delete_snapshot(
+        self,
+        component_names: tuple[str, ...],
+        connection_names: tuple[str, ...],
+    ) -> None:
+        orchestrator = self.parent_ref.orchestrator
+        for name in connection_names:
+            if name in orchestrator.connections:
+                orchestrator.remove_connection(name)
+        for name in component_names:
+            if name in orchestrator.components:
+                orchestrator.remove_component(name)
+        self.scene().clearSelection()
 
     @override
     def mousePressEvent(self, event):
+        self.setFocus()
         scene_pos = self.mapToScene(event.pos())
         port = self._port_at(scene_pos)
         if port is not None:
@@ -120,8 +156,6 @@ class DrawGraphicView(GraphCore):
         else:
             event.ignore()
 
-    # ── keyboard / context menu ───────────────────────────────────
-
     @override
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Delete and not self._connecting:
@@ -133,37 +167,32 @@ class DrawGraphicView(GraphCore):
 
     @override
     def contextMenuEvent(self, event):
-        scene_pos = self.mapToScene(event.pos())
-        target = next(
-            (
-                item
-                for item in self.scene().items(scene_pos)
-                if isinstance(item, (GraphComponent, BaseConnectionItem))
-            ),
-            None,
-        )
+        if self.parent_ref is None:
+            super().contextMenuEvent(event)
+            return
+
+        target = self._resolve_context_target(self.itemAt(event.pos()))
         if target is None:
             super().contextMenuEvent(event)
             return
 
-        if not target.isSelected():
-            self.scene().clearSelection()
-            target.setSelected(True)
-
-        # Snapshot selection now — exec_() may clear it before the action fires.
-        items_snapshot = list(self.scene().selectedItems())
+        component_names, connection_names = self._snapshot_delete_names(target)
 
         menu = RoundMenu(parent=self)
-        delete_action = Action(self)
+        delete_action = Action(menu)
         delete_action.setText("Delete")
         delete_action.setIcon(OrchestratorIcon.TRASH.icon())
-        delete_action.triggered.connect(
-            lambda checked=False, snap=items_snapshot: self.parent_ref.orchestrator.remove_selected_items(
-                snap
-            )
-        )
         menu.addAction(delete_action)
-        menu.exec_(event.globalPos())
+        selected_action = menu.exec_(event.globalPos())
+
+        if selected_action is delete_action:
+            QTimer.singleShot(
+                0,
+                lambda comps=component_names, conns=connection_names: self._delete_snapshot(
+                    comps, conns
+                ),
+            )
+
         event.accept()
 
     @override

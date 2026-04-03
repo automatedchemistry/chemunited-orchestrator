@@ -3,6 +3,7 @@ import re
 from loguru import logger
 from pydantic import BaseModel
 from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtWidgets import QGraphicsItem
 
 from chemunited.core.common.enums import ConnectionType
 from chemunited.core.connections import EdgeData, EdgeMode
@@ -192,12 +193,46 @@ class OrchestratorDraw(OrchestratorCore):
         self.parent_ref.scene_attribute.addItem(connection)
         self.connections[data.name] = connection
 
+    def _is_item_or_descendant(
+        self, item: QGraphicsItem, candidate: QGraphicsItem | None
+    ) -> bool:
+        current = candidate
+        while current is not None:
+            if current is item:
+                return True
+            current = current.parentItem()
+        return False
+
+    def _prepare_item_for_removal(self, item: QGraphicsItem) -> None:
+        scene = self.parent_ref.scene_attribute
+
+        mouse_grabber = scene.mouseGrabberItem()
+        if mouse_grabber is not None and self._is_item_or_descendant(
+            item, mouse_grabber
+        ):
+            mouse_grabber.ungrabMouse()
+
+        focus_item = scene.focusItem()
+        if focus_item is not None and self._is_item_or_descendant(item, focus_item):
+            scene.setFocusItem(None)
+
+        if item.isSelected():
+            item.setSelected(False)
+
+        item.setEnabled(False)
+        item.setVisible(False)
+
     def remove_connection(self, name: str) -> None:
         if name not in self.connections:
             raise ValueError(f"Connection '{name}' does not exist")
         connection = self.connections.pop(name)
         connection.remove()
+        self._prepare_item_for_removal(connection)
         self.parent_ref.scene_attribute.removeItem(connection)
+        self.parent_ref.scene_attribute.update()
+        logger.bind(window=self.parent_ref.WINDOW_TYPE).info(
+            f"Connection '{name}' was successfully removed."
+        )
 
     def remove_component(self, name: str) -> None:
         if name not in self.components:
@@ -212,11 +247,16 @@ class OrchestratorDraw(OrchestratorCore):
         for conn_name in attached:
             self.remove_connection(conn_name)
         component = self.components.pop(name)
+        self._prepare_item_for_removal(component.graph)
         self.parent_ref.scene_attribute.removeItem(component.graph)
+        self.parent_ref.scene_attribute.update()
+        logger.bind(window=self.parent_ref.WINDOW_TYPE).info(
+            f"Component '{name}' was successfully removed."
+        )
 
-    def remove_selected_items(self, items: list | None = None) -> None:
+    def remove_selected_items(self, items: list[QGraphicsItem] | None = None) -> None:
         if items is None:
-            items = self.parent_ref.scene_attribute.selectedItems()
+            items = list(self.parent_ref.scene_attribute.selectedItems())
 
         selected_components = {
             name for name, comp in self.components.items() if comp.graph in items
@@ -232,6 +272,8 @@ class OrchestratorDraw(OrchestratorCore):
         for name in connections_to_remove:
             self.remove_connection(name)
         for name in selected_components:
-            self.remove_component(name)
+            if name in self.components:
+                self.remove_component(name)
 
+        self.parent_ref.scene_attribute.clearSelection()
         self.parent_ref.scene_attribute.update()
