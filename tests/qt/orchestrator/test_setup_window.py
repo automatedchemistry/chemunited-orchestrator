@@ -5,6 +5,7 @@ What is tested:
 - add_component places the component's graph item in the scene
 - duplicate name raises ValueError
 """
+
 import pytest
 from pytestqt.qtbot import QtBot
 
@@ -12,7 +13,6 @@ from chemunited.qt.setup import SetupWindow
 
 
 class TestAddComponent:
-
     @pytest.fixture
     def window(self, qtbot: QtBot):
         w = SetupWindow()
@@ -21,7 +21,9 @@ class TestAddComponent:
         qtbot.waitExposed(w)
         return w
 
-    def test_component_registered_in_orchestrator(self, window: SetupWindow, screenshot):
+    def test_component_registered_in_orchestrator(
+        self, window: SetupWindow, screenshot
+    ):
         screenshot(window, "initial")
 
         window.orchestrator.add_component(

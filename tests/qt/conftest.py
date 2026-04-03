@@ -5,7 +5,6 @@ import pytest
 from PyQt5.QtGui import QPixmap
 from pytestqt.qtbot import QtBot
 
-
 SCREENSHOT_DIR = Path("tests/screenshots")
 
 

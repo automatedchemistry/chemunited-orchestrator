@@ -327,6 +327,15 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
         self._warning_active = visible
         self._warning.show_warning(visible)
 
+    def get_connection_point(self, port_num: int) -> ConnectionPoint:
+        """Return the ConnectionPoint UI item for the given port number."""
+        try:
+            return self._points[port_num]
+        except KeyError:
+            raise KeyError(
+                f"Port {port_num} not found on component '{self._data.name}'"
+            )
+
     def highlight(self, active: bool) -> None:
         """Apply or remove a drop-shadow highlight on the SVG and connection points.
 

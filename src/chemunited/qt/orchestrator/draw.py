@@ -4,10 +4,30 @@ from loguru import logger
 from pydantic import BaseModel
 from PyQt5.QtCore import pyqtSlot
 
+from chemunited.core.common.enums import ConnectionType
+from chemunited.core.connections import EdgeData, EdgeMode
+from chemunited.core.utils.internal_quantity import ChemUnitQuantity
 from chemunited.qt.draw.elements.component import create_component, list_components
+from chemunited.qt.draw.elements.component.component_parts.connection_point import (
+    ConnectionPoint,
+)
+from chemunited.qt.draw.elements.connection import (
+    BaseConnectionItem,
+    ElectricalConnectionItem,
+    HeatConnectionItem,
+    HydraulicConnectionItem,
+    MovementConnectionItem,
+)
 from chemunited.qt.shared.widgets.base_mode_editor import BaseModeDialog
 
 from .core import OrchestratorCore
+
+_CONNECTION_FACTORY: dict[ConnectionType, type[BaseConnectionItem]] = {
+    ConnectionType.HYDRAULIC: HydraulicConnectionItem,
+    ConnectionType.ELECTRONIC: ElectricalConnectionItem,
+    ConnectionType.HEAT: HeatConnectionItem,
+    ConnectionType.MOVEMENT: MovementConnectionItem,
+}
 
 
 def call_component_model(figure: str) -> type[BaseModel]:
@@ -87,15 +107,16 @@ class OrchestratorDraw(OrchestratorCore):
             f"Component {component.inf.COMPONENT_TYPE.name} name '{name}' was successfully created."
         )
 
-    @pyqtSlot(str, str, str, str)
-    def request_add_connection(
-        self, origin: str, destiny: str, origin_port: str, destiny_port: str
-    ):
+    @pyqtSlot(ConnectionPoint, ConnectionPoint)
+    def request_add_connection(self, origin: ConnectionPoint, destiny: ConnectionPoint):
+        if origin.parent_ref._data.name == destiny.parent_ref._data.name:
+            raise ValueError("Cannot connect a component to itself")
+
         self.add_connection(
-            origin=origin,
-            destiny=destiny,
-            origin_port=int(origin_port),
-            destiny_port=int(destiny_port),
+            origin=origin.parent_ref._data.name,
+            destiny=destiny.parent_ref._data.name,
+            origin_port=int(origin.id_connection),
+            destiny_port=int(destiny.id_connection),
         )
 
     def add_connection(
@@ -106,5 +127,67 @@ class OrchestratorDraw(OrchestratorCore):
         destiny_port: int = 1,
         **kwargs,
     ):
-        print(origin, destiny, origin_port, destiny_port)
-        ...
+        # Verify if the components do exist
+        if origin not in self.components:
+            raise ValueError(f"Component '{origin}' does not exist")
+        if destiny not in self.components:
+            raise ValueError(f"Component '{destiny}' does not exist")
+
+        # Verify if the ports do exist
+        if origin_port not in self.components[origin].inf.ports_by_number:
+            raise ValueError(
+                f"Port '{origin_port}' does not exist in component '{origin}'"
+            )
+        if destiny_port not in self.components[destiny].inf.ports_by_number:
+            raise ValueError(
+                f"Port '{destiny_port}' does not exist in component '{destiny}'"
+            )
+
+        # Verify if the origin and detination has the same category
+        port_1_object = self.components[origin].inf.ports_by_number[origin_port]
+        port_2_object = self.components[destiny].inf.ports_by_number[destiny_port]
+        if port_1_object.category != port_2_object.category:
+            raise ValueError(
+                "Origin and detination must have the same category. Now they are: "
+                f"{port_1_object.category.name} and {port_2_object.category.name}"
+            )
+
+        # Resolve the ConnectionPoint UI objects (needed for scenePos)
+        origin_cp = self.components[origin].graph.get_connection_point(origin_port)
+        destiny_cp = self.components[destiny].graph.get_connection_point(destiny_port)
+
+        if port_1_object.category == ConnectionType.HYDRAULIC:
+            diameter = kwargs.get("diameter", ChemUnitQuantity("1 mm"))
+            if diameter.to_base_units().magnitude <= 0:
+                raise ValueError("Diameter must be greater than 0")
+            length = kwargs.get("length", ChemUnitQuantity("100 mm"))
+            if length.to_base_units().magnitude <= 0:
+                raise ValueError("Length must be greater than 0")
+        else:
+            length = ChemUnitQuantity("0 mm")
+            diameter = ChemUnitQuantity("0 mm")
+
+        mode = EdgeMode(
+            origin=origin,
+            destination=destiny,
+            origin_port=origin_port,
+            destination_port=destiny_port,
+            classification=port_1_object.category,
+            length=length,
+            diameter=diameter,
+            straight_path=kwargs.get("straight_path", True),
+            air_pressure_line=kwargs.get("air_pressure_line", False),
+            inflection_points=kwargs.get("inflection_points", []),
+        )
+        data = EdgeData.from_mode(mode)
+
+        if data.name in self.connections:
+            raise ValueError(f"Connection '{data.name}' already exists")
+
+        cls = _CONNECTION_FACTORY.get(port_1_object.category)
+        if cls is None:
+            raise ValueError(f"Unknown connection category: {port_1_object.category}")
+        connection = cls(origin_port=origin_cp, destination_port=destiny_cp, data=data)
+
+        self.parent_ref.scene_attribute.addItem(connection)
+        self.connections[data.name] = connection

@@ -10,6 +10,7 @@ What is tested:
 - Each component is registered in orchestrator.components under its name
 - Each component's graph item is present in the scene after adding
 """
+
 import pytest
 from pytestqt.qtbot import QtBot
 
@@ -42,8 +43,9 @@ def _grid_positions() -> list[tuple[str, float, float]]:
 
 
 class TestAllComponents:
-
-    def test_all_components_added_to_orchestrator(self, window: SetupWindow, screenshot):
+    def test_all_components_added_to_orchestrator(
+        self, window: SetupWindow, screenshot
+    ):
         screenshot(window, "initial")
 
         for name, x, y in _grid_positions():
@@ -54,9 +56,9 @@ class TestAllComponents:
         categories, _ = list_components()
         all_names = [name for names in categories.values() for name in names]
         for name in all_names:
-            assert name in window.orchestrator.components, (
-                f"Component '{name}' missing from orchestrator.components"
-            )
+            assert (
+                name in window.orchestrator.components
+            ), f"Component '{name}' missing from orchestrator.components"
 
     def test_all_components_graph_items_in_scene(self, window: SetupWindow, screenshot):
         for name, x, y in _grid_positions():
@@ -67,9 +69,9 @@ class TestAllComponents:
         scene_items = set(window.scene_attribute.items())
         for name in window.orchestrator.components:
             component = window.orchestrator.components[name]
-            assert component.graph in scene_items, (
-                f"Graph item for '{name}' not found in scene"
-            )
+            assert (
+                component.graph in scene_items
+            ), f"Graph item for '{name}' not found in scene"
 
     def test_component_count_matches_registry(self, window: SetupWindow):
         categories, _ = list_components()

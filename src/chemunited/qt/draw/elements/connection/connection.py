@@ -1,24 +1,166 @@
-from PyQt5.QtCore import QPointF, Qt
-from PyQt5.QtGui import QPainterPath, QPen
-from PyQt5.QtWidgets import QGraphicsPathItem
+from typing import override
 
-from chemunited.core.connections import ConnectionType, EdgeData  # noqa: F401
+from PyQt5.QtCore import QPointF, Qt
+from PyQt5.QtGui import QColor, QPainterPath, QPen
+
+from chemunited.core.connections import ConnectionType, EdgeData
 from chemunited.qt.draw.elements.component.component_parts.connection_point import (
     ConnectionPoint,
 )
+from chemunited.qt.shared.enums import SetupStepMode
+from chemunited.qt.shared.graph_objects import MovablePathItem, PathElementItem
 
 
-class TemporaryConnectionItem(QGraphicsPathItem):
+class TemporaryConnectionItem(PathElementItem):
     """Rubber-band line drawn while the user drags from an origin port."""
+
+    DEFAULT_COLOR: QColor = QColor("black")
+    DEFAULT_LINE_WIDTH: float = 1
+    DEFAULT_PATH_STYLE = Qt.DashLine
 
     def __init__(self, origin_port: ConnectionPoint) -> None:
         super().__init__()
         self._origin_port = origin_port
-        pen = QPen(Qt.gray, 1, Qt.DashLine)
-        self.setPen(pen)
         self.setZValue(10)
 
     def update_path(self, scene_pos: QPointF) -> None:
         path = QPainterPath(self._origin_port.scenePos())
         path.lineTo(scene_pos)
         self.setPath(path)
+
+
+class BaseConnectionItem(MovablePathItem):
+    """Represents a connection between two components."""
+
+    CATEGORY: ConnectionType
+
+    def __init__(
+        self,
+        origin_port: ConnectionPoint,
+        destination_port: ConnectionPoint,
+        data: EdgeData,
+    ) -> None:
+        # _data must be set before super().__init__ because MovablePathItem
+        # calls rebuild_path() during construction, which accesses self._data.
+        self._data = data
+        self._origin_port = origin_port
+        self._destination_port = destination_port
+        p1 = origin_port.scenePos()
+        p2 = destination_port.scenePos()
+        super().__init__((p1.x(), p1.y()), (p2.x(), p2.y()))
+        self.setZValue(10)
+        self._attach_ports()
+
+    def _attach_ports(self) -> None:
+        self._origin_port.setCallbackPosChange(self.rebuild_path)
+        self._destination_port.setCallbackPosChange(self.rebuild_path)
+
+    @property
+    def inf(self) -> EdgeData:
+        return self._data
+
+    @override
+    def rebuild_path(self) -> None:
+        p1 = self._origin_port.scenePos()
+        p2 = self._destination_port.scenePos()
+        self._origin = [p1.x(), p1.y()]
+        self._end = [p2.x(), p2.y()]
+        self._data.inflection_points = [
+            (point[0], point[1]) for point in self._inflection_points
+        ]
+        super().rebuild_path()
+
+    @override
+    def setStraight(self, value: bool) -> None:
+        # Update the data with the current straight path value
+        self._data.straight_path = value
+        super().setStraight(value)
+
+    def set_frame_mode(self, mode: SetupStepMode) -> None:
+        if mode != SetupStepMode.DESIGN:
+            for p in self._handles:
+                p.hide()
+        else:
+            for p in self._handles:
+                p.show()
+        self.rebuild_path()
+
+    def remove(self) -> None:
+        """Detach position callbacks from both ports.
+
+        Must be called by the orchestrator before removing this item from the scene.
+        """
+        self._origin_port.setCallbackPosChange(None)
+        self._destination_port.setCallbackPosChange(None)
+
+
+class HydraulicConnectionItem(BaseConnectionItem):
+    """Represents a Hydraulic connection between two components."""
+
+    DEFAULT_OUTER_COLOR: QColor = QColor("#555555")  # tube wall
+    DEFAULT_INNER_COLOR: QColor = QColor("#aaddff")  # fluid
+    DEFAULT_OUTER_WIDTH: float = 5.0
+    DEFAULT_INNER_WIDTH: float = 3.0
+    CATEGORY: ConnectionType = ConnectionType.HYDRAULIC
+
+    def __init__(
+        self,
+        origin_port: ConnectionPoint,
+        destination_port: ConnectionPoint,
+        data: EdgeData,
+    ) -> None:
+        super().__init__(origin_port, destination_port, data)
+        self._outer_color = self.DEFAULT_OUTER_COLOR
+        self._inner_color = self.DEFAULT_INNER_COLOR
+        self._outer_width = self.DEFAULT_OUTER_WIDTH
+        self._inner_width = self.DEFAULT_INNER_WIDTH
+
+    def paint(self, painter, option, widget=None):
+        painter.setPen(
+            QPen(
+                self._outer_color,
+                self._outer_width,
+                Qt.SolidLine,
+                Qt.RoundCap,
+                Qt.RoundJoin,
+            )
+        )
+        painter.drawPath(self.path())
+
+        painter.setPen(
+            QPen(
+                self._inner_color,
+                self._inner_width,
+                Qt.SolidLine,
+                Qt.RoundCap,
+                Qt.RoundJoin,
+            )
+        )
+        painter.drawPath(self.path())
+
+
+class HeatConnectionItem(BaseConnectionItem):
+    """Represents a heat connection between two components."""
+
+    DEFAULT_COLOR: QColor = QColor("red")
+    DEFAULT_LINE_WIDTH: float = 2
+    DEFAULT_PATH_STYLE: Qt.PenStyle = Qt.DashLine
+    CATEGORY: ConnectionType = ConnectionType.HEAT
+
+
+class ElectricalConnectionItem(BaseConnectionItem):
+    """Represents an electrical connection between two components."""
+
+    DEFAULT_COLOR: QColor = QColor("green")
+    DEFAULT_LINE_WIDTH: float = 2
+    DEFAULT_PATH_STYLE: Qt.PenStyle = Qt.DashLine
+    CATEGORY: ConnectionType = ConnectionType.ELECTRONIC
+
+
+class MovementConnectionItem(BaseConnectionItem):
+    """Represents a movement connection between two components."""
+
+    DEFAULT_COLOR: QColor = QColor("blue")
+    DEFAULT_LINE_WIDTH: float = 2
+    DEFAULT_PATH_STYLE: Qt.PenStyle = Qt.DashLine
+    CATEGORY: ConnectionType = ConnectionType.MOVEMENT

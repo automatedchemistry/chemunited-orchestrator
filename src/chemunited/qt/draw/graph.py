@@ -19,7 +19,7 @@ if TYPE_CHECKING:
 class DrawGraphicView(GraphCore):
     MODE = SetupStepMode.DESIGN
 
-    connection_requested = pyqtSignal(str, str, str, str)
+    connection_requested = pyqtSignal(ConnectionPoint, ConnectionPoint)
 
     def __init__(self, scene: SceneCore | None = None, parent=None):
         super().__init__(scene, parent)
@@ -95,12 +95,7 @@ class DrawGraphicView(GraphCore):
             scene_pos = self.mapToScene(event.pos())
             port = self._port_at(scene_pos)
             if port is not None and port is not self._origin_port:
-                self.connection_requested.emit(
-                    self._origin_port.parent_ref._data.name,
-                    port.parent_ref._data.name,
-                    self._origin_port.id_connection,
-                    port.id_connection,
-                )
+                self.connection_requested.emit(self._origin_port, port)
             self._cleanup()
             event.accept()
             return
