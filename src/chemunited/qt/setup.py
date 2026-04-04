@@ -6,6 +6,7 @@ from .draw.graph import DrawGraphicView
 from .draw.tree_add import TreeAddItem
 from .orchestrator import Orchestrator
 from .protocols.graph import ProtocolGraphicView
+from .protocols.process_list import ProtocolsWidget
 from .protocols.workflows.workflow_widget import WorkflowsWidget
 from .shared.enums import WindowCategory
 from .shared.graph import SceneCore
@@ -36,7 +37,11 @@ class SetupWindow(MainWindowBase):
         self.workflows_protocol = WorkflowsWidget(self)
 
         # Main Orchestrator Object
+        # It depends on drawGraph being available during construction.
         self.orchestrator = Orchestrator(self)
+
+        self.protocols_widget = ProtocolsWidget(self)
+
         self.buildUi()
 
     @override
@@ -93,6 +98,13 @@ class SetupWindow(MainWindowBase):
             onClick=self.save,
             position=NavigationItemPosition.TOP,
             tooltip="Save the graph",
+        )
+
+        self.protocolFrame.addSubInterface(
+            widget=self.protocols_widget,
+            text="Process List",
+            icon=OrchestratorIcon.PROCESS,
+            routeKey="protocols_widget",
         )
 
         self.SegmentWindow.addSubInterface(

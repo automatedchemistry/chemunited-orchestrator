@@ -5,11 +5,11 @@ from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PyQt5.QtWidgets import QGraphicsItem
 from qfluentwidgets import Action, FluentIcon, RoundMenu
 
-from chemunited.qt.draw.elements.component.component_parts.connection_point import (
+from chemunited.qt.elements.component.component_parts.connection_point import (
     ConnectionPoint,
 )
-from chemunited.qt.draw.elements.component.graph_item import GraphComponent
-from chemunited.qt.draw.elements.connection.connection import (
+from chemunited.qt.elements.component.graph_item import GraphComponent
+from chemunited.qt.elements.connection.connection import (
     BaseConnectionItem,
     HydraulicConnectionItem,
     TemporaryConnectionItem,

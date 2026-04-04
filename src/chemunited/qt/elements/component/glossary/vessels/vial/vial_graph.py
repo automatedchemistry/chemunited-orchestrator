@@ -1,7 +1,7 @@
 from typing import ClassVar
 
 from chemunited.core.components import VesselComponentData, VesselMode
-from chemunited.qt.draw.elements.component.graph_item import GraphComponent
+from chemunited.qt.elements.component.graph_item import GraphComponent
 
 
 class Vial(GraphComponent[VesselComponentData]):

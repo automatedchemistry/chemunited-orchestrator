@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Union
 
 from PyQt5.QtWidgets import QWidget
@@ -5,7 +7,7 @@ from PyQt5.QtWidgets import QWidget
 from chemunited.qt.shared.widgets.base_mode_editor import BaseModeEditorWidget
 
 if TYPE_CHECKING:
-    from chemunited.qt.draw.elements.component import ElectronicManager, UtensilManager
+    from chemunited.qt.elements.component import ElectronicManager, UtensilManager
 
 
 class PropertiesWidget(BaseModeEditorWidget):

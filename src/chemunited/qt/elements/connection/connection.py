@@ -5,7 +5,7 @@ from PyQt5.QtGui import QColor, QPainterPath, QPen
 from PyQt5.QtWidgets import QGraphicsItem
 
 from chemunited.core.connections import ConnectionType, EdgeData
-from chemunited.qt.draw.elements.component.component_parts.connection_point import (
+from chemunited.qt.elements.component.component_parts.connection_point import (
     ConnectionPoint,
 )
 from chemunited.qt.shared.enums import SetupStepMode

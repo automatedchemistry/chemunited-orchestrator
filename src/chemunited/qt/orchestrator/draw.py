@@ -8,11 +8,11 @@ from PyQt5.QtWidgets import QGraphicsItem
 from chemunited.core.common.enums import ConnectionType
 from chemunited.core.connections import EdgeData, EdgeMode
 from chemunited.core.utils.internal_quantity import ChemUnitQuantity
-from chemunited.qt.draw.elements.component import create_component, list_components
-from chemunited.qt.draw.elements.component.component_parts.connection_point import (
+from chemunited.qt.elements.component import create_component, list_components
+from chemunited.qt.elements.component.component_parts.connection_point import (
     ConnectionPoint,
 )
-from chemunited.qt.draw.elements.connection import (
+from chemunited.qt.elements.connection import (
     BaseConnectionItem,
     ElectricalConnectionItem,
     HeatConnectionItem,

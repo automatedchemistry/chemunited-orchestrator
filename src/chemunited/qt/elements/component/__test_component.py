@@ -1,4 +1,4 @@
-from chemunited.qt.draw.elements.component.glossary import (
+from chemunited.qt.elements.component.glossary import (
     # pipes
     BackPressureRegulator,
     # vessels
@@ -58,7 +58,7 @@ from chemunited.qt.draw.elements.component.glossary import (
     TwoPortDistributionValve,
     Vial,
 )
-from chemunited.qt.draw.elements.component.graph_item import GraphComponent
+from chemunited.qt.elements.component.graph_item import GraphComponent
 
 # Category grouping for scene layout (row = category, col = component).
 # Each entry is the GraphComponent subclass; figure/data come from cls.METADATA.

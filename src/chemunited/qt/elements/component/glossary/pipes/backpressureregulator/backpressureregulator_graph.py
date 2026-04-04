@@ -4,7 +4,7 @@ from chemunited.core.components import (
     BackPressureRegulatorData,
     BackPressureRegulatorMode,
 )
-from chemunited.qt.draw.elements.component.graph_item import GraphComponent
+from chemunited.qt.elements.component.graph_item import GraphComponent
 
 
 class BackPressureRegulator(GraphComponent[BackPressureRegulatorData]):

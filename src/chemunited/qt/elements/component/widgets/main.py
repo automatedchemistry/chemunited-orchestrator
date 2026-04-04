@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import TYPE_CHECKING, Union, override
 
 from pydantic import BaseModel
@@ -9,7 +11,7 @@ from chemunited.qt.shared.widgets.main_window import WindowBase
 from .properties import PropertiesWidget
 
 if TYPE_CHECKING:
-    from chemunited.qt.draw.elements.component import ElectronicManager, UtensilManager
+    from chemunited.qt.elements.component import ElectronicManager, UtensilManager
 
 
 class ComponentWidget(WindowBase):

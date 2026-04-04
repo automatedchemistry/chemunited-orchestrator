@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING
 
 from PyQt5.QtCore import QObject
 
-from chemunited.qt.draw.elements.access import Components, Connections
+from chemunited.qt.elements.access import Components, Connections
 from chemunited.qt.protocols.workflows import ProcessWorkflow
 
 if TYPE_CHECKING:

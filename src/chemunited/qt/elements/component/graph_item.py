@@ -34,7 +34,7 @@ from qfluentwidgets import isDarkTheme
 from chemunited.core.common.constant import PATTERN_DIMENSION
 from chemunited.core.common.enums import ConnectionType as CoreConnectionType
 from chemunited.core.components import ComponentData, ComponentMode
-from chemunited.qt.draw.elements.component.component_parts import (
+from chemunited.qt.elements.component.component_parts import (
     ConnectionPoint,
     ConnectivityBadge,
     ElectronicConnectionPoint,

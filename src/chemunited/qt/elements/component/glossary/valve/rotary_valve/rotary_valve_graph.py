@@ -5,7 +5,7 @@ from chemunited.core.components.glossary.rotary_valve import (
     ValveComponentData,
     ValvePortLayout,
 )
-from chemunited.qt.draw.elements.component.graph_item import GraphComponent
+from chemunited.qt.elements.component.graph_item import GraphComponent
 
 ValveT = TypeVar("ValveT", bound=ValveComponentData)
 
