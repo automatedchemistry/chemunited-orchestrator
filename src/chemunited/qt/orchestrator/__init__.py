@@ -1,4 +1,4 @@
-from .orchestrator import Orchestrator
+from .main import Orchestrator
 
 __all__ = [
     "Orchestrator",
