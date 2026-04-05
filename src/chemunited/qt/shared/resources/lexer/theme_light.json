@@ -1,0 +1,62 @@
+{
+    "ForegroundColor": "#000000",
+    "BackgroundColor": "#FFFFFF",
+    "Paper": "#FFFFFF",
+    "Color": "#000000",
+    "MarginsForegroundColor": "#237893",
+    "MarginsBackgroundColor": "#F3F3F3",
+    "CaretColor": "#000000",
+    "CaretLineBackground": "#E8F2FB",
+    "font_family": "Consolas",
+    "FontSize": 12,
+    "tokens": {
+        "Default": {
+            "color": "#000000"
+        },
+        "Comment": {
+            "color": "#008000",
+            "italic": false
+        },
+        "CommentBlock": {
+            "color": "#008000",
+            "italic": false
+        },
+        "Number": {
+            "color": "#098658"
+        },
+        "DoubleQuotedString": {
+            "color": "#A31515"
+        },
+        "SingleQuotedString": {
+            "color": "#A31515"
+        },
+        "TripleSingleQuotedString": {
+            "color": "#A31515"
+        },
+        "TripleDoubleQuotedString": {
+            "color": "#A31515"
+        },
+        "Keyword": {
+            "color": "#0000FF",
+            "bold": false
+        },
+        "HighlightedIdentifier": {
+            "color": "#001080"
+        },
+        "Operator": {
+            "color": "#000000"
+        },
+        "Identifier": {
+            "color": "#001080"
+        },
+        "FunctionMethodName": {
+            "color": "#795E26"
+        },
+        "ClassName": {
+            "color": "#267F99"
+        },
+        "Decorator": {
+            "color": "#AF00DB"
+        }
+    }
+}

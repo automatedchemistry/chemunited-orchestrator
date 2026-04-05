@@ -187,4 +187,9 @@
     <qresource prefix="/default_files">
         <file>scripts/process.txt</file>
     </qresource>
+
+    <qresource prefix="/lexer_palettes">
+        <file>lexer/theme_dark.json</file>
+        <file>lexer/theme_light.json</file>
+    </qresource>
 </RCC>
