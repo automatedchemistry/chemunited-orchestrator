@@ -183,4 +183,8 @@
         <file>components/SolenoidValve2WayLIGHT.svg</file>
         <file>components/SolenoidValve2WayDARK.svg</file>
     </qresource>
+
+    <qresource prefix="/default_files">
+        <file>scripts/process.txt</file>
+    </qresource>
 </RCC>

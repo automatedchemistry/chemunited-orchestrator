@@ -3,8 +3,14 @@ from __future__ import annotations
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QColor, QPainter
 from PyQt5.QtWidgets import QHBoxLayout, QSizePolicy, QStackedWidget, QWidget
-from qfluentwidgets import Action, BodyLabel, FluentIcon, LineEdit, RoundMenu, ToolButton
-from loguru import logger
+from qfluentwidgets import (
+    Action,
+    BodyLabel,
+    FluentIcon,
+    LineEdit,
+    RoundMenu,
+    ToolButton,
+)
 
 
 class _StatusCircle(QWidget):
@@ -44,7 +50,7 @@ class ProcessItem(QWidget):
 
     option_triggered = pyqtSignal(str, str)  # (option_name, process_name)
     rename_requested = pyqtSignal(str, str)  # (current_name, proposed_name)
-    edit_started = pyqtSignal(str)           # (process_name)
+    edit_started = pyqtSignal(str)  # (process_name)
 
     def __init__(self, name: str, parent: QWidget | None = None) -> None:
         super().__init__(parent)

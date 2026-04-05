@@ -15,9 +15,11 @@ if TYPE_CHECKING:
 class ProtocolsList(ProcessList):
     """Process list for protocols. Emits user intentions only — never self-mutates."""
 
-    rename_requested   = pyqtSignal(str, str)  # (old_name, new_name) — forwarded intention
-    remove_requested   = pyqtSignal(str)        # user chose Remove
-    duplicate_requested = pyqtSignal(str)       # user chose Duplicate — original name only
+    rename_requested = pyqtSignal(
+        str, str
+    )  # (old_name, new_name) — forwarded intention
+    remove_requested = pyqtSignal(str)  # user chose Remove
+    duplicate_requested = pyqtSignal(str)  # user chose Duplicate — original name only
 
     def __init__(self, data: dict, parent=None):
         super().__init__(data, parent)

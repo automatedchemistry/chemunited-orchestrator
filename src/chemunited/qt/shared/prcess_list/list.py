@@ -2,10 +2,10 @@ from __future__ import annotations
 
 from collections.abc import Callable
 
+from loguru import logger
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QAbstractItemView, QListWidgetItem, QVBoxLayout, QWidget
 from qfluentwidgets import ListWidget
-from loguru import logger
 
 from .item import ProcessItem
 

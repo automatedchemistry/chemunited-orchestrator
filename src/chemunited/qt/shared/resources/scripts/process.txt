@@ -1,0 +1,149 @@
+# Script file of project parameter
+# Updated/Created on: ---DATE---
+# Project name: ---PROJECT_NAME---
+# Process name: ---PROCESS_NAME---
+from __future__ import annotations
+
+import networkx as nx
+from pydantic import BaseModel, ConfigDict
+from typing import TYPE_CHECKING
+
+from workflow import (
+    NodeExecutionContext,
+    Process,
+    WorkflowEdgeSpec,
+    WorkflowNodeSpec,
+)
+
+if TYPE_CHECKING:
+    from ..protocols.main_parameters import MainParameters
+
+
+# ── Process configuration ──────────────────────────────────────────────────────
+
+
+class ---CLASS_NAME---Config(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+    # Add your process-level parameters here
+    # Example:
+    # flow_rate: str = "5 ml/min"
+
+
+# ── Process class ──────────────────────────────────────────────────────────────
+
+
+class ---CLASS_NAME---(Process[---CLASS_NAME---Config]):
+    """---PROCESS_LABEL---"""
+
+    __process_label__ = "---PROCESS_LABEL---"
+    __process_description__ = "---PROCESS_DESCRIPTION---"
+
+    def build_workflow(self) -> nx.DiGraph:
+        graph = nx.DiGraph()
+
+        graph.add_node(
+            "IN",
+            **WorkflowNodeSpec(
+                node_id="IN",
+                method="start",
+                label="Start",
+            ).model_dump(exclude_none=True),
+        )
+        graph.add_node(
+            "OUT",
+            **WorkflowNodeSpec(
+                node_id="OUT",
+                method="finish",
+                label="Finish",
+            ).model_dump(exclude_none=True),
+        )
+
+        graph.add_edge(
+            "IN",
+            "OUT",
+            **WorkflowEdgeSpec(
+                condition=True,
+                label="done",
+            ).model_dump(exclude_none=True),
+        )
+
+        return graph
+
+    # ── Node methods ───────────────────────────────────────────────────────────
+
+    def start(self, ctx: NodeExecutionContext) -> bool:
+        ctx.runtime.status_message = "Started."
+        return True
+
+    def finish(self, ctx: NodeExecutionContext) -> bool:
+        ctx.runtime.status_message = "Finished."
+        return True
+
+
+# =============================================
+# HOW TO ADD A NEW NODE
+# ---------------------------------------------
+# 1. Add node to build_workflow():
+#
+#    graph.add_node(
+#        "my_step",
+#        **WorkflowNodeSpec(
+#            node_id="my_step",
+#            method="my_step",       # must match a method name below
+#            label="My Step",
+#            description="What this step does",
+#        ).model_dump(exclude_none=True),
+#    )
+#
+# 2. Connect it with edges:
+#
+#    graph.add_edge(
+#        "IN", "my_step",
+#        **WorkflowEdgeSpec(condition=True, label="start").model_dump(exclude_none=True),
+#    )
+#    graph.add_edge(
+#        "my_step", "OUT",
+#        **WorkflowEdgeSpec(condition=True, label="done").model_dump(exclude_none=True),
+#    )
+#
+# 3. Add the method:
+#
+#    def my_step(self, ctx: NodeExecutionContext) -> bool:
+#        ctx.runtime.status_message = "My step ran."
+#        return True
+#
+# LOOPBACK EXAMPLE
+# ---------------------------------------------
+#    graph.add_edge(
+#        "validate", "prepare",
+#        loopback=True,
+#        trigger_on=False,
+#        max_iterations=3,
+#        label="retry",
+#    )
+#
+# PARALLEL FAN-OUT EXAMPLE
+# ---------------------------------------------
+# Add multiple True edges from the same node —
+# they will execute in parallel:
+#
+#    graph.add_edge("IN", "step_a",
+#        **WorkflowEdgeSpec(condition=True, label="a").model_dump(exclude_none=True))
+#    graph.add_edge("IN", "step_b",
+#        **WorkflowEdgeSpec(condition=True, label="b").model_dump(exclude_none=True))
+#
+# ACCESSING THE PLATFORM
+# ---------------------------------------------
+#    def my_step(self, ctx: NodeExecutionContext) -> bool:
+#        platform = ctx.runtime.local_data["platform"]
+#        platform["PumpA"].put("infuse", rate="5 ml/min", volume="1 ml")
+#        return True
+#
+# ACCESSING PARAMETERS
+# ---------------------------------------------
+#    def my_step(self, ctx: NodeExecutionContext) -> bool:
+#        rate = self.config.flow_rate          # process-level config
+#        volume = ctx.runtime.local_data["parameters"].total_volume
+#        return True
+# =============================================

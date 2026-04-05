@@ -3,7 +3,6 @@ from __future__ import annotations
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QFrame, QHBoxLayout, QSizePolicy, QSpacerItem, QVBoxLayout
 from qfluentwidgets import PushButton
-from loguru import logger
 
 from .list import ProcessList
 
@@ -35,7 +34,9 @@ class ProcessWidget(QFrame):
         self._btn_layout = QHBoxLayout()
         self._btn_layout.setContentsMargins(8, 6, 8, 6)
         self._btn_layout.setSpacing(4)
-        self._btn_layout.addItem(QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum))
+        self._btn_layout.addItem(
+            QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum)
+        )
         outer.addLayout(self._btn_layout)
 
     def add_bottom_button(self, name: str, icon, tip: str, callable) -> PushButton:
@@ -57,8 +58,10 @@ class ProcessWidget(QFrame):
     def sync_list(self):
         self._list.sync()
 
+
 if __name__ == "__main__":
     import sys
+
     from PyQt5.QtWidgets import QApplication
     from qfluentwidgets import FluentIcon
 
@@ -79,17 +82,25 @@ if __name__ == "__main__":
     widget = ProcessWidget(lst)
 
     widget.add_bottom_button(
-        "Add", FluentIcon.ADD, "Add a new process",
-        lambda: lst.add_process(f"process_{len(data)}")
+        "Add",
+        FluentIcon.ADD,
+        "Add a new process",
+        lambda: lst.add_process(f"process_{len(data)}"),
     )
     widget.add_separator()
     widget.add_bottom_button(
-        "Remove", FluentIcon.DELETE, "Remove selected process",
-        lambda: lst.remove_process(lst.selected_name()) if lst.selected_name() else None
+        "Remove",
+        FluentIcon.DELETE,
+        "Remove selected process",
+        lambda: (
+            lst.remove_process(lst.selected_name()) if lst.selected_name() else None
+        ),
     )
 
     widget.selection_changed.connect(lambda name: print(f"Selected: {name!r}"))
-    widget.process_renamed.connect(lambda old, new: print(f"Renamed: {old!r} -> {new!r}"))
+    widget.process_renamed.connect(
+        lambda old, new: print(f"Renamed: {old!r} -> {new!r}")
+    )
 
     widget.resize(320, 480)
     widget.show()

@@ -1,10 +1,11 @@
+from dataclasses import asdict
 from typing import override
 
 from PyQt5.QtCore import QPointF, Qt
 from PyQt5.QtGui import QColor, QPainterPath, QPen
 from PyQt5.QtWidgets import QGraphicsItem
 
-from chemunited.core.connections import ConnectionType, EdgeData
+from chemunited.core.connections import ConnectionType, EdgeData, EdgeMode
 from chemunited.qt.elements.component.component_parts.connection_point import (
     ConnectionPoint,
 )
@@ -60,6 +61,14 @@ class BaseConnectionItem(MovablePathItem):
     @property
     def inf(self) -> EdgeData:
         return self._data
+
+    @property
+    def base_mode_instance(self) -> EdgeMode:
+        data = asdict(self._data)
+        mode_data = {
+            name: value for name, value in data.items() if name in EdgeMode.model_fields
+        }
+        return EdgeMode.model_validate(mode_data)
 
     @override
     def rebuild_path(self) -> None:

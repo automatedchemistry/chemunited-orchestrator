@@ -38,6 +38,7 @@ class WorkflowEdgeSpec(BaseModel):
 
     condition: bool
     label: str | None = None
+    inflection_points: list[tuple[float, float]] = field(default_factory=list)
 
 
 class LoopBackSpec(BaseModel):
