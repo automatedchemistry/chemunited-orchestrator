@@ -34,6 +34,7 @@ class EditorBase(QsciScintilla):
         self.textChanged.connect(self._textChanged)
 
         # Autosave timer (debounced)
+        self._autosave_enabled: bool = True
         self._autosave_timer = QTimer(self)
         self._autosave_timer.setSingleShot(True)
         self._autosave_timer.timeout.connect(self.autosave)
@@ -86,8 +87,13 @@ class EditorBase(QsciScintilla):
         # Debounce: restart timer on every keystroke
         self._autosave_timer.start(self.AUTOSAVE_INTERVAL_MS)
 
+    def set_autosave(self, enabled: bool) -> None:
+        self._autosave_enabled = enabled
+        if not enabled:
+            self._autosave_timer.stop()
+
     def autosave(self):
-        if not self._current_file_changed:
+        if not self._autosave_enabled or not self._current_file_changed:
             return
         ok, err = self._write_to_disk(self.text())
         if ok:

@@ -287,7 +287,10 @@ class VariableCard(QWidget):
         h.addWidget(TypeBadge(self.mode, header))
 
         default_name = self._mode_fields.get("name")
-        init_name = (default_name.default if default_name else None) or "unnamed"
+        init_name = getattr(self.mode, "name", None)
+        if init_name is None and default_name is not None:
+            init_name = default_name.default
+        init_name = init_name or "unnamed"
         self._name_label = BodyLabel(init_name, header)
         self._name_label.setStyleSheet("font-weight:500;")
         h.addWidget(self._name_label)
@@ -361,7 +364,7 @@ class VariableCard(QWidget):
         self, field_name: str, field_info: FieldInfo
     ) -> QWidget | None:
         annotation = field_info.annotation
-        default    = field_info.default
+        default    = getattr(self.mode, field_name, field_info.default)
         title      = field_info.title or field_name
         editor: QWidget
 
@@ -495,7 +498,7 @@ class VariableCard(QWidget):
         group_fi = self._mode_fields.get("group")
         if group_fi is not None:
             ge = LineEdit(section)
-            ge.setText(str(group_fi.default or "General"))
+            ge.setText(str(getattr(self.mode, "group", group_fi.default or "General")))
             ge.textChanged.connect(self._on_change)
             self._editors["group"] = ge
             layout.addWidget(self._labeled_row("Group", ge))
@@ -505,7 +508,7 @@ class VariableCard(QWidget):
 
         for key in ("visible", "editable"):
             fi = self._mode_fields.get(key)
-            default_val = fi.default if fi else True
+            default_val = getattr(self.mode, key, fi.default if fi else True)
             sw = SwitchButton(section)
             sw.setChecked(bool(default_val))
             sw.checkedChanged.connect(self._on_change)

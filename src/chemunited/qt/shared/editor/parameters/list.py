@@ -14,16 +14,7 @@ Responsibility
 
 The file structure that is written back looks like::
 
-    # Script file of project parameter
-    # ...header lines from the original file...
-    from chemunited.utils.base_project_config import BaseModeParameters
-    from chemunited.utils.quantity import ChemQuantityValidator
-    from chemunited import ChemUnitQuantity
-    from typing import Annotated
-    from pydantic import Field
-
-
-    class <ClassName>(BaseModeParameters):
+    class <ClassName>(<BaseClassName>):
 
         <field 1 code>
 
@@ -38,27 +29,12 @@ from __future__ import annotations
 import copy
 from typing import Callable
 
+from chemunited.qt.shared.widgets.base_mode_editor.cards.builder_models import BasicVariableBuildMode
 from pydantic import BaseModel
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QScrollArea, QVBoxLayout, QWidget
 
 from .cards import VariableCard
-
-# Fixed imports that every generated parameters file needs.
-_FILE_HEADER = """\
-# Script file of project parameter
-from chemunited.utils.base_project_config import BaseModeParameters
-from chemunited.utils.quantity import ChemQuantityValidator
-from chemunited import ChemUnitQuantity
-from typing import Annotated
-from pydantic import Field
-"""
-
-_UPDATE_METHOD = """\
-
-    def update(self):
-        ...
-"""
 
 
 class ParameterListWidget(QScrollArea):
@@ -69,9 +45,11 @@ class ParameterListWidget(QScrollArea):
     ----------
     class_name:
         Name of the generated class, e.g. ``"MainParameters"``.
+    base_class_name:
+        Name of the base class, e.g. ``"BaseModel"`` or ``"BaseModeParameters"``.
     write_callback:
-        Called with the full Python source string whenever any card changes.
-        Typically this writes the string back to disk.
+        Called with the full class source string whenever any card changes.
+        Typically this splices the string back into the file on disk.
     parent:
         Qt parent widget.
     """
@@ -79,11 +57,13 @@ class ParameterListWidget(QScrollArea):
     def __init__(
         self,
         class_name: str = "MainParameters",
+        base_class_name: str = "BaseModel",
         write_callback: Callable[[str], None] | None = None,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
         self._class_name = class_name
+        self._base_class_name = base_class_name
         self._write_callback = write_callback
 
         self.setWidgetResizable(True)
@@ -97,71 +77,72 @@ class ParameterListWidget(QScrollArea):
 
         self.setWidget(self._container)
         self._cards: list[VariableCard] = []
+        self._loading: bool = False
 
     # ------------------------------------------------------------------
     # Public API
     # ------------------------------------------------------------------
 
-    def add_card(self, mode: BaseModel) -> VariableCard:
-        """Create a VariableCard for *mode* and append it to the list."""
-        card = VariableCard(mode, parent=self._container)
+    def begin_load(self) -> None:
+        """Suppress _flush() during bulk card population."""
+        self._loading = True
+
+    def end_load(self) -> None:
+        """Re-enable _flush() after bulk population (does not flush itself)."""
+        self._loading = False
+
+    def add_card(self, mode: BasicVariableBuildMode) -> VariableCard:
+        card = VariableCard(mode, self._container)
         card.deleted.connect(self._remove_card)
         card.duplicate.connect(self._duplicate_card)
         card.code_changed.connect(self._on_any_card_changed)
-
+        # Insert before the trailing stretch (always the last layout item)
         self._layout.insertWidget(self._layout.count() - 1, card)
         self._cards.append(card)
         self._flush()
         return card
 
-    def validate_all(self) -> bool:
-        """Validate every card. Returns True only if all pass."""
-        return all(card.validate() for card in self._cards)
-
-    def clear_all(self) -> None:
-        """Remove all cards."""
-        for card in list(self._cards):
-            self._remove_card(card)
-
-    def set_class_name(self, name: str) -> None:
-        self._class_name = name
-        self._flush()
-
     def build_source(self) -> str:
-        """
-        Assemble and return the full Python source for the parameters file.
-        Returns an empty string if any card is currently invalid.
-        """
+        """Return the field-definitions block for the class, or '' if any card is invalid."""
+        if not self._cards:
+            return f"class {self._class_name}({self._base_class_name}):\n    pass\n"
         snippets = [card.get_field_code() for card in self._cards]
         if any(s == "" for s in snippets):
             return ""
-
         body = "\n\n".join(snippets)
         return (
-            f"{_FILE_HEADER}\n\n"
-            f"class {self._class_name}(BaseModeParameters):\n\n"
+            f"class {self._class_name}({self._base_class_name}):\n\n"
             f"{body}\n"
-            f"{_UPDATE_METHOD}"
         )
+
+    def validate_all(self) -> bool:
+        return all(card.validate() for card in self._cards)
+
+    def clear_all(self) -> None:
+        self._loading = True
+        try:
+            for card in list(self._cards):
+                self._remove_card(card)
+        finally:
+            self._loading = False
 
     # ------------------------------------------------------------------
     # Private
     # ------------------------------------------------------------------
 
+    def _flush(self) -> None:
+        if self._loading:
+            return
+        source = self.build_source()
+        if source and self._write_callback:
+            self._write_callback(source)
+
     def _on_any_card_changed(self, _snippet: str) -> None:
         self._flush()
 
-    def _flush(self) -> None:
-        """Regenerate source and call the write callback."""
-        if self._write_callback is None:
-            return
-        source = self.build_source()
-        if source:
-            self._write_callback(source)
-
     def _remove_card(self, card: VariableCard) -> None:
-        self._layout.removeWidget(card)
         self._cards.remove(card)
+        self._layout.removeWidget(card)
         card.deleteLater()
         self._flush()
 
