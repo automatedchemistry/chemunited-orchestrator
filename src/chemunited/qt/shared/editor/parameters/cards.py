@@ -1,23 +1,11 @@
-"""
-cards.py
-========
-VariableCard — one card per Field() definition in the parameters file.
-
-Each card knows how to:
-  1. Render itself from a *BuildMode model (the field's current config).
-  2. Emit ``code_changed`` with the regenerated Field() Python snippet
-     whenever any input changes.
-
-The parent (ParameterListWidget) listens to all cards and assembles the
-full class body, which is then written back to the file.
-"""
+"""Card widgets for the parameters editor."""
 
 from __future__ import annotations
 
+import ast
 from typing import Any
 
-from chemunited.qt.shared.widgets.base_mode_editor.cards.builder_models import BasicVariableBuildMode
-from pydantic import BaseModel
+from pydantic import ValidationError
 from pydantic.fields import FieldInfo
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import (
@@ -30,7 +18,6 @@ from PyQt5.QtWidgets import (
 from qfluentwidgets import (
     BodyLabel,
     CaptionLabel,
-    ComboBox,
     DoubleSpinBox,
     FluentIcon,
     LineEdit,
@@ -39,28 +26,39 @@ from qfluentwidgets import (
     TransparentToolButton,
 )
 
+from chemunited.qt.shared.widgets.base_mode_editor.cards.builder_models import (
+    BasicVariableBuildMode,
+    BoolVariableBuildMode,
+    ChoiceVariableBuildMode,
+    FloatVariableBuildMode,
+    IntVariableBuildMode,
+    ListVariableBuildMode,
+    PhysicalQuantitiesMode,
+    StringVariableBuildMode,
+)
+
 # ---------------------------------------------------------------------------
 # Type metadata
 # ---------------------------------------------------------------------------
 
 _BADGE: dict[str, tuple[str, str]] = {
-    "IntVariableBuildMode":    ("#E6F1FB", "#185FA5"),
-    "FloatVariableBuildMode":  ("#E1F5EE", "#0F6E56"),
-    "PhysicalQuantitiesMode":  ("#FBEAF0", "#993556"),
+    "IntVariableBuildMode": ("#E6F1FB", "#185FA5"),
+    "FloatVariableBuildMode": ("#E1F5EE", "#0F6E56"),
+    "PhysicalQuantitiesMode": ("#FBEAF0", "#993556"),
     "StringVariableBuildMode": ("#FAEEDA", "#854F0B"),
-    "ListVariableBuildMode":   ("#FAECE7", "#993C1D"),
+    "ListVariableBuildMode": ("#FAECE7", "#993C1D"),
     "ChoiceVariableBuildMode": ("#F1EFE8", "#5F5E5A"),
-    "BoolVariableBuildMode":   ("#EEEDFE", "#534AB7"),
+    "BoolVariableBuildMode": ("#EEEDFE", "#534AB7"),
 }
 
 _SHORT: dict[str, str] = {
-    "IntVariableBuildMode":    "int",
-    "FloatVariableBuildMode":  "float",
-    "PhysicalQuantitiesMode":  "qty",
+    "IntVariableBuildMode": "int",
+    "FloatVariableBuildMode": "float",
+    "PhysicalQuantitiesMode": "qty",
     "StringVariableBuildMode": "str",
-    "ListVariableBuildMode":   "list",
+    "ListVariableBuildMode": "list",
     "ChoiceVariableBuildMode": "choice",
-    "BoolVariableBuildMode":   "bool",
+    "BoolVariableBuildMode": "bool",
 }
 
 # These fields are rendered in the dedicated bottom section, not as body rows.
@@ -71,6 +69,7 @@ _ORG_FIELDS = {"group"}
 # ---------------------------------------------------------------------------
 # Code generator
 # ---------------------------------------------------------------------------
+
 
 def generate_field_code(mode: BasicVariableBuildMode) -> str:
     """
@@ -87,46 +86,46 @@ def generate_field_code(mode: BasicVariableBuildMode) -> str:
             json_schema_extra={"group": "General", "editable": True, "visible": True},
         )
     """
-    cls = type(mode).__name__
     v = mode.model_dump()
 
-    name: str        = v.get("name", "x")
-    title: str       = v.get("title", "")
+    name: str = v.get("name", "x")
+    title: str = v.get("title", "")
     description: str = v.get("description", "")
-    default          = v.get("default")
-    group: str       = v.get("group", "General")
-    editable: bool   = v.get("editable", True)
-    visible: bool    = v.get("visible", True)
+    default = v.get("default")
+    group: str = v.get("group", "General")
+    editable: bool = v.get("editable", True)
+    visible: bool = v.get("visible", True)
 
     # ── Python type annotation ──────────────────────────────────────────
-    if cls == "IntVariableBuildMode":
+    if isinstance(mode, IntVariableBuildMode):
         annotation = "int"
-    elif cls == "FloatVariableBuildMode":
+    elif isinstance(mode, FloatVariableBuildMode):
         annotation = "float"
-    elif cls == "PhysicalQuantitiesMode":
+    elif isinstance(mode, PhysicalQuantitiesMode):
         unit = v.get("unit", "ml")
         annotation = f'Annotated[ChemUnitQuantity, ChemQuantityValidator("{unit}")]'
-        # Wrap default as ChemUnitQuantity("…")
         default_repr = f'ChemUnitQuantity("{default}")'
-    elif cls == "StringVariableBuildMode":
+    elif isinstance(mode, StringVariableBuildMode):
         annotation = "str"
-    elif cls == "ListVariableBuildMode":
+    elif isinstance(mode, ListVariableBuildMode):
         annotation = "list"
-    elif cls == "ChoiceVariableBuildMode":
+    elif isinstance(mode, ChoiceVariableBuildMode):
         annotation = "str"
-    elif cls == "BoolVariableBuildMode":
+    elif isinstance(mode, BoolVariableBuildMode):
         annotation = "bool"
     else:
         annotation = "Any"
 
     # ── default representation ──────────────────────────────────────────
-    if cls != "PhysicalQuantitiesMode":
+    if not isinstance(mode, PhysicalQuantitiesMode):
         if isinstance(default, str):
             default_repr = f'"{default}"'
         elif isinstance(default, bool):
             default_repr = "True" if default else "False"
         elif isinstance(default, list):
-            items = ", ".join(f'"{i}"' if isinstance(i, str) else str(i) for i in default)
+            items = ", ".join(
+                f'"{i}"' if isinstance(i, str) else str(i) for i in default
+            )
             default_repr = f"[{items}]"
         elif default is None:
             default_repr = "None"
@@ -135,21 +134,14 @@ def generate_field_code(mode: BasicVariableBuildMode) -> str:
 
     # ── optional validation args ────────────────────────────────────────
     validation_lines: list[str] = []
-    if cls == "IntVariableBuildMode":
+    if isinstance(mode, (IntVariableBuildMode, FloatVariableBuildMode)):
         ge = v.get("ge")
         le = v.get("le")
         if ge is not None:
             validation_lines.append(f"    ge={ge!r},")
         if le is not None:
             validation_lines.append(f"    le={le!r},")
-    elif cls == "FloatVariableBuildMode":
-        ge = v.get("ge")
-        le = v.get("le")
-        if ge is not None:
-            validation_lines.append(f"    ge={ge!r},")
-        if le is not None:
-            validation_lines.append(f"    le={le!r},")
-    elif cls == "StringVariableBuildMode":
+    elif isinstance(mode, StringVariableBuildMode):
         pattern = v.get("pattern", "")
         min_len = v.get("min_length")
         max_len = v.get("max_length")
@@ -159,7 +151,7 @@ def generate_field_code(mode: BasicVariableBuildMode) -> str:
             validation_lines.append(f"    min_length={min_len!r},")
         if max_len is not None:
             validation_lines.append(f"    max_length={max_len!r},")
-    elif cls == "ListVariableBuildMode":
+    elif isinstance(mode, ListVariableBuildMode):
         min_items = v.get("min_items")
         max_items = v.get("max_items")
         if min_items is not None:
@@ -173,9 +165,9 @@ def generate_field_code(mode: BasicVariableBuildMode) -> str:
         "editable": editable,
         "visible": visible,
     }
-    if cls == "PhysicalQuantitiesMode":
+    if isinstance(mode, PhysicalQuantitiesMode):
         extra["unit"] = v.get("unit", "ml")
-    if cls == "ChoiceVariableBuildMode":
+    if isinstance(mode, ChoiceVariableBuildMode):
         options = v.get("Options", [])
         if options:
             extra["Options"] = options
@@ -201,7 +193,9 @@ def generate_field_code(mode: BasicVariableBuildMode) -> str:
 
 
 class TypeBadge(QLabel):
-    def __init__(self, mode: BasicVariableBuildMode, parent: QWidget | None = None) -> None:
+    def __init__(
+        self, mode: BasicVariableBuildMode, parent: QWidget | None = None
+    ) -> None:
         super().__init__(parent)
         cls = type(mode).__name__
         bg, fg = _BADGE.get(cls, ("#eeeeee", "#333333"))
@@ -222,27 +216,20 @@ class TypeBadge(QLabel):
 
 
 class VariableCard(QWidget):
-    """
-    Expandable card for one Field() definition.
+    """Expandable card for one field definition."""
 
-    Signals
-    -------
-    code_changed  – emitted with the regenerated Field() snippet whenever
-                    any input changes.  The list widget listens to this and
-                    writes the file.
-    deleted       – delete button clicked (passes self).
-    duplicate     – duplicate button clicked (passes self).
-    """
+    changed = pyqtSignal()
+    deleted = pyqtSignal(object)
+    duplicate = pyqtSignal(object)
 
-    code_changed = pyqtSignal(str)   # new Field() snippet
-    deleted      = pyqtSignal(object)
-    duplicate    = pyqtSignal(object)
-
-    def __init__(self, mode: BasicVariableBuildMode, parent: QWidget | None = None) -> None:
+    def __init__(
+        self, mode: BasicVariableBuildMode, parent: QWidget | None = None
+    ) -> None:
         super().__init__(parent)
         self.mode = mode
         self._expanded = True
         self._editors: dict[str, QWidget] = {}
+        self._message: QLabel
         self._build_ui()
 
     # ------------------------------------------------------------------
@@ -257,6 +244,11 @@ class VariableCard(QWidget):
         self._frame = QFrame(self)
         self._frame.setObjectName("varCard")
         self._set_border(error=False)
+        self._message = QLabel(self._frame)
+        self._message.hide()
+        self._message.setWordWrap(True)
+        self._message.setContentsMargins(12, 0, 12, 12)
+        self._message.setStyleSheet("color:#a1271f; font-size:11px; line-height:1.3;")
 
         fl = QVBoxLayout(self._frame)
         fl.setContentsMargins(0, 0, 0, 0)
@@ -265,6 +257,7 @@ class VariableCard(QWidget):
 
         self._body = self._build_body()
         fl.addWidget(self._body)
+        fl.addWidget(self._message)
 
         root.addWidget(self._frame)
 
@@ -324,9 +317,7 @@ class VariableCard(QWidget):
     def _build_body(self) -> QWidget:
         body = QWidget()
         body.setObjectName("cardBody")
-        body.setStyleSheet(
-            "#cardBody { border-top:1px solid rgba(0,0,0,0.08); }"
-        )
+        body.setStyleSheet("#cardBody { border-top:1px solid rgba(0,0,0,0.08); }")
 
         layout = QVBoxLayout(body)
         layout.setContentsMargins(12, 10, 12, 12)
@@ -360,12 +351,10 @@ class VariableCard(QWidget):
     # Field factory
     # ------------------------------------------------------------------
 
-    def _make_field_row(
-        self, field_name: str, field_info: FieldInfo
-    ) -> QWidget | None:
+    def _make_field_row(self, field_name: str, field_info: FieldInfo) -> QWidget | None:
         annotation = field_info.annotation
-        default    = getattr(self.mode, field_name, field_info.default)
-        title      = field_info.title or field_name
+        default = getattr(self.mode, field_name, field_info.default)
+        title = field_info.title or field_name
         editor: QWidget
 
         if annotation is int:
@@ -374,7 +363,7 @@ class VariableCard(QWidget):
             le = self._bound(field_info, "le")
             w.setRange(
                 int(ge) if ge is not None else -99_999,
-                int(le) if le is not None else  99_999,
+                int(le) if le is not None else 99_999,
             )
             if default is not None:
                 w.setValue(int(default))
@@ -388,7 +377,7 @@ class VariableCard(QWidget):
             le = self._bound(field_info, "le")
             w.setRange(
                 float(ge) if ge is not None else -1e9,
-                float(le) if le is not None else  1e9,
+                float(le) if le is not None else 1e9,
             )
             if default is not None:
                 w.setValue(float(default))
@@ -422,7 +411,9 @@ class VariableCard(QWidget):
                 w.setPlaceholderText(f"e.g. {placeholder}")
             if default is not None:
                 w.setText(str(default))
-            w.textChanged.connect(self._on_change)
+            # name/default get dedicated handlers below that already call _emit_change
+            if field_name not in ("name", "default"):
+                w.textChanged.connect(self._on_change)
             editor = w
 
         else:
@@ -551,30 +542,80 @@ class VariableCard(QWidget):
         self._expanded = not self._expanded
         self._body.setVisible(self._expanded)
         self._chevron.setIcon(
-            FluentIcon.CHEVRON_DOWN_MED if self._expanded else FluentIcon.CHEVRON_RIGHT_MED
+            FluentIcon.CHEVRON_DOWN_MED
+            if self._expanded
+            else FluentIcon.CHEVRON_RIGHT_MED
         )
 
     def _on_name_changed(self, text: str) -> None:
         self._name_label.setText(text or "unnamed")
-        self._emit_code()
+        self._emit_change()
 
     def _on_default_changed(self, text: str) -> None:
         self._default_label.setText(text)
-        self._emit_code()
+        self._emit_change()
 
     def _on_change(self, *_: Any) -> None:
-        self._emit_code()
+        self._emit_change()
 
-    def _emit_code(self) -> None:
-        """Regenerate the Field() snippet and emit it."""
+    def _current_mode(self) -> BasicVariableBuildMode:
+        return self.mode.__class__(**self.get_values())
+
+    @staticmethod
+    def _format_error_message(exc: ValidationError) -> str:
+        messages = [error["msg"] for error in exc.errors() if error.get("msg")]
+        if messages:
+            return "\n".join(messages)
+        return str(exc) or "Invalid value."
+
+    def _set_message(self, message: str | None) -> None:
+        if message:
+            self._message.setText(message)
+            self._message.show()
+            return
+        self._message.clear()
+        self._message.hide()
+
+    @staticmethod
+    def _parse_list_text(text: str) -> list[Any]:
+        stripped = text.strip()
+        if not stripped:
+            return []
+
         try:
-            updated = self.mode.__class__(**self.get_values())
-            self._set_border(error=False)
-            self.code_changed.emit(generate_field_code(updated))
-        except Exception:
+            parsed = ast.literal_eval(stripped)
+        except (SyntaxError, ValueError):
+            parsed = None
+
+        if isinstance(parsed, (list, tuple)):
+            return list(parsed)
+
+        items: list[Any] = []
+        for part in (piece.strip() for piece in text.split(",")):
+            if not part:
+                continue
+            try:
+                items.append(ast.literal_eval(part))
+            except (SyntaxError, ValueError):
+                items.append(part)
+        return items
+
+    def _refresh_validation_state(self) -> bool:
+        try:
+            self.mode = self._current_mode()
+        except ValidationError as exc:
             self._set_border(error=True)
-            # Still emit the raw attempt so the list can track position
-            self.code_changed.emit("")
+            self._set_message(self._format_error_message(exc))
+            return False
+
+        self._set_border(error=False)
+        self._set_message(None)
+        return True
+
+    def _emit_change(self) -> None:
+        """Refresh local validation state and notify listeners."""
+        self._refresh_validation_state()
+        self.changed.emit()
 
     # ------------------------------------------------------------------
     # Public API
@@ -583,46 +624,41 @@ class VariableCard(QWidget):
     def get_values(self) -> dict[str, Any]:
         result: dict[str, Any] = {}
         for fname, widget in self._editors.items():
+            annotation = self._mode_fields[fname].annotation
             if isinstance(widget, (SpinBox, DoubleSpinBox)):
                 result[fname] = widget.value()
             elif isinstance(widget, SwitchButton):
                 result[fname] = widget.isChecked()
-            elif isinstance(widget, ComboBox):
-                result[fname] = widget.currentText()
             elif isinstance(widget, LineEdit):
-                result[fname] = widget.text()
+                if annotation is list or (
+                    hasattr(annotation, "__origin__") and annotation.__origin__ is list
+                ):
+                    result[fname] = self._parse_list_text(widget.text())
+                else:
+                    result[fname] = widget.text()
         return result
 
     def get_field_code(self) -> str:
         """Return the current Field() snippet for this card."""
-        try:
-            updated = self.mode.__class__(**self.get_values())
-            self._set_border(error=False)
-            return generate_field_code(updated)
-        except Exception:
-            self._set_border(error=True)
+        if not self._refresh_validation_state():
             return ""
+        return generate_field_code(self.mode)
 
     def validate(self) -> bool:
-        try:
-            self.mode.__class__(**self.get_values())
-            self._set_border(error=False)
-            return True
-        except Exception:
-            self._set_border(error=True)
-            return False
+        return self._refresh_validation_state()
 
 
 if __name__ == "__main__":
-    from chemunited.qt.shared.widgets.base_mode_editor.cards.builder_models import PhysicalQuantitiesMode
-    from PyQt5.QtWidgets import QApplication
-    from pathlib import Path
     import sys
+
+    from PyQt5.QtWidgets import QApplication
+
+    from chemunited.qt.shared.widgets.base_mode_editor.cards.builder_models import (
+        PhysicalQuantitiesMode,
+    )
 
     app = QApplication(sys.argv)
     mode = PhysicalQuantitiesMode()
     card = VariableCard(mode)
     card.show()
     sys.exit(app.exec_())
-
-    

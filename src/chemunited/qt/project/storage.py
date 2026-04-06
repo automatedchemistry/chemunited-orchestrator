@@ -11,10 +11,10 @@ _PROTOCOLS_SKIP = {"__init__", "main_parameters"}
 
 # ── Pack / Unpack (unchanged) ──────────────────────────────────────────────────
 
+
 def pack(working_dir: Path, destination: Path) -> None:
     destination = destination.with_suffix(".chemunited")
-    with zipfile.ZipFile(destination, "w",
-                         compression=zipfile.ZIP_DEFLATED) as zf:
+    with zipfile.ZipFile(destination, "w", compression=zipfile.ZIP_DEFLATED) as zf:
         for file in working_dir.rglob("*"):
             if file.is_file() and not _is_excluded(file, working_dir):
                 zf.write(file, file.relative_to(working_dir))
@@ -27,11 +27,11 @@ def unpack(chemunited_file: Path, target_dir: Path) -> None:
 
 
 def _is_excluded(file: Path, root: Path) -> bool:
-    return any(part in _PACK_EXCLUDE
-               for part in file.relative_to(root).parts)
+    return any(part in _PACK_EXCLUDE for part in file.relative_to(root).parts)
 
 
 # ── Draw (unchanged) ───────────────────────────────────────────────────────────
+
 
 def save_draw(working_dir: Path, draw_data: dict) -> None:
     path = working_dir / "draw" / "setup.json"
@@ -47,6 +47,7 @@ def load_draw(working_dir: Path) -> dict:
 
 
 # ── Process files (replaces workflow + modules + process_parameters) ───────────
+
 
 def save_process(working_dir: Path, process_name: str, content: str) -> None:
     path = working_dir / "protocols" / f"{process_name}.py"
@@ -75,8 +76,7 @@ def rename_process(working_dir: Path, old_name: str, new_name: str) -> None:
     _refresh_protocols_init(working_dir)
 
 
-def duplicate_process(working_dir: Path,
-                      source_name: str, new_name: str) -> None:
+def duplicate_process(working_dir: Path, source_name: str, new_name: str) -> None:
     content = load_process(working_dir, source_name)
     # Update the class name inside the file to match the new name
     old_class = _class_name(source_name)
@@ -94,7 +94,8 @@ def list_processes(working_dir: Path) -> list[str]:
     if not protocols_dir.exists():
         return []
     return [
-        p.stem for p in sorted(protocols_dir.glob("*.py"))
+        p.stem
+        for p in sorted(protocols_dir.glob("*.py"))
         if p.stem not in _PROTOCOLS_SKIP
     ]
 
@@ -122,6 +123,7 @@ def load_process_classes(working_dir: Path) -> dict:
 
 # ── Main parameters ────────────────────────────────────────────────────────────
 
+
 def save_main_parameters(working_dir: Path, content: str) -> None:
     path = working_dir / "protocols" / "main_parameters.py"
     path.parent.mkdir(parents=True, exist_ok=True)
@@ -134,6 +136,7 @@ def load_main_parameters(working_dir: Path) -> str:
 
 
 # ── Connectivity (unchanged) ───────────────────────────────────────────────────
+
 
 def save_connectivity(working_dir: Path, data: dict) -> None:
     path = working_dir / "connectivity" / "associations.json"
@@ -150,6 +153,7 @@ def load_connectivity(working_dir: Path) -> dict:
 
 # ── protocols/__init__.py registry ────────────────────────────────────────────
 
+
 def _refresh_protocols_init(working_dir: Path) -> None:
     protocols_dir = working_dir / "protocols"
     names = list_processes(working_dir)
@@ -162,9 +166,7 @@ def _refresh_protocols_init(working_dir: Path) -> None:
         cls = _class_name(name)
         lines.append(f'    "{name}": {cls},\n')
     lines.append("}\n")
-    (protocols_dir / "__init__.py").write_text(
-        "".join(lines), encoding="utf-8"
-    )
+    (protocols_dir / "__init__.py").write_text("".join(lines), encoding="utf-8")
 
 
 def _class_name(process_name: str) -> str:

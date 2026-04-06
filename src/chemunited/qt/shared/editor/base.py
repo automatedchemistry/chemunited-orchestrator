@@ -1,10 +1,11 @@
-from chemunited.qt.shared.editor.lexer import ThemedLexerPython
-from chemunited.qt import resources_rc
-from qfluentwidgets import isDarkTheme
-from PyQt5.Qsci import QsciScintilla
-from PyQt5.QtCore import QTimer, QSaveFile, QIODevice
-from loguru import logger
 from pathlib import Path
+
+from loguru import logger
+from PyQt5.Qsci import QsciScintilla
+from PyQt5.QtCore import QIODevice, QSaveFile, QTimer
+from qfluentwidgets import isDarkTheme
+
+from chemunited.qt.shared.editor.lexer import ThemedLexerPython
 
 
 class EditorBase(QsciScintilla):
@@ -57,7 +58,6 @@ class EditorBase(QsciScintilla):
         self.setCaretLineVisible(True)  # Highlight the line with the caret
         self.setCaretWidth(2)  # Make caret thicker
 
-
         # Set end-of-line mode and visibility
         self.setEolMode(QsciScintilla.EolWindows)  # Use Windows-style line endings
         self.setEolVisibility(False)  # Hide EOL characters
@@ -72,7 +72,7 @@ class EditorBase(QsciScintilla):
 
         self.setMarginType(0, QsciScintilla.NumberMargin)  # Enable line numbers
         self.setMarginWidth(0, "000")  # Reserve width
-    
+
     def _load_content(self):
         """Load the initial text content from file."""
         self.setText(self.path.read_text(encoding="utf-8"))
@@ -137,9 +137,11 @@ class EditorBase(QsciScintilla):
 
 
 if __name__ == "__main__":
-    from PyQt5.QtWidgets import QApplication
-    from qfluentwidgets import setTheme, Theme
     import sys
+
+    from PyQt5.QtWidgets import QApplication
+    from qfluentwidgets import Theme, setTheme
+
     app = QApplication(sys.argv)
     setTheme(Theme.LIGHT)
     file = Path(__file__)

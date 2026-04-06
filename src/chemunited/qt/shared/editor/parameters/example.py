@@ -1,11 +1,8 @@
 """Example file for the parameters editor."""
 
-import sys
-from pathlib import Path
 from typing import Annotated
 
-from pydantic import BaseModel, Field
-from PyQt5.QtWidgets import QApplication
+from pydantic import BaseModel, Field, field_validator
 
 from chemunited.core.utils import ChemQuantityValidator, ChemUnitQuantity
 
@@ -75,7 +72,7 @@ class ProcessParameters(BaseModel):
     repeat_cycles: int = Field(
         title="Repeat Cycles",
         description="Number of identical injections to run before the wash sequence.",
-        default=1,
+        default=10,
         ge=1,
         le=12,
         json_schema_extra={"group": "Automation", "editable": True, "visible": True},
@@ -96,6 +93,22 @@ class ProcessParameters(BaseModel):
         default=True,
         json_schema_extra={"group": "Automation", "editable": True, "visible": True},
     )
+
+    experiment_name: str = Field(
+        title="Experiment Name",
+        description="Name of the experiment.",
+        default="some",
+        min_length=0,
+        max_length=50,
+        json_schema_extra={"group": "General", "editable": True, "visible": True},
+    )
+
+    @field_validator("experiment_name")
+    @classmethod
+    def validate_experiment_name(cls, v):
+        if v == "":
+            raise ValueError("Experiment name cannot be empty.")
+        return v
 
 
 def func(): ...

@@ -1,7 +1,9 @@
-from typing import Optional, Any, Iterable
-from loguru import logger
-from .enums import WindowCategory
 import queue
+from typing import Any, Optional
+
+from loguru import logger
+
+from .enums import WindowCategory
 
 
 class LogQueue:

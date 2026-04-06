@@ -1,15 +1,19 @@
-from PyQt5.QtCore import QFile, QTextStream
 from pathlib import Path
-from loguru import logger
+
 import black
+from loguru import logger
+from PyQt5.QtCore import QFile, QTextStream
 
 
 def _resource_fallback_path(path: str) -> Path | None:
     prefix = ":/default_files/"
     if not path.startswith(prefix):
         return None
-    return Path(__file__).resolve().parents[1] / "shared" / "resources" / path.removeprefix(
-        prefix
+    return (
+        Path(__file__).resolve().parents[1]
+        / "shared"
+        / "resources"
+        / path.removeprefix(prefix)
     )
 
 
@@ -52,8 +56,8 @@ def _write_lines(path: Path, lines: list[str], *, encoding: str = "utf-8") -> No
 
 
 def write_python_script(
-    file_path: Path, 
-    script: str = "process", 
+    file_path: Path,
+    script: str = "process",
     overwrite: dict | None = None,
 ) -> None:
     # read + apply replacements

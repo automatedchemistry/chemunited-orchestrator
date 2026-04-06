@@ -2,17 +2,25 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from .git_manager import GitManager
 from .manifest import ProjectManifest
 from .storage import (
-    pack, unpack,
-    save_draw, load_draw,
-    save_process, load_process, delete_process,
-    rename_process, duplicate_process, list_processes,
+    delete_process,
+    duplicate_process,
+    list_processes,
+    load_connectivity,
+    load_draw,
+    load_main_parameters,
+    load_process,
     load_process_classes,
-    save_main_parameters, load_main_parameters,
-    save_connectivity, load_connectivity,
+    pack,
+    rename_process,
+    save_connectivity,
+    save_draw,
+    save_main_parameters,
+    save_process,
+    unpack,
 )
-from .git_manager import GitManager
 
 
 class ProjectSession:
@@ -25,8 +33,9 @@ class ProjectSession:
 
     # ── Lifecycle (unchanged) ──────────────────────────────────────────────────
 
-    def new(self, name: str, location: Path,
-            description: str = "", init_git: bool = True) -> None:
+    def new(
+        self, name: str, location: Path, description: str = "", init_git: bool = True
+    ) -> None:
         self.working_dir = location / name
         self.working_dir.mkdir(parents=True, exist_ok=True)
         self.manifest = ProjectManifest(
@@ -43,8 +52,9 @@ class ProjectSession:
         self.manifest = ProjectManifest.load(working_dir)
         self.git = GitManager.open(working_dir)
 
-    def import_chemunited(self, chemunited_file: Path,
-                          location: Path | None = None) -> None:
+    def import_chemunited(
+        self, chemunited_file: Path, location: Path | None = None
+    ) -> None:
         name = chemunited_file.stem
         target = (location or chemunited_file.parent) / name
         unpack(chemunited_file, target)
@@ -83,8 +93,7 @@ class ProjectSession:
     def delete_process(self, process_name: str) -> None:
         delete_process(self.working_dir, process_name)
         self.manifest.processes_order = [
-            p for p in self.manifest.processes_order
-            if p != process_name
+            p for p in self.manifest.processes_order if p != process_name
         ]
         self.manifest.save(self.working_dir)
         if self.git:
@@ -93,8 +102,7 @@ class ProjectSession:
     def rename_process(self, old_name: str, new_name: str) -> None:
         rename_process(self.working_dir, old_name, new_name)
         self.manifest.processes_order = [
-            new_name if p == old_name else p
-            for p in self.manifest.processes_order
+            new_name if p == old_name else p for p in self.manifest.processes_order
         ]
         self.manifest.save(self.working_dir)
 

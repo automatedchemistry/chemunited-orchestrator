@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import json
-from dataclasses import dataclass, field, asdict
+from dataclasses import asdict, dataclass, field
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -10,9 +10,7 @@ from pathlib import Path
 class ProjectManifest:
     name: str
     chemunited_version: str
-    created: str = field(
-        default_factory=lambda: datetime.now(timezone.utc).isoformat()
-    )
+    created: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
     last_modified: str = field(
         default_factory=lambda: datetime.now(timezone.utc).isoformat()
     )

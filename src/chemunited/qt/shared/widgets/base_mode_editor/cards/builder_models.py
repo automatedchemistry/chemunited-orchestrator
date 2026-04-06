@@ -1,5 +1,6 @@
-from chemunited.core.utils.internal_quantity import ChemUnitQuantity
 from pydantic import BaseModel, Field, field_validator
+
+from chemunited.core.utils.internal_quantity import ChemUnitQuantity
 
 
 class BasicVariableBuildMode(BaseModel):
@@ -118,7 +119,9 @@ class BoolVariableBuildMode(BasicVariableBuildMode):
 
 
 class ListVariableBuildMode(BasicVariableBuildMode):
-    default: list = Field(default=[], json_schema_extra={"group": "General"})
+    default: list = Field(
+        default=["A", "B", "C"], json_schema_extra={"group": "General"}
+    )
     min_items: int = Field(
         default=0, title="Minimum Items", json_schema_extra={"group": "Validation"}
     )

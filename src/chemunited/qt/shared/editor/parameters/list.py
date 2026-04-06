@@ -1,58 +1,24 @@
-"""
-list.py
-=======
-ParameterListWidget
--------------------
-Scrollable list of VariableCard widgets.
-
-Responsibility
-~~~~~~~~~~~~~~
-* Holds all cards in order.
-* Listens to every card's ``code_changed`` signal.
-* On any change, assembles the full class body and writes the file via the
-  ``_write_callback`` supplied at construction.
-
-The file structure that is written back looks like::
-
-    class <ClassName>(<BaseClassName>):
-
-        <field 1 code>
-
-        <field 2 code>
-
-        def update(self):
-            ...
-"""
+"""Card list widget for the parameters editor."""
 
 from __future__ import annotations
 
 import copy
-from typing import Callable
+from collections.abc import Callable, Iterator
+from contextlib import contextmanager
 
-from chemunited.qt.shared.widgets.base_mode_editor.cards.builder_models import BasicVariableBuildMode
-from pydantic import BaseModel
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QScrollArea, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import QVBoxLayout, QWidget
+from qfluentwidgets import SmoothScrollArea
+
+from chemunited.qt.shared.widgets.base_mode_editor.cards.builder_models import (
+    BasicVariableBuildMode,
+)
 
 from .cards import VariableCard
 
 
-class ParameterListWidget(QScrollArea):
-    """
-    Scrollable list of VariableCard widgets.
-
-    Parameters
-    ----------
-    class_name:
-        Name of the generated class, e.g. ``"MainParameters"``.
-    base_class_name:
-        Name of the base class, e.g. ``"BaseModel"`` or ``"BaseModeParameters"``.
-    write_callback:
-        Called with the full class source string whenever any card changes.
-        Typically this splices the string back into the file on disk.
-    parent:
-        Qt parent widget.
-    """
+class ParameterListWidget(SmoothScrollArea):
+    """Scrollable list of parameter cards with live-write notifications."""
 
     def __init__(
         self,
@@ -65,79 +31,78 @@ class ParameterListWidget(QScrollArea):
         self._class_name = class_name
         self._base_class_name = base_class_name
         self._write_callback = write_callback
+        self._suspend_write_depth = 0
 
         self.setWidgetResizable(True)
         self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.enableTransparentBackground()
 
         self._container = QWidget()
         self._layout = QVBoxLayout(self._container)
         self._layout.setContentsMargins(10, 10, 10, 10)
         self._layout.setSpacing(8)
-        self._layout.addStretch()  # kept at bottom
+        self._layout.addStretch()
 
         self.setWidget(self._container)
         self._cards: list[VariableCard] = []
-        self._loading: bool = False
 
-    # ------------------------------------------------------------------
-    # Public API
-    # ------------------------------------------------------------------
+    @contextmanager
+    def suspend_writes(self) -> Iterator[None]:
+        """Temporarily suppress live writes while cards are populated."""
+        self._suspend_write_depth += 1
+        try:
+            yield
+        finally:
+            self._suspend_write_depth -= 1
 
-    def begin_load(self) -> None:
-        """Suppress _flush() during bulk card population."""
-        self._loading = True
-
-    def end_load(self) -> None:
-        """Re-enable _flush() after bulk population (does not flush itself)."""
-        self._loading = False
+    def set_base_class_name(self, name: str) -> None:
+        self._base_class_name = name
 
     def add_card(self, mode: BasicVariableBuildMode) -> VariableCard:
+        """Append a new card and flush if writes are enabled."""
         card = VariableCard(mode, self._container)
+        card.changed.connect(self._on_card_changed)
         card.deleted.connect(self._remove_card)
         card.duplicate.connect(self._duplicate_card)
-        card.code_changed.connect(self._on_any_card_changed)
-        # Insert before the trailing stretch (always the last layout item)
+
         self._layout.insertWidget(self._layout.count() - 1, card)
         self._cards.append(card)
         self._flush()
         return card
 
     def build_source(self) -> str:
-        """Return the field-definitions block for the class, or '' if any card is invalid."""
+        """Return the rendered class definition or an empty string if invalid."""
         if not self._cards:
             return f"class {self._class_name}({self._base_class_name}):\n    pass\n"
-        snippets = [card.get_field_code() for card in self._cards]
-        if any(s == "" for s in snippets):
-            return ""
+
+        snippets: list[str] = []
+        for card in self._cards:
+            snippet = card.get_field_code()
+            if not snippet:
+                return ""
+            snippets.append(snippet)
+
         body = "\n\n".join(snippets)
-        return (
-            f"class {self._class_name}({self._base_class_name}):\n\n"
-            f"{body}\n"
-        )
+        return f"class {self._class_name}({self._base_class_name}):\n\n{body}\n"
 
     def validate_all(self) -> bool:
         return all(card.validate() for card in self._cards)
 
     def clear_all(self) -> None:
-        self._loading = True
-        try:
+        with self.suspend_writes():
             for card in list(self._cards):
                 self._remove_card(card)
-        finally:
-            self._loading = False
-
-    # ------------------------------------------------------------------
-    # Private
-    # ------------------------------------------------------------------
+        self._flush()
 
     def _flush(self) -> None:
-        if self._loading:
+        if self._suspend_write_depth or self._write_callback is None:
             return
+
         source = self.build_source()
-        if source and self._write_callback:
+        if source:
             self._write_callback(source)
 
-    def _on_any_card_changed(self, _snippet: str) -> None:
+    def _on_card_changed(self) -> None:
         self._flush()
 
     def _remove_card(self, card: VariableCard) -> None:

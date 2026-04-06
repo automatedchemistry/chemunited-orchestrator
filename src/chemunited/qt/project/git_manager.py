@@ -4,7 +4,6 @@ from pathlib import Path
 
 import git  # gitpython
 
-
 _GITIGNORE = """\
 # Python
 __pycache__/
@@ -42,8 +41,7 @@ class GitManager:
         return cls(repo)
 
     @classmethod
-    def init_from_import(cls, working_dir: Path,
-                         source_name: str) -> GitManager:
+    def init_from_import(cls, working_dir: Path, source_name: str) -> GitManager:
         """Initialize a fresh Git repo after unpacking a .chemunited file."""
         repo = git.Repo.init(working_dir)
         gitignore = working_dir / ".gitignore"
@@ -109,9 +107,7 @@ class GitManager:
             "modified": [d.a_path for d in self._repo.index.diff(None)],
             "untracked": self._repo.untracked_files,
             "last_commit_message": self._repo.head.commit.message.strip(),
-            "last_commit_time": (
-                self._repo.head.commit.committed_datetime.isoformat()
-            ),
+            "last_commit_time": (self._repo.head.commit.committed_datetime.isoformat()),
         }
 
     def log(self, max_entries: int = 20) -> list[dict]:
@@ -145,8 +141,7 @@ class GitManager:
 
     def _auto_commit(self, paths: list[str], message: str) -> None:
         """Stage specific paths and commit only if they changed."""
-        existing = [p for p in paths
-                    if (Path(self._repo.working_dir) / p).exists()]
+        existing = [p for p in paths if (Path(self._repo.working_dir) / p).exists()]
         if not existing:
             return
         self._repo.index.add(existing)
