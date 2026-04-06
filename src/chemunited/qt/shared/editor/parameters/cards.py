@@ -16,6 +16,7 @@ from __future__ import annotations
 
 from typing import Any
 
+from chemunited.qt.shared.widgets.base_mode_editor.cards.builder_models import BasicVariableBuildMode
 from pydantic import BaseModel
 from pydantic.fields import FieldInfo
 from PyQt5.QtCore import Qt, pyqtSignal
@@ -71,7 +72,7 @@ _ORG_FIELDS = {"group"}
 # Code generator
 # ---------------------------------------------------------------------------
 
-def generate_field_code(mode: BaseModel) -> str:
+def generate_field_code(mode: BasicVariableBuildMode) -> str:
     """
     Produce the Python source line(s) for one Field() definition.
 
@@ -200,7 +201,7 @@ def generate_field_code(mode: BaseModel) -> str:
 
 
 class TypeBadge(QLabel):
-    def __init__(self, mode: BaseModel, parent: QWidget | None = None) -> None:
+    def __init__(self, mode: BasicVariableBuildMode, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         cls = type(mode).__name__
         bg, fg = _BADGE.get(cls, ("#eeeeee", "#333333"))
@@ -237,7 +238,7 @@ class VariableCard(QWidget):
     deleted      = pyqtSignal(object)
     duplicate    = pyqtSignal(object)
 
-    def __init__(self, mode: BaseModel, parent: QWidget | None = None) -> None:
+    def __init__(self, mode: BasicVariableBuildMode, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.mode = mode
         self._expanded = True
@@ -267,6 +268,10 @@ class VariableCard(QWidget):
 
         root.addWidget(self._frame)
 
+    @property
+    def _mode_fields(self) -> dict[str, FieldInfo]:
+        return type(self.mode).model_fields
+
     def _build_header(self) -> QWidget:
         header = QWidget()
         header.setCursor(Qt.PointingHandCursor)
@@ -281,7 +286,7 @@ class VariableCard(QWidget):
 
         h.addWidget(TypeBadge(self.mode, header))
 
-        default_name = self.mode.model_fields.get("name")
+        default_name = self._mode_fields.get("name")
         init_name = (default_name.default if default_name else None) or "unnamed"
         self._name_label = BodyLabel(init_name, header)
         self._name_label.setStyleSheet("font-weight:500;")
@@ -326,7 +331,7 @@ class VariableCard(QWidget):
 
         # Group fields by json_schema_extra["group"]
         groups: dict[str, list[tuple[str, FieldInfo]]] = {}
-        for fname, finfo in self.mode.model_fields.items():
+        for fname, finfo in self._mode_fields.items():
             if fname in _BEHAVIOR_FIELDS or fname in _ORG_FIELDS:
                 continue
             grp = (finfo.json_schema_extra or {}).get("group", "General")
@@ -487,7 +492,7 @@ class VariableCard(QWidget):
         layout.addWidget(caption)
 
         # group field
-        group_fi = self.mode.model_fields.get("group")
+        group_fi = self._mode_fields.get("group")
         if group_fi is not None:
             ge = LineEdit(section)
             ge.setText(str(group_fi.default or "General"))
@@ -499,7 +504,7 @@ class VariableCard(QWidget):
         toggle_row.setSpacing(16)
 
         for key in ("visible", "editable"):
-            fi = self.mode.model_fields.get(key)
+            fi = self._mode_fields.get(key)
             default_val = fi.default if fi else True
             sw = SwitchButton(section)
             sw.setChecked(bool(default_val))
@@ -603,3 +608,18 @@ class VariableCard(QWidget):
         except Exception:
             self._set_border(error=True)
             return False
+
+
+if __name__ == "__main__":
+    from chemunited.qt.shared.widgets.base_mode_editor.cards.builder_models import PhysicalQuantitiesMode
+    from PyQt5.QtWidgets import QApplication
+    from pathlib import Path
+    import sys
+
+    app = QApplication(sys.argv)
+    mode = PhysicalQuantitiesMode()
+    card = VariableCard(mode)
+    card.show()
+    sys.exit(app.exec_())
+
+    

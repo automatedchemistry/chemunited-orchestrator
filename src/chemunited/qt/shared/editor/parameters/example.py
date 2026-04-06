@@ -1,3 +1,4 @@
+# Script file of project parameter
 from pydantic import BaseModel, Field
 from PyQt5.QtWidgets import QApplication
 
@@ -185,24 +186,3 @@ class ProcessParameters(BaseModel):
         ),
     ]
 
-
-
-def main() -> None:
-    # Fall back to this file if the real parameters.py does not exist.
-    from chemunited.qt.shared.editor.parameters.main import MainParametersEditor
-    from PyQt5.QtWidgets import QApplication
-    from pathlib import Path
-    import sys
-    target = Path(__file__)
-
-
-    app = QApplication(sys.argv)
-
-    win = MainParametersEditor(path=target, class_name="ProcessParameters")
-    win.show()
-
-    sys.exit(app.exec_())
-
-
-if __name__ == "__main__":
-    main()
