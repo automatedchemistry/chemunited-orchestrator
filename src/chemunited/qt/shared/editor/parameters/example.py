@@ -1,188 +1,102 @@
-# Script file of project parameter
+"""Example file for the parameters editor."""
+
+import sys
+from pathlib import Path
+from typing import Annotated
+
 from pydantic import BaseModel, Field
 from PyQt5.QtWidgets import QApplication
 
 from chemunited.core.utils import ChemQuantityValidator, ChemUnitQuantity
-from typing import Annotated
+
+
+def some_method():
+    ...
 
 # ---------------------------------------------------------------------------
-# Comprehensive Pydantic model — one field per card type
+# Comprehensive Pydantic model
 # ---------------------------------------------------------------------------
 
 
 class ProcessParameters(BaseModel):
-    """Full demonstration model; every field exercises a different card type."""
 
-    # ── Identification ──────────────────────────────────────────────────────
+    campaign_code: str = Field(
+        title="Campaign Code",
+        description="Unique label used to group this experimental series.",
+        default="AURORA_07",
+        pattern='^[A-Z0-9_]+$',
+        min_length=6,
+        max_length=16,
+        json_schema_extra={'group': 'Identification', 'editable': True, 'visible': True},
+    )
 
-    experiment_name: Annotated[
-        str,
-        Field(
-            default="Run-01",
-            title="Experiment name",
-            description="Human-readable label for this run.",
-            min_length=3,
-            max_length=12,
-            json_schema_extra={"group": "Identification"},
-        ),
-    ]
+    solvent_recipe: str = Field(
+        title="Solvent Recipe",
+        description="Short human-readable description of the solvent blend.",
+        default="MeCN:H2O 8:2 + 0.1% HCOOH",
+        min_length=10,
+        max_length=40,
+        json_schema_extra={'group': 'Identification', 'editable': True, 'visible': True},
+    )
 
-    operator: Annotated[
-        str,
-        Field(
-            default="",
-            title="Operator",
-            description="Name of the person running this experiment.",
-            json_schema_extra={"group": "Identification"},
-        ),
-    ]
+    sample_loop_volume: Annotated[ChemUnitQuantity, ChemQuantityValidator("ml")] = Field(
+        title="Sample Loop Volume",
+        description="Volume loaded into the injection loop for each screening shot.",
+        default=ChemUnitQuantity("2.5 ml"),
+        json_schema_extra={'group': 'Flow Setup', 'editable': True, 'visible': True, 'unit': 'ml'},
+    )
 
-    # ── Reactor settings ────────────────────────────────────────────────────
+    residence_time: Annotated[ChemUnitQuantity, ChemQuantityValidator("s")] = Field(
+        title="Residence Time",
+        description="Target time the reaction slug spends inside the reactor.",
+        default=ChemUnitQuantity("90 s"),
+        json_schema_extra={'group': 'Flow Setup', 'editable': True, 'visible': True, 'unit': 's'},
+    )
 
-    reactor_volume: Annotated[
-        ChemUnitQuantity,
-        ChemQuantityValidator("ml"),
-        Field(
-            default=ChemUnitQuantity("10 ml"),
-            title="Reactor volume",
-            description="Internal volume of the reactor.",
-            json_schema_extra={"group": "Reactor"},
-        ),
-    ]
+    back_pressure: Annotated[ChemUnitQuantity, ChemQuantityValidator("bar")] = Field(
+        title="Back Pressure",
+        description="Pressure applied to stabilize flow and suppress degassing.",
+        default=ChemUnitQuantity("6 bar"),
+        json_schema_extra={'group': 'Flow Setup', 'editable': True, 'visible': True, 'unit': 'bar'},
+    )
 
-    residence_time: Annotated[
-        ChemUnitQuantity,
-        ChemQuantityValidator("s"),
-        Field(
-            default=ChemUnitQuantity("60 s"),
-            title="Residence time",
-            description="Target mean residence time.",
-            json_schema_extra={"group": "Reactor"},
-        ),
-    ]
+    quench_flow_rate: Annotated[ChemUnitQuantity, ChemQuantityValidator("ml / min")] = Field(
+        title="Quench Flow Rate",
+        description="Flow rate of the quench stream merged before collection.",
+        default=ChemUnitQuantity("0.35 ml / min"),
+        json_schema_extra={'group': 'Flow Setup', 'editable': True, 'visible': True, 'unit': 'ml / min'},
+    )
 
-    back_pressure: Annotated[
-        ChemUnitQuantity,
-        ChemQuantityValidator("bar"),
-        Field(
-            default=ChemUnitQuantity("2 bar"),
-            title="Back pressure",
-            description="Setpoint for the back-pressure regulator.",
-            json_schema_extra={"group": "Reactor"},
-        ),
-    ]
+    repeat_cycles: int = Field(
+        title="Repeat Cycles",
+        description="Number of identical injections to run before the wash sequence.",
+        default=4,
+        ge=1,
+        le=12,
+        json_schema_extra={'group': 'Automation', 'editable': True, 'visible': True},
+    )
 
-    flow_rate: Annotated[
-        ChemUnitQuantity,
-        ChemQuantityValidator("ml/min"),
-        Field(
-            default=ChemUnitQuantity("1 ml/min"),
-            title="Flow rate",
-            description="Pump flow rate setpoint.",
-            json_schema_extra={"group": "Reactor"},
-        ),
-    ]
+    uv_trigger_threshold: float = Field(
+        title="UV Trigger Threshold",
+        description="Absorbance threshold that marks the front of the slug.",
+        default=2.75,
+        ge=0.1,
+        le=10.0,
+        json_schema_extra={'group': 'Automation', 'editable': True, 'visible': True},
+    )
 
-    # ── Run parameters ──────────────────────────────────────────────────────
+    archive_trace_automatically: bool = Field(
+        title="Archive Trace Automatically",
+        description="Store chromatograms and sensor traces as soon as the run ends.",
+        default=True,
+        json_schema_extra={'group': 'Automation', 'editable': True, 'visible': True},
+    )
 
-    repetitions: Annotated[
-        int,
-        Field(
-            default=3,
-            ge=1,
-            le=20,
-            title="Repetitions",
-            description="How many times to repeat the run.",
-            json_schema_extra={"group": "Run parameters"},
-        ),
-    ]
 
-    sample_interval: Annotated[
-        float,
-        Field(
-            default=0.5,
-            ge=0.1,
-            le=60.0,
-            title="Sample interval (s)",
-            description="Time between data-point recordings.",
-            json_schema_extra={"group": "Run parameters", "step": 0.1},
-        ),
-    ]
+def func():
+    ...
 
-    collect_samples: Annotated[
-        bool,
-        Field(
-            default=True,
-            title="Collect samples",
-            description="Enable automatic fraction collection.",
-            json_schema_extra={"group": "Run parameters"},
-        ),
-    ]
-
-    # ── Analysis ────────────────────────────────────────────────────────────
-
-    detection_mode: Annotated[
-        str,
-        Field(
-            default="UV",
-            title="Detection mode",
-            description="Primary analytical channel.",
-            json_schema_extra={
-                "group": "Analysis",
-                "Options": ["UV", "MS", "NMR", "IR", "Conductivity"],
-            },
-        ),
-    ]
-
-    wavelengths: Annotated[
-        list[float],
-        Field(
-            default_factory=lambda: [254.0, 280.0],
-            title="UV wavelengths (nm)",
-            description="Wavelengths to record when UV detection is active.",
-            json_schema_extra={"group": "Analysis"},
-        ),
-    ]
-
-    target_compounds: Annotated[
-        list[str],
-        Field(
-            default_factory=lambda: ["product", "starting_material"],
-            title="Target compounds",
-            description="Compound names expected in the chromatogram.",
-            json_schema_extra={"group": "Analysis"},
-        ),
-    ]
-
-    # ── Notifications ────────────────────────────────────────────────────────
-
-    notify_on_completion: Annotated[
-        bool,
-        Field(
-            default=False,
-            title="Notify on completion",
-            json_schema_extra={"group": "Notifications"},
-        ),
-    ]
-
-    # hidden field — card must not appear in the scroll area
-    _schema_version: Annotated[
-        str,
-        Field(
-            default="1.0",
-            title="Schema version",
-            json_schema_extra={"group": "Notifications", "visible": False},
-        ),
-    ] = "1.0"
-
-    # read-only field — card appears but is greyed out
-    instrument_id: Annotated[
-        str,
-        Field(
-            default="SYN-01",
-            title="Instrument ID",
-            description="Fixed instrument identifier (read-only).",
-            json_schema_extra={"group": "Notifications", "editable": False},
-        ),
-    ]
-
+class AnotherObject:
+    a = 1
+    b = 2
+    c = 3

@@ -186,6 +186,7 @@
 
     <qresource prefix="/default_files">
         <file>scripts/process.txt</file>
+        <file>scripts/parameter.txt</file>
     </qresource>
 
     <qresource prefix="/lexer_palettes">

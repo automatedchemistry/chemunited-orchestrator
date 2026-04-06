@@ -1,0 +1,13 @@
+# Script file of project parameter
+# Updated/Created on: ---DATA---
+# Project name: ---PROJECT_NAME---
+from chemunited.core.utils import ChemQuantityValidator, ChemUnitQuantity
+from pydantic import BaseModel, Field, ConfigDict
+from PyQt5.QtWidgets import QApplication
+from typing import Annotated
+
+
+class MainParameter(BaseModel):
+    # -------------- General Settings (UI-visible) --------------
+    # Short, descriptive fields for the experiment identity and notes
+    model_config = ConfigDict(frozen=True)

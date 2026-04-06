@@ -107,6 +107,16 @@ class FloatVariableBuildMode(BasicVariableBuildMode):
     )
 
 
+class BoolVariableBuildMode(BasicVariableBuildMode):
+    """Configuration for boolean variables."""
+
+    default: bool = Field(
+        default=False,
+        title="Default Value",
+        json_schema_extra={"group": "General"},
+    )
+
+
 class ListVariableBuildMode(BasicVariableBuildMode):
     default: list = Field(default=[], json_schema_extra={"group": "General"})
     min_items: int = Field(
@@ -131,7 +141,14 @@ class ChoiceVariableBuildMode(BasicVariableBuildMode):
 
 
 class PhysicalQuantitiesMode(BasicVariableBuildMode):
-    """Configuration for string variables with unit."""
+    """Configuration for physical quantity variables."""
+
+    unit: str = Field(
+        default="ml",
+        title="Unit",
+        description="Pint-compatible unit string, e.g. 'ml', 's', 'bar', 'ml/min'.",
+        json_schema_extra={"group": "General"},
+    )
 
     default: str = Field(
         default="0 ml",
