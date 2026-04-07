@@ -1,55 +1,55 @@
 # analytics
-from .analytics.hplccontrol.hplccontrol_graph import HPLCControl
-from .analytics.ircontrol.ircontrol_graph import IRControl
-from .analytics.mscontrol.mscontrol_graph import MSControl
-from .analytics.nmrcontrol.nmrcontrol_graph import NMRControl
+from .analytics.hplccontrol_graph import HPLCControl
+from .analytics.ircontrol_graph import IRControl
+from .analytics.mscontrol_graph import MSControl
+from .analytics.nmrcontrol_graph import NMRControl
 
 # assembly
-from .assembly.gantry3d.gantry3d_graph import Gantry3D
-from .assembly.lengthcontrol.lengthcontrol_graph import LengthControl
+from .assembly.gantry3d_graph import Gantry3D
+from .assembly.lengthcontrol_graph import LengthControl
 
 # pipes
-from .pipes.backpressureregulator.backpressureregulator_graph import (
+from .pipes.backpressureregulator_graph import (
     BackPressureRegulator,
 )
-from .pipes.distributor.distributor_graph import Distributor
-from .pipes.mfccomponent.mfccomponent_graph import MFCComponent
-from .pipes.sink.sink_graph import Sink
-from .pipes.source.source_graph import Source
+from .pipes.distributor_graph import Distributor
+from .pipes.mfccomponent_graph import MFCComponent
+from .pipes.sink_graph import Sink
+from .pipes.source_graph import Source
 
 # pumps
-from .pumps.hplcpump.hplcpump_graph import HPLCPump
-from .pumps.syringepump.syringepump_graph import SyringePump
+from .pumps.hplcpump_graph import HPLCPump
+from .pumps.syringepump_graph import SyringePump
 
 # sensors
-from .sensors.flowmeter.flowmeter_graph import FlowMeter
-from .sensors.phidgetbubblesensorcomponent.phidgetbubblesensorcomponent_graph import (
+from .sensors.flowmeter_graph import FlowMeter
+from .sensors.phidgetbubblesensorcomponent_graph import (
     PhidgetBubbleSensorComponent,
 )
-from .sensors.photosensor.photosensor_graph import PhotoSensor
-from .sensors.pressurecontrol.pressurecontrol_graph import PressureControl
-from .sensors.pressuresensor.pressuresensor_graph import PressureSensor
+from .sensors.photosensor_graph import PhotoSensor
+from .sensors.pressurecontrol_graph import PressureControl
+from .sensors.pressuresensor_graph import PressureSensor
 
 # technical
-from .technical.multichannel.multichannel_graph import (
+from .technical.multichannel_graph import (
     MultiChannelADC,
     MultiChannelDAC,
     MultiChannelRelay,
 )
-from .technical.powers.powers_graph import (
+from .technical.powers_graph import (
     PhidgetBubbleSensorPowerComponent,
     PowerControl,
     PowerSwitch,
 )
 
 # thermal
-from .thermal.peltiercoolertemperaturecontrol.peltiercoolertemperaturecontrol_graph import (
+from .thermal.peltiercoolertemperaturecontrol_graph import (
     PeltierCoolerTemperatureControl,
 )
-from .thermal.temperaturecontrol.temperaturecontrol_graph import TemperatureControl
+from .thermal.temperaturecontrol_graph import TemperatureControl
 
 # valve — rotary
-from .valve.rotary_valve.rotary_valve_graph import (
+from .valve.rotary_valve_graph import (
     FourPortDistributionValve,
     FourPortFivePositionValve,
     SixPortDistributionValve,
@@ -62,19 +62,19 @@ from .valve.rotary_valve.rotary_valve_graph import (
 )
 
 # valve — solenoid
-from .valve.solenoid_valve.solenoid_valve_graph import SolenoidValve, SolenoidValve2Way
+from .valve.solenoid_valve_graph import SolenoidValve, SolenoidValve2Way
 
 # vessels
-from .vessels.bathreactor.bathreactor_graph import BathReactor
-from .vessels.customflask.customflask_graph import CustomFlask
-from .vessels.flowreactor.flowreactor_graph import FlowReactor
-from .vessels.glassbottle.glassbottle_graph import GlassBottle
-from .vessels.loop.loop_graph import Loop
-from .vessels.photoreactor.photoreactor_graph import Photoreactor
-from .vessels.pool.pool_graph import Pool
-from .vessels.pressureglasbottle.pressureglasbottle_graph import PressureGlassBottle
-from .vessels.reactor.reactor_graph import Reactor
-from .vessels.vial.vial_graph import Vial
+from .vessels.bathreactor_graph import BathReactor
+from .vessels.customflask_graph import CustomFlask
+from .vessels.flowreactor_graph import FlowReactor
+from .vessels.glassbottle_graph import GlassBottle
+from .vessels.loop_graph import Loop
+from .vessels.photoreactor_graph import Photoreactor
+from .vessels.pool_graph import Pool
+from .vessels.pressureglasbottle_graph import PressureGlassBottle
+from .vessels.reactor_graph import Reactor
+from .vessels.vial_graph import Vial
 
 __all__ = [
     # analytics
