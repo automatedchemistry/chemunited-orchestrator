@@ -2,11 +2,13 @@ from typing import Union
 
 from loguru import logger
 
+import chemunited.qt.elements.component.protocols as protocol_module
 from chemunited.core.components import ComponentData
 
 from . import glossary
 from .graph_item import GraphComponent
 from .widgets import ComponentWidget
+from .protocols import ComponentProtocol
 
 
 class UtensilManager:
@@ -32,6 +34,7 @@ class UtensilManager:
 class ElectronicManager(UtensilManager):
     def __init__(self):
         super().__init__()
+        self.protocols: ComponentProtocol = ComponentProtocol("generic")
 
 
 def list_components() -> tuple[dict[str, list[str]], dict[str, type[GraphComponent]]]:
@@ -81,4 +84,12 @@ def create_component(figure: str, **kwargs) -> Union[UtensilManager, ElectronicM
     else:
         component = UtensilManager()
     component.graph = components[figure](mdata)
+    if mdata.is_electronic:
+        protocol_cls = getattr(
+            protocol_module,
+            f"{mdata.figure}Protocols",
+            ComponentProtocol,
+        )
+        component.protocols = protocol_cls(component.name)
     return component
+
