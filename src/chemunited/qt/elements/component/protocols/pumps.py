@@ -57,10 +57,17 @@ class WithdrawParameter(CommandSignature):
         default=ChemUnitQuantity("1 ml"),
     )
 
-    @field_validator("rate", "volume")
+    @field_validator("rate")
     @classmethod
-    def validate_positive(cls, v: ChemUnitQuantity) -> ChemUnitQuantity:
+    def validate_positive_rate(cls, v: ChemUnitQuantity) -> ChemUnitQuantity:
         if v <= ChemUnitQuantity("0 ml / min"):
+            raise ValueError("Value must be positive")
+        return v
+
+    @field_validator("volume")
+    @classmethod
+    def validate_positive_volume(cls, v: ChemUnitQuantity) -> ChemUnitQuantity:
+        if v <= ChemUnitQuantity("0 ml"):
             raise ValueError("Value must be positive")
         return v
 
