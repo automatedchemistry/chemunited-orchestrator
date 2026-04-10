@@ -13,7 +13,7 @@ from .protocols import ComponentProtocol
 
 class UtensilManager:
     def __init__(self):
-        self.graph: GraphComponent = GraphComponent(data=ComponentData())
+        self.graph: GraphComponent
         self._widget: ComponentWidget | None = None  # lazy — created on first access
 
     @property

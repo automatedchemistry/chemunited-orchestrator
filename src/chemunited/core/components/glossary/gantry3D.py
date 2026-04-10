@@ -10,6 +10,7 @@ from chemunited.core.components.component import (
     ComponentMode,
 )
 from chemunited.core.components.internals import Port
+import numpy as np
 
 
 class gantry3DMode(ComponentMode):
@@ -85,13 +86,23 @@ class gantry3DData(ComponentData):
             1: Port(
                 number=1,
                 component=self.name,
-                relative_position=(-PATTERN_DIMENSION / 2, 0),
+                relative_position=(0, - 1.05 * PATTERN_DIMENSION),
             )
         }
+        factor_y = 1
+        factor_x = 0
         for i in range(self.connections_number):
+            if i % 20 == 0:
+                factor_x = 0
+                factor_y += 0.3
             self.ports_by_number[i + 2] = Port(
                 number=i + 2,
                 component=self.name,
                 category=ConnectionType.MOVEMENT,
-                relative_position=(PATTERN_DIMENSION / 2, 0),
+                relative_position=(
+                    factor_x - 2 * PATTERN_DIMENSION, 
+                    factor_y * PATTERN_DIMENSION + 10
+                ),
+                show_in_graph=False,
             )
+            factor_x += 10

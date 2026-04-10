@@ -27,6 +27,8 @@ dependencies = [
     "pint",
     "pydantic_pint",
     "loguru",
+    "scipy",
+    "gitpython",
 ]
 
 [project.optional-dependencies]

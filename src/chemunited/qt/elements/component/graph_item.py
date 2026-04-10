@@ -47,6 +47,7 @@ from chemunited.qt.elements.component.component_parts import (
     WarningDisplay,
 )
 from chemunited.qt.shared.enums import SetupStepMode
+from loguru import logger
 
 # Maps chemunited_core ConnectionType values to their visual point classes.
 # HYDRAULIC is the core counterpart of what the UI layer calls FLOW.
@@ -171,6 +172,7 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
                 parent=self,
             )
         else:
+            logger.warning(f"Device doesn't have an SVG icon: {self._data.figure} - Not found in {svg_path}")
             self._svg = QGraphicsRectItem(
                 -PATTERN_DIMENSION / 2,
                 -PATTERN_DIMENSION / 2,
@@ -205,6 +207,7 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
             label = TextElement(str(port_num), parent=self)
             label.setPos(*port.relative_position)
             self._port_labels[port_num] = label
+            label.setVisible(port.show_in_graph)
             self.addToGroup(label)
 
         # Plain children — follow the group but don't affect its bounding rect.
@@ -281,6 +284,13 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
         # Rotation changes the bounding rect, so re-position plain children.
         self.post_layout()
 
+    def _restore_port_graph_visibility(self) -> None:
+        """Apply each port's declared graph visibility to its point and label."""
+        for port_num, port in self._data.ports_by_number.items():
+            label = self._port_labels.get(port_num)
+            if label is not None:
+                label.setVisible(port.show_in_graph)
+
     def set_frame_mode(self, mode: SetupStepMode) -> None:
         """Configure visibility and interaction flags for the active editor frame.
 
@@ -301,10 +311,7 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
         if mode == SetupStepMode.DESIGN:
             self.setFlag(QGraphicsItem.ItemIsMovable, True)  # type: ignore
             self._deletable = True
-            for pt in self._points.values():
-                pt.setVisible(True)
-            for lbl in self._port_labels.values():
-                lbl.setVisible(True)
+            self._restore_port_graph_visibility()
             if self._badge is not None:
                 self._badge.setVisible(False)
             self._warning.setVisible(False)
@@ -312,10 +319,7 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
         elif mode == SetupStepMode.PROTOCOLS:
             self.setFlag(QGraphicsItem.ItemIsMovable, True)  # type: ignore
             self._deletable = False
-            for pt in self._points.values():
-                pt.setVisible(True)
-            for lbl in self._port_labels.values():
-                lbl.setVisible(True)
+            self._restore_port_graph_visibility()
             if self._badge is not None:
                 self._badge.setVisible(False)
             self._warning.setVisible(False)

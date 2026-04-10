@@ -100,8 +100,8 @@
         <file>components/MSControlDARK.svg</file>
         <file>components/MFCcomponentLIGHT.svg</file>
         <file>components/MFCcomponentDARK.svg</file>
-        <file>components/gantry3DLIGHT.svg</file>
-        <file>components/gantry3DDARK.svg</file>
+        <file>components/Gantry3DLIGHT.svg</file>
+        <file>components/Gantry3DDARK.svg</file>
         <file>components/PeltierCoolerTemperatureControlLIGHT.svg</file>
         <file>components/PeltierCoolerTemperatureControlDARK.svg</file>
         <file>components/LoopLIGHT.svg</file>
