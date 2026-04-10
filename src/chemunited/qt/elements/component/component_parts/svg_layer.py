@@ -72,6 +72,6 @@ class SvgLayer(QGraphicsSvgItem):
         br = self.boundingRect()
         self.setTransformOriginPoint(br.center())
         self.setPos(
-            -br.width() * self.scale() / 2,
-            -br.height() * self.scale() / 2,
+            -br.width() / 2,
+            -br.height() / 2,
         )
