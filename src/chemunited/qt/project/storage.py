@@ -114,6 +114,8 @@ def load_process_classes(working_dir: Path) -> dict:
             init_path,
             submodule_search_locations=[str(working_dir / "protocols")],
         )
+        if spec is None or spec.loader is None:
+            return {}
         module = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(module)
         return getattr(module, "PROCESSES", {})

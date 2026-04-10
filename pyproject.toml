@@ -92,6 +92,8 @@ explicit_package_bases = true
 module = [
     "PyQt5",
     "PyQt5.*",
+    "black",
+    "git",
     "qfluentwidgets",
     "qframelesswindow",
     "networkx",

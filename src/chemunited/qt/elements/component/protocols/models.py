@@ -1,6 +1,7 @@
-from pydantic import BaseModel, Field
-from typing import Literal, Type, Self
 import uuid
+from typing import Literal, Self, Type
+
+from pydantic import BaseModel, Field
 
 
 class CommandSignature(BaseModel):
@@ -9,6 +10,7 @@ class CommandSignature(BaseModel):
     method: Literal["GET", "PUT"] = "PUT"
     description: str = ""
     wait_time: float = 0.0
+    wait_feedback_status: bool = False
     id: str = Field(default_factory=lambda: uuid.uuid4().hex[:6])
 
     @property

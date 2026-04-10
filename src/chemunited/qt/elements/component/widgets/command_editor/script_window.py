@@ -166,6 +166,7 @@ class ScriptEditorDialog(FramelessDialog):
         # TODO: replace QLabel placeholder with a real code editor widget
         # (e.g. QsciScintilla, or your existing script editor component)
         from PyQt5.QtWidgets import QPlainTextEdit
+
         self._editor = QPlainTextEdit()
         self._editor.setPlainText(self._source)
         self._editor.setStyleSheet(
@@ -215,10 +216,10 @@ class ScriptEditorDialog(FramelessDialog):
             # TODO: connect each button to the appropriate insertion helper
             return btn
 
-        layout.addWidget(_action_btn("+", "add command",   "#185FA5", "#E6F1FB"))
-        layout.addWidget(_action_btn("⇢", "pathway",       "#0F6E56", "#E1F5EE"))
+        layout.addWidget(_action_btn("+", "add command", "#185FA5", "#E6F1FB"))
+        layout.addWidget(_action_btn("⇢", "pathway", "#0F6E56", "#E1F5EE"))
         layout.addWidget(_action_btn("P", "process param", "#854F0B", "#FAEEDA"))
-        layout.addWidget(_action_btn("M", "main param",    "#3C3489", "#EEEDFE"))
+        layout.addWidget(_action_btn("M", "main param", "#3C3489", "#EEEDFE"))
 
         layout.addStretch()
 

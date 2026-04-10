@@ -10,7 +10,6 @@ from chemunited.core.components.component import (
     ComponentMode,
 )
 from chemunited.core.components.internals import Port
-import numpy as np
 
 
 class gantry3DMode(ComponentMode):
@@ -86,7 +85,7 @@ class gantry3DData(ComponentData):
             1: Port(
                 number=1,
                 component=self.name,
-                relative_position=(0, - 1.05 * PATTERN_DIMENSION),
+                relative_position=(0, -1.05 * PATTERN_DIMENSION),
             )
         }
         factor_y = 1
@@ -100,8 +99,8 @@ class gantry3DData(ComponentData):
                 component=self.name,
                 category=ConnectionType.MOVEMENT,
                 relative_position=(
-                    factor_x - 2 * PATTERN_DIMENSION, 
-                    factor_y * PATTERN_DIMENSION + 10
+                    factor_x - 2 * PATTERN_DIMENSION,
+                    factor_y * PATTERN_DIMENSION + 10,
                 ),
                 show_in_graph=False,
             )

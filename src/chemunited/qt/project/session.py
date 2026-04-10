@@ -31,6 +31,16 @@ class ProjectSession:
         self.manifest: ProjectManifest | None = None
         self.git: GitManager | None = None
 
+    def _require_working_dir(self) -> Path:
+        if self.working_dir is None:
+            raise RuntimeError("Project session has no working directory.")
+        return self.working_dir
+
+    def _require_manifest(self) -> ProjectManifest:
+        if self.manifest is None:
+            raise RuntimeError("Project session has no loaded manifest.")
+        return self.manifest
+
     # ── Lifecycle (unchanged) ──────────────────────────────────────────────────
 
     def new(
@@ -64,78 +74,86 @@ class ProjectSession:
         self.git = GitManager.init_from_import(target, chemunited_file.name)
 
     def export_chemunited(self, destination: Path | None = None) -> Path:
-        dest = destination or self.working_dir.parent / self.manifest.name
-        self.manifest.save(self.working_dir)
-        pack(self.working_dir, dest)
+        working_dir = self._require_working_dir()
+        manifest = self._require_manifest()
+        dest = destination or working_dir.parent / manifest.name
+        manifest.save(working_dir)
+        pack(working_dir, dest)
         self.source_file = dest.with_suffix(".chemunited")
         return self.source_file
 
     # ── Draw (unchanged) ───────────────────────────────────────────────────────
 
     def save_draw(self, draw_data: dict) -> None:
-        save_draw(self.working_dir, draw_data)
+        save_draw(self._require_working_dir(), draw_data)
         if self.git:
             self.git.commit_draw()
 
     def load_draw(self) -> dict:
-        return load_draw(self.working_dir)
+        return load_draw(self._require_working_dir())
 
     # ── Protocols ──────────────────────────────────────────────────────────────
 
     def save_process(self, process_name: str, content: str) -> None:
-        save_process(self.working_dir, process_name, content)
+        save_process(self._require_working_dir(), process_name, content)
         if self.git:
             self.git.commit_process(process_name)
 
     def load_process(self, process_name: str) -> str:
-        return load_process(self.working_dir, process_name)
+        return load_process(self._require_working_dir(), process_name)
 
     def delete_process(self, process_name: str) -> None:
-        delete_process(self.working_dir, process_name)
-        self.manifest.processes_order = [
-            p for p in self.manifest.processes_order if p != process_name
+        working_dir = self._require_working_dir()
+        manifest = self._require_manifest()
+        delete_process(working_dir, process_name)
+        manifest.processes_order = [
+            p for p in manifest.processes_order if p != process_name
         ]
-        self.manifest.save(self.working_dir)
+        manifest.save(working_dir)
         if self.git:
             self.git.commit_process(process_name, deleted=True)
 
     def rename_process(self, old_name: str, new_name: str) -> None:
-        rename_process(self.working_dir, old_name, new_name)
-        self.manifest.processes_order = [
-            new_name if p == old_name else p for p in self.manifest.processes_order
+        working_dir = self._require_working_dir()
+        manifest = self._require_manifest()
+        rename_process(working_dir, old_name, new_name)
+        manifest.processes_order = [
+            new_name if p == old_name else p for p in manifest.processes_order
         ]
-        self.manifest.save(self.working_dir)
+        manifest.save(working_dir)
 
     def duplicate_process(self, source_name: str, new_name: str) -> None:
-        duplicate_process(self.working_dir, source_name, new_name)
-        self.manifest.processes_order.append(new_name)
-        self.manifest.save(self.working_dir)
+        working_dir = self._require_working_dir()
+        manifest = self._require_manifest()
+        duplicate_process(working_dir, source_name, new_name)
+        manifest.processes_order.append(new_name)
+        manifest.save(working_dir)
         if self.git:
             self.git.commit_process(new_name, created=True)
 
     def list_processes(self) -> list[str]:
-        return list_processes(self.working_dir)
+        return list_processes(self._require_working_dir())
 
     def load_process_classes(self) -> dict:
-        return load_process_classes(self.working_dir)
+        return load_process_classes(self._require_working_dir())
 
     # ── Parameters ─────────────────────────────────────────────────────────────
 
     def save_main_parameters(self, content: str) -> None:
-        save_main_parameters(self.working_dir, content)
+        save_main_parameters(self._require_working_dir(), content)
         if self.git:
             self.git.commit_main_parameters()
 
     def load_main_parameters(self) -> str:
-        return load_main_parameters(self.working_dir)
+        return load_main_parameters(self._require_working_dir())
 
     # ── Connectivity (unchanged) ───────────────────────────────────────────────
 
     def save_connectivity(self, data: dict) -> None:
-        save_connectivity(self.working_dir, data)
+        save_connectivity(self._require_working_dir(), data)
 
     def load_connectivity(self) -> dict:
-        return load_connectivity(self.working_dir)
+        return load_connectivity(self._require_working_dir())
 
     # ── Git ────────────────────────────────────────────────────────────────────
 

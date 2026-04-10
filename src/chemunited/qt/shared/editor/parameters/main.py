@@ -6,7 +6,7 @@ import ast
 import copy
 from functools import partial
 from pathlib import Path
-from typing import Annotated, Any, get_args, get_origin
+from typing import Annotated, Any, TypedDict, get_args, get_origin
 
 from loguru import logger
 from pydantic.fields import FieldInfo
@@ -35,6 +35,15 @@ from chemunited.qt.shared.widgets.base_mode_editor.cards.builder_models import (
     StringVariableBuildMode,
 )
 from chemunited.qt.utils.files import load_class
+
+
+class _BaseModeKwargs(TypedDict):
+    name: str
+    title: str
+    description: str
+    group: str
+    editable: bool
+    visible: bool
 
 
 def _unwrap_annotation(fi: FieldInfo) -> tuple[Any, list[Any]]:
@@ -73,6 +82,17 @@ def _field_default(fi: FieldInfo, fallback: Any = None) -> Any:
         return fallback
 
 
+def _field_extra(field_info: FieldInfo) -> dict[str, Any]:
+    extra = field_info.json_schema_extra
+    return extra if isinstance(extra, dict) else {}
+
+
+def _string_list(value: Any) -> list[str]:
+    if not isinstance(value, list):
+        return []
+    return [str(item) for item in value]
+
+
 def field_info_to_build_mode(
     field_name: str,
     field_info: FieldInfo,
@@ -81,16 +101,16 @@ def field_info_to_build_mode(
     if field_name.startswith("_"):
         return None
 
-    extra = field_info.json_schema_extra or {}
+    extra = _field_extra(field_info)
     annotation, metadata = _unwrap_annotation(field_info)
 
-    base_kwargs = {
+    base_kwargs: _BaseModeKwargs = {
         "name": field_name,
         "title": field_info.title or "",
         "description": field_info.description or "",
-        "group": extra.get("group", "General"),
-        "editable": extra.get("editable", True),
-        "visible": extra.get("visible", True),
+        "group": str(extra.get("group", "General")),
+        "editable": bool(extra.get("editable", True)),
+        "visible": bool(extra.get("visible", True)),
     }
 
     if annotation is ChemUnitQuantity:
@@ -111,7 +131,7 @@ def field_info_to_build_mode(
         )
 
     if annotation is str and extra.get("Options"):
-        options = list(extra.get("Options", []))
+        options = _string_list(extra.get("Options"))
         default = _field_default(field_info, "")
         return ChoiceVariableBuildMode(
             default=str(default),

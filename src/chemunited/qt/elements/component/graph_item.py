@@ -20,6 +20,7 @@ from __future__ import annotations
 from dataclasses import asdict
 from typing import ClassVar, Generic, TypeVar
 
+from loguru import logger
 from pydantic import BaseModel
 from PyQt5.QtCore import QFile, Qt
 from PyQt5.QtGui import QColor, QPen
@@ -47,7 +48,6 @@ from chemunited.qt.elements.component.component_parts import (
     WarningDisplay,
 )
 from chemunited.qt.shared.enums import SetupStepMode
-from loguru import logger
 
 # Maps chemunited_core ConnectionType values to their visual point classes.
 # HYDRAULIC is the core counterpart of what the UI layer calls FLOW.
@@ -172,7 +172,9 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
                 parent=self,
             )
         else:
-            logger.warning(f"Device doesn't have an SVG icon: {self._data.figure} - Not found in {svg_path}")
+            logger.warning(
+                f"Device doesn't have an SVG icon: {self._data.figure} - Not found in {svg_path}"
+            )
             self._svg = QGraphicsRectItem(
                 -PATTERN_DIMENSION / 2,
                 -PATTERN_DIMENSION / 2,

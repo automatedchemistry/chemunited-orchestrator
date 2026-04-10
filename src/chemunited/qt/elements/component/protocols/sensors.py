@@ -1,10 +1,16 @@
-from .models import CommandSignature, ComponentProtocol
-from chemunited.core.utils.internal_quantity import ChemUnitQuantity, ChemQuantityValidator
-from pydantic import Field, field_validator
 from typing import Annotated, Literal
 
+from pydantic import Field, field_validator
+
+from chemunited.core.utils.internal_quantity import (
+    ChemQuantityValidator,
+    ChemUnitQuantity,
+)
+
+from .models import CommandSignature, ComponentProtocol
 
 # --- shared power commands (identical across all sensor-based protocols) ---
+
 
 class PowerOnParameter(CommandSignature):
     command: str = "power-on"
@@ -28,6 +34,7 @@ class PhidgetBubbleSensorComponentProtocols(SensorProtocolBase): ...
 
 
 # --- MFC ---
+
 
 class GetFlowRateParameter(CommandSignature):
     command: str = "get-flow-rate"
@@ -67,6 +74,7 @@ class MFCComponentProtocols(ComponentProtocol):
 
 # --- Photo sensor ---
 
+
 class AcquireSignalParameter(CommandSignature):
     command: str = "acquire-signal"
     method: Literal["GET", "PUT"] = "GET"
@@ -87,6 +95,7 @@ class PhotoSensorProtocols(SensorProtocolBase):
 
 # --- Pressure sensor (read-only) ---
 
+
 class ReadPressureParameter(CommandSignature):
     command: str = "read-pressure"
     method: Literal["GET", "PUT"] = "GET"
@@ -100,6 +109,7 @@ class PressureSensorProtocols(SensorProtocolBase):
 
 
 # --- Pressure control (read + set) ---
+
 
 class GetPressureParameter(CommandSignature):
     command: str = "pressure"

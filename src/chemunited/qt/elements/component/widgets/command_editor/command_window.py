@@ -55,7 +55,9 @@ class _HeaderWidget(QWidget):
             "  font-weight: 600;"
             "}"
         )
-        badge.setSizePolicy(badge.sizePolicy().horizontalPolicy(), badge.sizePolicy().verticalPolicy())
+        badge.setSizePolicy(
+            badge.sizePolicy().horizontalPolicy(), badge.sizePolicy().verticalPolicy()
+        )
         layout.addWidget(badge)
 
         # --- device · method · command (read-only label) ---
@@ -147,8 +149,8 @@ class CommandEditorDialog(FramelessDialog):
         Carries the pre-filled Python source string. The dialog closes itself.
     """
 
-    saved            = pyqtSignal(object)   # CommandSignature instance
-    convert_to_script = pyqtSignal(str)     # pre-filled Python source
+    saved = pyqtSignal(object)  # CommandSignature instance
+    convert_to_script = pyqtSignal(str)  # pre-filled Python source
 
     def __init__(
         self,
@@ -172,9 +174,7 @@ class CommandEditorDialog(FramelessDialog):
         # the class-level attribute (already set at protocol registration time).
         self._instance: CommandSignature = instance or command_class.model_construct()
 
-        self.setWindowTitle(
-            f"{self._instance.component} · {self._instance.command}"
-        )
+        self.setWindowTitle(f"{self._instance.component} · {self._instance.command}")
         self.setMinimumWidth(460)
         self.setResizeEnabled(True)
 
@@ -240,7 +240,7 @@ class CommandEditorDialog(FramelessDialog):
     def _build_script_source(self) -> str:
         """Return the Python source that the command currently represents."""
         # Collect current field values from the editor cards
-        values: dict = {}
+        values: dict[str, object] = {}
         for name, card in self._editor._cards.items():
             values[name] = card.get_value()
 

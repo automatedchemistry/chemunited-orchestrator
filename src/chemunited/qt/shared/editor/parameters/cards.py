@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import ast
-from typing import Any
+from typing import Any, get_origin
 
 from pydantic import ValidationError
 from pydantic.fields import FieldInfo
@@ -64,6 +64,15 @@ _SHORT: dict[str, str] = {
 # These fields are rendered in the dedicated bottom section, not as body rows.
 _BEHAVIOR_FIELDS = {"editable", "visible"}
 _ORG_FIELDS = {"group"}
+
+
+def _field_extra(field_info: FieldInfo) -> dict[str, Any]:
+    extra = field_info.json_schema_extra
+    return extra if isinstance(extra, dict) else {}
+
+
+def _is_list_annotation(annotation: Any) -> bool:
+    return annotation is list or get_origin(annotation) is list
 
 
 # ---------------------------------------------------------------------------
@@ -328,7 +337,7 @@ class VariableCard(QWidget):
         for fname, finfo in self._mode_fields.items():
             if fname in _BEHAVIOR_FIELDS or fname in _ORG_FIELDS:
                 continue
-            grp = (finfo.json_schema_extra or {}).get("group", "General")
+            grp = str(_field_extra(finfo).get("group", "General"))
             groups.setdefault(grp, []).append((fname, finfo))
 
         order = ["General"] + [g for g in groups if g != "General"]
@@ -390,9 +399,7 @@ class VariableCard(QWidget):
             w.checkedChanged.connect(self._on_change)
             editor = w
 
-        elif annotation is list or (
-            hasattr(annotation, "__origin__") and annotation.__origin__ is list
-        ):
+        elif _is_list_annotation(annotation):
             w = LineEdit()
             w.setPlaceholderText("Comma-separated, e.g. DCM, Toluene")
             if default is not None:
@@ -406,7 +413,7 @@ class VariableCard(QWidget):
 
         elif annotation is str:
             w = LineEdit()
-            placeholder = (field_info.json_schema_extra or {}).get("unit", "")
+            placeholder = str(_field_extra(field_info).get("unit", ""))
             if placeholder:
                 w.setPlaceholderText(f"e.g. {placeholder}")
             if default is not None:
@@ -630,9 +637,7 @@ class VariableCard(QWidget):
             elif isinstance(widget, SwitchButton):
                 result[fname] = widget.isChecked()
             elif isinstance(widget, LineEdit):
-                if annotation is list or (
-                    hasattr(annotation, "__origin__") and annotation.__origin__ is list
-                ):
+                if _is_list_annotation(annotation):
                     result[fname] = self._parse_list_text(widget.text())
                 else:
                     result[fname] = widget.text()

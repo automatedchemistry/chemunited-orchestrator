@@ -1,6 +1,8 @@
-from .models import CommandSignature, ComponentProtocol
-from pydantic import Field
 from typing import Literal
+
+from pydantic import Field
+
+from .models import CommandSignature, ComponentProtocol
 
 
 class SetXPositionParameter(CommandSignature):

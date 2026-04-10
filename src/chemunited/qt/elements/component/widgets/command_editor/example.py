@@ -4,12 +4,13 @@
 or
     python src/chemunited/qt/elements/component/widgets/command_editor/example.py
 """
+
 from __future__ import annotations
 
 import sys
 
 from PyQt5.QtWidgets import QApplication
-from qfluentwidgets import setTheme, Theme
+from qfluentwidgets import Theme, setTheme
 
 from chemunited.qt.elements.component.protocols.pumps import WithdrawParameter
 from chemunited.qt.elements.component.widgets.command_editor import (

@@ -7,8 +7,8 @@ from chemunited.core.components import ComponentData
 
 from . import glossary
 from .graph_item import GraphComponent
-from .widgets import ComponentWidget
 from .protocols import ComponentProtocol
+from .widgets import ComponentWidget
 
 
 class UtensilManager:
@@ -71,25 +71,28 @@ def list_components() -> tuple[dict[str, list[str]], dict[str, type[GraphCompone
 
 
 def create_component(figure: str, **kwargs) -> Union[UtensilManager, ElectronicManager]:
-    component: Union[UtensilManager, ElectronicManager]
     _, components = list_components()
     if figure not in components:
         logger.error(f"Component {figure} not found, assuming generic component")
-        component = ElectronicManager()
-        component.graph = GraphComponent(ComponentData(name=figure, **kwargs))
-        return component
-    mdata = components[figure].METADATA(figure=figure, **kwargs)
+        electronic_component = ElectronicManager()
+        electronic_component.graph = GraphComponent(
+            ComponentData(name=figure, **kwargs)
+        )
+        return electronic_component
+
+    component_cls = components[figure]
+    mdata = component_cls.METADATA(figure=figure, **kwargs)
     if mdata.is_electronic:
-        component = ElectronicManager()
-    else:
-        component = UtensilManager()
-    component.graph = components[figure](mdata)
-    if mdata.is_electronic:
+        electronic_component = ElectronicManager()
+        electronic_component.graph = component_cls(mdata)
         protocol_cls = getattr(
             protocol_module,
             f"{mdata.figure}Protocols",
             ComponentProtocol,
         )
-        component.protocols = protocol_cls(component.name)
-    return component
+        electronic_component.protocols = protocol_cls(electronic_component.name)
+        return electronic_component
 
+    utensil_component = UtensilManager()
+    utensil_component.graph = component_cls(mdata)
+    return utensil_component

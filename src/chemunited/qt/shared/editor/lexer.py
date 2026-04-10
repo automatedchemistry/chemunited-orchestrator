@@ -1,4 +1,5 @@
 import json
+from typing import Any
 
 from PyQt5.Qsci import QsciLexerPython
 from PyQt5.QtCore import QFile, QIODevice
@@ -27,16 +28,16 @@ class ThemedLexerPython(QsciLexerPython):
 
     def __init__(self, theme_path: str, parent=None):
         super().__init__(parent)
-        self._colors = {}
-        self._papers = {}
-        self._fonts = {}
+        self._colors: dict[int, QColor] = {}
+        self._papers: dict[int, QColor] = {}
+        self._fonts: dict[int, QFont] = {}
         self._load_theme(theme_path)
 
     def _load_theme(self, path: str) -> None:
         file = QFile(path)
         if not file.open(QIODevice.ReadOnly | QIODevice.Text):
             return
-        data = json.loads(bytes(file.readAll()).decode("utf-8"))
+        data: dict[str, Any] = json.loads(bytes(file.readAll()).decode("utf-8"))
         file.close()
 
         # --- editor-level settings stored as attributes ---
@@ -63,11 +64,16 @@ class ThemedLexerPython(QsciLexerPython):
             font = QFont(default_font_family, default_font_size)
             font.setBold(bold)
             font.setItalic(italic)
+            fg_color = QColor(fg or data.get("Color", "#000000"))
+            bg_color = QColor(bg)
+
+            self._colors[style_id] = fg_color
+            self._papers[style_id] = bg_color
+            self._fonts[style_id] = font
 
             # Use setters directly instead of relying on default* overrides
-            if fg:
-                self.setColor(QColor(fg), style_id)
-            self.setPaper(QColor(bg), style_id)
+            self.setColor(fg_color, style_id)
+            self.setPaper(bg_color, style_id)
             self.setFont(font, style_id)
 
     def apply_to_editor(self, editor) -> None:
