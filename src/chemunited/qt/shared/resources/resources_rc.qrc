@@ -5,7 +5,6 @@
         <file>qss/light/loggings_widget.qss</file>
         <file>qss/light/main_window.qss</file>
     </qresource>
-
     <qresource prefix="/icons">
         <file>icons/add_folder_black.svg</file>
         <file>icons/add_folder_white.svg</file>
@@ -88,15 +87,19 @@
         <file>icons/waiting_icon.svg</file>
         <file>icons/water.svg</file>
     </qresource>
-
     <qresource prefix="/components_icons">
+        <file>components/IRControl.svg</file>
         <file>components/IRControlLIGHT.svg</file>
         <file>components/IRControlDARK.svg</file>
+        <file>components/NMRControl.svg</file>
         <file>components/NMRControlLIGHT.svg</file>
         <file>components/NMRControlDARK.svg</file>
+        <file>components/HPLC.svg</file>
         <file>components/HPLCControlLIGHT.svg</file>
         <file>components/HPLCControlDARK.svg</file>
+        <file>components/MSControl.svg</file>
         <file>components/MSControlLIGHT.svg</file>
+        <file>components/MassFlowControl.svg</file>
         <file>components/MSControlDARK.svg</file>
         <file>components/MFCcomponentLIGHT.svg</file>
         <file>components/MFCcomponentDARK.svg</file>
@@ -148,6 +151,7 @@
         <file>components/PhidgetBubbleSensorPowercomponentDARK.svg</file>
         <file>components/PhotoSensorLIGHT.svg</file>
         <file>components/PhotoSensorDARK.svg</file>
+        <file>components/Chiller.svg</file>
         <file>components/TemperatureControlLIGHT.svg</file>
         <file>components/TemperatureControlDARK.svg</file>
         <file>components/PhotoreactorLIGHT.svg</file>
@@ -164,6 +168,8 @@
         <file>components/TwoPortDistributionValveDARK.svg</file>
         <file>components/FourPortDistributionValveLIGHT.svg</file>
         <file>components/FourPortDistributionValveDARK.svg</file>
+        <file>components/SyringeBarrel.svg</file>
+        <file>components/SyringePlunger.svg</file>
         <file>components/SixPortDistributionValveLIGHT.svg</file>
         <file>components/SixPortDistributionValveDARK.svg</file>
         <file>components/TwelvePortDistributionValveLIGHT.svg</file>
@@ -184,12 +190,10 @@
         <file>components/SolenoidValve2WayLIGHT.svg</file>
         <file>components/SolenoidValve2WayDARK.svg</file>
     </qresource>
-
     <qresource prefix="/default_files">
         <file>scripts/process.txt</file>
         <file>scripts/parameter.txt</file>
     </qresource>
-
     <qresource prefix="/lexer_palettes">
         <file>lexer/theme_dark.json</file>
         <file>lexer/theme_light.json</file>

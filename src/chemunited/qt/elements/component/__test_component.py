@@ -1,3 +1,4 @@
+from typing import Any
 from chemunited.qt.elements.component.glossary import (
     # pipes
     BackPressureRegulator,
@@ -63,10 +64,27 @@ from chemunited.qt.elements.component.graph_item import GraphComponent
 # Category grouping for scene layout (row = category, col = component).
 # Each entry is the GraphComponent subclass; figure/data come from cls.METADATA.
 LAYOUT: dict[str, list[type[GraphComponent]]] = {
-    "analytics": [HPLCControl, IRControl, MSControl, NMRControl],
-    "assembly": [Gantry3D, LengthControl],
-    "pipes": [BackPressureRegulator, Distributor, MFCComponent, Sink, Source],
-    "pumps": [HPLCPump, SyringePump],
+    # "analytics": [
+    #     HPLCControl, 
+    #     IRControl,
+    #     MSControl, 
+    #     NMRControl
+    # ],
+    # "assembly": [
+    #     Gantry3D, 
+    #     LengthControl
+    # ],
+    "pipes": [
+        BackPressureRegulator, 
+        Distributor, 
+        MFCComponent, 
+        Sink, 
+        Source
+    ],
+    "pumps": [
+        HPLCPump, 
+        #SyringePump
+    ],
     "sensors": [
         FlowMeter,
         PhidgetBubbleSensorComponent,
@@ -74,21 +92,35 @@ LAYOUT: dict[str, list[type[GraphComponent]]] = {
         PressureControl,
         PressureSensor,
     ],
-    "multichannel": [MultiChannelADC, MultiChannelDAC, MultiChannelRelay],
-    "powers": [PowerControl, PowerSwitch, PhidgetBubbleSensorPowerComponent],
-    "thermal": [PeltierCoolerTemperatureControl, TemperatureControl],
-    "valve_rotary": [
-        FourPortDistributionValve,
-        FourPortFivePositionValve,
-        SixPortDistributionValve,
-        SixPortTwoPositionValve,
-        SixteenPortDistributionValve,
-        ThreePortFourPositionValve,
-        ThreePortTwoPositionValve,
-        TwelvePortDistributionValve,
-        TwoPortDistributionValve,
+    "multichannel": [
+        MultiChannelADC, 
+        MultiChannelDAC, 
+        MultiChannelRelay
     ],
-    "valve_solenoid": [SolenoidValve, SolenoidValve2Way],
+    "powers": [
+        PowerControl,
+        PowerSwitch, 
+        PhidgetBubbleSensorPowerComponent
+    ],
+    "thermal": [
+        PeltierCoolerTemperatureControl, 
+        #TemperatureControl
+    ],
+    # "valve_rotary": [
+    #     FourPortDistributionValve,
+    #     FourPortFivePositionValve,
+    #     SixPortDistributionValve,
+    #     SixPortTwoPositionValve,
+    #     SixteenPortDistributionValve,
+    #     ThreePortFourPositionValve,
+    #     ThreePortTwoPositionValve,
+    #     TwelvePortDistributionValve,
+    #     TwoPortDistributionValve,
+    # ],
+    # "valve_solenoid": [
+    #     SolenoidValve, 
+    #     SolenoidValve2Way
+    # ],
     "vessels": [
         BathReactor,
         CustomFlask,

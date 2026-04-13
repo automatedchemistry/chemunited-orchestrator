@@ -18,17 +18,21 @@ NOT responsible for:
 from __future__ import annotations
 
 from dataclasses import asdict
+from math import ceil
+from pathlib import Path
 from typing import ClassVar, Generic, TypeVar
 
 from loguru import logger
 from pydantic import BaseModel
-from PyQt5.QtCore import QFile, Qt
-from PyQt5.QtGui import QColor, QPen
+from PyQt5.QtCore import QFile, QRectF, QSize, Qt
+from PyQt5.QtGui import QColor, QPainter, QPen, QTransform
+from PyQt5.QtSvg import QSvgGenerator
 from PyQt5.QtWidgets import (
     QGraphicsDropShadowEffect,
     QGraphicsItem,
     QGraphicsItemGroup,
     QGraphicsRectItem,
+    QStyleOptionGraphicsItem,
 )
 from qfluentwidgets import isDarkTheme
 
@@ -379,6 +383,108 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
 
     def show_bounding_rect(self, visible: bool) -> None:
         self._bounding_rect.setVisible(visible)
+
+    def export_svg(self, path: Path) -> None:
+        """Export the component drawing to SVG without name or port-number labels."""
+        path = Path(path)
+        path.parent.mkdir(parents=True, exist_ok=True)
+
+        hidden_for_export: tuple[QGraphicsItem, ...] = (
+            self._name,
+            self._bounding_rect,
+            *self._port_labels.values(),
+        )
+        previous_visibility = [(item, item.isVisible()) for item in hidden_for_export]
+
+        try:
+            for item in hidden_for_export:
+                item.setVisible(False)
+
+            export_rect = self._export_bounding_rect()
+            margin = 1.0
+            export_rect = export_rect.adjusted(-margin, -margin, margin, margin)
+
+            generator = QSvgGenerator()
+            generator.setFileName(str(path))
+            generator.setSize(
+                QSize(
+                    max(1, ceil(export_rect.width())),
+                    max(1, ceil(export_rect.height())),
+                )
+            )
+            generator.setViewBox(
+                QRectF(0, 0, export_rect.width(), export_rect.height())
+            )
+            generator.setTitle(self._data.figure)
+            generator.setDescription(
+                "Chemunited component figure exported without name or port labels."
+            )
+
+            root_to_export = QTransform()
+            root_to_export.translate(-export_rect.left(), -export_rect.top())
+
+            painter = QPainter()
+            if not painter.begin(generator):
+                raise OSError(f"Could not create SVG export at '{path}'.")
+            try:
+                painter.setRenderHint(QPainter.Antialiasing, True)
+                painter.setRenderHint(QPainter.TextAntialiasing, True)
+                painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
+                self._paint_item_tree(painter, self, root_to_export)
+            finally:
+                painter.end()
+        finally:
+            for item, visible in previous_visibility:
+                item.setVisible(visible)
+
+    def _export_bounding_rect(self) -> QRectF:
+        """Return a tight local bounding rect for visible exported child items."""
+        scene_to_root = self._scene_to_root_transform()
+        bounds: QRectF | None = None
+
+        def visit(item: QGraphicsItem) -> None:
+            nonlocal bounds
+            if not item.isVisible():
+                return
+            if item is not self:
+                item_to_root = item.sceneTransform() * scene_to_root
+                item_rect = item_to_root.mapRect(item.boundingRect())
+                bounds = item_rect if bounds is None else bounds.united(item_rect)
+            for child in item.childItems():
+                visit(child)
+
+        visit(self)
+        return bounds if bounds is not None else self.boundingRect()
+
+    def _paint_item_tree(
+        self,
+        painter: QPainter,
+        item: QGraphicsItem,
+        root_to_export: QTransform,
+    ) -> None:
+        """Paint this item tree into the active painter."""
+        if not item.isVisible():
+            return
+
+        option = QStyleOptionGraphicsItem()
+        option.exposedRect = item.boundingRect()
+
+        scene_to_root = self._scene_to_root_transform()
+        item_to_export = item.sceneTransform() * scene_to_root * root_to_export
+
+        painter.save()
+        painter.setTransform(item_to_export)
+        painter.setOpacity(item.effectiveOpacity())
+        item.paint(painter, option, None)
+        painter.restore()
+
+        children = sorted(item.childItems(), key=lambda child: child.zValue())
+        for child in children:
+            self._paint_item_tree(painter, child, root_to_export)
+
+    def _scene_to_root_transform(self) -> QTransform:
+        scene_to_root, invertible = self.sceneTransform().inverted()
+        return scene_to_root if invertible else QTransform()
 
     # ── Qt overrides ───────────────────────────────────────────────
 

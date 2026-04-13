@@ -1,6 +1,7 @@
 import numpy as np
 from numpy import ndarray
 from scipy.interpolate import splev, splprep
+from scipy.special import voigt_profile
 
 _CURVE_RESOLUTION = 30
 _CORNER_RADIUS = 10
@@ -88,3 +89,10 @@ def build_smooth_path(points: list | ndarray) -> ndarray:
     smooth = splev(u, tck)
 
     return np.array(smooth).T  # back to shape (N, 2)
+
+
+def multi_peak(x, peaks):
+    y = np.zeros_like(x)
+    for x0, gamma, sigma, A in peaks:
+        y += A * voigt_profile(x - x0, sigma, gamma)
+    return y
