@@ -156,14 +156,15 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
 
     # ── construction ───────────────────────────────────────────────
 
-    def build(self) -> None:
+    def build(self, svg_path: str | None = None) -> None:
         """Assemble all child items from ComponentData.
 
         Called once from __init__. Subclasses may override to implement
         a custom layout — call super().build() or fully replace it.
         """
         # SVG figure, or fallback rect when no SVG asset is available.
-        svg_path = f":/components_icons/components/{self._data.figure}{'DARK' if isDarkTheme() else 'LIGHT'}.svg"
+        if svg_path is None:
+            svg_path = f":/components_icons/components/{self._data.figure}{'DARK' if isDarkTheme() else 'LIGHT'}.svg"
         if QFile.exists(svg_path):
             self._svg = SvgLayer(
                 svg_path,

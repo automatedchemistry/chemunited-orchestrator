@@ -105,8 +105,10 @@ def possibles_connections_pairs(
     return sorted(set(points))
 
 
-def _port_numbers_from_stator(stator_ports: ValvePortLayout) -> list[int]:
+def _port_numbers_from_stator(stator_ports: ValvePortLayout, rotor_ports: ValvePortLayout) -> list[int]:
     numbers = {number for row in stator_ports for number in row if number is not None}
+    if 0 in numbers and rotor_ports[1][0] is None:
+        numbers.remove(0)
     return sorted(numbers)
 
 
@@ -165,7 +167,7 @@ class ValveComponentData(ComponentData):
         self.port_pairs = connections
         self.ports_by_number = {
             number: Port(number=number, component=self.name)
-            for number in _port_numbers_from_stator(self.stator_ports)
+            for number in _port_numbers_from_stator(self.stator_ports, self.rotor_ports)
         }
         self.internal_edges = {
             pair: InternalEdge(

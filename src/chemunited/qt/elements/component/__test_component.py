@@ -104,6 +104,7 @@ LAYOUT: dict[str, list[type[GraphComponent]]] = {
 }
 
 if __name__ == "__main__":
+    FIGURE = "all"
     import sys
 
     from PyQt5.QtWidgets import QApplication
@@ -116,17 +117,32 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     scene = SceneCore()
 
-    for row, (category, classes) in enumerate(LAYOUT.items()):
-        for col, cls in enumerate(classes):
-            component = cls(
-                data=cls.METADATA(
+    if FIGURE == "all":
+        for row, (category, classes) in enumerate(LAYOUT.items()):
+            for col, cls in enumerate(classes):
+                component = cls(
+                    data=cls.METADATA(
                     name=cls.__name__,
                     figure=cls.__name__,
                     position=(col * SPACING_X, row * SPACING_Y),
                     angle=0,
                 ),
             )
-            scene.addItem(component)
+                scene.addItem(component)
+    else:
+        for row, (category, classes) in enumerate(LAYOUT.items()):
+            for col, cls in enumerate(classes):
+                if cls.__name__ == FIGURE:
+                    component = cls(
+                        data=cls.METADATA(
+                        name=cls.__name__,
+                        figure=cls.__name__,
+                        position=(col * SPACING_X, row * SPACING_Y),
+                        angle=0,
+                    ),
+                )
+                    scene.addItem(component)
+                    break
 
     view = GraphCore(scene)
     view.show()

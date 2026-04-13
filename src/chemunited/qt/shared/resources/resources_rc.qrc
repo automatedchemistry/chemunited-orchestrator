@@ -178,6 +178,7 @@
         <file>components/FourPortFivePositionValveDARK.svg</file>
         <file>components/SixPortTwoPositionValveLIGHT.svg</file>
         <file>components/SixPortTwoPositionValveDARK.svg</file>
+        <file>components/RotaryValve.svg</file>
         <file>components/SolenoidValveLIGHT.svg</file>
         <file>components/SolenoidValveDARK.svg</file>
         <file>components/SolenoidValve2WayLIGHT.svg</file>

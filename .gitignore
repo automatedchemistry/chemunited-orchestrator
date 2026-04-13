@@ -216,3 +216,4 @@ tests/screenshots/
 .tmp_pytest_paths/
 
 .idea/
+.vscode/
