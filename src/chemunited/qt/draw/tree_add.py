@@ -23,6 +23,10 @@ from chemunited.qt.shared.icon import OrchestratorIcon
 _COMPONENTS_DIR = (
     Path(__file__).resolve().parents[1] / "shared" / "resources" / "components"
 )
+QT_DISPLAY_ROLE = getattr(Qt, "DisplayRole")
+QT_ITEM_IS_DRAG_ENABLED = getattr(Qt, "ItemIsDragEnabled")
+QT_ITEM_IS_ENABLED = getattr(Qt, "ItemIsEnabled")
+QT_ITEM_IS_SELECTABLE = getattr(Qt, "ItemIsSelectable")
 
 
 def _humanize(text: str) -> str:
@@ -188,7 +192,7 @@ class TreeAddItem(TreeWidget):
             category_item.setText(0, _humanize(category))
             category_item.setData(0, self.ROLE_KIND, "category")
             category_item.setData(0, self.ROLE_PAYLOAD, category)
-            category_item.setFlags(Qt.ItemIsEnabled)  # type: ignore[attr-defined]
+            category_item.setFlags(QT_ITEM_IS_ENABLED)
             category_item.setExpanded(True)
 
             for component_name in component_names:
@@ -209,7 +213,7 @@ class TreeAddItem(TreeWidget):
 
                 item = QTreeWidgetItem(category_item)
                 item.setText(0, "")
-                item.setData(0, Qt.DisplayRole, "")
+                item.setData(0, QT_DISPLAY_ROLE, "")
                 item.setData(0, self.ROLE_KIND, "component")
                 item.setData(0, self.ROLE_PAYLOAD, f"{category}|{component_name}")
                 item.setToolTip(
@@ -217,7 +221,7 @@ class TreeAddItem(TreeWidget):
                     f"{component_name}\n{_humanize(category)}\n{description}",
                 )
                 item.setFlags(
-                    Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsDragEnabled  # type: ignore[attr-type]
+                    QT_ITEM_IS_ENABLED | QT_ITEM_IS_SELECTABLE | QT_ITEM_IS_DRAG_ENABLED
                 )
                 item.setSizeHint(
                     0,

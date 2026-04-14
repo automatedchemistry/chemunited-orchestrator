@@ -1,5 +1,5 @@
 from functools import partial
-from typing import TYPE_CHECKING, override
+from typing import TYPE_CHECKING, cast, override
 
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PyQt5.QtWidgets import QGraphicsItem
@@ -23,6 +23,8 @@ from .tree_add import TreeAddItem
 if TYPE_CHECKING:
     from ..setup import SetupWindow
 
+QT_STRONG_FOCUS = getattr(Qt, "StrongFocus")
+
 
 class DrawGraphicView(GraphCore):
     MODE = SetupStepMode.DESIGN
@@ -32,7 +34,7 @@ class DrawGraphicView(GraphCore):
     def __init__(self, scene: SceneCore | None = None, parent=None):
         super().__init__(scene, parent)
         self.setObjectName("drawGraph")
-        self.setFocusPolicy(Qt.StrongFocus)
+        self.setFocusPolicy(QT_STRONG_FOCUS)
         if parent is not None:
             self.parent_ref: SetupWindow = parent
 
@@ -41,8 +43,14 @@ class DrawGraphicView(GraphCore):
         self._temp_connection: TemporaryConnectionItem | None = None
         self._candidate: ConnectionPoint | None = None
 
+    def _scene(self) -> SceneCore:
+        scene = self.scene()
+        if scene is None:
+            raise RuntimeError("DrawGraphicView requires an active scene.")
+        return cast(SceneCore, scene)
+
     def _port_at(self, scene_pos) -> ConnectionPoint | None:
-        for item in self.scene().items(scene_pos):
+        for item in self._scene().items(scene_pos):
             if isinstance(item, ConnectionPoint):
                 return item
         return None
@@ -56,7 +64,7 @@ class DrawGraphicView(GraphCore):
 
     def _cleanup(self) -> None:
         if self._temp_connection is not None:
-            self.scene().removeItem(self._temp_connection)
+            self._scene().removeItem(self._temp_connection)
         self._highlight_candidate(None)
         self._connecting = False
         self._origin_port = None
@@ -77,7 +85,7 @@ class DrawGraphicView(GraphCore):
         self, target: GraphComponent | BaseConnectionItem
     ) -> tuple[tuple[str, ...], tuple[str, ...]]:
         scene_items = (
-            set(self.scene().selectedItems()) if target.isSelected() else {target}
+            set(self._scene().selectedItems()) if target.isSelected() else {target}
         )
 
         component_names = tuple(
@@ -106,7 +114,7 @@ class DrawGraphicView(GraphCore):
         for name in component_names:
             if name in orchestrator.components:
                 orchestrator.remove_component(name)
-        self.scene().clearSelection()
+        self._scene().clearSelection()
 
     @override
     def mousePressEvent(self, event):
@@ -117,7 +125,7 @@ class DrawGraphicView(GraphCore):
             self._connecting = True
             self._origin_port = port
             self._temp_connection = TemporaryConnectionItem(port)
-            self.scene().addItem(self._temp_connection)
+            self._scene().addItem(self._temp_connection)
             event.accept()
             return
         super().mousePressEvent(event)
@@ -173,7 +181,7 @@ class DrawGraphicView(GraphCore):
     def keyPressEvent(self, event):
         if event.key() == Qt.Key_Delete and not self._connecting:
             if self.parent_ref is not None:
-                for item in self.scene().selectedItems():
+                for item in self._scene().selectedItems():
                     if isinstance(item, GraphComponent):
                         QTimer.singleShot(
                             0,

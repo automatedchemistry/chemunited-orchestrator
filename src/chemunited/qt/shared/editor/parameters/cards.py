@@ -3,11 +3,13 @@
 from __future__ import annotations
 
 import ast
-from typing import Any
+from typing import Any, get_origin
 
 from pydantic import ValidationError
+from pydantic.config import JsonDict
 from pydantic.fields import FieldInfo
 from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtGui import QMouseEvent
 from PyQt5.QtWidgets import (
     QFrame,
     QHBoxLayout,
@@ -64,6 +66,19 @@ _SHORT: dict[str, str] = {
 # These fields are rendered in the dedicated bottom section, not as body rows.
 _BEHAVIOR_FIELDS = {"editable", "visible"}
 _ORG_FIELDS = {"group"}
+QT_ALIGN_CENTER = getattr(Qt, "AlignCenter")
+QT_POINTING_HAND_CURSOR = getattr(Qt, "PointingHandCursor")
+
+
+def _field_extra_dict(field_info: FieldInfo) -> JsonDict:
+    extras = field_info.json_schema_extra
+    if isinstance(extras, dict):
+        return extras
+    return {}
+
+
+def _is_list_annotation(annotation: Any) -> bool:
+    return annotation is list or get_origin(annotation) is list
 
 
 # ---------------------------------------------------------------------------
@@ -201,13 +216,21 @@ class TypeBadge(QLabel):
         bg, fg = _BADGE.get(cls, ("#eeeeee", "#333333"))
         short = _SHORT.get(cls, cls)
         self.setText(short.upper())
-        self.setAlignment(Qt.AlignCenter)
+        self.setAlignment(QT_ALIGN_CENTER)
         self.setFixedHeight(18)
         self.setContentsMargins(6, 0, 6, 0)
         self.setStyleSheet(
             f"background:{bg}; color:{fg}; border-radius:3px;"
             " font-size:9px; font-weight:600; letter-spacing:0.05em;"
         )
+
+
+class _ClickableHeader(QWidget):
+    clicked = pyqtSignal()
+
+    def mousePressEvent(self, event: QMouseEvent | None) -> None:
+        self.clicked.emit()
+        super().mousePressEvent(event)
 
 
 # ---------------------------------------------------------------------------
@@ -266,8 +289,8 @@ class VariableCard(QWidget):
         return type(self.mode).model_fields
 
     def _build_header(self) -> QWidget:
-        header = QWidget()
-        header.setCursor(Qt.PointingHandCursor)
+        header = _ClickableHeader()
+        header.setCursor(QT_POINTING_HAND_CURSOR)
 
         h = QHBoxLayout(header)
         h.setContentsMargins(10, 8, 10, 8)
@@ -311,7 +334,7 @@ class VariableCard(QWidget):
         self._chevron.clicked.connect(self._toggle_body)
         h.addWidget(self._chevron)
 
-        header.mousePressEvent = lambda _e: self._toggle_body()
+        header.clicked.connect(self._toggle_body)
         return header
 
     def _build_body(self) -> QWidget:
@@ -328,7 +351,7 @@ class VariableCard(QWidget):
         for fname, finfo in self._mode_fields.items():
             if fname in _BEHAVIOR_FIELDS or fname in _ORG_FIELDS:
                 continue
-            grp = (finfo.json_schema_extra or {}).get("group", "General")
+            grp = str(_field_extra_dict(finfo).get("group", "General"))
             groups.setdefault(grp, []).append((fname, finfo))
 
         order = ["General"] + [g for g in groups if g != "General"]
@@ -390,9 +413,7 @@ class VariableCard(QWidget):
             w.checkedChanged.connect(self._on_change)
             editor = w
 
-        elif annotation is list or (
-            hasattr(annotation, "__origin__") and annotation.__origin__ is list
-        ):
+        elif _is_list_annotation(annotation):
             w = LineEdit()
             w.setPlaceholderText("Comma-separated, e.g. DCM, Toluene")
             if default is not None:
@@ -406,7 +427,7 @@ class VariableCard(QWidget):
 
         elif annotation is str:
             w = LineEdit()
-            placeholder = (field_info.json_schema_extra or {}).get("unit", "")
+            placeholder = str(_field_extra_dict(field_info).get("unit", ""))
             if placeholder:
                 w.setPlaceholderText(f"e.g. {placeholder}")
             if default is not None:
@@ -630,9 +651,7 @@ class VariableCard(QWidget):
             elif isinstance(widget, SwitchButton):
                 result[fname] = widget.isChecked()
             elif isinstance(widget, LineEdit):
-                if annotation is list or (
-                    hasattr(annotation, "__origin__") and annotation.__origin__ is list
-                ):
+                if _is_list_annotation(annotation):
                     result[fname] = self._parse_list_text(widget.text())
                 else:
                     result[fname] = widget.text()

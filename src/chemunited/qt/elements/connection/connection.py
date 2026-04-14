@@ -12,13 +12,18 @@ from chemunited.qt.elements.component.component_parts.connection_point import (
 from chemunited.qt.shared.enums import SetupStepMode
 from chemunited.qt.shared.graph_objects import MovablePathItem, PathElementItem
 
+QT_DASH_LINE = getattr(Qt, "DashLine")
+QT_ROUND_CAP = getattr(Qt, "RoundCap")
+QT_ROUND_JOIN = getattr(Qt, "RoundJoin")
+QT_SOLID_LINE = getattr(Qt, "SolidLine")
+
 
 class TemporaryConnectionItem(PathElementItem):
     """Rubber-band line drawn while the user drags from an origin port."""
 
     DEFAULT_COLOR: QColor = QColor("black")
     DEFAULT_LINE_WIDTH: float = 1
-    DEFAULT_PATH_STYLE = Qt.DashLine
+    DEFAULT_PATH_STYLE = QT_DASH_LINE
 
     def __init__(self, origin_port: ConnectionPoint) -> None:
         super().__init__()
@@ -100,9 +105,9 @@ class BaseConnectionItem(MovablePathItem):
         """Draw a blue dashed overlay when the connection is selected."""
         if not self.isSelected():
             return
-        pen = QPen(QColor("#1E88E5"), 4.0, Qt.DashLine)
-        pen.setCapStyle(Qt.RoundCap)
-        pen.setJoinStyle(Qt.RoundJoin)
+        pen = QPen(QColor("#1E88E5"), 4.0, QT_DASH_LINE)
+        pen.setCapStyle(QT_ROUND_CAP)
+        pen.setJoinStyle(QT_ROUND_JOIN)
         painter.setPen(pen)
         painter.drawPath(self.path())
 
@@ -162,9 +167,9 @@ class HydraulicConnectionItem(BaseConnectionItem):
             QPen(
                 self._outer_color,
                 self._outer_width,
-                Qt.SolidLine,
-                Qt.RoundCap,
-                Qt.RoundJoin,
+                QT_SOLID_LINE,
+                QT_ROUND_CAP,
+                QT_ROUND_JOIN,
             )
         )
         painter.drawPath(self.path())
@@ -173,9 +178,9 @@ class HydraulicConnectionItem(BaseConnectionItem):
             QPen(
                 self._inner_color,
                 self._inner_width,
-                Qt.SolidLine,
-                Qt.RoundCap,
-                Qt.RoundJoin,
+                QT_SOLID_LINE,
+                QT_ROUND_CAP,
+                QT_ROUND_JOIN,
             )
         )
         painter.drawPath(self.path())
@@ -187,7 +192,7 @@ class HeatConnectionItem(BaseConnectionItem):
 
     DEFAULT_COLOR: QColor = QColor("red")
     DEFAULT_LINE_WIDTH: float = 2
-    DEFAULT_PATH_STYLE: Qt.PenStyle = Qt.DashLine
+    DEFAULT_PATH_STYLE = QT_DASH_LINE
     CATEGORY: ConnectionType = ConnectionType.HEAT
 
 
@@ -196,7 +201,7 @@ class ElectricalConnectionItem(BaseConnectionItem):
 
     DEFAULT_COLOR: QColor = QColor("green")
     DEFAULT_LINE_WIDTH: float = 2
-    DEFAULT_PATH_STYLE: Qt.PenStyle = Qt.DashLine
+    DEFAULT_PATH_STYLE = QT_DASH_LINE
     CATEGORY: ConnectionType = ConnectionType.ELECTRONIC
 
 
@@ -205,5 +210,5 @@ class MovementConnectionItem(BaseConnectionItem):
 
     DEFAULT_COLOR: QColor = QColor("blue")
     DEFAULT_LINE_WIDTH: float = 2
-    DEFAULT_PATH_STYLE: Qt.PenStyle = Qt.DashLine
+    DEFAULT_PATH_STYLE = QT_DASH_LINE
     CATEGORY: ConnectionType = ConnectionType.MOVEMENT

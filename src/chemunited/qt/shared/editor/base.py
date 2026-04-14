@@ -73,6 +73,9 @@ class EditorBase(QsciScintilla):
         self.setMarginType(0, QsciScintilla.NumberMargin)  # Enable line numbers
         self.setMarginWidth(0, "000")  # Reserve width
 
+        # Load file content into the editor
+        self._load_content()
+
     def _load_content(self):
         """Load the initial text content from file."""
         self.setText(self.path.read_text(encoding="utf-8"))

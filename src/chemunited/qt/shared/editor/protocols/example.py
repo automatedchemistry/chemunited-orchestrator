@@ -1,5 +1,3 @@
-"""Example workflow showing conditional fan-out, joins, and loopbacks."""
-
 from __future__ import annotations
 
 import sys
@@ -8,10 +6,6 @@ from time import sleep
 
 import networkx as nx
 from pydantic import BaseModel, ConfigDict
-
-from .protocols import MAIN_PARAMETERS, PLATFORM
-
-sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from chemunited.workflow import (
     NodeConfig,
@@ -26,7 +20,7 @@ from chemunited.workflow import (
 )
 
 
-class UserProcessConfig(BaseModel):
+class ProcessParameter(BaseModel):
     """Immutable process configuration shared across all nodes."""
 
     model_config = ConfigDict(frozen=True)
@@ -36,7 +30,7 @@ class UserProcessConfig(BaseModel):
     default_delay_s: float = 0.15
 
 
-class UserNodeConfig(NodeConfig):
+class NodeParameter(NodeConfig):
     """Per-node immutable settings."""
 
     model_config = ConfigDict(frozen=True)
@@ -45,7 +39,7 @@ class UserNodeConfig(NodeConfig):
     note: str
 
 
-class CustomProcess(Process[UserProcessConfig]):
+class CustomProcess(Process[ProcessParameter]):
     """User-defined workflow process."""
 
     def build_workflow(self) -> nx.DiGraph:
@@ -62,7 +56,7 @@ class CustomProcess(Process[UserProcessConfig]):
                     label=label,
                     description=description,
                 ).model_dump(exclude_none=True),
-                node_config=UserNodeConfig(
+                node_config=NodeParameter(
                     node_id=node_id,
                     delay_s=delay_s,
                     note=description,
@@ -193,7 +187,7 @@ class CustomProcess(Process[UserProcessConfig]):
 
     def _pause(self, ctx: NodeExecutionContext) -> None:
         delay_s = self.config.default_delay_s
-        if isinstance(ctx.node_config, UserNodeConfig):
+        if isinstance(ctx.node_config, NodeParameter):
             delay_s = ctx.node_config.delay_s
             ctx.runtime.local_data["note"] = ctx.node_config.note
         sleep(delay_s)
@@ -258,26 +252,3 @@ class CustomProcess(Process[UserProcessConfig]):
         ctx.runtime.status_message = f"Workflow finished in iteration {ctx.iteration}."
         return True
 
-
-def main() -> None:
-    """Build, compile, and execute the example workflow."""
-
-    configure_terminal_logging()
-    config = UserProcessConfig(
-        primary_route=True,
-        loopback_success_iteration=1,
-    )
-    process = CustomProcess(config)
-
-    authored_graph = process.build_workflow()
-    compiled = compile_workflow(authored_graph)
-    terminal = TerminalWorkflowObserver(compiled, refresh_per_second=6)
-    executor = WorkflowExecutor(
-        compiled, max_workers=4, event_listeners=[terminal.handle_event]
-    )
-    result = executor.execute(process, start_node="IN")
-    terminal.print_execution_report(result, authored_graph=authored_graph)
-
-
-if __name__ == "__main__":
-    main()

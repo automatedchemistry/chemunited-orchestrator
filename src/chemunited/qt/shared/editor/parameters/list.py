@@ -16,6 +16,8 @@ from chemunited.qt.shared.widgets.base_mode_editor.cards.builder_models import (
 
 from .cards import VariableCard
 
+QT_SCROLLBAR_ALWAYS_OFF = getattr(Qt, "ScrollBarAlwaysOff")
+
 
 class ParameterListWidget(SmoothScrollArea):
     """Scrollable list of parameter cards with live-write notifications."""
@@ -34,7 +36,7 @@ class ParameterListWidget(SmoothScrollArea):
         self._suspend_write_depth = 0
 
         self.setWidgetResizable(True)
-        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        self.setHorizontalScrollBarPolicy(QT_SCROLLBAR_ALWAYS_OFF)
         self.enableTransparentBackground()
 
         self._container = QWidget()

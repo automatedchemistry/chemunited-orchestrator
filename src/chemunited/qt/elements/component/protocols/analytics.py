@@ -1,9 +1,11 @@
-from .models import CommandSignature, ComponentProtocol
-from pydantic import Field, field_validator
-from typing import Annotated, Literal
+from typing import Literal
 
+from pydantic import Field
+
+from .models import CommandSignature, ComponentProtocol
 
 # --- HPLC ---
+
 
 class HPLCSendMethodParameter(CommandSignature):
     command: str = "send-method"
@@ -17,7 +19,9 @@ class HPLCSendMethodParameter(CommandSignature):
 
 class HPLCRunSampleParameter(CommandSignature):
     command: str = "run-sample"
-    description: str = "Run an analysis on the instrument with the specified sample and method."
+    description: str = (
+        "Run an analysis on the instrument with the specified sample and method."
+    )
     sample_name: str = Field(
         title="Sample Name",
         description="The name of the sample to be analyzed.",
@@ -41,6 +45,7 @@ class HPLCControlProtocols(ComponentProtocol):
 # --- MS ---
 # run-sample for MS only needs sample_name — different from HPLC, so separate class.
 
+
 class MSRunSampleParameter(CommandSignature):
     command: str = "run-sample"
     description: str = "Run an analysis on the instrument with the specified sample."
@@ -59,6 +64,7 @@ class MSControlProtocols(ComponentProtocol):
 
 
 # --- NMR ---
+
 
 class NMRSolventParameter(CommandSignature):
     command: str = "solvent"
@@ -130,6 +136,7 @@ class NMRControlProtocols(ComponentProtocol):
 # --- IR ---
 # acquire-spectrum for IR takes no parameters — different from NMR, so separate class.
 
+
 class IRAcquireSpectrumParameter(CommandSignature):
     command: str = "acquire-spectrum"
 
@@ -144,4 +151,4 @@ class IRControlProtocols(ComponentProtocol):
         super().__init__(name)
         self.commands["acquire-spectrum"] = IRAcquireSpectrumParameter
         self.commands["start-experiment"] = IRStartExperimentParameter
-        self.commands["stop"] = NMRStopParameter   # identical — reuse
+        self.commands["stop"] = NMRStopParameter  # identical — reuse

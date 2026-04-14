@@ -1,41 +1,41 @@
-from .models import ComponentProtocol, CommandSignature
 from .analytics import (
     HPLCControlProtocols,
+    IRControlProtocols,
     MSControlProtocols,
     NMRControlProtocols,
-    IRControlProtocols,
 )
 from .assembly import (
     Gantry3DProtocols,
 )
+from .models import CommandSignature, ComponentProtocol
+from .pumps import HPLCPumpProtocols, SyringePumpProtocols
+from .sensors import (
+    MFCComponentProtocols,
+    PhidgetBubbleSensorComponentProtocols,
+    PhotoSensorProtocols,
+    PressureControlProtocols,
+    PressureSensorProtocols,
+)
 from .technical import (
-    TemperatureControlProtocols,
-    PeltierCoolerTemperatureControlProtocols,
     LengthControlProtocols,
     MultiChannelADCProtocols,
     MultiChannelDACProtocols,
     MultiChannelRelayProtocols,
+    PeltierCoolerTemperatureControlProtocols,
     PhotoreactorProtocols,
+    TemperatureControlProtocols,
 )
-from .pumps import HPLCPumpProtocols, SyringePumpProtocols
 from .valves import (
-    TwoPortDistributionValveProtocols,
     FourPortDistributionValveProtocols,
-    SixPortDistributionValveProtocols,
-    TwelvePortDistributionValveProtocols,
-    SixteenPortDistributionValveProtocols,
-    ThreePortTwoPositionValveProtocols,
-    ThreePortFourPositionValveProtocols,
     FourPortFivePositionValveProtocols,
+    SixPortDistributionValveProtocols,
     SixPortTwoPositionValveProtocols,
+    SixteenPortDistributionValveProtocols,
     SolenoidValve2WayProtocols,
-)
-from .sensors import (
-    PhidgetBubbleSensorComponentProtocols,
-    MFCComponentProtocols,
-    PhotoSensorProtocols,
-    PressureSensorProtocols,
-    PressureControlProtocols,
+    ThreePortFourPositionValveProtocols,
+    ThreePortTwoPositionValveProtocols,
+    TwelvePortDistributionValveProtocols,
+    TwoPortDistributionValveProtocols,
 )
 
 __all__ = [

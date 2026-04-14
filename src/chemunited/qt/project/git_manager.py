@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
-import git  # gitpython
+import git  # type: ignore[import-not-found]  # gitpython
 
 _GITIGNORE = """\
 # Python
@@ -124,8 +124,12 @@ class GitManager:
     # ── Remote (GitHub / GitLab) ───────────────────────────────────────────────
 
     def set_remote(self, url: str, name: str = "origin") -> None:
-        if name in [r.name for r in self._repo.remotes]:
-            self._repo.delete_remote(name)
+        existing_remote = next(
+            (remote for remote in self._repo.remotes if remote.name == name),
+            None,
+        )
+        if existing_remote is not None:
+            self._repo.delete_remote(existing_remote)
         self._repo.create_remote(name, url)
 
     def push(self, remote: str = "origin") -> None:

@@ -1,23 +1,5 @@
-from pydantic import BaseModel, Field
-from typing import Literal, Type, Self
-import uuid
-
-
-class CommandSignature(BaseModel):
-    component: str
-    command: str = ""
-    method: Literal["GET", "PUT"] = "PUT"
-    description: str = ""
-    wait_time: float = 0.0
-    id: str = Field(default_factory=lambda: uuid.uuid4().hex[:6])
-
-    @property
-    def result(self) -> str:
-        return f"{self.component}-{self.command}-{self.id}"
-
-    @property
-    def has_feedback(self) -> bool:
-        return False
+from chemunited.workflow.orchestrator import CommandSignature
+from typing import Self, Type
 
 
 class ComponentProtocol:

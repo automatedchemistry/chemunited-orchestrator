@@ -8,12 +8,24 @@ from PyQt5.QtWidgets import (
 
 from chemunited.qt.utils.math_functions import build_smooth_path, build_straight_path
 
+QT_ROUND_CAP = getattr(Qt, "RoundCap")
+QT_ROUND_JOIN = getattr(Qt, "RoundJoin")
+QT_SIZE_ALL_CURSOR = getattr(Qt, "SizeAllCursor")
+QT_SOLID_LINE = getattr(Qt, "SolidLine")
+QGRAPHICS_ITEM_IS_MOVABLE = getattr(QGraphicsItem, "ItemIsMovable")
+QGRAPHICS_ITEM_IS_SELECTABLE = getattr(QGraphicsItem, "ItemIsSelectable")
+QGRAPHICS_ITEM_POSITION_HAS_CHANGED = getattr(QGraphicsItem, "ItemPositionHasChanged")
+QGRAPHICS_ITEM_SENDS_GEOMETRY_CHANGES = getattr(
+    QGraphicsItem,
+    "ItemSendsGeometryChanges",
+)
+
 
 class PathElementItem(QGraphicsPathItem):
 
     DEFAULT_COLOR: QColor = QColor("black")
     DEFAULT_LINE_WIDTH: float = 2.0
-    DEFAULT_PATH_STYLE: Qt.PenStyle = Qt.SolidLine
+    DEFAULT_PATH_STYLE = QT_SOLID_LINE
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -24,8 +36,8 @@ class PathElementItem(QGraphicsPathItem):
 
     def _update_pen(self) -> None:
         pen = QPen(self._color, self._line_width)
-        pen.setCapStyle(Qt.RoundCap)
-        pen.setJoinStyle(Qt.RoundJoin)
+        pen.setCapStyle(QT_ROUND_CAP)
+        pen.setJoinStyle(QT_ROUND_JOIN)
         if self._path_style:
             pen.setStyle(self._path_style)
         self.setPen(pen)
@@ -71,17 +83,17 @@ class DraggablePoint(QGraphicsEllipseItem):
         super().__init__(-r, -r, r * 2, r * 2, parent)
         self.setPos(x, y)
         self.setFlags(
-            QGraphicsItem.ItemIsMovable
-            | QGraphicsItem.ItemSendsGeometryChanges
-            | QGraphicsItem.ItemIsSelectable
+            QGRAPHICS_ITEM_IS_MOVABLE
+            | QGRAPHICS_ITEM_SENDS_GEOMETRY_CHANGES
+            | QGRAPHICS_ITEM_IS_SELECTABLE
         )
         self.setBrush(QBrush(QColor("white")))
         self.setPen(QPen(QColor("#3a86ff"), 2.0))
-        self.setCursor(Qt.SizeAllCursor)
+        self.setCursor(QT_SIZE_ALL_CURSOR)
         self._callback = callback
 
     def itemChange(self, change, value):
-        if change == QGraphicsItem.ItemPositionHasChanged and self._callback:
+        if change == QGRAPHICS_ITEM_POSITION_HAS_CHANGED and self._callback:
             self._callback()
         return super().itemChange(change, value)
 

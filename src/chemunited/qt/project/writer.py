@@ -1,6 +1,6 @@
 from pathlib import Path
 
-import black
+import black  # type: ignore[import-not-found]
 from loguru import logger
 from PyQt5.QtCore import QFile, QTextStream
 

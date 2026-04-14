@@ -9,6 +9,7 @@ from pathlib import Path
 from typing import Annotated, Any, get_args, get_origin
 
 from loguru import logger
+from pydantic.config import JsonDict
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefinedType
 from PyQt5.QtCore import QIODevice, QSaveFile
@@ -35,6 +36,9 @@ from chemunited.qt.shared.widgets.base_mode_editor.cards.builder_models import (
     StringVariableBuildMode,
 )
 from chemunited.qt.utils.files import load_class
+
+QIODEVICE_TEXT = getattr(QIODevice, "Text")
+QIODEVICE_WRITE_ONLY = getattr(QIODevice, "WriteOnly")
 
 
 def _unwrap_annotation(fi: FieldInfo) -> tuple[Any, list[Any]]:
@@ -73,6 +77,13 @@ def _field_default(fi: FieldInfo, fallback: Any = None) -> Any:
         return fallback
 
 
+def _field_extra_dict(fi: FieldInfo) -> JsonDict:
+    extras = fi.json_schema_extra
+    if isinstance(extras, dict):
+        return extras
+    return {}
+
+
 def field_info_to_build_mode(
     field_name: str,
     field_info: FieldInfo,
@@ -81,17 +92,13 @@ def field_info_to_build_mode(
     if field_name.startswith("_"):
         return None
 
-    extra = field_info.json_schema_extra or {}
+    extra = _field_extra_dict(field_info)
     annotation, metadata = _unwrap_annotation(field_info)
-
-    base_kwargs = {
-        "name": field_name,
-        "title": field_info.title or "",
-        "description": field_info.description or "",
-        "group": extra.get("group", "General"),
-        "editable": extra.get("editable", True),
-        "visible": extra.get("visible", True),
-    }
+    title = field_info.title or ""
+    description = field_info.description or ""
+    group = str(extra.get("group", "General"))
+    editable = bool(extra.get("editable", True))
+    visible = bool(extra.get("visible", True))
 
     if annotation is ChemUnitQuantity:
         validator = next(
@@ -105,61 +112,104 @@ def field_info_to_build_mode(
         else:
             default_text = f"0 {unit}"
         return PhysicalQuantitiesMode(
+            name=field_name,
+            title=title,
+            description=description,
+            group=group,
+            editable=editable,
+            visible=visible,
             unit=unit,
             default=default_text,
-            **base_kwargs,
         )
 
-    if annotation is str and extra.get("Options"):
-        options = list(extra.get("Options", []))
+    options_value = extra.get("Options", [])
+    options = (
+        [str(option) for option in options_value]
+        if isinstance(options_value, list)
+        else []
+    )
+    if annotation is str and options:
         default = _field_default(field_info, "")
         return ChoiceVariableBuildMode(
+            name=field_name,
+            title=title,
+            description=description,
+            group=group,
+            editable=editable,
+            visible=visible,
             default=str(default),
             Options=options,
-            **base_kwargs,
         )
 
     if annotation is int:
         ge = _metadata_value(metadata, "ge")
         le = _metadata_value(metadata, "le")
         return IntVariableBuildMode(
+            name=field_name,
+            title=title,
+            description=description,
+            group=group,
+            editable=editable,
+            visible=visible,
             default=int(_field_default(field_info, 0)),
             ge=int(ge) if ge is not None else 0,
             le=int(le) if le is not None else 100,
-            **base_kwargs,
         )
 
     if annotation is float:
         ge = _metadata_value(metadata, "ge")
         le = _metadata_value(metadata, "le")
         return FloatVariableBuildMode(
+            name=field_name,
+            title=title,
+            description=description,
+            group=group,
+            editable=editable,
+            visible=visible,
             default=float(_field_default(field_info, 0.0)),
             ge=float(ge) if ge is not None else 0.0,
             le=float(le) if le is not None else 100.0,
-            **base_kwargs,
         )
 
     if annotation is bool:
         return BoolVariableBuildMode(
+            name=field_name,
+            title=title,
+            description=description,
+            group=group,
+            editable=editable,
+            visible=visible,
             default=bool(_field_default(field_info, False)),
-            **base_kwargs,
         )
 
     if annotation is list or get_origin(annotation) is list:
         default = _field_default(field_info, [])
         default_list = list(default) if isinstance(default, (list, tuple)) else []
-        return ListVariableBuildMode(default=default_list, **base_kwargs)
+        return ListVariableBuildMode(
+            name=field_name,
+            title=title,
+            description=description,
+            group=group,
+            editable=editable,
+            visible=visible,
+            default=default_list,
+        )
 
     if annotation is str:
         min_length = _metadata_value(metadata, "min_length")
         max_length = _metadata_value(metadata, "max_length")
         pattern = _metadata_value(metadata, "pattern") or ""
         return StringVariableBuildMode(
+            name=field_name,
+            title=title,
+            description=description,
+            group=group,
+            editable=editable,
+            visible=visible,
             default=str(_field_default(field_info, "")),
             pattern=str(pattern),
             min_length=int(min_length) if min_length is not None else 0,
             max_length=int(max_length) if max_length is not None else 50,
-            **base_kwargs,
         )
 
     logger.warning(
@@ -360,7 +410,7 @@ class MainParametersEditor(QMainWindow):
 
     def _write_to_file_raw(self, content: str) -> None:
         file = QSaveFile(str(self._path))
-        if not file.open(QIODevice.WriteOnly | QIODevice.Text):
+        if not file.open(QIODEVICE_WRITE_ONLY | QIODEVICE_TEXT):
             logger.error(f"QSaveFile could not open {self._path}: {file.errorString()}")
             return
 

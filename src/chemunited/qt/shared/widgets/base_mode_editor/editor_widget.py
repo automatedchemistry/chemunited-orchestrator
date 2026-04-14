@@ -17,6 +17,9 @@ from qfluentwidgets import (
 from .card_factory import CardFactory
 from .cards.base_card import BaseFieldCard
 
+QT_ALIGN_TOP = getattr(Qt, "AlignTop")
+QT_SCROLLBAR_ALWAYS_OFF = getattr(Qt, "ScrollBarAlwaysOff")
+
 
 def _field_extras(field_info) -> dict[str, object]:
     extras = field_info.json_schema_extra
@@ -85,14 +88,14 @@ class BaseModeEditorWidget(QWidget):
         # Scroll area — must have self as parent so it is never a top-level window
         scroll = SmoothScrollArea(self)
         scroll.setWidgetResizable(True)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.setHorizontalScrollBarPolicy(QT_SCROLLBAR_ALWAYS_OFF)
         scroll.enableTransparentBackground()
 
         scroll_content = QWidget(scroll)
         cards_layout = QVBoxLayout(scroll_content)
         cards_layout.setContentsMargins(16, 16, 16, 16)
         cards_layout.setSpacing(8)
-        cards_layout.setAlignment(Qt.AlignTop)
+        cards_layout.setAlignment(QT_ALIGN_TOP)
 
         self._populate_cards(cards_layout)
 
@@ -166,7 +169,7 @@ class BaseModeEditorWidget(QWidget):
             values.update(self._instance.model_dump())
 
         for name, card in self._cards.items():
-            if not card.isVisible():
+            if card.isHidden():
                 if name not in values:
                     values[name] = card.get_value()
                 continue

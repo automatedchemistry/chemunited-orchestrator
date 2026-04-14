@@ -1,10 +1,16 @@
-from .models import CommandSignature, ComponentProtocol
-from chemunited.core.utils.internal_quantity import ChemUnitQuantity, ChemQuantityValidator
-from pydantic import Field
 from typing import Annotated, Literal
 
+from pydantic import Field
+
+from chemunited.core.utils.internal_quantity import (
+    ChemQuantityValidator,
+    ChemUnitQuantity,
+)
+
+from .models import CommandSignature, ComponentProtocol
 
 # --- Temperature control ---
+
 
 class GetTemperatureParameter(CommandSignature):
     command: str = "temperature"
@@ -43,6 +49,7 @@ class PeltierCoolerTemperatureControlProtocols(TemperatureControlProtocols): ...
 
 # --- Length / position control ---
 
+
 class GetPositionParameter(CommandSignature):
     command: str = "get_position"
     method: Literal["GET", "PUT"] = "GET"
@@ -75,6 +82,7 @@ class LengthControlProtocols(ComponentProtocol):
 
 # --- Multi-channel ADC ---
 
+
 class ReadChannelParameter(CommandSignature):
     command: str = "read"
     method: Literal["GET", "PUT"] = "GET"
@@ -101,6 +109,7 @@ class MultiChannelADCProtocols(ComponentProtocol):
 
 # --- Multi-channel DAC ---
 
+
 class SetChannelVoltageParameter(CommandSignature):
     command: str = "set"
     method: Literal["GET", "PUT"] = "PUT"
@@ -122,11 +131,12 @@ class MultiChannelDACProtocols(ComponentProtocol):
 
     def __init__(self, name: str):
         super().__init__(name)
-        self.commands["read"] = ReadChannelParameter   # reuse — identical structure
+        self.commands["read"] = ReadChannelParameter  # reuse — identical structure
         self.commands["set"] = SetChannelVoltageParameter
 
 
 # --- Multi-channel relay ---
+
 
 class RelayChannelOnParameter(CommandSignature):
     command: str = "power-on"
@@ -157,7 +167,7 @@ class RelayMultipleChannelParameter(CommandSignature):
         title="Values",
         description=(
             "List of up to 'n' integers (0, 1, or 2). "
-            "Example: \"00010012\". "
+            'Example: "00010012". '
             "If shorter than 'n', remaining channels are set to 0. "
             "Any value greater than 0 is treated as ON."
         ),
@@ -193,6 +203,7 @@ class MultiChannelRelayProtocols(ComponentProtocol):
 
 
 # --- Photoreactor ---
+
 
 class ReadIntensityParameter(CommandSignature):
     command: str = "read_intensity"
@@ -232,6 +243,7 @@ class PhotoreactorProtocols(ComponentProtocol):
 
 
 # --- Power switch / control ---
+
 
 class PowerSwitchProtocols(ComponentProtocol):
 

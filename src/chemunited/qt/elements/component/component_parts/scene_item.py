@@ -7,6 +7,8 @@ from qfluentwidgets import isDarkTheme
 
 from chemunited.core.common.constant import PATTERN_DIMENSION
 
+QT_NO_PEN = getattr(Qt, "NoPen")
+
 CONTOUR_DARK = "#3A3A3A"
 SOLID_DARK = "#525252"
 EVIDENCE_DARK = "#F9F9F9"
@@ -274,7 +276,7 @@ class StatusOverlay(SceneItem):
 
     def paint(self, painter, option, widget=None) -> None:
         painter.setRenderHint(painter.Antialiasing, True)
-        painter.setPen(Qt.NoPen)
+        painter.setPen(QT_NO_PEN)
         painter.setBrush(QBrush(self._color))
         w, h = self.width, self.height
         painter.drawRoundedRect(QRectF(-w / 2, -h / 2, w, h), 4, 4)

@@ -1,14 +1,18 @@
-from chemunited.core.components.glossary.rotary_valve import possibles_connections_pairs
-import chemunited.core.components.glossary.rotary_valve
-from chemunited.qt.utils.files import load_class
-from .models import CommandSignature, ComponentProtocol
-from pydantic import Field, field_validator, create_model
-from typing import ClassVar, Literal
-from pathlib import Path
 from functools import cache
+from pathlib import Path
+from typing import ClassVar, Literal, cast
 
+from loguru import logger
+from pydantic import Field, create_model, field_validator
+from pydantic.config import JsonDict
+
+from chemunited.core.components.glossary.rotary_valve import possibles_connections_pairs
+from chemunited.qt.utils.files import load_class
+
+from .models import CommandSignature, ComponentProtocol
 
 # --- Rotary valves ---
+
 
 class MonitorPositionParameter(CommandSignature):
     command: str = "monitor_position"
@@ -22,7 +26,9 @@ class PositionParameter(CommandSignature):
         title="Connect",
         description="Ports to connect",
         default="[[0, 1]]",
-        json_schema_extra={"options": []},   # options injected per subclass
+        json_schema_extra=cast(
+            JsonDict, {"options": []}
+        ),  # options injected per subclass
     )
     disconnect: str = Field(
         title="Disconnect",
@@ -41,8 +47,8 @@ class PositionParameter(CommandSignature):
 
 class ValvesProtocols(ComponentProtocol):
     STATOR_PORTS: ClassVar[list[tuple]] = [(1, 2), (0,)]
-    ROTOR_PORTS:  ClassVar[list[tuple]] = [(3, None), (3,)]
-    DEFAULT:      ClassVar[str]         = "[[0, 1]]"
+    ROTOR_PORTS: ClassVar[list[tuple]] = [(3, None), (3,)]
+    DEFAULT: ClassVar[str] = "[[0, 1]]"
 
     @classmethod
     @cache
@@ -61,7 +67,7 @@ class ValvesProtocols(ComponentProtocol):
                     title="Connect",
                     description="Ports to connect",
                     default=cls.DEFAULT,
-                    json_schema_extra={"options": options},
+                    json_schema_extra=cast(JsonDict, {"options": options}),
                 ),
             ),
         )
@@ -69,11 +75,16 @@ class ValvesProtocols(ComponentProtocol):
     @classmethod
     def _load_port_topology(cls) -> tuple[list[tuple], list[tuple]]:
         import chemunited.core.components.glossary.rotary_valve as rv_module
-        data = load_class(
-            file_path=Path(rv_module.__file__),
-            class_name=f"{cls.__name__[:-9]}Data",
-        )
-        if data:
+
+        try:
+            data = load_class(
+                file_path=Path(rv_module.__file__),
+                class_name=f"{cls.__name__[:-9]}Data",
+            )
+        except Exception as exc:
+            logger.debug(f"Falling back to default topology for {cls.__name__}: {exc}")
+            data = None
+        if data is not None:
             return data.stator_ports, data.rotor_ports
         return cls.STATOR_PORTS, cls.ROTOR_PORTS
 
@@ -84,25 +95,38 @@ class ValvesProtocols(ComponentProtocol):
 
 
 class TwoPortDistributionValveProtocols(ValvesProtocols): ...
+
+
 class FourPortDistributionValveProtocols(ValvesProtocols): ...
+
+
 class SixPortDistributionValveProtocols(ValvesProtocols): ...
+
+
 class TwelvePortDistributionValveProtocols(ValvesProtocols): ...
+
+
 class SixteenPortDistributionValveProtocols(ValvesProtocols): ...
+
 
 class ThreePortTwoPositionValveProtocols(ValvesProtocols):
     DEFAULT = "[[1, 2]]"
 
+
 class ThreePortFourPositionValveProtocols(ValvesProtocols):
     DEFAULT = "[[1, 2]]"
 
+
 class FourPortFivePositionValveProtocols(ValvesProtocols):
     DEFAULT = "[[1, 2]]"
+
 
 class SixPortTwoPositionValveProtocols(ValvesProtocols):
     DEFAULT = "[[1, 2]]"
 
 
 # --- Solenoid valves ---
+
 
 class SolenoidOpenParameter(CommandSignature):
     command: str = "open"

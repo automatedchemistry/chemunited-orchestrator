@@ -1,8 +1,12 @@
 import json
+from typing import Any
 
 from PyQt5.Qsci import QsciLexerPython
 from PyQt5.QtCore import QFile, QIODevice
 from PyQt5.QtGui import QColor, QFont
+
+QIODEVICE_READ_ONLY = getattr(QIODevice, "ReadOnly")
+QIODEVICE_TEXT = getattr(QIODevice, "Text")
 
 
 class ThemedLexerPython(QsciLexerPython):
@@ -27,14 +31,14 @@ class ThemedLexerPython(QsciLexerPython):
 
     def __init__(self, theme_path: str, parent=None):
         super().__init__(parent)
-        self._colors = {}
-        self._papers = {}
-        self._fonts = {}
+        self._colors: dict[int, QColor] = {}
+        self._papers: dict[int, QColor] = {}
+        self._fonts: dict[int, QFont] = {}
         self._load_theme(theme_path)
 
     def _load_theme(self, path: str) -> None:
         file = QFile(path)
-        if not file.open(QIODevice.ReadOnly | QIODevice.Text):
+        if not file.open(QIODEVICE_READ_ONLY | QIODEVICE_TEXT):
             return
         data = json.loads(bytes(file.readAll()).decode("utf-8"))
         file.close()
@@ -66,11 +70,14 @@ class ThemedLexerPython(QsciLexerPython):
 
             # Use setters directly instead of relying on default* overrides
             if fg:
-                self.setColor(QColor(fg), style_id)
-            self.setPaper(QColor(bg), style_id)
+                self._colors[style_id] = QColor(fg)
+                self.setColor(self._colors[style_id], style_id)
+            self._papers[style_id] = QColor(bg)
+            self.setPaper(self._papers[style_id], style_id)
+            self._fonts[style_id] = font
             self.setFont(font, style_id)
 
-    def apply_to_editor(self, editor) -> None:
+    def apply_to_editor(self, editor: Any) -> None:
         editor.setLexer(self)
 
         # Force the lexer defaults to propagate to the editor
@@ -88,11 +95,14 @@ class ThemedLexerPython(QsciLexerPython):
         editor.setCaretForegroundColor(self.editor_foreground)
         editor.setCaretLineBackgroundColor(self.editor_background)
 
-    def defaultColor(self, style: int) -> QColor:
-        return self._colors.get(style, QColor("#000000"))
+    def defaultColor(self, style: int | None = None) -> QColor:
+        key = self.Default if style is None else style
+        return self._colors.get(key, QColor("#000000"))
 
-    def defaultPaper(self, style: int) -> QColor:
-        return self._papers.get(style, QColor("#ffffff"))
+    def defaultPaper(self, style: int | None = None) -> QColor:
+        key = self.Default if style is None else style
+        return self._papers.get(key, QColor("#ffffff"))
 
-    def defaultFont(self, style: int) -> QFont:
-        return self._fonts.get(style, QFont("Monospace", 10))
+    def defaultFont(self, style: int | None = None) -> QFont:
+        key = self.Default if style is None else style
+        return self._fonts.get(key, QFont("Monospace", 10))

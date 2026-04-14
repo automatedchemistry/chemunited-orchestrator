@@ -12,6 +12,9 @@ from qfluentwidgets import (
     ToolButton,
 )
 
+QT_KEY_ESCAPE = getattr(Qt, "Key_Escape")
+QT_NO_PEN = getattr(Qt, "NoPen")
+
 
 class _StatusCircle(QWidget):
     """Circle placeholder — replace with real status widget later."""
@@ -24,7 +27,7 @@ class _StatusCircle(QWidget):
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
         painter.setBrush(QColor(120, 120, 120))
-        painter.setPen(Qt.NoPen)
+        painter.setPen(QT_NO_PEN)
         painter.drawEllipse(1, 1, 10, 10)
 
 
@@ -35,7 +38,7 @@ class _EditLineEdit(LineEdit):
     focus_lost = pyqtSignal()
 
     def keyPressEvent(self, event) -> None:
-        if event.key() == Qt.Key_Escape:
+        if event.key() == QT_KEY_ESCAPE:
             self.escape_pressed.emit()
         else:
             super().keyPressEvent(event)
