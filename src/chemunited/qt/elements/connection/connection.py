@@ -54,10 +54,15 @@ class BaseConnectionItem(MovablePathItem):
         self._destination_port = destination_port
         p1 = origin_port.scenePos()
         p2 = destination_port.scenePos()
-        super().__init__((p1.x(), p1.y()), (p2.x(), p2.y()))
+        super().__init__(
+            (p1.x(), p1.y()),
+            (p2.x(), p2.y()),
+            inflection_points=data.inflection_points,
+        )
         self.setZValue(10)
         self.setFlag(QGraphicsItem.ItemIsSelectable, True)  # type: ignore
         self._attach_ports()
+        self.setStraight(data.straight_path)
 
     def _attach_ports(self) -> None:
         self._origin_port.setCallbackPosChange(self.rebuild_path)
@@ -147,6 +152,8 @@ class HydraulicConnectionItem(BaseConnectionItem):
         self._inner_color = self.DEFAULT_INNER_COLOR
         self._outer_width = self.DEFAULT_OUTER_WIDTH
         self._inner_width = self.DEFAULT_INNER_WIDTH
+        if data.air_pressure_line:
+            self.set_air_pressure_line(True)
 
     def set_air_pressure_line(self, value: bool) -> None:
         self._data.air_pressure_line = value

@@ -158,10 +158,12 @@ class OrchestratorDraw(OrchestratorCore):
         destiny_cp = self.components[destiny].graph.get_connection_point(destiny_port)
 
         if port_1_object.category == ConnectionType.HYDRAULIC:
-            diameter = kwargs.get("diameter", ChemUnitQuantity("1 mm"))
+            diameter = ChemUnitQuantity(
+                kwargs.get("diameter", ChemUnitQuantity("1 mm"))
+            )
             if diameter.to_base_units().magnitude <= 0:
                 raise ValueError("Diameter must be greater than 0")
-            length = kwargs.get("length", ChemUnitQuantity("100 mm"))
+            length = ChemUnitQuantity(kwargs.get("length", ChemUnitQuantity("100 mm")))
             if length.to_base_units().magnitude <= 0:
                 raise ValueError("Length must be greater than 0")
         else:
