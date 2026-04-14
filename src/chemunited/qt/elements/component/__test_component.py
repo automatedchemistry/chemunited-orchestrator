@@ -91,18 +91,18 @@ LAYOUT: dict[str, list[type[GraphComponent]]] = {
     #     HPLCPump, 
     #     SyringePump
     # ],
-    "sensors": [
-        FlowMeter,
-        PhidgetBubbleSensorComponent,
-        PhotoSensor,
-        PressureControl,
-        PressureSensor,
-    ],
-    "multichannel": [
-        MultiChannelADC, 
-        MultiChannelDAC, 
-        MultiChannelRelay
-    ],
+    # "sensors": [
+    #     FlowMeter,
+    #     PhidgetBubbleSensorComponent,
+    #     PhotoSensor,
+    #     PressureControl,
+    #     PressureSensor,
+    # ],
+    # "multichannel": [
+    #     MultiChannelADC, 
+    #     MultiChannelDAC, 
+    #     MultiChannelRelay
+    # ],
     "powers": [
         PowerControl,
         PowerSwitch, 

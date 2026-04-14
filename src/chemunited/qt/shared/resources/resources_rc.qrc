@@ -153,6 +153,9 @@
         <file>components/PhotoreactorDARK.svg</file>
         <file>components/LengthControlLIGHT.svg</file>
         <file>components/LengthControlDARK.svg</file>
+        <file>components/DAC.svg</file>
+        <file>components/ADC.svg</file>
+        <file>components/Relay.svg</file>
         <file>components/MultiChannelDACLIGHT.svg</file>
         <file>components/MultiChannelDACDARK.svg</file>
         <file>components/MultiChannelADCLIGHT.svg</file>
