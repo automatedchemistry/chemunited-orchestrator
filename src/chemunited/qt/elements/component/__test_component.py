@@ -2,10 +2,15 @@ from typing import Any
 from chemunited.qt.elements.component.glossary import (
     # pipes
     BackPressureRegulator,
+    Distributor,
+    MFCComponent,
+    Separator,
+    Sink,
+    Source,
     # vessels
     BathReactor,
     CustomFlask,
-    Distributor,
+    FlowReactor,
     # sensors
     FlowMeter,
     FlowReactor,
@@ -74,13 +79,14 @@ LAYOUT: dict[str, list[type[GraphComponent]]] = {
     #     Gantry3D, 
     #     LengthControl
     # ],
-    "pipes": [
-        BackPressureRegulator, 
-        Distributor, 
-        MFCComponent, 
-        Sink, 
-        Source
-    ],
+    # "pipes": [
+    #     BackPressureRegulator, 
+    #     Distributor, 
+    #     MFCComponent, 
+    #     Separator, 
+    #     Sink, 
+    #     Source
+    # ],
     "pumps": [
         HPLCPump, 
         #SyringePump
@@ -152,27 +158,27 @@ if __name__ == "__main__":
     if FIGURE == "all":
         for row, (category, classes) in enumerate(LAYOUT.items()):
             for col, cls in enumerate(classes):
-                component = cls(
-                    data=cls.METADATA(
+                mode = cls.BASEMODE(
                     name=cls.__name__,
                     figure=cls.__name__,
                     position=(col * SPACING_X, row * SPACING_Y),
                     angle=0,
-                ),
-            )
+                )
+                data = cls.METADATA.from_mode(mode)
+                component = cls(data)
                 scene.addItem(component)
     else:
         for row, (category, classes) in enumerate(LAYOUT.items()):
             for col, cls in enumerate(classes):
-                if cls.__name__ == FIGURE:
-                    component = cls(
-                        data=cls.METADATA(
-                        name=cls.__name__,
-                        figure=cls.__name__,
-                        position=(col * SPACING_X, row * SPACING_Y),
-                        angle=0,
-                    ),
+                mode = cls.BASEMODE(
+                    name=cls.__name__,
+                    figure=cls.__name__,
+                    position=(col * SPACING_X, row * SPACING_Y),
+                    angle=0,
                 )
+                data = cls.METADATA.from_mode(mode)
+                if cls.__name__ == FIGURE:
+                    component = cls(data)
                     scene.addItem(component)
                     break
 

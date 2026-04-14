@@ -89,20 +89,10 @@
     </qresource>
     <qresource prefix="/components_icons">
         <file>components/IRControl.svg</file>
-        <file>components/IRControlLIGHT.svg</file>
-        <file>components/IRControlDARK.svg</file>
         <file>components/NMRControl.svg</file>
-        <file>components/NMRControlLIGHT.svg</file>
-        <file>components/NMRControlDARK.svg</file>
         <file>components/HPLC.svg</file>
-        <file>components/HPLCControlLIGHT.svg</file>
-        <file>components/HPLCControlDARK.svg</file>
         <file>components/MSControl.svg</file>
-        <file>components/MSControlLIGHT.svg</file>
         <file>components/MassFlowControl.svg</file>
-        <file>components/MSControlDARK.svg</file>
-        <file>components/MFCcomponentLIGHT.svg</file>
-        <file>components/MFCcomponentDARK.svg</file>
         <file>components/Gantry3DLIGHT.svg</file>
         <file>components/Gantry3DDARK.svg</file>
         <file>components/PeltierCoolerTemperatureControlLIGHT.svg</file>
@@ -125,10 +115,14 @@
         <file>components/PressureGlassBottleDARK.svg</file>
         <file>components/VialLIGHT.svg</file>
         <file>components/VialDARK.svg</file>
+        <file>components/Separator.svg</file>
+        <file>components/Distributor.svg</file>
         <file>components/DistributorLIGHT.svg</file>
         <file>components/DistributorDARK.svg</file>
+        <file>components/BackPressureRegulator.svg</file>
         <file>components/BackPressureRegulatorLIGHT.svg</file>
         <file>components/BackPressureRegulatorDARK.svg</file>
+        <file>components/SourceSink.svg</file>
         <file>components/SinkLIGHT.svg</file>
         <file>components/SinkDARK.svg</file>
         <file>components/SourceLIGHT.svg</file>

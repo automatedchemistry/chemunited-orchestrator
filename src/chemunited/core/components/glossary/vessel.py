@@ -68,6 +68,16 @@ class VesselMode(ComponentMode):
             "lock_reason": "Internal Chosen",
         },
     )
+    heat_exchange: bool = Field(
+        default=True,
+        title="Heat Exchange",
+        description="Whether the component allows heat exchange.",
+        json_schema_extra={
+            "group": GroupParameterCategory.PROPERTY.value,
+            "editable": False,
+            "lock_reason": "Internal Chosen",
+        },
+    )
 
 
 def _centered_offsets(count: int) -> list[float]:
@@ -91,6 +101,7 @@ class VesselComponentData(ComponentData):
     capacity: ChemUnitQuantity = ChemUnitQuantity("1 ml")
     top_access: int = 1
     bottom_access: int = 1
+    heat_exchange: bool = True
 
     @property
     def capacity_value(self) -> float:
@@ -122,12 +133,13 @@ class VesselComponentData(ComponentData):
                 relative_position=(x_offset, -1.0),
             )
 
-        self.ports_by_number[n + 1] = Port(
-            number=n + 1,
-            component=self.name,
-            category=ConnectionType.HEAT,
-            relative_position=(-1.5, 0.0),
-        )
+        if self.heat_exchange:
+            self.ports_by_number[n + 1] = Port(
+                number=n + 1,
+                component=self.name,
+                category=ConnectionType.HEAT,
+                relative_position=(-1.5, 0.0),
+            )
 
         for number in range(1, n + 1):
             self.internal_edges[(number, "Inventory")] = InternalEdge(

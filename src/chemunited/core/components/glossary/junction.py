@@ -50,7 +50,7 @@ class JunctionData(ComponentData):
     """
 
     number_ports: int = 3
-    internal_radius: float = 1
+    internal_radius: float = 30
 
     @override
     def internal_structure(self):
