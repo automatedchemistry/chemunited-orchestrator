@@ -87,10 +87,10 @@ LAYOUT: dict[str, list[type[GraphComponent]]] = {
     #     Sink, 
     #     Source
     # ],
-    "pumps": [
-        HPLCPump, 
-        #SyringePump
-    ],
+    # "pumps": [
+    #     HPLCPump, 
+    #     SyringePump
+    # ],
     "sensors": [
         FlowMeter,
         PhidgetBubbleSensorComponent,

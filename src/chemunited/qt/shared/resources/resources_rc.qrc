@@ -117,16 +117,13 @@
         <file>components/VialDARK.svg</file>
         <file>components/Separator.svg</file>
         <file>components/Distributor.svg</file>
-        <file>components/DistributorLIGHT.svg</file>
-        <file>components/DistributorDARK.svg</file>
         <file>components/BackPressureRegulator.svg</file>
-        <file>components/BackPressureRegulatorLIGHT.svg</file>
-        <file>components/BackPressureRegulatorDARK.svg</file>
         <file>components/SourceSink.svg</file>
         <file>components/SinkLIGHT.svg</file>
         <file>components/SinkDARK.svg</file>
         <file>components/SourceLIGHT.svg</file>
         <file>components/SourceDARK.svg</file>
+        <file>components/HPLCPump.svg</file>
         <file>components/HPLCPumpLIGHT.svg</file>
         <file>components/HPLCPumpDARK.svg</file>
         <file>components/SyringePumpLIGHT.svg</file>
