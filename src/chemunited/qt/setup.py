@@ -1,6 +1,12 @@
 from typing import override
 
-from qfluentwidgets import FluentIcon, NavigationItemPosition
+from PyQt5.QtGui import QKeySequence
+from qfluentwidgets import (
+    Action,
+    FluentIcon,
+    NavigationItemPosition,
+    RoundMenu,
+)
 
 from .draw.graph import DrawGraphicView
 from .draw.tree_add import TreeAddItem
@@ -46,9 +52,81 @@ class SetupWindow(MainWindowBase):
 
         self.buildUi()
 
+    def initProjectMenu(self) -> None:
+        self.project_menu = RoundMenu(parent=self)
+        self.project_menu_button = self.navigationInterface.addItem(
+            routeKey="project_menu",
+            icon=FluentIcon.FOLDER,
+            text="Project",
+            onClick=self._show_project_menu,
+            selectable=True,
+            position=NavigationItemPosition.TOP,
+            tooltip="Project",
+        )
+
+        self.add_project_action = Action(
+            OrchestratorIcon.ADD_FOLDER,
+            "Add Project...",
+            self,
+        )
+        self.add_project_action.triggered.connect(self.add_project)
+        self.project_menu.addAction(self.add_project_action)
+
+        self.load_project_action = Action(
+            OrchestratorIcon.OPEN_FOLDER,
+            "Load Project...",
+            self,
+        )
+        self.load_project_action.setShortcut(QKeySequence("Ctrl+A"))
+        self.load_project_action.triggered.connect(self.load_project)
+        self.project_menu.addAction(self.load_project_action)
+        self.addAction(self.load_project_action)
+
+        self.recent_projects_menu = RoundMenu("Recent Files", self.project_menu)
+        self.project_menu.addMenu(self.recent_projects_menu)
+
+        self.project_menu.addSeparator()
+
+        self.save_project_action = Action(FluentIcon.SAVE, "Save Project", self)
+        self.save_project_action.setShortcut(QKeySequence.Save)
+        self.save_project_action.triggered.connect(self.save)
+        self.project_menu.addAction(self.save_project_action)
+        self.addAction(self.save_project_action)
+
+    def _show_project_menu(self) -> None:
+        self.refresh_recent_projects_menu()
+
+        current_widget = self.stackWidget.currentWidget()
+        if current_widget is not None:
+            self.navigationInterface.setCurrentItem(current_widget.objectName())
+
+        pos = self.project_menu_button.mapToGlobal(
+            self.project_menu_button.rect().bottomRight()
+        )
+        self.project_menu.exec(pos)
+
+    def refresh_recent_projects_menu(self) -> None:
+        self.recent_projects_menu.clear()
+
+        recent_projects = self.orchestrator.recent_projects.list()
+        if not recent_projects:
+            empty_action = Action(FluentIcon.INFO, "No Recent Files", self)
+            empty_action.setEnabled(False)
+            self.recent_projects_menu.addAction(empty_action)
+            return
+
+        for project_path in recent_projects:
+            action = Action(FluentIcon.DOCUMENT, project_path.name, self)
+            action.setToolTip(str(project_path))
+            action.triggered.connect(
+                lambda checked=False, path=project_path: self.open_recent_project(path)
+            )
+            self.recent_projects_menu.addAction(action)
+
     @override
     def initNavigation(self):
         super().initNavigation()
+        self.initProjectMenu()
 
         self.drawFrame.setGraphWidget(self.drawGraph)
 
@@ -133,3 +211,12 @@ class SetupWindow(MainWindowBase):
 
     def save(self):
         self.orchestrator.save()
+
+    def add_project(self):
+        self.orchestrator.new_project()
+
+    def load_project(self):
+        self.orchestrator.load()
+
+    def open_recent_project(self, path):
+        self.orchestrator.open_recent_project(path)

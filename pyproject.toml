@@ -20,6 +20,7 @@ classifiers = [
     "License :: OSI Approved :: MIT License"
 ]
 dependencies = [
+    "appdirs",
     "PyQt-Fluent-Widgets",
     "networkx",
     "numpy",
@@ -91,6 +92,7 @@ explicit_package_bases = true
 
 [[tool.mypy.overrides]]
 module = [
+    "appdirs",
     "PyQt5",
     "PyQt5.*",
     "black",
