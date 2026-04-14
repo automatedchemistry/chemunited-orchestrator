@@ -128,10 +128,14 @@
         <file>components/HPLCPumpDARK.svg</file>
         <file>components/SyringePumpLIGHT.svg</file>
         <file>components/SyringePumpDARK.svg</file>
+        <file>components/BubbleSensor.svg</file>
         <file>components/PhidgetBubbleSensorcomponentLIGHT.svg</file>
         <file>components/PhidgetBubbleSensorcomponentDARK.svg</file>
+        <file>components/FlowMeter.svg</file>
+        <file>components/PressureSensor.svg</file>
         <file>components/PressureSensorLIGHT.svg</file>
         <file>components/PressureSensorDARK.svg</file>
+        <file>components/PressureControl.svg</file>
         <file>components/PressureControlLIGHT.svg</file>
         <file>components/PressureControlDARK.svg</file>
         <file>components/PowerSwitchLIGHT.svg</file>
