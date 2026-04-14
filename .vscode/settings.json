@@ -18,7 +18,11 @@
     "ruff.path": ["${workspaceFolder}/.venv/Scripts/ruff.exe"],
 
     // Mypy
+    "mypy-type-checker.importStrategy": "fromEnvironment",
     "mypy-type-checker.path": ["${workspaceFolder}/.venv/Scripts/mypy.exe"],
+    "mypy-type-checker.args": [
+        "--python-executable=${workspaceFolder}/.venv/Scripts/python.exe"
+    ],
 
     // Test discovery
     "python.testing.pytestEnabled": false,

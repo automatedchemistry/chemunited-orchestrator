@@ -7,3 +7,7 @@ from chemunited.qt.elements.component.graph_item import GraphComponent
 class PressureControl(GraphComponent[PressureControlData]):
     METADATA: ClassVar[type[PressureControlData]] = PressureControlData
     BASEMODE: ClassVar[type[PressureControlMode]] = PressureControlMode
+
+    def build(self, svg_path: str | None = None) -> None:
+        self._data.ports_by_number[1].relative_position = (40, 33)
+        return super().build(svg_path=f":/components_icons/components/PressureControl.svg")

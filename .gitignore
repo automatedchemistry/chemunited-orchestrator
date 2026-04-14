@@ -213,5 +213,7 @@ __marimo__/
 .claude/
 CLAUDE.md
 tests/screenshots/
+.tmp_pytest_paths/
 
 .idea/
+.vscode/

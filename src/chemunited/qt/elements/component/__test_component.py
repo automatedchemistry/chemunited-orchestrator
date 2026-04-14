@@ -1,10 +1,16 @@
+from typing import Any
 from chemunited.qt.elements.component.glossary import (
     # pipes
     BackPressureRegulator,
+    Distributor,
+    MFCComponent,
+    Separator,
+    Sink,
+    Source,
     # vessels
     BathReactor,
     CustomFlask,
-    Distributor,
+    FlowReactor,
     # sensors
     FlowMeter,
     FlowReactor,
@@ -63,32 +69,64 @@ from chemunited.qt.elements.component.graph_item import GraphComponent
 # Category grouping for scene layout (row = category, col = component).
 # Each entry is the GraphComponent subclass; figure/data come from cls.METADATA.
 LAYOUT: dict[str, list[type[GraphComponent]]] = {
-    "analytics": [HPLCControl, IRControl, MSControl, NMRControl],
-    "assembly": [Gantry3D, LengthControl],
-    "pipes": [BackPressureRegulator, Distributor, MFCComponent, Sink, Source],
-    "pumps": [HPLCPump, SyringePump],
-    "sensors": [
-        FlowMeter,
-        PhidgetBubbleSensorComponent,
-        PhotoSensor,
-        PressureControl,
-        PressureSensor,
+    # "analytics": [
+    #     HPLCControl, 
+    #     IRControl,
+    #     MSControl, 
+    #     NMRControl
+    # ],
+    # "assembly": [
+    #     Gantry3D, 
+    #     LengthControl
+    # ],
+    # "pipes": [
+    #     BackPressureRegulator, 
+    #     Distributor, 
+    #     MFCComponent, 
+    #     Separator, 
+    #     Sink, 
+    #     Source
+    # ],
+    # "pumps": [
+    #     HPLCPump, 
+    #     SyringePump
+    # ],
+    # "sensors": [
+    #     FlowMeter,
+    #     PhidgetBubbleSensorComponent,
+    #     PhotoSensor,
+    #     PressureControl,
+    #     PressureSensor,
+    # ],
+    # "multichannel": [
+    #     MultiChannelADC, 
+    #     MultiChannelDAC, 
+    #     MultiChannelRelay
+    # ],
+    "powers": [
+        PowerControl,
+        PowerSwitch, 
+        PhidgetBubbleSensorPowerComponent
     ],
-    "multichannel": [MultiChannelADC, MultiChannelDAC, MultiChannelRelay],
-    "powers": [PowerControl, PowerSwitch, PhidgetBubbleSensorPowerComponent],
-    "thermal": [PeltierCoolerTemperatureControl, TemperatureControl],
-    "valve_rotary": [
-        FourPortDistributionValve,
-        FourPortFivePositionValve,
-        SixPortDistributionValve,
-        SixPortTwoPositionValve,
-        SixteenPortDistributionValve,
-        ThreePortFourPositionValve,
-        ThreePortTwoPositionValve,
-        TwelvePortDistributionValve,
-        TwoPortDistributionValve,
+    "thermal": [
+        PeltierCoolerTemperatureControl, 
+        #TemperatureControl
     ],
-    "valve_solenoid": [SolenoidValve, SolenoidValve2Way],
+    # "valve_rotary": [
+    #     FourPortDistributionValve,
+    #     FourPortFivePositionValve,
+    #     SixPortDistributionValve,
+    #     SixPortTwoPositionValve,
+    #     SixteenPortDistributionValve,
+    #     ThreePortFourPositionValve,
+    #     ThreePortTwoPositionValve,
+    #     TwelvePortDistributionValve,
+    #     TwoPortDistributionValve,
+    # ],
+    # "valve_solenoid": [
+    #     SolenoidValve, 
+    #     SolenoidValve2Way
+    # ],
     "vessels": [
         BathReactor,
         CustomFlask,
@@ -104,6 +142,7 @@ LAYOUT: dict[str, list[type[GraphComponent]]] = {
 }
 
 if __name__ == "__main__":
+    FIGURE = "all"
     import sys
 
     from PyQt5.QtWidgets import QApplication
@@ -116,17 +155,32 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     scene = SceneCore()
 
-    for row, (category, classes) in enumerate(LAYOUT.items()):
-        for col, cls in enumerate(classes):
-            component = cls(
-                data=cls.METADATA(
+    if FIGURE == "all":
+        for row, (category, classes) in enumerate(LAYOUT.items()):
+            for col, cls in enumerate(classes):
+                mode = cls.BASEMODE(
                     name=cls.__name__,
                     figure=cls.__name__,
                     position=(col * SPACING_X, row * SPACING_Y),
                     angle=0,
-                ),
-            )
-            scene.addItem(component)
+                )
+                data = cls.METADATA.from_mode(mode)
+                component = cls(data)
+                scene.addItem(component)
+    else:
+        for row, (category, classes) in enumerate(LAYOUT.items()):
+            for col, cls in enumerate(classes):
+                mode = cls.BASEMODE(
+                    name=cls.__name__,
+                    figure=cls.__name__,
+                    position=(col * SPACING_X, row * SPACING_Y),
+                    angle=0,
+                )
+                data = cls.METADATA.from_mode(mode)
+                if cls.__name__ == FIGURE:
+                    component = cls(data)
+                    scene.addItem(component)
+                    break
 
     view = GraphCore(scene)
     view.show()

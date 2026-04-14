@@ -27,6 +27,8 @@ dependencies = [
     "pint",
     "pydantic_pint",
     "loguru",
+    "scipy",
+    "gitpython",
 ]
 
 [project.optional-dependencies]
@@ -90,6 +92,8 @@ explicit_package_bases = true
 module = [
     "PyQt5",
     "PyQt5.*",
+    "black",
+    "git",
     "qfluentwidgets",
     "qframelesswindow",
     "networkx",

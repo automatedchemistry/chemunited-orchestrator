@@ -16,6 +16,7 @@ from .pipes.distributor_graph import Distributor
 from .pipes.mfccomponent_graph import MFCComponent
 from .pipes.sink_graph import Sink
 from .pipes.source_graph import Source
+from .pipes.separator import Separator
 
 # pumps
 from .pumps.hplcpump_graph import HPLCPump
@@ -91,6 +92,7 @@ __all__ = [
     "MFCComponent",
     "Sink",
     "Source",
+    "Separator",
     # pumps
     "HPLCPump",
     "SyringePump",

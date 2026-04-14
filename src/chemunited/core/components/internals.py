@@ -69,6 +69,7 @@ class Port:
     access: PortAccess = PortAccess.TOP
     closure: PortClosure = PortClosure.OPEN
     boundary: PortBoundaryCondition | None = None
+    show_in_graph: bool = True
 
     @property
     def name(self) -> str:

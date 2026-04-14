@@ -7,3 +7,6 @@ from chemunited.qt.elements.component.graph_item import GraphComponent
 class TemperatureControl(GraphComponent[NeutralComponentData]):
     METADATA: ClassVar[type[NeutralComponentData]] = NeutralComponentData
     BASEMODE: ClassVar[type[ComponentMode]] = ComponentMode
+
+    def build(self, svg_path: str | None = None) -> None:
+        return super().build(svg_path=f":/components_icons/components/Chiller.svg")

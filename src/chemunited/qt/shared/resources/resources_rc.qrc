@@ -5,7 +5,6 @@
         <file>qss/light/loggings_widget.qss</file>
         <file>qss/light/main_window.qss</file>
     </qresource>
-
     <qresource prefix="/icons">
         <file>icons/add_folder_black.svg</file>
         <file>icons/add_folder_white.svg</file>
@@ -88,20 +87,14 @@
         <file>icons/waiting_icon.svg</file>
         <file>icons/water.svg</file>
     </qresource>
-
     <qresource prefix="/components_icons">
-        <file>components/IRControlLIGHT.svg</file>
-        <file>components/IRControlDARK.svg</file>
-        <file>components/NMRControlLIGHT.svg</file>
-        <file>components/NMRControlDARK.svg</file>
-        <file>components/HPLCControlLIGHT.svg</file>
-        <file>components/HPLCControlDARK.svg</file>
-        <file>components/MSControlLIGHT.svg</file>
-        <file>components/MSControlDARK.svg</file>
-        <file>components/MFCcomponentLIGHT.svg</file>
-        <file>components/MFCcomponentDARK.svg</file>
-        <file>components/gantry3DLIGHT.svg</file>
-        <file>components/gantry3DDARK.svg</file>
+        <file>components/IRControl.svg</file>
+        <file>components/NMRControl.svg</file>
+        <file>components/HPLC.svg</file>
+        <file>components/MSControl.svg</file>
+        <file>components/MassFlowControl.svg</file>
+        <file>components/Gantry3DLIGHT.svg</file>
+        <file>components/Gantry3DDARK.svg</file>
         <file>components/PeltierCoolerTemperatureControlLIGHT.svg</file>
         <file>components/PeltierCoolerTemperatureControlDARK.svg</file>
         <file>components/LoopLIGHT.svg</file>
@@ -122,22 +115,27 @@
         <file>components/PressureGlassBottleDARK.svg</file>
         <file>components/VialLIGHT.svg</file>
         <file>components/VialDARK.svg</file>
-        <file>components/DistributorLIGHT.svg</file>
-        <file>components/DistributorDARK.svg</file>
-        <file>components/BackPressureRegulatorLIGHT.svg</file>
-        <file>components/BackPressureRegulatorDARK.svg</file>
+        <file>components/Separator.svg</file>
+        <file>components/Distributor.svg</file>
+        <file>components/BackPressureRegulator.svg</file>
+        <file>components/SourceSink.svg</file>
         <file>components/SinkLIGHT.svg</file>
         <file>components/SinkDARK.svg</file>
         <file>components/SourceLIGHT.svg</file>
         <file>components/SourceDARK.svg</file>
+        <file>components/HPLCPump.svg</file>
         <file>components/HPLCPumpLIGHT.svg</file>
         <file>components/HPLCPumpDARK.svg</file>
         <file>components/SyringePumpLIGHT.svg</file>
         <file>components/SyringePumpDARK.svg</file>
+        <file>components/BubbleSensor.svg</file>
         <file>components/PhidgetBubbleSensorcomponentLIGHT.svg</file>
         <file>components/PhidgetBubbleSensorcomponentDARK.svg</file>
+        <file>components/FlowMeter.svg</file>
+        <file>components/PressureSensor.svg</file>
         <file>components/PressureSensorLIGHT.svg</file>
         <file>components/PressureSensorDARK.svg</file>
+        <file>components/PressureControl.svg</file>
         <file>components/PressureControlLIGHT.svg</file>
         <file>components/PressureControlDARK.svg</file>
         <file>components/PowerSwitchLIGHT.svg</file>
@@ -148,12 +146,16 @@
         <file>components/PhidgetBubbleSensorPowercomponentDARK.svg</file>
         <file>components/PhotoSensorLIGHT.svg</file>
         <file>components/PhotoSensorDARK.svg</file>
+        <file>components/Chiller.svg</file>
         <file>components/TemperatureControlLIGHT.svg</file>
         <file>components/TemperatureControlDARK.svg</file>
         <file>components/PhotoreactorLIGHT.svg</file>
         <file>components/PhotoreactorDARK.svg</file>
         <file>components/LengthControlLIGHT.svg</file>
         <file>components/LengthControlDARK.svg</file>
+        <file>components/DAC.svg</file>
+        <file>components/ADC.svg</file>
+        <file>components/Relay.svg</file>
         <file>components/MultiChannelDACLIGHT.svg</file>
         <file>components/MultiChannelDACDARK.svg</file>
         <file>components/MultiChannelADCLIGHT.svg</file>
@@ -164,6 +166,8 @@
         <file>components/TwoPortDistributionValveDARK.svg</file>
         <file>components/FourPortDistributionValveLIGHT.svg</file>
         <file>components/FourPortDistributionValveDARK.svg</file>
+        <file>components/SyringeBarrel.svg</file>
+        <file>components/SyringePlunger.svg</file>
         <file>components/SixPortDistributionValveLIGHT.svg</file>
         <file>components/SixPortDistributionValveDARK.svg</file>
         <file>components/TwelvePortDistributionValveLIGHT.svg</file>
@@ -178,17 +182,16 @@
         <file>components/FourPortFivePositionValveDARK.svg</file>
         <file>components/SixPortTwoPositionValveLIGHT.svg</file>
         <file>components/SixPortTwoPositionValveDARK.svg</file>
+        <file>components/RotaryValve.svg</file>
         <file>components/SolenoidValveLIGHT.svg</file>
         <file>components/SolenoidValveDARK.svg</file>
         <file>components/SolenoidValve2WayLIGHT.svg</file>
         <file>components/SolenoidValve2WayDARK.svg</file>
     </qresource>
-
     <qresource prefix="/default_files">
         <file>scripts/process.txt</file>
         <file>scripts/parameter.txt</file>
     </qresource>
-
     <qresource prefix="/lexer_palettes">
         <file>lexer/theme_dark.json</file>
         <file>lexer/theme_light.json</file>

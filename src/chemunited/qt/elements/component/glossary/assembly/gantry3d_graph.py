@@ -7,3 +7,4 @@ from chemunited.qt.elements.component.graph_item import GraphComponent
 class Gantry3D(GraphComponent[gantry3DData]):
     METADATA: ClassVar[type[gantry3DData]] = gantry3DData
     BASEMODE: ClassVar[type[gantry3DMode]] = gantry3DMode
+    SVG_SCALE: ClassVar[float] = 4.0
