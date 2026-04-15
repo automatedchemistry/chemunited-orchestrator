@@ -209,11 +209,11 @@ __marimo__/
 .pre-commit-cache/
 .pre-commit-home-run/
 
-.vscode/
 .claude/
 CLAUDE.md
 tests/screenshots/
 .tmp_pytest_paths/
+AGENTS.md
 
 .idea/
 .vscode/
