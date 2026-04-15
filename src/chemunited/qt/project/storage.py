@@ -3,7 +3,11 @@ from __future__ import annotations
 import importlib.util
 import json
 import zipfile
+from datetime import datetime, timezone
 from pathlib import Path
+
+from chemunited.qt.project.writer import render_python_script
+from chemunited.qt.utils.files import load_attribute
 
 _PACK_EXCLUDE = {".git", ".gitignore", ".chemunited_session"}
 _PROTOCOLS_SKIP = {"__init__", "main_parameters"}
@@ -34,16 +38,128 @@ def _is_excluded(file: Path, root: Path) -> bool:
 
 
 def save_draw(working_dir: Path, draw_data: dict) -> None:
-    path = working_dir / "draw" / "setup.json"
+    path = working_dir / "draw" / "setup.py"
     path.parent.mkdir(parents=True, exist_ok=True)
-    path.write_text(json.dumps(draw_data, indent=2), encoding="utf-8")
+    path.write_text(_render_draw_script(working_dir, draw_data), encoding="utf-8")
 
 
 def load_draw(working_dir: Path) -> dict:
-    path = working_dir / "draw" / "setup.json"
+    path = working_dir / "draw" / "setup.py"
     if not path.exists():
         return {"components": [], "connections": [], "canvas": {}}
-    return json.loads(path.read_text(encoding="utf-8"))
+    build_draw = load_attribute(
+        path,
+        "build_draw",
+        f"_chemunited_draw_setup_{abs(hash(path.resolve()))}",
+    )
+    if not callable(build_draw):
+        raise ValueError(f"Draw setup file must define build_draw(platform): {path}")
+
+    recorder = _DrawRecorder()
+    build_draw(recorder)
+    return recorder.data()
+
+
+class _DrawRecorder:
+    def __init__(self) -> None:
+        self.components: list[dict] = []
+        self.connections: list[dict] = []
+
+    def add_component(self, **payload) -> None:
+        self.components.append(dict(payload))
+
+    def add_connection(
+        self,
+        origin: str,
+        destiny: str | None = None,
+        origin_port: int = 2,
+        destiny_port: int | None = None,
+        destination: str | None = None,
+        destination_port: int | None = None,
+        **payload,
+    ) -> None:
+        target = destiny if destiny is not None else destination
+        if target is None:
+            raise ValueError("Draw setup connection is missing a destiny.")
+
+        target_port = (
+            destiny_port
+            if destiny_port is not None
+            else destination_port
+            if destination_port is not None
+            else 1
+        )
+        connection = {
+            "origin": origin,
+            "destination": target,
+            "origin_port": origin_port,
+            "destination_port": target_port,
+        }
+        connection.update(payload)
+        self.connections.append(connection)
+
+    def data(self) -> dict:
+        return {"components": self.components, "connections": self.connections}
+
+
+def _render_draw_script(working_dir: Path, draw_data: dict) -> str:
+    generated_at = datetime.now(timezone.utc).isoformat()
+    draw_body = _render_draw_body(draw_data)
+    template = render_python_script(
+        script="project",
+        overwrite={
+            "---PROJECT_NAME---": working_dir.name,
+            "---DATE---": generated_at,
+            "---DATA---": generated_at,
+        },
+    )
+    return template.replace("    ---DRAW---", draw_body).replace(
+        "---DRAW---", draw_body.lstrip()
+    )
+
+
+def _render_draw_body(draw_data: dict) -> str:
+    calls = []
+    for component in draw_data.get("components", []):
+        calls.append(_render_call("platform.add_component", component, "component"))
+
+    for connection in draw_data.get("connections", []):
+        calls.append(_render_call("platform.add_connection", connection, "connection"))
+
+    if not calls:
+        return "    pass\n"
+    return "\n\n".join(calls) + "\n"
+
+
+def _render_call(function_name: str, payload: dict, payload_type: str) -> str:
+    lines = [f"    {function_name}("]
+    for key, value in _ordered_payload(payload, payload_type).items():
+        lines.append(f"        {key}={_format_python_value(key, value)},")
+    lines.append("    )")
+    return "\n".join(lines)
+
+
+def _ordered_payload(payload: dict, payload_type: str) -> dict:
+    normalized = dict(payload)
+    if payload_type == "connection":
+        if "destination" in normalized and "destiny" not in normalized:
+            normalized["destiny"] = normalized.pop("destination")
+        if "destination_port" in normalized and "destiny_port" not in normalized:
+            normalized["destiny_port"] = normalized.pop("destination_port")
+
+    preferred = {
+        "component": ("name", "figure", "position", "angle"),
+        "connection": ("origin", "destiny", "origin_port", "destiny_port"),
+    }[payload_type]
+    ordered = {key: normalized.pop(key) for key in preferred if key in normalized}
+    ordered.update({key: normalized[key] for key in sorted(normalized)})
+    return ordered
+
+
+def _format_python_value(key: str, value) -> str:
+    if key == "position" and isinstance(value, list):
+        return repr(tuple(value))
+    return repr(value)
 
 
 # ── Process files (replaces workflow + modules + process_parameters) ───────────

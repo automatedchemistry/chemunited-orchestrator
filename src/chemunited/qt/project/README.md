@@ -21,7 +21,7 @@ my_experiment/                       ← working directory (source of truth)
 ├── .gitignore                       ← excludes __pycache__, connectivity, etc.
 │
 ├── draw/
-│   └── setup.json                   ← canvas components, connections, viewport
+│   └── setup.py                     ← Python draw setup script
 │
 ├── protocols/
 │   ├── __init__.py                  ← auto-generated process registry (PROCESSES dict)
@@ -61,34 +61,31 @@ Protocols and Pre-Running panels.
 
 ---
 
-### `draw/setup.json`
+### `draw/setup.py`
 
-Everything visible on the Draw canvas. Serialised directly from `base_mode_instance` property of each component and connection.
+Everything visible on the Draw canvas. ChemUnited generates this Python file
+from each component and connection, and calls `build_draw(platform)` when the
+project is opened.
 
-```json
-{
-  "components": [
-    {
-      "type": "FlowSource",
-      "name": "ReagentPump",
-      "figure": "PumpFigure",
-      "position": [120.0, 340.0],
-      "angle": 0,
-      "flow_rate": "5 ml/min"
-    }
-  ],
-  "connections": [
-    {
-      "origin": "ReagentPump",
-      "origin_port": 1,
-      "destination": "ReagentValve",
-      "destination_port": 1,
-      "length": "100 mm",
-      "diameter": "1.6 mm",
-      "classification": "hydraulic"
-    }
-  ]
-}
+```python
+def build_draw(platform):
+    platform.add_component(
+        name="ReagentPump",
+        figure="PumpFigure",
+        position=(120.0, 340.0),
+        angle=0,
+        flow_rate="5 ml/min",
+    )
+
+    platform.add_connection(
+        origin="ReagentPump",
+        destiny="ReagentValve",
+        origin_port=1,
+        destiny_port=1,
+        length="100 mm",
+        diameter="1.6 mm",
+        classification="hydraulic",
+    )
 ```
 
 ---
@@ -218,7 +215,7 @@ my_experiment.chemunited  (ZIP)
 ├── manifest.json
 ├── pyproject.toml
 ├── __init__.py
-├── draw/setup.json
+├── draw/setup.py
 ├── protocols/__init__.py
 ├── protocols/main_parameters.py
 ├── protocols/calibration.py
@@ -251,7 +248,7 @@ Create working directory
 Write manifest.json, pyproject.toml, __init__.py
 Write protocols/__init__.py  (empty PROCESSES dict)
 Write protocols/main_parameters.py  (from template)
-Create draw/setup.json  (empty canvas)
+Create draw/setup.py  (empty canvas)
 Create connectivity/associations.json  (empty)
 Init Git repo → first commit "Initialize ChemUnited project"
 ```
@@ -263,7 +260,7 @@ User selects a directory
         ↓
 Load manifest.json
 Open Git repo if .git/ present
-Load draw/setup.json → reconstruct ComponentData / EdgeData
+Load draw/setup.py → call build_draw(platform) and reconstruct ComponentData / EdgeData
 Load protocols via import protocols.PROCESSES
 Load connectivity/associations.json
 ```
@@ -295,7 +292,7 @@ Pack working directory → my_experiment.chemunited
 
 | What | Why |
 |---|---|
-| `ComponentData` / `EdgeData` objects | Rebuilt via `from_mode()` from `setup.json` |
+| `ComponentData` / `EdgeData` objects | Rebuilt by calling `build_draw(platform)` from `setup.py` |
 | Compiled `nx.DiGraph` | Rebuilt by `build_workflow()` at runtime |
 | `WorkflowExecutor` state | Always restarted |
 | Simulation state | Always recomputed |

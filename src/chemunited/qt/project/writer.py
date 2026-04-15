@@ -55,21 +55,26 @@ def _write_lines(path: Path, lines: list[str], *, encoding: str = "utf-8") -> No
         f.writelines(lines)
 
 
+def render_python_script(
+    script: str = "process",
+    overwrite: dict | None = None,
+) -> str:
+    lines = _read_lines(f":/default_files/scripts/{script}.txt", encoding="utf-8")
+    if overwrite:
+        lines = _apply_replacements(lines, overwrite)
+    return "".join(lines)
+
+
 def write_python_script(
     file_path: Path,
     script: str = "process",
     overwrite: dict | None = None,
 ) -> None:
-    # read + apply replacements
-    lines = _read_lines(f":/default_files/scripts/{script}.txt", encoding="utf-8")
-    if overwrite:
-        lines = _apply_replacements(lines, overwrite)
-    _write_lines(file_path, lines)
+    raw_code = render_python_script(script=script, overwrite=overwrite)
+    _write_lines(file_path, raw_code.splitlines(keepends=True))
 
     # --- 2. Try formatting with Black ---
     try:
-        # join as crude code
-        raw_code = "".join(lines)
         mode = black.FileMode()
         formatted_code = black.format_str(raw_code, mode=mode)
         file_path.write_text(formatted_code, encoding="utf-8")

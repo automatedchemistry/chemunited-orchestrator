@@ -61,7 +61,7 @@ class GitManager:
     # ── Auto-commit helpers (called by session on each save) ───────────────────
 
     def commit_draw(self) -> None:
-        self._auto_commit(["draw/setup.json"], "Update platform layout")
+        self._auto_commit(["draw/setup.py"], "Update platform layout")
 
     def commit_process(
         self,
@@ -145,9 +145,11 @@ class GitManager:
 
     def _auto_commit(self, paths: list[str], message: str) -> None:
         """Stage specific paths and commit only if they changed."""
-        existing = [p for p in paths if (Path(self._repo.working_dir) / p).exists()]
-        if not existing:
+        root = Path(self._repo.working_dir)
+        tracked = set(self._repo.git.ls_files("--", *paths).splitlines())
+        stageable = [p for p in paths if (root / p).exists() or p in tracked]
+        if not stageable:
             return
-        self._repo.index.add(existing)
+        self._repo.git.add("--", *stageable)
         if self._repo.is_dirty(index=True):
             self._repo.index.commit(message)
