@@ -1,0 +1,33 @@
+# =============================================
+# Auto-generated ChemUnited Draw Setup
+# Project Name: ---PROJECT_NAME---
+# Generated on: ---DATE---
+# ---------------------------------------------
+# This file is built by ChemUnited from the open
+# project canvas. Saving the project in the app
+# rewrites this file.
+#
+# You may edit it while the project is closed.
+# When the project is opened, ChemUnited calls
+# build_draw(platform) to rebuild the platform.
+# =============================================
+
+
+def build_draw(platform):
+    """Build the platform layout for this project."""
+    # Component reference:
+    # platform.add_component(
+    #     name="PumpA",
+    #     figure="HPLCPump",
+    #     position=(0.0, 0.0),
+    #     angle=0,
+    # )
+    #
+    # Connection reference:
+    # platform.add_connection(
+    #     origin="PumpA",
+    #     destiny="ReactorA",
+    #     origin_port=2,
+    #     destiny_port=1,
+    # )
+    ---DRAW---

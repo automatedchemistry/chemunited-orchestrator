@@ -191,6 +191,7 @@
     <qresource prefix="/default_files">
         <file>scripts/process.txt</file>
         <file>scripts/parameter.txt</file>
+        <file>scripts/project.txt</file>
     </qresource>
     <qresource prefix="/lexer_palettes">
         <file>lexer/theme_dark.json</file>
