@@ -80,7 +80,7 @@ class OrchestratorDraw(OrchestratorCore):
         if mode is None:
             return
 
-        payload = mode.model_dump()
+        payload = dict(mode)
         self.add_component(**payload)
 
     def add_component(

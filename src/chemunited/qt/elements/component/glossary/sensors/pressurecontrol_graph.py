@@ -10,4 +10,6 @@ class PressureControl(GraphComponent[PressureControlData]):
 
     def build(self, svg_path: str | None = None) -> None:
         self._data.ports_by_number[1].relative_position = (40, 33)
-        return super().build(svg_path=f":/components_icons/components/PressureControl.svg")
+        return super().build(
+            svg_path=":/components_icons/components/PressureControl.svg"
+        )

@@ -75,9 +75,17 @@ def create_component(figure: str, **kwargs) -> Union[UtensilManager, ElectronicM
     if figure not in components:
         logger.error(f"Component {figure} not found, assuming generic component")
         fallback_component = ElectronicManager()
-        fallback_component.graph = GraphComponent(ComponentData(name=figure, **kwargs))
+        fallback_component.graph = GraphComponent(
+            ComponentData(
+                name=kwargs.get("name", figure),
+                figure=figure,
+                position=kwargs.get("position", (0, 0)),
+                angle=kwargs.get("angle", 0),
+            )
+        )
         return fallback_component
-    mdata = components[figure].METADATA(figure=figure, **kwargs)
+    mode = components[figure].BASEMODE.model_validate({"figure": figure, **kwargs})
+    mdata = components[figure].METADATA.from_mode(mode)
     if mdata.is_electronic:
         electronic_component = ElectronicManager()
         electronic_component.graph = components[figure](mdata)
