@@ -11,4 +11,4 @@ class PhidgetBubbleSensorComponent(GraphComponent[ComponentData]):
     def build(self, svg_path: str | None = None) -> None:
         self._data.ports_by_number[1].relative_position = (48, 7)
         self._data.ports_by_number[2].relative_position = (-48, 7)
-        return super().build(svg_path=f":/components_icons/components/BubbleSensor.svg")
+        return super().build(svg_path=":/components_icons/components/BubbleSensor.svg")

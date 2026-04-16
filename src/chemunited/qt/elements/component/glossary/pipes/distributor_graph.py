@@ -1,10 +1,11 @@
-from chemunited.core.components import JunctionData, JunctionMode
-from chemunited.qt.elements.component.graph_item import GraphComponent
-from chemunited.qt.elements.component.component_parts import SceneItem
+from typing import ClassVar
+
 from PyQt5.QtCore import QPointF, Qt
 from PyQt5.QtGui import QPen
-from typing import ClassVar
-import numpy as np
+
+from chemunited.core.components import JunctionData, JunctionMode
+from chemunited.qt.elements.component.component_parts import SceneItem
+from chemunited.qt.elements.component.graph_item import GraphComponent
 
 
 class Body(SceneItem):
@@ -13,9 +14,7 @@ class Body(SceneItem):
 
         radius = int(40 * max(7, data.number_ports) / 10)
 
-        super().__init__(
-            width=2 * radius, height=2 * radius, parent=parent
-        )
+        super().__init__(width=2 * radius, height=2 * radius, parent=parent)
 
         self._data = data
 
@@ -44,8 +43,6 @@ class Distributor(GraphComponent[JunctionData]):
 
     def build(self, svg_path: str | None = None) -> None:
 
-        super().build(svg_path=f":/components_icons/components/Distributor.svg")
+        super().build(svg_path=":/components_icons/components/Distributor.svg")
 
         self.addToGroup(Body(self._data, parent=self))
-
-        

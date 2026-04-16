@@ -1,10 +1,12 @@
-from .clients import ComponentClient
-from pathlib import Path
 import json
+from pathlib import Path
+
+from .clients import ComponentClient
 
 
 class Platform:
     """Platform for component communication."""
+
     def __init__(self):
         self.components: dict[str, ComponentClient] = {}
 

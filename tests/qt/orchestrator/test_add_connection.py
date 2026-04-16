@@ -14,6 +14,7 @@ What is tested:
 import pytest
 from pytestqt.qtbot import QtBot
 
+from chemunited.core.common.enums import ConnectionType
 from chemunited.qt.setup import SetupWindow
 
 CONNECTION_NAME = "PumpA_2_PumpB_1"
@@ -81,6 +82,32 @@ class TestAddConnection:
 
         connection = two_pumps.orchestrator.connections[CONNECTION_NAME]
         assert connection in two_pumps.scene_attribute.items()
+
+    def test_saved_movement_connection_can_use_mixed_port_categories(
+        self, window: SetupWindow
+    ):
+        window.orchestrator.add_component(
+            name="Tray-A1",
+            figure="Vial",
+            position=(0.0, 0.0),
+        )
+        window.orchestrator.add_component(
+            name="gantry",
+            figure="gantry3D",
+            position=(100.0, 0.0),
+            connections_number=1,
+        )
+
+        window.orchestrator.add_connection(
+            origin="Tray-A1",
+            destiny="gantry",
+            origin_port=1,
+            destiny_port=2,
+            classification="movement",
+        )
+
+        connection = window.orchestrator.connections["Tray-A1_1_gantry_2"]
+        assert connection.inf.classification == ConnectionType.MOVEMENT
 
     # ── remove: happy path ─────────────────────────────────────────────────
 

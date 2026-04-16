@@ -1,10 +1,11 @@
-from chemunited.core.utils.internal_quantity import ChemQuantityValidator, ChemUnitQuantity
-from chemunited.core.components import VesselComponentData, VesselMode
-from chemunited.core.common.enums import GroupParameterCategory
-from chemunited.qt.elements.component.graph_item import GraphComponent
 from dataclasses import dataclass
-from typing import ClassVar, Annotated
+from typing import ClassVar
+
 from pydantic import Field
+
+from chemunited.core.common.enums import GroupParameterCategory
+from chemunited.core.components import VesselComponentData, VesselMode
+from chemunited.qt.elements.component.graph_item import GraphComponent
 
 
 @dataclass
@@ -24,19 +25,19 @@ class VialMode(VesselMode):
             "group": GroupParameterCategory.PROPERTY.value,
             "editable": False,
             "lock_reason": "Internal Chosen",
-            "visible": False
+            "visible": False,
         },
     )
     bottom_access: int = Field(
         default=0,
-        ge=1,
+        ge=0,
         title="Access at the bottom",
         description="Access connections at the bottom of the flask.",
         json_schema_extra={
             "group": GroupParameterCategory.PROPERTY.value,
             "editable": False,
             "lock_reason": "Internal Chosen",
-            "visible": False
+            "visible": False,
         },
     )
 

@@ -105,7 +105,9 @@ def possibles_connections_pairs(
     return sorted(set(points))
 
 
-def _port_numbers_from_stator(stator_ports: ValvePortLayout, rotor_ports: ValvePortLayout) -> list[int]:
+def _port_numbers_from_stator(
+    stator_ports: ValvePortLayout, rotor_ports: ValvePortLayout
+) -> list[int]:
     numbers = {number for row in stator_ports for number in row if number is not None}
     if 0 in numbers and rotor_ports[1][0] is None:
         numbers.remove(0)

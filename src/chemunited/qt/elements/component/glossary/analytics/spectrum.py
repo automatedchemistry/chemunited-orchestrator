@@ -1,17 +1,20 @@
+import numpy as np
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QPainterPath
+
 from chemunited.qt.elements.component.component_parts import SceneItem
 from chemunited.qt.utils.math_functions import multi_peak
-from PyQt5.QtGui import QPainterPath
-from PyQt5.QtCore import Qt
-import numpy as np
 
 
 class Spectrum(SceneItem):
-    def __init__(self, width: int = ..., height: int | None = None, color=Qt.red, parent=None):
+    def __init__(
+        self, width: int = ..., height: int | None = None, color=Qt.red, parent=None
+    ):
         super().__init__(width, height, parent)
         self.color = color
 
     def paint(self, painter, option, widget=None) -> None:
-       # Parameters for the log-normal distribution
+        # Parameters for the log-normal distribution
 
         # Create the x-space
         x_list = np.linspace(0, self.width, 100)

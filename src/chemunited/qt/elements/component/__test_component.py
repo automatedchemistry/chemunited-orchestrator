@@ -1,4 +1,3 @@
-from typing import Any
 from chemunited.qt.elements.component.glossary import (
     # pipes
     BackPressureRegulator,
@@ -124,7 +123,7 @@ LAYOUT: dict[str, list[type[GraphComponent]]] = {
     #     TwoPortDistributionValve,
     # ],
     # "valve_solenoid": [
-    #     SolenoidValve, 
+    #     SolenoidValve,
     #     SolenoidValve2Way
     # ],
     "vessels": [

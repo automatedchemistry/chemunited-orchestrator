@@ -9,8 +9,6 @@ from time import sleep
 import networkx as nx
 from pydantic import BaseModel, ConfigDict
 
-from .protocols import MAIN_PARAMETERS, PLATFORM
-
 sys.path.insert(0, str(Path(__file__).resolve().parents[3]))
 
 from chemunited.workflow import (

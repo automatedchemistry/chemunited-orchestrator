@@ -85,9 +85,7 @@ class _DrawRecorder:
         target_port = (
             destiny_port
             if destiny_port is not None
-            else destination_port
-            if destination_port is not None
-            else 1
+            else destination_port if destination_port is not None else 1
         )
         connection = {
             "origin": origin,

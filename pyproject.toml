@@ -31,7 +31,11 @@ dependencies = [
     "gitpython",
     "rich",
     "requests",
+    "rich-click",
 ]
+
+[project.scripts]
+chemunited = "chemunited.qt.__main__:main"
 
 [project.optional-dependencies]
 dev = [

@@ -30,6 +30,27 @@ class RecentProjectsStore:
     def list(self) -> list[Path]:
         return [Path(path) for path in self._read_paths()]
 
+    def prune_missing(self) -> list[Path]:
+        paths = self._read_paths()
+        existing_paths: list[Path] = []
+        serialized_paths: list[str] = []
+        seen_paths: set[Path] = set()
+
+        for path in paths:
+            normalized = self._normalize(Path(path))
+            if normalized in seen_paths or not self._exists(normalized):
+                continue
+
+            seen_paths.add(normalized)
+            existing_paths.append(normalized)
+            serialized_paths.append(str(normalized))
+
+        serialized_paths = serialized_paths[: self.limit]
+        if serialized_paths != paths:
+            self._write_paths(serialized_paths)
+
+        return existing_paths[: self.limit]
+
     def add(self, project_path: Path) -> None:
         normalized = self._normalize(project_path)
         paths = [
@@ -79,3 +100,9 @@ class RecentProjectsStore:
 
     def _normalize(self, path: Path) -> Path:
         return Path(path).expanduser().resolve(strict=False)
+
+    def _exists(self, path: Path) -> bool:
+        try:
+            return path.exists()
+        except OSError:
+            return False

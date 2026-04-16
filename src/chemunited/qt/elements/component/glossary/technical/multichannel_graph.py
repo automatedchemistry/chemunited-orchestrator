@@ -1,25 +1,23 @@
-from chemunited.core.components import NeutralComponentData, ComponentMode
-from chemunited.qt.elements.component.graph_item import GraphComponent
-from chemunited.qt.elements.component.component_parts import SceneItem
-from chemunited.core.common.enums import GroupParameterCategory
-from chemunited.core.common.enums import ConnectionType
-from chemunited.core.components.internals import Port
-from PyQt5.QtGui import QPen, QBrush, QColor
-from PyQt5.QtCore import Qt
-from pydantic import Field
 from typing import ClassVar
+
+from pydantic import Field
+from PyQt5.QtCore import Qt
+from PyQt5.QtGui import QBrush, QColor, QPen
+
+from chemunited.core.common.enums import ConnectionType, GroupParameterCategory
+from chemunited.core.components import ComponentMode, NeutralComponentData
+from chemunited.core.components.internals import Port
+from chemunited.qt.elements.component.component_parts import SceneItem
+from chemunited.qt.elements.component.graph_item import GraphComponent
 
 
 class MultiChannelBory(SceneItem):
 
     def __init__(self, data: MultiChannelData) -> None:
         self._data = data
-        super().__init__(
-            width=15,
-            height=16 * data.channels + 4
-        )
+        super().__init__(width=15, height=16 * data.channels + 4)
 
-    def paint(self, painter, option, widget = None) -> None:
+    def paint(self, painter, option, widget=None) -> None:
         painter.setPen(QPen(Qt.black, 1))
         painter.setBrush(QBrush(Qt.white))
         painter.drawRect(self.boundingRect())
@@ -29,12 +27,7 @@ class MultiChannelBory(SceneItem):
             if value:
                 color = QColor("#8BC34A") if value[i] else QColor("#E8F5E9")
                 painter.setPen(QPen(color, 2))
-            painter.drawEllipse(
-                -r, 
-                int(-self.height / 2 + i * 16 + 4), 
-                2 * r, 
-                2 * r
-            )
+            painter.drawEllipse(-r, int(-self.height / 2 + i * 16 + 4), 2 * r, 2 * r)
 
 
 class MultiChannelMode(ComponentMode):
@@ -46,8 +39,8 @@ class MultiChannelMode(ComponentMode):
             "group": GroupParameterCategory.GENERAL.value,
             "editable": True,
         },
-        ge=1, 
-        le=32
+        ge=1,
+        le=32,
     )
 
 
@@ -62,8 +55,8 @@ class MultiChannelData(NeutralComponentData):
             i: Port(
                 number=i,
                 component=self.name,
-                relative_position=(0, - (self.channels * 8 + 10) + i * 16),
-                category=ConnectionType.ELECTRONIC
+                relative_position=(0, -(self.channels * 8 + 10) + i * 16),
+                category=ConnectionType.ELECTRONIC,
             )
             for i in range(1, self.channels + 1)
         }
@@ -79,8 +72,8 @@ class MultiChannelADC(GraphComponent[MultiChannelData]):
     def build(self, svg_path: str | None = None) -> None:
         self.bory = MultiChannelBory(self._data)
         self.addToGroup(self.bory)
-        super().build(svg_path=f":/components_icons/components/ADC.svg")
-        self._svg.setPos(-20, self.bory.height /2)
+        super().build(svg_path=":/components_icons/components/ADC.svg")
+        self._svg.setPos(-20, self.bory.height / 2)
 
 
 class MultiChannelDAC(GraphComponent[MultiChannelData]):
@@ -91,8 +84,8 @@ class MultiChannelDAC(GraphComponent[MultiChannelData]):
     def build(self, svg_path: str | None = None) -> None:
         self.bory = MultiChannelBory(self._data)
         self.addToGroup(self.bory)
-        super().build(svg_path=f":/components_icons/components/DAC.svg")
-        self._svg.setPos(-20, self.bory.height /2)
+        super().build(svg_path=":/components_icons/components/DAC.svg")
+        self._svg.setPos(-20, self.bory.height / 2)
 
 
 class MultiChannelRelay(GraphComponent[MultiChannelData]):
@@ -103,5 +96,5 @@ class MultiChannelRelay(GraphComponent[MultiChannelData]):
     def build(self, svg_path: str | None = None) -> None:
         self.bory = MultiChannelBory(self._data)
         self.addToGroup(self.bory)
-        super().build(svg_path=f":/components_icons/components/Relay.svg")
-        self._svg.setPos(-20, self.bory.height /2)
+        super().build(svg_path=":/components_icons/components/Relay.svg")
+        self._svg.setPos(-20, self.bory.height / 2)

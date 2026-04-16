@@ -84,6 +84,7 @@ class SetupWindow(MainWindowBase):
 
         self.recent_projects_menu = RoundMenu("Recent Files", self.project_menu)
         self.project_menu.addMenu(self.recent_projects_menu)
+        self.refresh_recent_projects_menu()
 
         self.project_menu.addSeparator()
 
@@ -108,7 +109,7 @@ class SetupWindow(MainWindowBase):
     def refresh_recent_projects_menu(self) -> None:
         self.recent_projects_menu.clear()
 
-        recent_projects = self.orchestrator.recent_projects.list()
+        recent_projects = self.orchestrator.recent_projects.prune_missing()
         if not recent_projects:
             empty_action = Action(FluentIcon.INFO, "No Recent Files", self)
             empty_action.setEnabled(False)

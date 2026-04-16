@@ -11,5 +11,4 @@ class HPLCPump(GraphComponent[ComponentData]):
     def build(self, svg_path: str | None = None) -> None:
         self._data.ports_by_number[1].relative_position = (14, 33)
         self._data.ports_by_number[2].relative_position = (35, 33)
-        return super().build(svg_path=f":/components_icons/components/HPLCPump.svg")
-
+        return super().build(svg_path=":/components_icons/components/HPLCPump.svg")

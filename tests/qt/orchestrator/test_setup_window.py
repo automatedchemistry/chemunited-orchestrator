@@ -11,6 +11,7 @@ from PyQt5.QtGui import QKeySequence
 from pytestqt.qtbot import QtBot
 from qfluentwidgets import NavigationTreeWidget
 
+from chemunited.core.common.enums import ConnectionType
 from chemunited.qt.project.recent import RecentProjectsStore
 from chemunited.qt.setup import SetupWindow
 
@@ -52,6 +53,82 @@ class TestAddComponent:
         scene_items = window.scene_attribute.items()
         assert component.graph in scene_items
 
+    def test_component_string_quantities_are_validated(self, window: SetupWindow):
+        window.orchestrator.add_component(
+            name="FlowReactor",
+            figure="FlowReactor",
+            position=(0.0, 0.0),
+            length="100 mm",
+            diameter="1 mm",
+        )
+
+        component = window.orchestrator.components["FlowReactor"]
+        assert component.inf.length.to_base_units().magnitude == pytest.approx(0.1)
+        assert component.inf.diameter.to_base_units().magnitude == pytest.approx(0.001)
+
+    def test_component_legacy_figure_alias_is_supported(self, window: SetupWindow):
+        window.orchestrator.add_component(
+            name="gantry",
+            figure="gantry3D",
+            position=(0.0, 0.0),
+            connections_number=6,
+        )
+
+        component = window.orchestrator.components["gantry"]
+        assert component.inf.figure == "gantry3D"
+        assert len(component.inf.ports_by_number) == 7
+
+    def test_pool_component_restores_flow_and_heat_ports(self, window: SetupWindow):
+        window.orchestrator.add_component(
+            name="pool",
+            figure="Pool",
+            position=(0.0, 0.0),
+            connections_number=3,
+        )
+
+        component = window.orchestrator.components["pool"]
+        assert set(component.inf.ports_by_number) == {1, 2, 3, 4, 5}
+        assert component.inf.ports_by_number[1].category == ConnectionType.HYDRAULIC
+        assert component.inf.ports_by_number[4].category == ConnectionType.HEAT
+
+    def test_photoreactor_restores_heat_port(self, window: SetupWindow):
+        window.orchestrator.add_component(
+            name="photo reactor",
+            figure="Photoreactor",
+            position=(0.0, 0.0),
+        )
+
+        component = window.orchestrator.components["photo reactor"]
+        assert component.inf.ports_by_number[3].category == ConnectionType.HEAT
+
+    def test_thermal_controls_restore_connection_ports(self, window: SetupWindow):
+        window.orchestrator.add_component(
+            name="peltier",
+            figure="PeltierCoolerTemperatureControl",
+            position=(0.0, 0.0),
+        )
+        window.orchestrator.add_component(
+            name="chiller",
+            figure="TemperatureControl",
+            position=(100.0, 0.0),
+        )
+
+        peltier = window.orchestrator.components["peltier"]
+        chiller = window.orchestrator.components["chiller"]
+        assert peltier.inf.ports_by_number[1].category == ConnectionType.HEAT
+        assert set(chiller.inf.ports_by_number) == {1, 2}
+
+    def test_pressure_control_restores_two_pressure_ports(self, window: SetupWindow):
+        window.orchestrator.add_component(
+            name="PressureControl",
+            figure="PressureControl",
+            position=(0.0, 0.0),
+        )
+
+        component = window.orchestrator.components["PressureControl"]
+        assert set(component.inf.ports_by_number) == {1, 2}
+        assert component.inf.ports_by_number[2].category == ConnectionType.HYDRAULIC
+
     def test_duplicate_name_raises(self, window: SetupWindow):
         window.orchestrator.add_component(
             name="HPLCPump",
@@ -80,8 +157,10 @@ class TestAddComponent:
     ):
         store = RecentProjectsStore(tmp_path / "recent_projects.json")
         project_path = tmp_path / "demo.chemunited"
+        missing_path = tmp_path / "missing.chemunited"
         project_path.write_text("", encoding="utf-8")
         store.add(project_path)
+        store.add(missing_path)
         window.orchestrator.recent_projects = store
 
         window.refresh_recent_projects_menu()
@@ -90,6 +169,7 @@ class TestAddComponent:
         assert len(recent_actions) == 1
         assert recent_actions[0].text() == "demo.chemunited"
         assert recent_actions[0].toolTip() == str(project_path.resolve())
+        assert store.list() == [project_path.resolve()]
 
     def test_save_updates_existing_project_file(self, window: SetupWindow, tmp_path):
         class DummySession:

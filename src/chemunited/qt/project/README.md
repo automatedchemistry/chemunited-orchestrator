@@ -270,9 +270,11 @@ Load connectivity/associations.json
 ```
 User opens my_experiment.chemunited
         ↓
-Unpack ZIP → my_experiment/ (next to the .chemunited file)
+If my_experiment/ already contains manifest.json, open that directory
+        ↓
+Otherwise unpack ZIP → my_experiment/ (next to the .chemunited file)
 Load manifest.json
-Init fresh Git repo → first commit "Imported from my_experiment.chemunited"
+Open existing Git repo, or init fresh Git repo after unpacking
 Continue as open existing project
 ```
 

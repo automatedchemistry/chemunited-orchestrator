@@ -67,6 +67,18 @@ class ProjectSession:
     ) -> None:
         name = chemunited_file.stem
         target = (location or chemunited_file.parent) / name
+        if ProjectManifest.exists(target):
+            self.open_directory(target)
+            self.source_file = chemunited_file
+            return
+
+        if target.exists():
+            if not target.is_dir() or any(target.iterdir()):
+                raise FileExistsError(
+                    "Cannot import archive into an existing non-project path: "
+                    f"{target}"
+                )
+
         unpack(chemunited_file, target)
         self.working_dir = target
         self.source_file = chemunited_file

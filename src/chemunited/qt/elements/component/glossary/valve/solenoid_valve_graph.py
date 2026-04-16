@@ -1,18 +1,22 @@
-from chemunited.core.components.glossary.rotary_valve import ValvePortLayout
-from chemunited.core.common.enums import GroupParameterCategory
-from chemunited.core.components import ValveMode, ValveComponentData
-from chemunited.qt.elements.component.graph_item import GraphComponent
-from pydantic import Field
 from dataclasses import dataclass, field
 from typing import ClassVar
+
+from pydantic import Field
+
+from chemunited.core.common.enums import GroupParameterCategory
+from chemunited.core.components import ValveComponentData, ValveMode
+from chemunited.core.components.glossary.rotary_valve import ValvePortLayout
+from chemunited.qt.elements.component.graph_item import GraphComponent
 
 
 @dataclass
 class SolenideValveData(ValveComponentData):
     stator_ports: ValvePortLayout = field(
-        default_factory=lambda: [(None, 1, None, 2), (None,)])
+        default_factory=lambda: [(None, 1, None, 2), (None,)]
+    )
     rotor_ports: ValvePortLayout = field(
-        default_factory=lambda: [(3, None, 3, None), (None,)])
+        default_factory=lambda: [(3, None, 3, None), (None,)]
+    )
 
     def internal_structure(self):
         super().internal_structure()
@@ -50,17 +54,14 @@ class SolenoidValve(GraphComponent[SolenideValveData]):
 
 @dataclass
 class SolenideValve2WayData(ValveComponentData):
-    stator_ports: ValvePortLayout = field(
-        default_factory=lambda: [(1, 2), (0,)])
-    rotor_ports: ValvePortLayout = field(
-        default_factory=lambda: [(3, None), (3,)])
+    stator_ports: ValvePortLayout = field(default_factory=lambda: [(1, 2), (0,)])
+    rotor_ports: ValvePortLayout = field(default_factory=lambda: [(3, None), (3,)])
 
     def internal_structure(self):
         super().internal_structure()
         self.ports_by_number[0].relative_position = (40, 20)
         self.ports_by_number[1].relative_position = (-40, 8)
         self.ports_by_number[2].relative_position = (-40, 30)
-
 
 
 class SolenoidValve2Way(GraphComponent[SolenideValve2WayData]):

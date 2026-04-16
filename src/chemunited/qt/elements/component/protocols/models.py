@@ -1,5 +1,6 @@
-from chemunited.workflow.orchestrator import CommandSignature
 from typing import Self, Type
+
+from chemunited.workflow.orchestrator import CommandSignature
 
 
 class ComponentProtocol:

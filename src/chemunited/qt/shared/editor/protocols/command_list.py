@@ -4,7 +4,6 @@ import json
 from dataclasses import dataclass
 from typing import TypedDict, cast
 
-import chemunited.qt.elements.component.protocols as protocol_module
 from loguru import logger
 from PyQt5.QtCore import QMimeData, QSize, Qt, pyqtSignal
 from PyQt5.QtGui import QDrag, QIcon
@@ -20,6 +19,7 @@ from PyQt5.QtWidgets import (
 )
 from qfluentwidgets import TreeWidget, isDarkTheme
 
+import chemunited.qt.elements.component.protocols as protocol_module
 from chemunited.qt.elements.component.protocols.models import (
     CommandSignature,
     ComponentProtocol,
@@ -135,9 +135,7 @@ class _CommandCard(QFrame):
         method_color = "#2d7dff" if method.upper() == "GET" else "#1a8f5a"
         title_color = "#f3f3f3" if isDarkTheme() else "#202020"
         subdued = (
-            "rgba(255, 255, 255, 0.62)"
-            if isDarkTheme()
-            else "rgba(0, 0, 0, 0.56)"
+            "rgba(255, 255, 255, 0.62)" if isDarkTheme() else "rgba(0, 0, 0, 0.56)"
         )
 
         self.setObjectName("commandCard")
@@ -200,9 +198,7 @@ class _ComponentCard(QFrame):
 
         title_color = "#f3f3f3" if isDarkTheme() else "#202020"
         subdued = (
-            "rgba(255, 255, 255, 0.62)"
-            if isDarkTheme()
-            else "rgba(0, 0, 0, 0.56)"
+            "rgba(255, 255, 255, 0.62)" if isDarkTheme() else "rgba(0, 0, 0, 0.56)"
         )
         self.setObjectName("componentCard")
         self.setAttribute(Qt.WA_TransparentForMouseEvents, True)  # type: ignore[attr-defined]
@@ -285,7 +281,9 @@ class CommandList(TreeWidget):
             if not isinstance(protocol, ComponentProtocol) or not protocol.commands:
                 continue
 
-            figure = str(getattr(getattr(manager, "inf", None), "figure", component_name))
+            figure = str(
+                getattr(getattr(manager, "inf", None), "figure", component_name)
+            )
             sources.append(
                 _ProtocolSource(
                     component_name=str(component_name),
@@ -340,7 +338,9 @@ class CommandList(TreeWidget):
         total_commands = 0
 
         for source in sources:
-            command_entries: list[tuple[str, type[CommandSignature], CommandSignature]] = []
+            command_entries: list[
+                tuple[str, type[CommandSignature], CommandSignature]
+            ] = []
             for command_key, command_class in source.protocol.commands.items():
                 try:
                     command_instance = command_class(component=source.component_name)

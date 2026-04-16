@@ -1,15 +1,16 @@
+from dataclasses import dataclass, field
+from typing import ClassVar, Generic, TypeVar
+
+import numpy as np
+from PyQt5.QtCore import QPointF, QRectF, Qt
+from PyQt5.QtGui import QPainter, QPainterPath, QPen
+from PyQt5.QtWidgets import QGraphicsObject, QGraphicsPathItem
+
 from chemunited.core.components.glossary.rotary_valve import (
     ValveComponentData,
     ValvePortLayout,
 )
 from chemunited.qt.elements.component.graph_item import GraphComponent
-from chemunited.qt.elements.component.component_parts import SceneItem
-from PyQt5.QtWidgets import QGraphicsPathItem, QGraphicsObject
-from PyQt5.QtGui import QPainterPath, QPen, QPainter
-from PyQt5.QtCore import QPointF, Qt, QRectF
-from dataclasses import dataclass, field
-from typing import ClassVar, Generic, TypeVar
-import numpy as np
 
 ValveT = TypeVar("ValveT", bound=ValveComponentData)
 
@@ -37,14 +38,20 @@ class RotorChannel(QGraphicsObject):
             for i, value in enumerate(self._data.rotor_ports[0]):
                 if value == self._data.rotor_ports[1][0]:
                     rotor_ports[0][i] = None
-                    x2, y2 = self.radius * np.cos(angles[i]), self.radius * np.sin(angles[i])
+                    x2, y2 = self.radius * np.cos(angles[i]), self.radius * np.sin(
+                        angles[i]
+                    )
                     painter.drawLine(QPointF(0, 0), QPointF(x2, y2))
         for i, value in enumerate(self._data.rotor_ports[0]):
             if value:
                 for j, value_2 in enumerate(rotor_ports[0]):
                     if value == value_2 and j != i:
-                        x1, y1 = self.radius * np.cos(angles[i]), self.radius * np.sin(angles[i])
-                        x2, y2 = self.radius * np.cos(angles[j]), self.radius * np.sin(angles[j])
+                        x1, y1 = self.radius * np.cos(angles[i]), self.radius * np.sin(
+                            angles[i]
+                        )
+                        x2, y2 = self.radius * np.cos(angles[j]), self.radius * np.sin(
+                            angles[j]
+                        )
                         painter.drawLine(QPointF(x1, y1), QPointF(x2, y2))
                         break
 
@@ -57,9 +64,9 @@ class RotaryValveGraph(GraphComponent[ValveT], Generic[ValveT]):
         self._internal_channel: RotorChannel | None = None
 
     def build(self) -> None:
-        super().build(svg_path=f":/components_icons/components/RotaryValve.svg")
+        super().build(svg_path=":/components_icons/components/RotaryValve.svg")
         self._build_internal_channels()
-    
+
     def _build_internal_channels(self) -> None:
         # Stator
         for i, port in self._data.ports_by_number.items():
@@ -78,7 +85,7 @@ class RotaryValveGraph(GraphComponent[ValveT], Generic[ValveT]):
         # Rotor
         self._internal_channel = RotorChannel(self._data)
         self.addToGroup(self._internal_channel)
-                
+
 
 @dataclass
 class ThreePortTwoPositionValveData(ValveComponentData):

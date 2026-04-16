@@ -19,6 +19,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
         self.working_dir: Path | None = None
         self._session: ProjectSession | None = None
         self.recent_projects = RecentProjectsStore()
+        self.recent_projects.prune_missing()
 
     def load(self) -> None:
         if not self._confirm_replace_current_project():
@@ -201,7 +202,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
             mode_class = call_component_model(figure)
         except AttributeError:
             return payload
-        return mode_class.model_validate(payload).model_dump()
+        return dict(mode_class.model_validate(payload))
 
     def _restore_connection(self, payload: dict) -> None:
         destination = payload.pop("destination", payload.pop("destiny", None))

@@ -1,9 +1,11 @@
-from chemunited.workflow.orchestrator import BaseParameters, Platform
 from pathlib import Path
+
+from chemunited.workflow.orchestrator import BaseParameters, Platform
 
 
 class MainParameters(BaseParameters):
     """Main parameters for the process."""
+
     pass
 
 

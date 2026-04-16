@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-import sys
-from pathlib import Path
 from time import sleep
 
 import networkx as nx
@@ -11,12 +9,8 @@ from chemunited.workflow import (
     NodeConfig,
     NodeExecutionContext,
     Process,
-    TerminalWorkflowObserver,
     WorkflowEdgeSpec,
-    WorkflowExecutor,
     WorkflowNodeSpec,
-    compile_workflow,
-    configure_terminal_logging,
 )
 
 
@@ -251,4 +245,3 @@ class CustomProcess(Process[ProcessParameter]):
         self._pause(ctx)
         ctx.runtime.status_message = f"Workflow finished in iteration {ctx.iteration}."
         return True
-

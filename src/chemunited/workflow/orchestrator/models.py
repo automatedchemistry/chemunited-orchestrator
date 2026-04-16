@@ -1,6 +1,7 @@
-from pydantic import BaseModel, Field
-from typing import Literal, Any
 import uuid
+from typing import Any, Literal
+
+from pydantic import BaseModel, Field
 
 
 class CommandSignature(BaseModel):
@@ -32,4 +33,3 @@ class CommandSignature(BaseModel):
 
     def validate_feedback_answer(self, answer: Any) -> bool:
         return answer == self.feedback_answer
-
