@@ -17,7 +17,7 @@ class PeltierCoolerTemperatureControlData(NeutralComponentData):
                 number=1,
                 component=self.name,
                 category=ConnectionType.HEAT,
-                relative_position=(0, 1),
+                relative_position=(50, 0),
             )
         }
 
@@ -29,3 +29,7 @@ class PeltierCoolerTemperatureControl(
         PeltierCoolerTemperatureControlData
     )
     BASEMODE: ClassVar[type[ComponentMode]] = ComponentMode
+    SVG_SCALE: ClassVar[float] = 2
+
+    def build(self, svg_path: str | None = None) -> None:
+        super().build(svg_path=f":/components_icons/components/Peltier.svg")

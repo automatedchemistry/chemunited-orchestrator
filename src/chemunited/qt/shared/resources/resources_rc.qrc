@@ -95,6 +95,7 @@
         <file>components/MassFlowControl.svg</file>
         <file>components/Gantry3DLIGHT.svg</file>
         <file>components/Gantry3DDARK.svg</file>
+        <file>components/Peltier.svg</file>
         <file>components/PeltierCoolerTemperatureControlLIGHT.svg</file>
         <file>components/PeltierCoolerTemperatureControlDARK.svg</file>
         <file>components/LoopLIGHT.svg</file>
@@ -103,6 +104,11 @@
         <file>components/ReactorDARK.svg</file>
         <file>components/FlowReactorLIGHT.svg</file>
         <file>components/FlowReactorDARK.svg</file>
+        <file>components/CustomFlask.svg</file>
+        <file>components/FlaskJacket.svg</file>
+        <file>components/GlassBottle.svg</file>
+        <file>components/BottleAccess.svg</file>
+        <file>components/BottlePressureAccess.svg</file>
         <file>components/GlassBottleLIGHT.svg</file>
         <file>components/GlassBottleDARK.svg</file>
         <file>components/PoolLIGHT.svg</file>
@@ -138,6 +144,7 @@
         <file>components/PressureControl.svg</file>
         <file>components/PressureControlLIGHT.svg</file>
         <file>components/PressureControlDARK.svg</file>
+        <file>components/Power.svg</file>
         <file>components/PowerSwitchLIGHT.svg</file>
         <file>components/PowerSwitchDARK.svg</file>
         <file>components/PowerControlLIGHT.svg</file>

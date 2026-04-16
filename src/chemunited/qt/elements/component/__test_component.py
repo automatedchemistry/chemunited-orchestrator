@@ -7,7 +7,6 @@ from chemunited.qt.elements.component.glossary import (
     Sink,
     Source,
     # vessels
-    BathReactor,
     CustomFlask,
     FlowReactor,
     # sensors
@@ -39,14 +38,11 @@ from chemunited.qt.elements.component.glossary import (
     PhidgetBubbleSensorPowerComponent,
     Photoreactor,
     PhotoSensor,
-    Pool,
     # technical — powers
     PowerControl,
     PowerSwitch,
     PressureControl,
-    PressureGlassBottle,
     PressureSensor,
-    Reactor,
     Sink,
     SixPortDistributionValve,
     SixPortTwoPositionValve,
@@ -102,15 +98,15 @@ LAYOUT: dict[str, list[type[GraphComponent]]] = {
     #     MultiChannelDAC, 
     #     MultiChannelRelay
     # ],
-    "powers": [
-        PowerControl,
-        PowerSwitch, 
-        PhidgetBubbleSensorPowerComponent
-    ],
-    "thermal": [
-        PeltierCoolerTemperatureControl, 
-        #TemperatureControl
-    ],
+    # "powers": [
+    #     PowerControl,
+    #     PowerSwitch, 
+    #     PhidgetBubbleSensorPowerComponent
+    # ],
+    # "thermal": [
+    #     PeltierCoolerTemperatureControl, 
+    #     TemperatureControl
+    # ],
     # "valve_rotary": [
     #     FourPortDistributionValve,
     #     FourPortFivePositionValve,
@@ -127,15 +123,11 @@ LAYOUT: dict[str, list[type[GraphComponent]]] = {
     #     SolenoidValve2Way
     # ],
     "vessels": [
-        BathReactor,
         CustomFlask,
         FlowReactor,
         GlassBottle,
         Loop,
         Photoreactor,
-        Pool,
-        PressureGlassBottle,
-        Reactor,
         Vial,
     ],
 }

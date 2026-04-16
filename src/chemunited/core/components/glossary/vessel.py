@@ -81,8 +81,8 @@ class VesselMode(ComponentMode):
 
 
 def _centered_offsets(count: int) -> list[float]:
-    center = (count - 1) / 2
-    return [index - center for index in range(count)]
+    center = (12 * count - 1) / 2
+    return [12 * index - center for index in range(count)]
 
 
 @dataclass
@@ -101,6 +101,7 @@ class VesselComponentData(ComponentData):
     capacity: ChemUnitQuantity = ChemUnitQuantity("1 ml")
     top_access: int = 1
     bottom_access: int = 1
+    pressure_access: bool = True
     heat_exchange: bool = True
 
     @property
@@ -119,7 +120,7 @@ class VesselComponentData(ComponentData):
                 number=number,
                 component=self.name,
                 access=PortAccess.TOP,
-                relative_position=(x_offset, 1.0),
+                relative_position=(x_offset, -55),
             )
 
         for number, x_offset in enumerate(
@@ -130,15 +131,16 @@ class VesselComponentData(ComponentData):
                 number=number,
                 component=self.name,
                 access=PortAccess.BOTTOM,
-                relative_position=(x_offset, -1.0),
+                relative_position=(x_offset, 50),
             )
 
         if self.heat_exchange:
-            self.ports_by_number[n + 1] = Port(
-                number=n + 1,
+            m = len(self.ports_by_number)
+            self.ports_by_number[m + 1] = Port(
+                number=m + 1,
                 component=self.name,
                 category=ConnectionType.HEAT,
-                relative_position=(-1.5, 0.0),
+                relative_position=(32, 0.0),
             )
 
         for number in range(1, n + 1):

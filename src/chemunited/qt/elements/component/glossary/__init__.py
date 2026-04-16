@@ -66,15 +66,11 @@ from .valve.rotary_valve_graph import (
 from .valve.solenoid_valve_graph import SolenoidValve, SolenoidValve2Way
 
 # vessels
-from .vessels.bathreactor_graph import BathReactor
 from .vessels.customflask_graph import CustomFlask
 from .vessels.flowreactor_graph import FlowReactor
 from .vessels.glassbottle_graph import GlassBottle
 from .vessels.loop_graph import Loop
 from .vessels.photoreactor_graph import Photoreactor
-from .vessels.pool_graph import Pool
-from .vessels.pressureglasbottle_graph import PressureGlassBottle
-from .vessels.reactor_graph import Reactor
 from .vessels.vial_graph import Vial
 
 __all__ = [
@@ -126,14 +122,10 @@ __all__ = [
     "SolenoidValve",
     "SolenoidValve2Way",
     # vessels
-    "BathReactor",
     "CustomFlask",
     "FlowReactor",
     "GlassBottle",
     "Loop",
     "Photoreactor",
-    "Pool",
-    "PressureGlassBottle",
-    "Reactor",
     "Vial",
 ]
