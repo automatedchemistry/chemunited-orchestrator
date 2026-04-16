@@ -135,6 +135,7 @@ LAYOUT: dict[str, list[type[GraphComponent]]] = {
 if __name__ == "__main__":
     FIGURE = "all"
     import sys
+    from pathlib import Path
 
     from PyQt5.QtWidgets import QApplication
 
@@ -157,6 +158,9 @@ if __name__ == "__main__":
                 )
                 data = cls.METADATA.from_mode(mode)
                 component = cls(data)
+                file = Path(__file__).parent.parent.parent / f"shared/resources/components/{cls.__name__}.svg"
+                if not file.exists():
+                    component.export_svg(file)
                 scene.addItem(component)
     else:
         for row, (category, classes) in enumerate(LAYOUT.items()):
