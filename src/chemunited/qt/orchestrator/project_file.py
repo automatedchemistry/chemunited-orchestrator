@@ -65,7 +65,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
         self.working_dir = session.working_dir
         self._restore_draw_data(draw_data)
 
-        logger.bind(window=WindowCategory.SETUP).info(f"Project loaded from {path}")
+        logger.bind(window=WindowCategory.SETUP).success(f"Project loaded from {path}")
         self._record_recent_project(path)
 
     def open_recent_project(self, path: Path) -> None:
@@ -111,7 +111,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
         if comment:
             self._session.git_snapshot(comment)
 
-        logger.bind(window=WindowCategory.SETUP).info(
+        logger.bind(window=WindowCategory.SETUP).success(
             f"Project saved to {self._session.source_file}"
         )
         if self._session.source_file is not None:
