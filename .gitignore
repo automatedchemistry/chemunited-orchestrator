@@ -223,3 +223,6 @@ AGENTS.md
 
 .idea/
 .vscode/
+
+# Exemples not compiled files
+example/complete/
