@@ -1,6 +1,6 @@
 from .component import ComponentData, ComponentMode
 from .flow_source import FlowSourceData, FlowSourceMode
-from .glossary.gantry3D import gantry3DData, gantry3DMode
+from .glossary.gantry3D import Gantry3DData, Gantry3DMode
 from .glossary.junction import JunctionData, JunctionMode
 from .glossary.neutral import NeutralComponentData
 from .glossary.plugflow import PlugFlowComponentData, PlugFlowMode
@@ -30,6 +30,6 @@ __all__ = [
     "ValveMode",
     "VesselComponentData",
     "VesselMode",
-    "gantry3DMode",
-    "gantry3DData",
+    "Gantry3DMode",
+    "Gantry3DData",
 ]

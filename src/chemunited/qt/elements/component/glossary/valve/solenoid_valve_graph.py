@@ -4,7 +4,7 @@ from typing import ClassVar
 from pydantic import Field
 
 from chemunited.core.common.enums import GroupParameterCategory
-from chemunited.core.components import ValveComponentData, ValveMode
+from chemunited.core.components import ValveComponentData, ComponentMode
 from chemunited.core.components.glossary.rotary_valve import ValvePortLayout
 from chemunited.qt.elements.component.graph_item import GraphComponent
 
@@ -24,7 +24,7 @@ class SolenideValveData(ValveComponentData):
         self.ports_by_number[2].relative_position = (45, 25)
 
 
-class SolenideValveMode(ValveMode):
+class SolenideValveMode(ComponentMode):
     normally_open: bool = Field(
         default=True,
         title="Normally open/close",

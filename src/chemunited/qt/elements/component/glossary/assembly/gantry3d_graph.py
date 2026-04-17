@@ -1,10 +1,10 @@
 from typing import ClassVar
 
-from chemunited.core.components import gantry3DData, gantry3DMode
+from chemunited.core.components import Gantry3DData, Gantry3DMode
 from chemunited.qt.elements.component.graph_item import GraphComponent
 
 
-class Gantry3D(GraphComponent[gantry3DData]):
-    METADATA: ClassVar[type[gantry3DData]] = gantry3DData
-    BASEMODE: ClassVar[type[gantry3DMode]] = gantry3DMode
+class Gantry3D(GraphComponent[Gantry3DData]):
+    METADATA: ClassVar[type[Gantry3DData]] = Gantry3DData
+    BASEMODE: ClassVar[type[Gantry3DMode]] = Gantry3DMode
     SVG_SCALE: ClassVar[float] = 4.0

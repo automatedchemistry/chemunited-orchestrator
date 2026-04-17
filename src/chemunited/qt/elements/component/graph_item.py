@@ -168,7 +168,7 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
         """
         # SVG figure, or fallback rect when no SVG asset is available.
         if svg_path is None:
-            svg_path = f":/components_icons/components/{self._data.figure}{'DARK' if isDarkTheme() else 'LIGHT'}.svg"
+            svg_path = f":/components_icons/components/{self._data.figure}.svg"
         if QFile.exists(svg_path):
             self._svg = SvgLayer(
                 svg_path,

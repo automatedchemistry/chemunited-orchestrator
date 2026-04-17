@@ -12,7 +12,7 @@ from chemunited.core.components.component import (
 from chemunited.core.components.internals import Port
 
 
-class gantry3DMode(ComponentMode):
+class Gantry3DMode(ComponentMode):
     position_x: str = Field(
         default="1",
         title="Actual position at x axis",
@@ -72,7 +72,7 @@ class gantry3DMode(ComponentMode):
 
 
 @dataclass
-class gantry3DData(ComponentData):
+class Gantry3DData(ComponentData):
     position_x: str = "1"
     position_y: str = "A"
     position_z: str = "UP"

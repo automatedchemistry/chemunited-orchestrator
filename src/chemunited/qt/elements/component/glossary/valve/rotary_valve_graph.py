@@ -29,9 +29,9 @@ class RotorChannel(QGraphicsObject):
             self.radius * 2,
         )
 
-    def paint(self, painter: QPainter, option, widget=None) -> None:
-        painter.setPen(QPen(Qt.black, 1))
-        painter.setBrush(Qt.NoBrush)
+    def paint(self, painter, option, widget=None) -> None:
+        painter.setPen(QPen(Qt.GlobalColor.black, 1))
+        painter.setBrush(Qt.BrushStyle.NoBrush)
         rotor_ports = [list(row) for row in self._data.rotor_ports]
         angles = np.arange(-np.pi / 2, 3 * np.pi / 2, 2 * np.pi / len(rotor_ports[0]))
         if 0 in self._data.ports_by_number:
@@ -63,7 +63,7 @@ class RotaryValveGraph(GraphComponent[ValveT], Generic[ValveT]):
         super().__init__(data)
         self._internal_channel: RotorChannel | None = None
 
-    def build(self) -> None:
+    def build(self, svg_path: str | None = None) -> None:
         super().build(svg_path=":/components_icons/components/RotaryValve.svg")
         self._build_internal_channels()
 

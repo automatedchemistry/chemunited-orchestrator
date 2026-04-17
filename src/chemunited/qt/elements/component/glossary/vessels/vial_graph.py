@@ -16,27 +16,40 @@ class VialData(VesselComponentData):
 
 class VialMode(VesselMode):
 
-    top_access: int = Field(
+    column: int = Field(
         default=1,
         ge=1,
-        title="Access at the top",
-        description="Access connections at the top of the flask.",
+        le=20,
         json_schema_extra={
             "group": GroupParameterCategory.PROPERTY.value,
             "editable": False,
             "lock_reason": "Internal Chosen",
+            "visible": True,
+        },
+    )
+
+    row: int = Field(
+        default=1,
+        ge=1,
+        le=20,
+        json_schema_extra={
+            "group": GroupParameterCategory.PROPERTY.value,
+            "editable": False,
+            "lock_reason": "Internal Chosen",
+            "visible": True,
+        },
+    )
+
+    top_access: int = Field(
+        default=1,
+        json_schema_extra={
             "visible": False,
         },
     )
+
     bottom_access: int = Field(
         default=0,
-        ge=0,
-        title="Access at the bottom",
-        description="Access connections at the bottom of the flask.",
         json_schema_extra={
-            "group": GroupParameterCategory.PROPERTY.value,
-            "editable": False,
-            "lock_reason": "Internal Chosen",
             "visible": False,
         },
     )
@@ -47,7 +60,7 @@ class Vial(GraphComponent[VialData]):
     BASEMODE: ClassVar[type[VialMode]] = VialMode
     SVG_SCALE: ClassVar[float] = 0.5
 
-    def build(self) -> None:
+    def build(self, svg_path: str | None = None) -> None:
         self._data.ports_by_number[1].relative_position = (0, -11)
         self._data.ports_by_number[2].relative_position = (0, 10)
         super().build()
