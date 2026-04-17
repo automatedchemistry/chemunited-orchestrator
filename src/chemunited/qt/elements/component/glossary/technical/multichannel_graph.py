@@ -61,7 +61,7 @@ class MultiChannelData(NeutralComponentData):
             for i in range(1, self.channels + 1)
         }
         self.internal_edges = {}
-        self.internal_inventory = None
+        self.internal_inventories = {}
 
 
 class MultiChannelADC(GraphComponent[MultiChannelData]):

@@ -27,6 +27,7 @@ from chemunited.core.components import (
     VesselComponentData,
     VesselMode,
 )
+from chemunited.core.components.internals import InternalEndpoint
 from chemunited.core.connections import EdgeData, EdgeMode
 from chemunited.core.utils import ChemUnitQuantity
 
@@ -264,8 +265,12 @@ def _port_node_id(component_name: str, port_number: int | str) -> str:
     return f"{component_name}.{port_number}"
 
 
-def _inventory_node_id(component_name: str) -> str:
-    return f"{component_name}.Inventory"
+def _inventory_label(component_name: str, inventory_key: str) -> str:
+    return f"{component_name}.{inventory_key}"
+
+
+def _inventory_node_id(component_name: str, inventory_key: str) -> str:
+    return _inventory_label(component_name, inventory_key)
 
 
 def _visible_flow_ports(component: ComponentData):
@@ -317,17 +322,81 @@ def _port_title(component: ComponentData, port_number: int) -> str:
     )
 
 
-def _inventory_title(component: ComponentData) -> str:
-    inventory = component.internal_inventory
+def _inventory_title(component: ComponentData, inventory_key: str) -> str:
+    inventory = component.internal_inventories.get(inventory_key)
     if inventory is None:
-        return f"{component.name}.Inventory"
+        return _inventory_label(component.name, inventory_key)
 
     return "<br>".join(
         [
-            f"{component.name}.Inventory",
+            _inventory_label(component.name, inventory_key),
             f"gas volume: {inventory.gas_content.volume}",
             f"liquid volume: {inventory.liq_content.volume}",
         ]
+    )
+
+
+def _visible_inventory_keys(
+    component: ComponentData,
+    visible_ports: set[int],
+) -> list[str]:
+    inventory_keys: set[str] = set()
+
+    for origin, destination in component.internal_edges:
+        if isinstance(origin, int) and origin in visible_ports:
+            if isinstance(destination, str):
+                inventory_keys.add(destination)
+
+        if isinstance(destination, int) and destination in visible_ports:
+            if isinstance(origin, str):
+                inventory_keys.add(origin)
+
+    return [
+        inventory_key
+        for inventory_key in component.internal_inventories
+        if inventory_key in inventory_keys
+    ]
+
+
+def _internal_endpoint_node_id(
+    component: ComponentData,
+    endpoint: InternalEndpoint,
+    visible_ports: set[int],
+    visible_inventory_keys: set[str],
+) -> str | None:
+    if isinstance(endpoint, int):
+        if endpoint not in visible_ports:
+            return None
+
+        return _port_node_id(component.name, endpoint)
+
+    if endpoint not in visible_inventory_keys:
+        return None
+
+    return _inventory_node_id(component.name, endpoint)
+
+
+def _visible_internal_edge_count(component: ComponentData) -> int:
+    visible_ports = set(_visible_flow_port_numbers(component))
+    visible_inventory_keys = set(_visible_inventory_keys(component, visible_ports))
+
+    return sum(
+        1
+        for origin, destination in component.internal_edges
+        if _internal_endpoint_node_id(
+            component,
+            origin,
+            visible_ports,
+            visible_inventory_keys,
+        )
+        is not None
+        and _internal_endpoint_node_id(
+            component,
+            destination,
+            visible_ports,
+            visible_inventory_keys,
+        )
+        is not None
     )
 
 
@@ -362,41 +431,45 @@ def export_pyvis_html(
                 physics=False,
             )
 
-        show_inventory = component.internal_inventory is not None and any(
-            origin in visible_ports and isinstance(destination, str)
-            for origin, destination in component.internal_edges
-        )
+        visible_inventory_keys = _visible_inventory_keys(component, visible_ports)
+        visible_inventory_key_set = set(visible_inventory_keys)
 
-        if show_inventory:
-            base_x = component.position[0] * POSITION_SCALE
-            base_y = component.position[1] * POSITION_SCALE
+        base_x = component.position[0] * POSITION_SCALE
+        base_y = component.position[1] * POSITION_SCALE
+        inventory_spacing = 44
+        inventory_center = (len(visible_inventory_keys) - 1) / 2
+        for index, inventory_key in enumerate(visible_inventory_keys):
+            inventory_x = base_x + (index - inventory_center) * inventory_spacing
             network.add_node(
-                _inventory_node_id(component.name),
-                label=f"{component.name}.Inventory",
-                title=_inventory_title(component),
+                _inventory_node_id(component.name, inventory_key),
+                label=_inventory_label(component.name, inventory_key),
+                title=_inventory_title(component, inventory_key),
                 shape="diamond",
                 size=26,
                 color="#f59e0b",
-                x=base_x,
+                x=inventory_x,
                 y=base_y,
                 physics=False,
             )
 
         for (origin, destination), internal_edge in component.internal_edges.items():
-            if origin not in visible_ports:
+            origin_id = _internal_endpoint_node_id(
+                component,
+                origin,
+                visible_ports,
+                visible_inventory_key_set,
+            )
+            destination_id = _internal_endpoint_node_id(
+                component,
+                destination,
+                visible_ports,
+                visible_inventory_key_set,
+            )
+            if origin_id is None or destination_id is None:
                 continue
 
-            if isinstance(destination, str):
-                if not show_inventory:
-                    continue
-                destination_id = _inventory_node_id(component.name)
-            else:
-                if destination not in visible_ports:
-                    continue
-                destination_id = _port_node_id(component.name, destination)
-
             network.add_edge(
-                _port_node_id(component.name, origin),
+                origin_id,
                 destination_id,
                 title=(
                     f"{component.name}: {origin} -> {destination}<br>"
@@ -458,24 +531,16 @@ def main():
         len(_visible_flow_port_numbers(component)) for component in graph.components
     )
     internal_node_count = sum(
-        1
-        for component in graph.components
-        if component.internal_inventory is not None
-        and any(
-            origin in _visible_flow_port_numbers(component)
-            and isinstance(destination, str)
-            for origin, destination in component.internal_edges
+        len(
+            _visible_inventory_keys(
+                component,
+                set(_visible_flow_port_numbers(component)),
+            )
         )
+        for component in graph.components
     )
     internal_edge_count = sum(
-        1
-        for component in graph.components
-        for (origin, destination) in component.internal_edges
-        if origin in _visible_flow_port_numbers(component)
-        and (
-            isinstance(destination, str)
-            or destination in _visible_flow_port_numbers(component)
-        )
+        _visible_internal_edge_count(component) for component in graph.components
     )
     print(
         f"Built example graph with {port_count} hydraulic port nodes, "
@@ -489,7 +554,7 @@ def main():
         print(
             f"- {component.name}: {type(component).__name__} "
             f"hydraulic_ports={port_numbers} "
-            f"inventory={component.internal_inventory is not None} "
+            f"inventories={list(component.internal_inventories)} "
             f"internal_edges={len(component.internal_edges)}"
         )
 

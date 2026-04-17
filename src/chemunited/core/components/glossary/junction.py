@@ -57,7 +57,7 @@ class JunctionData(ComponentData):
         self.port_pairs = [(i + 1, 0) for i in range(self.number_ports)]
         self.ports_by_number = {0: Port(number=0, component=self.name)}
         self.internal_edges = {}
-        self.internal_inventory = None
+        self.internal_inventories = {}
 
         angles = np.arange(-np.pi / 2, 3 * np.pi / 2, 2 * np.pi / self.number_ports)
         for i in range(self.number_ports):

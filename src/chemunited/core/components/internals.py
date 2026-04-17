@@ -19,13 +19,17 @@ All physical quantities are in SI units unless noted otherwise.
 """
 
 from dataclasses import dataclass, field
-from typing import Self
+from typing import Self, TypeAlias
 
 from chemunited.core.common.constant import R_MAX_HYDRAULIC
 from chemunited.core.common.enums import ConnectionType
 from chemunited.core.compounds import VolumeContentBase
 
 from .enums import BoundaryConditionKind, InternalEdgeRole, PortAccess, PortClosure
+
+DEFAULT_INVENTORY_KEY = "Inventory"
+InventoryKey: TypeAlias = str
+InternalEndpoint: TypeAlias = int | InventoryKey
 
 
 @dataclass
@@ -85,25 +89,25 @@ class Port:
 class InternalEdge:
     """Directed channel connecting two endpoints within a component subgraph.
 
-    Endpoints are port numbers (int) or the string 'Inventory' for edges that
-    connect a port to an InventoryNode. The EdgeKey tuple in ComponentData uses
-    the same convention: (origin, destination).
+    Endpoints are port numbers (int) or inventory keys for edges that connect
+    a port to an InventoryNode. The EdgeKey tuple in ComponentData uses the
+    same convention: (origin, destination).
 
     The sim adapter (chemunited-sim) computes hydraulic resistance from geometry
     using the Hagen-Poiseuille equation unless resistance_override is set.
     Use close() / open() to control flow through switching elements (valves, BPRs).
 
     Attributes:
-        origin_port:         Source endpoint — port number or 'Inventory'.
-        destination_port:    Target endpoint — port number or 'Inventory'.
+        origin_port:         Source endpoint — port number or inventory key.
+        destination_port:    Target endpoint — port number or inventory key.
         length:              Channel length in metres (used for resistance calc).
         diameter:            Channel inner diameter in metres (used for resistance calc).
         role:                TRANSPORT (geometry matters) or JUNCTION (lossless).
         resistance_override: Fixed resistance in Pa·s/m³; None = compute from geometry.
     """
 
-    origin_port: int = 1
-    destination_port: int | str = 2
+    origin_port: InternalEndpoint = 1
+    destination_port: InternalEndpoint = 2
     length: float = 1e-3
     diameter: float = 1e-3
     role: InternalEdgeRole = InternalEdgeRole.TRANSPORT

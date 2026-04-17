@@ -189,6 +189,11 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
             )
         self.addToGroup(self._svg)
 
+        self.build_connections_points()
+
+        self.build_labels_and_flags()
+    
+    def build_connections_points(self) -> None:
         # Connection points — one per port.
         for port_num, port in self._data.ports_by_number.items():
             cls = _POINT_FACTORY.get(port.category, FlowConnectionPoint)
@@ -208,7 +213,8 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
             point.setZValue(1)
             self._points[port_num] = point
             self.addToGroup(point)
-
+        
+    def build_labels_and_flags(self) -> None:
         # Port labels — positioned outward from the connection point.
         for port_num, port in self._data.ports_by_number.items():
             label = TextElement(str(port_num), parent=self)
@@ -216,7 +222,7 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
             self._port_labels[port_num] = label
             label.setVisible(port.show_in_graph)
             self.addToGroup(label)
-
+        
         # Plain children — follow the group but don't affect its bounding rect.
         self._name = TextElement(self._data.name, parent=self)
 

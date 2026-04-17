@@ -68,7 +68,7 @@ class PressureControlData(ComponentData):
             )
         }
         self.internal_edges = {}
-        self.internal_inventory = None
+        self.internal_inventories = {}
 
     @override
     def sync_internal_state(self):

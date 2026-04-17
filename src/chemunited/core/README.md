@@ -58,7 +58,7 @@ Import public symbols from subpackages such as `chemunted.core.components` and `
 | `JunctionMode` / `JunctionData` | Splitter or combiner | N external ports connected to hub port `0` through junction edges |
 | `ValveMode` / `ValveComponentData` | Rotary switching element | All possible internal routes are compiled; only active routes stay open |
 | `BackPressureRegulatorMode` / `BackPressureRegulatorData` | Pressure-controlled inline valve | Two ports joined by a normally closed internal edge |
-| `VesselMode` / `VesselComponentData` | Storage and phase inventory | Top and bottom hydraulic ports plus one heat port and one inventory node |
+| `VesselMode` / `VesselComponentData` | Storage and phase inventory | Top and bottom hydraulic ports plus one heat port and one named inventory node |
 
 ## Consumer Contract
 
@@ -66,10 +66,11 @@ Another package can safely rely on the following behavior:
 
 - `Element.from_mode(mode)` accepts a Pydantic model and returns the matching dataclass with derived runtime fields already built.
 - `Element.update(mode)` patches only fields explicitly set on the incoming mode object and then calls `sync_internal_state()`.
-- Every `ComponentData` instance exposes `name`, `figure`, `position`, `angle`, `component_type`, `port_pairs`, `ports_by_number`, `internal_edges`, and `internal_inventory`.
+- Every `ComponentData` instance exposes `name`, `figure`, `position`, `angle`, `component_type`, `port_pairs`, `ports_by_number`, `internal_edges`, and `internal_inventories`.
 - `ports_by_number` contains `Port` objects with stable fields such as `number`, `component`, `category`, `relative_position`, `access`, `closure`, and optional `boundary`.
-- `internal_edges` contains `InternalEdge` objects keyed by `(origin_port, destination_port)` or `(origin_port, "Inventory")`.
-- `internal_inventory` is either `None` or an `InventoryNode` that stores `liq_content` and `gas_content`.
+- `internal_edges` contains `InternalEdge` objects keyed by `(origin_endpoint, destination_endpoint)`, where each endpoint is a port number or named inventory key.
+- `internal_inventories` maps stable inventory keys such as `"Inventory"` or `"A1"` to `InventoryNode` objects that store `liq_content` and `gas_content`.
+- `internal_inventory` remains a compatibility alias that returns the first inventory in `internal_inventories`, or `None` when there are no inventories.
 - `EdgeData` exposes `origin`, `destination`, `origin_port`, `destination_port`, `classification`, `length`, `diameter`, `straight_path`, and `air_pressure_line`.
 - `EdgeData.name` is a stable identifier in the form `<origin>_<origin_port>_<destination>_<destination_port>`.
 - `ChemUnitQuantity` stores unit-aware values. Use `.to_base_units().magnitude` when your consumer needs SI floats.
@@ -156,7 +157,7 @@ Inspect the compiled topology through public runtime fields:
 for component in components:
     print(component.name, sorted(component.ports_by_number))
     print(component.port_pairs)
-    print(component.internal_inventory)
+    print(component.internal_inventories)
 
 for edge_key, internal_edge in reactor.internal_edges.items():
     print(edge_key, internal_edge.length, internal_edge.diameter)
@@ -178,6 +179,10 @@ For downstream packages, the most important compiled objects are:
 - `Port`: the externally connectable point on a component. GUI or graph packages usually read `relative_position`, `category`, `access`, `closure`, and `boundary`.
 - `InternalEdge`: the directed edge inside a component. Simulation packages usually read `length`, `diameter`, `role`, and `resistance_override`.
 - `InventoryNode`: the lumped storage node for vessels and similar components.
+
+Inventory edges target named inventory keys. Existing vessels use `"Inventory"`;
+multi-inventory components can use physical keys such as `"A1"`, `"A2"`, and
+`"B1"`.
 
 These objects live in `chemunted.core.components.internals` and are populated by each component's `internal_structure()` implementation.
 

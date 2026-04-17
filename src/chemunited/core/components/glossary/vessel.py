@@ -2,7 +2,7 @@
 
 Represents flasks, reactors, and any closed vessel that holds liquid and gas
 simultaneously. Compiles into a star subgraph where all hydraulic ports connect
-to a single InventoryNode via JUNCTION edges.
+to a single named InventoryNode via JUNCTION edges.
 
 GUI: exposes capacity, top_access, and bottom_access in the properties widget.
 Sim: DigitalTwinAdapter reads InventoryNode initial conditions to seed runtime
@@ -28,7 +28,7 @@ from chemunited.core.utils.internal_quantity import (
 
 from ..component import ComponentData, ComponentMode
 from ..enums import ComponentType, InternalEdgeRole, PortAccess
-from ..internals import InternalEdge, InventoryNode, Port
+from ..internals import DEFAULT_INVENTORY_KEY, InternalEdge, InventoryNode, Port
 
 
 class VesselMode(ComponentMode):
@@ -89,7 +89,7 @@ def _centered_offsets(count: int) -> list[float]:
 class VesselComponentData(ComponentData):
     """Structural definition of a closed vessel with phase-separated inventory.
 
-    Internal subgraph: each hydraulic port connects to one InventoryNode
+    Internal subgraph: each hydraulic port connects to one named InventoryNode
     via a JUNCTION edge. The inventory node holds separate initial conditions
     for liquid and gas phases — both are seeded from capacity at construction
     (all gas, no liquid by default).
@@ -144,19 +144,23 @@ class VesselComponentData(ComponentData):
             )
 
         for number in range(1, n + 1):
-            self.internal_edges[(number, "Inventory")] = InternalEdge(
+            self.internal_edges[(number, DEFAULT_INVENTORY_KEY)] = InternalEdge(
                 origin_port=number,
-                destination_port="Inventory",
+                destination_port=DEFAULT_INVENTORY_KEY,
                 role=InternalEdgeRole.JUNCTION,
             )
 
-        self.internal_inventory = InventoryNode(
-            gas_content=VolumeContentBase(volume=self.capacity_value),
-            liq_content=VolumeContentBase(
-                volume=0, phase_kind=PhaseKind.LIQUID
-            ),  # init empty
-        )
+        self.internal_inventories = {
+            DEFAULT_INVENTORY_KEY: InventoryNode(
+                gas_content=VolumeContentBase(volume=self.capacity_value),
+                liq_content=VolumeContentBase(
+                    volume=0, phase_kind=PhaseKind.LIQUID
+                ),  # init empty
+            )
+        }
 
     @override
     def sync_internal_state(self):
-        self.internal_inventory.gas_content.volume = self.capacity_value
+        inventory = self.internal_inventories.get(DEFAULT_INVENTORY_KEY)
+        if inventory is not None:
+            inventory.gas_content.volume = self.capacity_value

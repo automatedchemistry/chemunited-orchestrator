@@ -34,7 +34,7 @@
                 <mxCell id="downstream" value="Downstream runtime uses&#xa;&#xa;- build process graphs&#xa;- render component ports&#xa;- evaluate hydraulic state&#xa;- inspect connection geometry&#xa;- serialize validated project state" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=14;" parent="1" vertex="1">
                     <mxGeometry x="1140" y="420" width="220" height="220" as="geometry"/>
                 </mxCell>
-                <mxCell id="note" value="Key consumer contract&#xa;&#xa;1. Construct Mode objects&#xa;2. Call from_mode() for full runtime state&#xa;3. Read public fields such as ports_by_number, internal_edges, and internal_inventory&#xa;4. Use update(mode_patch) instead of mutating derived state directly" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#ffffff;strokeColor=#666666;fontSize=13;" parent="1" vertex="1">
+                <mxCell id="note" value="Key consumer contract&#xa;&#xa;1. Construct Mode objects&#xa;2. Call from_mode() for full runtime state&#xa;3. Read public fields such as ports_by_number, internal_edges, and internal_inventories&#xa;4. Use update(mode_patch) instead of mutating derived state directly" style="rounded=1;whiteSpace=wrap;html=1;dashed=1;fillColor=#ffffff;strokeColor=#666666;fontSize=13;" parent="1" vertex="1">
                     <mxGeometry x="550" y="600" width="220" height="220" as="geometry"/>
                 </mxCell>
                 <mxCell id="e1" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;strokeWidth=2;curved=1;" parent="1" source="consumer" target="components" edge="1">

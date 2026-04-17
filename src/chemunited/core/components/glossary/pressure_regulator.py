@@ -67,4 +67,4 @@ class BackPressureRegulatorData(ComponentData):
                 destination_port=2,
             ).close()
         }
-        self.internal_inventory = None
+        self.internal_inventories = {}

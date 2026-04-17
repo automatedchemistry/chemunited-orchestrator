@@ -9,12 +9,12 @@ ComponentData  — Dataclass; holds the compiled structural state of one
                 and by chemunited-sim's DigitalTwinAdapter.
 
 Every concrete component subclasses both and implements internal_structure()
-to populate ports, internal edges, and the inventory node.
+to populate ports, internal edges, and inventory nodes.
 sync_internal_state() is called when the user updates parameters via the GUI.
 """
 
 from dataclasses import dataclass, field
-from typing import ClassVar, Literal
+from typing import ClassVar
 
 from pydantic import BaseModel, Field, field_validator
 
@@ -22,9 +22,16 @@ from chemunited.core.common.enums import GroupParameterCategory
 from chemunited.core.common.metadata import Element
 
 from .enums import ComponentType
-from .internals import InternalEdge, InventoryNode, Port
+from .internals import (
+    DEFAULT_INVENTORY_KEY,
+    InternalEdge,
+    InternalEndpoint,
+    InventoryKey,
+    InventoryNode,
+    Port,
+)
 
-EdgeKey = tuple[int, int | Literal["Inventory"]]
+EdgeKey = tuple[int, InternalEndpoint]
 
 PATTERN_DIMENSION = 50
 
@@ -98,7 +105,7 @@ class ComponentData(Element):
         port_pairs:         Valid external connection pairs for topology rules.
         ports_by_number:    All ports indexed by port number.
         internal_edges:     Internal channels keyed by (origin, destination).
-        internal_inventory: Lumped control volume; None for non-storage components.
+        internal_inventories: Lumped control volumes keyed by stable inventory IDs.
     """
 
     name: str = ""
@@ -111,7 +118,9 @@ class ComponentData(Element):
     internal_edges: dict[EdgeKey, InternalEdge] = field(
         default_factory=dict, init=False
     )
-    internal_inventory: InventoryNode | None = field(default=None, init=False)
+    internal_inventories: dict[InventoryKey, InventoryNode] = field(
+        default_factory=dict, init=False
+    )
 
     """ Properties """
 
@@ -122,6 +131,20 @@ class ComponentData(Element):
     @property
     def is_electronic(self) -> bool:
         return self.component_type == ComponentType.ELECTRONIC
+
+    @property
+    def internal_inventory(self) -> InventoryNode | None:
+        """Compatibility alias returning the first internal inventory."""
+
+        return next(iter(self.internal_inventories.values()), None)
+
+    @internal_inventory.setter
+    def internal_inventory(self, inventory: InventoryNode | None) -> None:
+        """Compatibility setter for old singleton-inventory code."""
+
+        self.internal_inventories = (
+            {} if inventory is None else {DEFAULT_INVENTORY_KEY: inventory}
+        )
 
     """ Initialization """
 
@@ -143,4 +166,4 @@ class ComponentData(Element):
             ),
         }
         self.internal_edges = {}
-        self.internal_inventory = None
+        self.internal_inventories = {}

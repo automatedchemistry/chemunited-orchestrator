@@ -136,3 +136,19 @@ def spring(start_pos: tuple[float, float] = (0.0, 0.0), length=50, coils=6, widt
     y = y0 + 2 * r * np.cos(t)
 
     return x, y
+
+
+def position_to_letter(position: int) -> str:
+    """
+    Convert a 1-based position to letters like Excel columns.
+    1 -> a, 26 -> z, 27 -> aa, etc.
+    """
+    if position < 1:
+        raise ValueError("Position must be >= 1")
+
+    result = ""
+    while position > 0:
+        position -= 1  # shift to 0-based index
+        result = chr(ord("A") + (position % 26)) + result
+        position //= 26
+    return result
