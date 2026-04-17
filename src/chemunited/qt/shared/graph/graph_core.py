@@ -1,7 +1,7 @@
 from PyQt5.QtCore import QRectF, Qt
 from PyQt5.QtGui import QColor, QPainter, QPen
 from PyQt5.QtWidgets import QGraphicsView
-from qfluentwidgets import isDarkTheme
+from qfluentwidgets import Action, FluentIcon, RoundMenu
 
 from chemunited.qt.shared.enums import SetupStepMode
 
@@ -71,8 +71,23 @@ class GraphCore(QGraphicsView):
         event.accept()
 
     def contextMenuEvent(self, event):
-        # Show custom right-click menus
-        super().contextMenuEvent(event)
+        menu = RoundMenu(parent=self)
+
+        grid_action = Action(FluentIcon.VIEW, "Show Grid", self)
+        grid_action.setCheckable(True)
+        grid_action.setChecked(self._grid_enabled)
+        grid_action.triggered.connect(self.set_grid_enabled)
+        menu.addAction(grid_action)
+
+        scene = self.scene_attribute
+        dark_background_action = Action(FluentIcon.BRUSH, "Dark Background", self)
+        dark_background_action.setCheckable(True)
+        dark_background_action.setChecked(scene.dark_background_enabled)
+        dark_background_action.triggered.connect(scene.set_dark_background_enabled)
+        menu.addAction(dark_background_action)
+
+        menu.exec_(event.globalPos())
+        event.accept()
 
     # === Keyboard Events ===
     def keyPressEvent(self, event):
@@ -98,11 +113,22 @@ class GraphCore(QGraphicsView):
         self._grid_line_color = line_color
         self.update()
 
+    @property
+    def grid_enabled(self) -> bool:
+        return self._grid_enabled
+
+    def set_grid_enabled(self, enabled: bool) -> None:
+        self._grid_enabled = enabled
+        self.viewport().update()
+
     def _default_grid_background_color(self) -> QColor:
-        return QColor(39, 39, 39) if isDarkTheme() else QColor(249, 249, 249)
+        return self.scene_attribute.background_color()
 
     def _default_grid_line_color(self) -> QColor:
-        return QColor(255, 255, 255, 18) if isDarkTheme() else QColor(0, 0, 0, 16)
+        background = self._grid_background_color or self._default_grid_background_color()
+        if background.lightness() < 128:
+            return QColor(255, 255, 255, 24)
+        return QColor(0, 0, 0, 16)
 
     def draw_grid_background(self, painter: QPainter, rect: QRectF) -> None:
         """Paint a reusable graph grid."""
