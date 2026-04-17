@@ -67,10 +67,9 @@ from .valve.solenoid_valve_graph import SolenoidValve, SolenoidValve2Way
 
 # vessels
 from .vessels.customflask_graph import CustomFlask
-from .vessels.flowreactor_graph import FlowReactor
+from .vessels.flowreactor_graph import FlowReactor, PhotoReactor
 from .vessels.glassbottle_graph import GlassBottle
 from .vessels.loop_graph import Loop
-from .vessels.photoreactor_graph import Photoreactor
 from .vessels.vial_graph import Vial
 
 __all__ = [
@@ -126,6 +125,6 @@ __all__ = [
     "FlowReactor",
     "GlassBottle",
     "Loop",
-    "Photoreactor",
+    "PhotoReactor",
     "Vial",
 ]

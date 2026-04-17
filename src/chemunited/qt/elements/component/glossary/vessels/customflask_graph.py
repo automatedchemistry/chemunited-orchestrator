@@ -41,12 +41,12 @@ class CustomFlask(GraphComponent[VesselComponentData]):
                 _svg_access = SvgLayer(
                     access_svg_path,
                     angle=self._data.angle,
-                    scale=20 * self.SVG_SCALE,
+                    scale=40 * self.SVG_SCALE,
                     parent=self,
                 )
                 _svg_access.moveBy(
                     port.relative_position[0], 
-                    port.relative_position[1] + 20
+                    port.relative_position[1] + 40
                 )
                 self.addToGroup(_svg_access)
 

@@ -98,10 +98,12 @@
         <file>components/Peltier.svg</file>
         <file>components/PeltierCoolerTemperatureControlLIGHT.svg</file>
         <file>components/PeltierCoolerTemperatureControlDARK.svg</file>
+        <file>components/LoopBase.svg</file>
         <file>components/LoopLIGHT.svg</file>
         <file>components/LoopDARK.svg</file>
         <file>components/ReactorLIGHT.svg</file>
         <file>components/ReactorDARK.svg</file>
+        <file>components/FlowReactorBase.svg</file>
         <file>components/FlowReactorLIGHT.svg</file>
         <file>components/FlowReactorDARK.svg</file>
         <file>components/CustomFlask.svg</file>
@@ -151,6 +153,7 @@
         <file>components/PowerControlDARK.svg</file>
         <file>components/PhidgetBubbleSensorPowercomponentLIGHT.svg</file>
         <file>components/PhidgetBubbleSensorPowercomponentDARK.svg</file>
+        <file>components/PhotoLeds.svg</file>
         <file>components/PhotoSensorLIGHT.svg</file>
         <file>components/PhotoSensorDARK.svg</file>
         <file>components/Chiller.svg</file>

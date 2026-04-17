@@ -36,7 +36,7 @@ from chemunited.qt.elements.component.glossary import (
     PeltierCoolerTemperatureControl,
     PhidgetBubbleSensorComponent,
     PhidgetBubbleSensorPowerComponent,
-    Photoreactor,
+    PhotoReactor,
     PhotoSensor,
     # technical — powers
     PowerControl,
@@ -64,70 +64,70 @@ from chemunited.qt.elements.component.graph_item import GraphComponent
 # Category grouping for scene layout (row = category, col = component).
 # Each entry is the GraphComponent subclass; figure/data come from cls.METADATA.
 LAYOUT: dict[str, list[type[GraphComponent]]] = {
-    # "analytics": [
-    #     HPLCControl, 
-    #     IRControl,
-    #     MSControl, 
-    #     NMRControl
-    # ],
-    # "assembly": [
-    #     Gantry3D, 
-    #     LengthControl
-    # ],
-    # "pipes": [
-    #     BackPressureRegulator, 
-    #     Distributor, 
-    #     MFCComponent, 
-    #     Separator, 
-    #     Sink, 
-    #     Source
-    # ],
-    # "pumps": [
-    #     HPLCPump, 
-    #     SyringePump
-    # ],
-    # "sensors": [
-    #     FlowMeter,
-    #     PhidgetBubbleSensorComponent,
-    #     PhotoSensor,
-    #     PressureControl,
-    #     PressureSensor,
-    # ],
-    # "multichannel": [
-    #     MultiChannelADC, 
-    #     MultiChannelDAC, 
-    #     MultiChannelRelay
-    # ],
-    # "powers": [
-    #     PowerControl,
-    #     PowerSwitch, 
-    #     PhidgetBubbleSensorPowerComponent
-    # ],
-    # "thermal": [
-    #     PeltierCoolerTemperatureControl, 
-    #     TemperatureControl
-    # ],
-    # "valve_rotary": [
-    #     FourPortDistributionValve,
-    #     FourPortFivePositionValve,
-    #     SixPortDistributionValve,
-    #     SixPortTwoPositionValve,
-    #     SixteenPortDistributionValve,
-    #     ThreePortFourPositionValve,
-    #     ThreePortTwoPositionValve,
-    #     TwelvePortDistributionValve,
-    #     TwoPortDistributionValve,
-    # ],
-    # "valve_solenoid": [
-    #     SolenoidValve,
-    #     SolenoidValve2Way
-    # ],
+    "analytics": [
+        HPLCControl, 
+        IRControl,
+        MSControl, 
+        NMRControl
+    ],
+    "assembly": [
+        Gantry3D, 
+        LengthControl
+    ],
+    "pipes": [
+        BackPressureRegulator, 
+        Distributor, 
+        MFCComponent, 
+        Separator, 
+        Sink, 
+        Source
+    ],
+    "pumps": [
+        HPLCPump, 
+        SyringePump
+    ],
+    "sensors": [
+        FlowMeter,
+        PhidgetBubbleSensorComponent,
+        PhotoSensor,
+        PressureControl,
+        PressureSensor,
+    ],
+    "multichannel": [
+        MultiChannelADC, 
+        MultiChannelDAC, 
+        MultiChannelRelay
+    ],
+    "powers": [
+        PowerControl,
+        PowerSwitch, 
+        PhidgetBubbleSensorPowerComponent
+    ],
+    "thermal": [
+        PeltierCoolerTemperatureControl, 
+        TemperatureControl
+    ],
+    "valve_rotary": [
+        FourPortDistributionValve,
+        FourPortFivePositionValve,
+        SixPortDistributionValve,
+        SixPortTwoPositionValve,
+        SixteenPortDistributionValve,
+        ThreePortFourPositionValve,
+        ThreePortTwoPositionValve,
+        TwelvePortDistributionValve,
+        TwoPortDistributionValve,
+    ],
+    "valve_solenoid": [
+        SolenoidValve,
+        SolenoidValve2Way
+    ],
     "vessels": [
         CustomFlask,
         FlowReactor,
         GlassBottle,
         Loop,
-        Photoreactor,
+        PhotoReactor,
         Vial,
     ],
 }

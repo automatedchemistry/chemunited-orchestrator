@@ -96,3 +96,43 @@ def multi_peak(x, peaks):
     for x0, gamma, sigma, A in peaks:
         y += A * voigt_profile(x - x0, sigma, gamma)
     return y
+
+
+def build_snake_path(radius: float, length: float, n_circle: int, samples: int = 50):
+    # angles (same as your -linspace(np.pi/2, 3*np.pi/2, 50))
+    t = -np.linspace(np.pi / 2, 3 * np.pi / 2, samples)
+
+    xs_list, ys_list = [], []
+    for n in range(n_circle):
+        x0 = n * 2 * radius
+        direction = 1 if n % 2 == 0 else -1
+        y0 = 0 if n % 2 == 0 else length
+
+        xs = x0 + radius * np.sin(t)
+        ys = y0 + direction * radius * np.cos(t)
+        xs_list.append(xs)
+        ys_list.append(ys)
+
+    xs = np.concatenate(xs_list)
+    ys = np.concatenate(ys_list)
+
+    # (1) keep as Nx2 list
+    points_array = [xs, ys]
+
+    start_point = (points_array[0][0], points_array[1][1])
+    end_point = (points_array[0][-1], points_array[1][-1])
+
+    return points_array, start_point, end_point
+
+
+def spring(start_pos: tuple[float, float] = (0.0, 0.0), length=50, coils=6, width=25):
+
+    t_max = 2 * np.pi * coils
+    t = np.linspace(0, t_max, 1000)
+    r = width / 2
+    x0, y0 = start_pos
+
+    x = (length / t_max) * t + r * np.sin(t)
+    y = y0 + 2 * r * np.cos(t)
+
+    return x, y
