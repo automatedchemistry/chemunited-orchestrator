@@ -22,7 +22,7 @@ class SvgLayer(QGraphicsSvgItem):
       - Animation
     """
 
-    def __init__(self, svg_path, angle=0, scale=PATTERN_DIMENSION, parent=None):
+    def __init__(self, svg_path, scale=PATTERN_DIMENSION, parent=None):
         super().__init__(svg_path, parent=parent)
 
         # Explicitly disable caching — ensures SVG re-renders at every zoom level
@@ -34,13 +34,11 @@ class SvgLayer(QGraphicsSvgItem):
 
         self._scale = scale
         self._apply_scale()
-        self.setRotation(angle)
 
     # ── public API ────────────────────────────────────────────────
 
     def update_angle(self, angle: int) -> None:
-        """Apply a new rotation angle. Called by GraphComponent.sync()."""
-        self.setRotation(angle)
+        """No-op: rotation is owned by the parent GraphComponent group."""
 
     def update_figure(self, svg_path: str) -> None:
         """Swap the SVG figure. Called by GraphComponent.sync()."""

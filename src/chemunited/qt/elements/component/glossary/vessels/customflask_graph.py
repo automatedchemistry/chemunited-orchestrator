@@ -17,7 +17,6 @@ class CustomFlask(GraphComponent[VesselComponentData]):
             jacket_svg_path = f":/components_icons/components/FlaskJacket.svg"
             self._svg_jacket = SvgLayer(
                 jacket_svg_path,
-                angle=self._data.angle,
                 scale=PATTERN_DIMENSION * self.SVG_SCALE,
                 parent=self,
             )
@@ -29,7 +28,6 @@ class CustomFlask(GraphComponent[VesselComponentData]):
                 pressure_access_svg_path = f":/components_icons/components/BottlePressureAccess.svg"
                 self._svg_pressure_access = SvgLayer(
                     pressure_access_svg_path,
-                    angle=self._data.angle,
                     scale=10 * self.SVG_SCALE,
                     parent=self,
                 )
@@ -40,7 +38,6 @@ class CustomFlask(GraphComponent[VesselComponentData]):
                 access_svg_path = f":/components_icons/components/BottleAccess.svg"
                 _svg_access = SvgLayer(
                     access_svg_path,
-                    angle=self._data.angle,
                     scale=40 * self.SVG_SCALE,
                     parent=self,
                 )

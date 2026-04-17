@@ -140,6 +140,7 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
         self.post_layout()
         self.build_bounding_rect()
         self.setPos(*data.position)
+        self.setRotation(data.angle)
         self.set_frame_mode(SetupStepMode.DESIGN)  # initialise badge/warning visibility
 
     # -- properties --
@@ -172,7 +173,6 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
         if QFile.exists(svg_path):
             self._svg = SvgLayer(
                 svg_path,
-                angle=self._data.angle,
                 scale=PATTERN_DIMENSION * self.SVG_SCALE,
                 parent=self,
             )
@@ -290,10 +290,7 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
         """
         self._data.update(mode)
         self.setPos(self._data.position[0], self._data.position[1])
-        if isinstance(self._svg, SvgLayer):
-            self._svg.update_angle(self._data.angle)
-        else:
-            self._svg.setRotation(self._data.angle)
+        self.setRotation(self._data.angle)
         # Rotation changes the bounding rect, so re-position plain children.
         self.post_layout()
 

@@ -272,7 +272,6 @@ class Vial(GraphComponent[VialData]):
                 vial_graph = SvgLayer(
                     svg_path=vial_svg_path,
                     scale=VIAL_ICON_SCALE * CELL_SIZE,
-                    angle=self._data.angle,
                     parent=self,
                 )
                 center_x, center_y = _well_center(

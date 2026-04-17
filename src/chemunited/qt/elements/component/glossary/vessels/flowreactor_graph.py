@@ -70,10 +70,10 @@ class FlowReactor(GraphComponent[FlowReactorData]):
             jacket_svg_path = f":/components_icons/components/FlaskJacket.svg"
             self._svg_jacket = SvgLayer(
                 jacket_svg_path,
-                angle=self._data.angle + 90,
                 scale=PATTERN_DIMENSION * self.SVG_SCALE,
                 parent=self,
             )
+            self._svg_jacket.setRotation(90)
             self.addToGroup(self._svg_jacket)
 
         self._data.ports_by_number[1].relative_position = (-45, -20)
@@ -96,7 +96,6 @@ class PhotoReactor(FlowReactor):
         super().build()
         self.leds = SvgLayer(
             f":/components_icons/components/PhotoLeds.svg",
-            angle=self._data.angle,
             scale=int(PATTERN_DIMENSION * self.SVG_SCALE * 0.5),
             parent=self,
         )

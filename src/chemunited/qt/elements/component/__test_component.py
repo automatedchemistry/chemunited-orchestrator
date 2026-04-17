@@ -154,7 +154,7 @@ if __name__ == "__main__":
                     name=cls.__name__,
                     figure=cls.__name__,
                     position=(col * SPACING_X, row * SPACING_Y),
-                    angle=0,
+                    angle=45,
                 )
                 data = cls.METADATA.from_mode(mode)
                 component = cls(data)

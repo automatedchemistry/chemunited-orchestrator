@@ -18,7 +18,6 @@ class SyringePump(GraphComponent[FlowSourceData]):
         if QFile.exists(svg_path):
             self._syringe_plunger = SvgLayer(
                 svg_path,
-                angle=self._data.angle,
                 scale=PATTERN_DIMENSION * 1.2,
                 parent=self,
             )
