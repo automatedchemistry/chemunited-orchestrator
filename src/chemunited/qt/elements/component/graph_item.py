@@ -52,6 +52,13 @@ from chemunited.qt.elements.component.component_parts import (
 )
 from chemunited.qt.shared.enums import SetupStepMode
 
+QGRAPHICS_ITEM_POSITION_HAS_CHANGED = getattr(QGraphicsItem, "ItemPositionHasChanged")
+QGRAPHICS_ITEM_ROTATION_HAS_CHANGED = getattr(
+    QGraphicsItem,
+    "ItemRotationHasChanged",
+    None,
+)
+
 # Maps chemunited_core ConnectionType values to their visual point classes.
 # HYDRAULIC is the core counterpart of what the UI layer calls FLOW.
 _POINT_FACTORY: dict[CoreConnectionType, type[ConnectionPoint]] = {
@@ -150,6 +157,7 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
 
     @property
     def base_mode_instance(self) -> ComponentMode:
+        self._sync_geometry_to_data()
         data = asdict(self._data)
         mode_data = {
             name: value
@@ -157,6 +165,18 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
             if name in self.BASEMODE.model_fields
         }
         return self.BASEMODE.model_validate(mode_data)
+
+    def _sync_geometry_to_data(self) -> None:
+        pos = self.pos()
+        self._data.position = (float(pos.x()), float(pos.y()))
+        self._data.angle = self._normalized_angle(self.rotation())
+
+    @staticmethod
+    def _normalized_angle(value) -> int:
+        angle = int(round(float(value)))
+        if 0 <= angle <= 360:
+            return angle
+        return angle % 360
 
     # ── construction ───────────────────────────────────────────────
 
@@ -500,7 +520,15 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
 
     def itemChange(self, change, value):
         """Notify connected edges when position changes; toggle selection visual."""
-        if change == QGraphicsItem.ItemPositionHasChanged:
+        if change == QGRAPHICS_ITEM_POSITION_HAS_CHANGED:
+            self._data.position = (float(value.x()), float(value.y()))
+            for point in self._points.values():
+                point.connectionMove()
+        elif (
+            QGRAPHICS_ITEM_ROTATION_HAS_CHANGED is not None
+            and change == QGRAPHICS_ITEM_ROTATION_HAS_CHANGED
+        ):
+            self._data.angle = self._normalized_angle(value)
             for point in self._points.values():
                 point.connectionMove()
         elif change == QGraphicsItem.ItemSelectedHasChanged:

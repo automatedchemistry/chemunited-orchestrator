@@ -202,7 +202,7 @@ class MultiChannelRelayProtocols(ComponentProtocol):
         self.commands["read_channels_set_point"] = ReadChannelsSetPointParameter
 
 
-# --- Photoreactor ---
+# --- PhotoReactor ---
 
 
 class ReadIntensityParameter(CommandSignature):
@@ -232,7 +232,7 @@ class DevicePowerOffParameter(CommandSignature):
     method: Literal["GET", "PUT"] = "PUT"
 
 
-class PhotoreactorProtocols(ComponentProtocol):
+class PhotoReactorProtocols(ComponentProtocol):
 
     def __init__(self, name: str):
         super().__init__(name)

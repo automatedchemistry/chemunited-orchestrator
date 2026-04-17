@@ -196,3 +196,25 @@ class TestAddComponent:
         assert session.draw_data == {"components": [], "connections": []}
         assert session.export_destination == source_file
         assert store.list() == [source_file.resolve()]
+
+    def test_build_draw_data_persists_current_component_geometry(
+        self, window: SetupWindow
+    ):
+        window.orchestrator.add_component(
+            name="HPLCPump",
+            figure="HPLCPump",
+            position=(0.0, 0.0),
+        )
+
+        component = window.orchestrator.components["HPLCPump"]
+        component.graph.setPos(123.5, 456.25)
+        component.graph.setRotation(90)
+
+        assert component.inf.position == (123.5, 456.25)
+        assert component.inf.angle == 90
+
+        draw_data = window.orchestrator._build_draw_data()
+        saved_component = draw_data["components"][0]
+
+        assert saved_component["position"] == [123.5, 456.25]
+        assert saved_component["angle"] == 90

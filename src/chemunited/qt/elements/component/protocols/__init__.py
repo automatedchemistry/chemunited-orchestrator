@@ -22,7 +22,7 @@ from .technical import (
     MultiChannelDACProtocols,
     MultiChannelRelayProtocols,
     PeltierCoolerTemperatureControlProtocols,
-    PhotoreactorProtocols,
+    PhotoReactorProtocols,
     TemperatureControlProtocols,
 )
 from .valves import (
@@ -52,7 +52,7 @@ __all__ = [
     "MultiChannelADCProtocols",
     "MultiChannelDACProtocols",
     "MultiChannelRelayProtocols",
-    "PhotoreactorProtocols",
+    "PhotoReactorProtocols",
     "HPLCPumpProtocols",
     "SyringePumpProtocols",
     "TwoPortDistributionValveProtocols",
