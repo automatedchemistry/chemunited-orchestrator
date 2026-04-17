@@ -1,5 +1,4 @@
 from .component import ComponentData, ComponentMode
-from .internals import DEFAULT_INVENTORY_KEY
 from .flow_source import FlowSourceData, FlowSourceMode
 from .glossary.gantry3D import Gantry3DData, Gantry3DMode
 from .glossary.junction import JunctionData, JunctionMode
@@ -12,6 +11,7 @@ from .glossary.pressure_regulator import (
 )
 from .glossary.rotary_valve import ValveComponentData, ValveMode
 from .glossary.vessel import VesselComponentData, VesselMode
+from .internals import DEFAULT_INVENTORY_KEY
 
 __all__ = [
     "ComponentData",

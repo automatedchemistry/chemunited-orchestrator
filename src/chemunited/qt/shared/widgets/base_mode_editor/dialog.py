@@ -14,6 +14,7 @@ class BaseModeDialog(FramelessDialog):
         model_class: type[BaseModel],
         instance: BaseModel | None = None,
         field_overrides: dict[str, Mapping[str, object]] | None = None,
+        creation_mode: bool = False,
         title: str | None = None,
         content: str = "",
         parent=None,
@@ -26,6 +27,7 @@ class BaseModeDialog(FramelessDialog):
             model_class=model_class,
             instance=instance,
             field_overrides=field_overrides,
+            creation_mode=creation_mode,
             parent=self,
         )
         self.editor_widget.saved.connect(self.on_save)

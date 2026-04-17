@@ -2,7 +2,7 @@ from dataclasses import dataclass
 from typing import ClassVar, override
 
 from chemunited.core.common.enums import ConnectionType
-from chemunited.core.components import NeutralComponentData, ComponentMode
+from chemunited.core.components import ComponentMode, NeutralComponentData
 from chemunited.core.components.internals import Port
 from chemunited.qt.elements.component.graph_item import GraphComponent
 
@@ -32,4 +32,4 @@ class PeltierCoolerTemperatureControl(
     SVG_SCALE: ClassVar[float] = 2
 
     def build(self, svg_path: str | None = None) -> None:
-        super().build(svg_path=f":/components_icons/components/Peltier.svg")
+        super().build(svg_path=":/components_icons/components/Peltier.svg")

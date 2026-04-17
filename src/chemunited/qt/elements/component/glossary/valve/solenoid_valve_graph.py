@@ -4,7 +4,7 @@ from typing import ClassVar
 from pydantic import Field
 
 from chemunited.core.common.enums import GroupParameterCategory
-from chemunited.core.components import ValveComponentData, ComponentMode
+from chemunited.core.components import ComponentMode, ValveComponentData
 from chemunited.core.components.glossary.rotary_valve import ValvePortLayout
 from chemunited.qt.elements.component.graph_item import GraphComponent
 

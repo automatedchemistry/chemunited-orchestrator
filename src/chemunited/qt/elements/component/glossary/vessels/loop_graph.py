@@ -1,9 +1,10 @@
 from typing import ClassVar
-from PyQt5.QtCore import QPointF
-from PyQt5.QtGui import QPainterPath, QPolygonF, QColor
 
-from chemunited.core.components import PlugFlowComponentData, PlugFlowMode
+from PyQt5.QtCore import QPointF
+from PyQt5.QtGui import QColor, QPainterPath, QPolygonF
+
 from chemunited.core.common.constant import PATTERN_DIMENSION
+from chemunited.core.components import PlugFlowComponentData, PlugFlowMode
 from chemunited.qt.elements.component.graph_item import GraphComponent
 from chemunited.qt.shared.graph_objects.custom_path import PathElementItem
 from chemunited.qt.utils.math_functions import spring
@@ -29,7 +30,9 @@ class PathSpring(PathElementItem):
             width=self.WIDTH,
         )
         # Build the path without Python loops (use a polygon)
-        poly = QPolygonF(QPointF(float(x), float(y)) for x, y in zip(x_coords, y_coords))
+        poly = QPolygonF(
+            QPointF(float(x), float(y)) for x, y in zip(x_coords, y_coords)
+        )
         path = QPainterPath()
         path.addPolygon(poly)
         self.setPath(path)
@@ -47,7 +50,7 @@ class Loop(GraphComponent[PlugFlowComponentData]):
     def build(self, svg_path: str | None = None) -> None:
         self._data.ports_by_number[1].relative_position = (-50, -5)
         self._data.ports_by_number[2].relative_position = (50, -5)
-        
+
         self.tubing = PathSpring(parent=self)
         self.tubing.rebuild_path()
         self.tubing.moveBy(-50, -55)
@@ -58,4 +61,4 @@ class Loop(GraphComponent[PlugFlowComponentData]):
         self.fluid_path.moveBy(-50, -55)
         self.addToGroup(self.fluid_path)
 
-        super().build(svg_path=f":/components_icons/components/LoopBase.svg")
+        super().build(svg_path=":/components_icons/components/LoopBase.svg")

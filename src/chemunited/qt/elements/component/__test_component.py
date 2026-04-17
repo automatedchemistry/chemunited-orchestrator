@@ -1,15 +1,8 @@
 from chemunited.qt.elements.component.glossary import (
     # pipes
     BackPressureRegulator,
-    Distributor,
-    MFCComponent,
-    Separator,
-    Sink,
-    Source,
-    # vessels
     CustomFlask,
-    FlowReactor,
-    # sensors
+    Distributor,
     FlowMeter,
     FlowReactor,
     # valve — rotary
@@ -43,6 +36,7 @@ from chemunited.qt.elements.component.glossary import (
     PowerSwitch,
     PressureControl,
     PressureSensor,
+    Separator,
     Sink,
     SixPortDistributionValve,
     SixPortTwoPositionValve,
@@ -64,28 +58,17 @@ from chemunited.qt.elements.component.graph_item import GraphComponent
 # Category grouping for scene layout (row = category, col = component).
 # Each entry is the GraphComponent subclass; figure/data come from cls.METADATA.
 LAYOUT: dict[str, list[type[GraphComponent]]] = {
-    "analytics": [
-        HPLCControl, 
-        IRControl,
-        MSControl, 
-        NMRControl
-    ],
-    "assembly": [
-        Gantry3D, 
-        LengthControl
-    ],
+    "analytics": [HPLCControl, IRControl, MSControl, NMRControl],
+    "assembly": [Gantry3D, LengthControl],
     "pipes": [
-        BackPressureRegulator, 
-        Distributor, 
-        MFCComponent, 
-        Separator, 
-        Sink, 
-        Source
+        BackPressureRegulator,
+        Distributor,
+        MFCComponent,
+        Separator,
+        Sink,
+        Source,
     ],
-    "pumps": [
-        HPLCPump, 
-        SyringePump
-    ],
+    "pumps": [HPLCPump, SyringePump],
     "sensors": [
         FlowMeter,
         PhidgetBubbleSensorComponent,
@@ -93,20 +76,9 @@ LAYOUT: dict[str, list[type[GraphComponent]]] = {
         PressureControl,
         PressureSensor,
     ],
-    "multichannel": [
-        MultiChannelADC, 
-        MultiChannelDAC, 
-        MultiChannelRelay
-    ],
-    "powers": [
-        PowerControl,
-        PowerSwitch, 
-        PhidgetBubbleSensorPowerComponent
-    ],
-    "thermal": [
-        PeltierCoolerTemperatureControl, 
-        TemperatureControl
-    ],
+    "multichannel": [MultiChannelADC, MultiChannelDAC, MultiChannelRelay],
+    "powers": [PowerControl, PowerSwitch, PhidgetBubbleSensorPowerComponent],
+    "thermal": [PeltierCoolerTemperatureControl, TemperatureControl],
     "valve_rotary": [
         FourPortDistributionValve,
         FourPortFivePositionValve,
@@ -118,10 +90,7 @@ LAYOUT: dict[str, list[type[GraphComponent]]] = {
         TwelvePortDistributionValve,
         TwoPortDistributionValve,
     ],
-    "valve_solenoid": [
-        SolenoidValve,
-        SolenoidValve2Way
-    ],
+    "valve_solenoid": [SolenoidValve, SolenoidValve2Way],
     "vessels": [
         CustomFlask,
         FlowReactor,
@@ -154,11 +123,13 @@ if __name__ == "__main__":
                     name=cls.__name__,
                     figure=cls.__name__,
                     position=(col * SPACING_X, row * SPACING_Y),
-                    angle=45,
                 )
                 data = cls.METADATA.from_mode(mode)
                 component = cls(data)
-                file = Path(__file__).parent.parent.parent / f"shared/resources/components/{cls.__name__}.svg"
+                file = (
+                    Path(__file__).parent.parent.parent
+                    / f"shared/resources/components/{cls.__name__}.svg"
+                )
                 if not file.exists():
                     component.export_svg(file)
                 scene.addItem(component)

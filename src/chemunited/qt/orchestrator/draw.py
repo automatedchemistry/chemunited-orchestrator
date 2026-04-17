@@ -69,7 +69,7 @@ class OrchestratorDraw(OrchestratorCore):
         dialog = BaseModeDialog(
             model_class=mode_class,
             instance=mode_class(name=suggested_name, figure=figure, position=position),
-            field_overrides={"name": {"editable": True}},
+            creation_mode=True,
             parent=self.parent_ref,
         )
 

@@ -1,16 +1,16 @@
 from typing import ClassVar
+
+from pydantic import Field
 from PyQt5.QtCore import QPointF
 from PyQt5.QtGui import QColor, QPainterPath, QPolygonF
-from pydantic import Field
 
-from chemunited.core.components import PlugFlowComponentData, PlugFlowMode
-from chemunited.qt.elements.component.graph_item import GraphComponent
-from chemunited.qt.utils.math_functions import build_snake_path
-from chemunited.qt.shared.graph_objects.custom_path import PathElementItem
-from chemunited.core.common.enums import GroupParameterCategory
 from chemunited.core.common.constant import PATTERN_DIMENSION
+from chemunited.core.common.enums import GroupParameterCategory
+from chemunited.core.components import PlugFlowComponentData, PlugFlowMode
 from chemunited.qt.elements.component.component_parts import SvgLayer
-
+from chemunited.qt.elements.component.graph_item import GraphComponent
+from chemunited.qt.shared.graph_objects.custom_path import PathElementItem
+from chemunited.qt.utils.math_functions import build_snake_path
 
 
 class FlowReactorMode(PlugFlowMode):
@@ -21,6 +21,7 @@ class FlowReactorMode(PlugFlowMode):
         json_schema_extra={
             "group": GroupParameterCategory.PROPERTY.value,
             "editable": False,
+            "creation_editable": True,
             "lock_reason": "Internal Chosen",
         },
     )
@@ -49,7 +50,9 @@ class PathTubing(PathElementItem):
             n_circle=self.N_CIRCLE,
         )
         # Build the path without Python loops (use a polygon)
-        poly = QPolygonF(QPointF(float(x), float(y)) for x, y in zip(points[0], points[1]))
+        poly = QPolygonF(
+            QPointF(float(x), float(y)) for x, y in zip(points[0], points[1])
+        )
         path = QPainterPath()
         path.addPolygon(poly)
         self.setPath(path)
@@ -67,7 +70,7 @@ class FlowReactor(GraphComponent[FlowReactorData]):
     def build(self, svg_path: str | None = None) -> None:
 
         if self._data.heat_exchange:
-            jacket_svg_path = f":/components_icons/components/FlaskJacket.svg"
+            jacket_svg_path = ":/components_icons/components/FlaskJacket.svg"
             self._svg_jacket = SvgLayer(
                 jacket_svg_path,
                 scale=PATTERN_DIMENSION * self.SVG_SCALE,
@@ -78,7 +81,7 @@ class FlowReactor(GraphComponent[FlowReactorData]):
 
         self._data.ports_by_number[1].relative_position = (-45, -20)
         self._data.ports_by_number[2].relative_position = (45, -20)
-        super().build(svg_path=f":/components_icons/components/FlowReactorBase.svg")
+        super().build(svg_path=":/components_icons/components/FlowReactorBase.svg")
         self.tubing = PathTubing(parent=self)
         self.tubing.rebuild_path()
         self.tubing.moveBy(-42, -20)
@@ -95,13 +98,9 @@ class PhotoReactor(FlowReactor):
     def build(self, svg_path: str | None = None) -> None:
         super().build()
         self.leds = SvgLayer(
-            f":/components_icons/components/PhotoLeds.svg",
+            ":/components_icons/components/PhotoLeds.svg",
             scale=int(PATTERN_DIMENSION * self.SVG_SCALE * 0.5),
             parent=self,
         )
         self.leds.moveBy(0, -40)
         self.addToGroup(self.leds)
-    
-
-        
-        

@@ -19,10 +19,7 @@ class HPLCControl(GraphComponent[ComponentData]):
         super().build(svg_path=":/components_icons/components/HPLC.svg")
 
         self.spectrum = Spectrum(
-            width=80, 
-            height=20, 
-            color=Qt.blue,  # type: ignore
-            parent=self
+            width=80, height=20, color=Qt.blue, parent=self  # type: ignore
         )
 
         self.spectrum.setPos(

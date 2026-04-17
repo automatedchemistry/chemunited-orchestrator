@@ -88,65 +88,71 @@
         <file>icons/water.svg</file>
     </qresource>
     <qresource prefix="/components_icons">
-        <file>components/IRControl.svg</file>
-        <file>components/NMRControl.svg</file>
-        <file>components/HPLC.svg</file>
-        <file>components/MSControl.svg</file>
-        <file>components/MassFlowControl.svg</file>
-        <file>components/Gantry3D.svg</file>
-        <file>components/Peltier.svg</file>
-        <file>components/PeltierCoolerTemperatureControl.svg</file>
-        <file>components/LoopBase.svg</file>
-        <file>components/Loop.svg</file>
-        <file>components/FlowReactorBase.svg</file>
-        <file>components/FlowReactor.svg</file>
-        <file>components/CustomFlask.svg</file>
-        <file>components/FlaskJacket.svg</file>
-        <file>components/GlassBottle.svg</file>
+        <file>components/ADC.svg</file>
+        <file>components/BackPressureRegulator.svg</file>
         <file>components/BottleAccess.svg</file>
         <file>components/BottlePressureAccess.svg</file>
-        <file>components/GlassBottle.svg</file>
-        <file>components/CustomFlask.svg</file>
-        <file>components/Vial.svg</file>
-        <file>components/Separator.svg</file>
-        <file>components/Distributor.svg</file>
-        <file>components/BackPressureRegulator.svg</file>
-        <file>components/SourceSink.svg</file>
-        <file>components/HPLCPump.svg</file>
-        <file>components/SyringePump.svg</file>
         <file>components/BubbleSensor.svg</file>
-        <file>components/FlowMeter.svg</file>
-        <file>components/PressureSensor.svg</file>
-        <file>components/PressureControl.svg</file>
-        <file>components/Power.svg</file>
-        <file>components/PowerSwitch.svg</file>
-        <file>components/PowerControl.svg</file>
-        <file>components/PhotoLeds.svg</file>
-        <file>components/PhotoSensor.svg</file>
         <file>components/Chiller.svg</file>
-        <file>components/TemperatureControl.svg</file>
-        <file>components/Photoreactor.svg</file>
-        <file>components/LengthControl.svg</file>
+        <file>components/CustomFlask.svg</file>
         <file>components/DAC.svg</file>
-        <file>components/ADC.svg</file>
-        <file>components/Relay.svg</file>
-        <file>components/MultiChannelDAC.svg</file>
-        <file>components/MultiChannelADC.svg</file>
-        <file>components/MultiChannelRelay.svg</file>
-        <file>components/TwoPortDistributionValve.svg</file>
+        <file>components/Distributor.svg</file>
+        <file>components/FlaskJacket.svg</file>
+        <file>components/FlowMeter.svg</file>
+        <file>components/FlowReactor.svg</file>
+        <file>components/FlowReactorBase.svg</file>
         <file>components/FourPortDistributionValve.svg</file>
-        <file>components/SyringeBarrel.svg</file>
-        <file>components/SyringePlunger.svg</file>
-        <file>components/SixPortDistributionValve.svg</file>
-        <file>components/TwelvePortDistributionValve.svg</file>
-        <file>components/SixteenPortDistributionValve.svg</file>
-        <file>components/ThreePortTwoPositionValve.svg</file>
-        <file>components/ThreePortFourPositionValve.svg</file>
         <file>components/FourPortFivePositionValve.svg</file>
-        <file>components/SixPortTwoPositionValve.svg</file>
+        <file>components/Gantry3D.svg</file>
+        <file>components/GlassBottle.svg</file>
+        <file>components/HPLC.svg</file>
+        <file>components/HPLCControl.svg</file>
+        <file>components/HPLCPump.svg</file>
+        <file>components/IRControl.svg</file>
+        <file>components/LengthControl.svg</file>
+        <file>components/Loop.svg</file>
+        <file>components/LoopBase.svg</file>
+        <file>components/MassFlowControl.svg</file>
+        <file>components/MFCComponent.svg</file>
+        <file>components/MSControl.svg</file>
+        <file>components/MultiChannelADC.svg</file>
+        <file>components/MultiChannelDAC.svg</file>
+        <file>components/MultiChannelRelay.svg</file>
+        <file>components/NMRControl.svg</file>
+        <file>components/Peltier.svg</file>
+        <file>components/PeltierCoolerTemperatureControl.svg</file>
+        <file>components/PhidgetBubbleSensorComponent.svg</file>
+        <file>components/PhidgetBubbleSensorPowerComponent.svg</file>
+        <file>components/PhotoLeds.svg</file>
+        <file>components/Photoreactor.svg</file>
+        <file>components/PhotoSensor.svg</file>
+        <file>components/PoolDARK.svg</file>
+        <file>components/PoolLIGHT.svg</file>
+        <file>components/Power.svg</file>
+        <file>components/PowerControl.svg</file>
+        <file>components/PowerSwitch.svg</file>
+        <file>components/PressureControl.svg</file>
+        <file>components/PressureSensor.svg</file>
+        <file>components/Relay.svg</file>
         <file>components/RotaryValve.svg</file>
+        <file>components/Separator.svg</file>
+        <file>components/Sink.svg</file>
+        <file>components/SixPortDistributionValve.svg</file>
+        <file>components/SixPortTwoPositionValve.svg</file>
+        <file>components/SixteenPortDistributionValve.svg</file>
         <file>components/SolenoidValve.svg</file>
         <file>components/SolenoidValve2Way.svg</file>
+        <file>components/Source.svg</file>
+        <file>components/SourceSink.svg</file>
+        <file>components/SyringeBarrel.svg</file>
+        <file>components/SyringePlunger.svg</file>
+        <file>components/SyringePump.svg</file>
+        <file>components/TemperatureControl.svg</file>
+        <file>components/ThreePortFourPositionValve.svg</file>
+        <file>components/ThreePortTwoPositionValve.svg</file>
+        <file>components/TwelvePortDistributionValve.svg</file>
+        <file>components/TwoPortDistributionValve.svg</file>
+        <file>components/Vial.svg</file>
     </qresource>
     <qresource prefix="/default_files">
         <file>scripts/process.txt</file>

@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import tempfile
 from pathlib import Path
+from typing import TypeAlias
 
 try:
     from appdirs import user_data_dir
@@ -16,6 +17,8 @@ APP_NAME = "ChemUnited Orchestrator"
 APP_AUTHOR = "ChemUnited"
 RECENT_PROJECTS_FILENAME = "recent_projects.json"
 MAX_RECENT_PROJECTS = 10
+PathList: TypeAlias = list[Path]
+StringList: TypeAlias = list[str]
 
 
 def default_recent_projects_path() -> Path:
@@ -27,13 +30,13 @@ class RecentProjectsStore:
         self.path = path or default_recent_projects_path()
         self.limit = limit
 
-    def list(self) -> list[Path]:
+    def list(self) -> PathList:
         return [Path(path) for path in self._read_paths()]
 
-    def prune_missing(self) -> list[Path]:
+    def prune_missing(self) -> PathList:
         paths = self._read_paths()
-        existing_paths: list[Path] = []
-        serialized_paths: list[str] = []
+        existing_paths: PathList = []
+        serialized_paths: StringList = []
         seen_paths: set[Path] = set()
 
         for path in paths:
@@ -70,7 +73,7 @@ class RecentProjectsStore:
         ]
         self._write_paths(paths)
 
-    def _read_paths(self) -> list[str]:
+    def _read_paths(self) -> StringList:
         if not self.path.exists():
             return []
 
@@ -88,7 +91,7 @@ class RecentProjectsStore:
 
         return [item for item in items if isinstance(item, str)]
 
-    def _write_paths(self, paths: list[str]) -> None:
+    def _write_paths(self, paths: StringList) -> None:
         try:
             self.path.parent.mkdir(parents=True, exist_ok=True)
             self.path.write_text(

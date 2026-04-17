@@ -10,6 +10,7 @@ class CommandSignature(BaseModel):
     method: Literal["GET", "PUT"] = "PUT"
     description: str = ""
     wait_time: float = 0.0
+    wait_feedback_status: bool = False
     feedback_status_command: str = ""
     id: str = Field(default_factory=lambda: uuid.uuid4().hex[:6])
     feedback_answer: str = "true"

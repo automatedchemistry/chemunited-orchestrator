@@ -110,8 +110,11 @@ module = [
     "loguru",
     "pyvis",
     "pyvis.*",
+    "requests",
+    "requests.*",
     "rich",
     "rich.*",
+    "rich_click",
     "pydantic_pint",
 ]
 ignore_missing_imports = true

@@ -13,7 +13,7 @@ from chemunited.qt.elements.component.graph_item import GraphComponent
 
 class MultiChannelBory(SceneItem):
 
-    def __init__(self, data: MultiChannelData) -> None:
+    def __init__(self, data: "MultiChannelData") -> None:
         self._data = data
         super().__init__(width=15, height=16 * data.channels + 4)
 

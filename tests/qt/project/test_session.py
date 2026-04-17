@@ -44,10 +44,7 @@ def test_import_chemunited_prefers_existing_project_directory(tmp_path):
 
     assert session.working_dir == working_dir
     assert session.source_file == archive_path
-    assert (
-        (working_dir / "draw" / "setup.py").read_text(encoding="utf-8")
-        == local_draw
-    )
+    assert (working_dir / "draw" / "setup.py").read_text(encoding="utf-8") == local_draw
 
 
 def test_import_chemunited_does_not_overwrite_existing_non_project_path(tmp_path):

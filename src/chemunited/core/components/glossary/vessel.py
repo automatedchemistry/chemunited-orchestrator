@@ -54,6 +54,7 @@ class VesselMode(ComponentMode):
         json_schema_extra={
             "group": GroupParameterCategory.PROPERTY.value,
             "editable": False,
+            "creation_editable": True,
             "lock_reason": "Internal Chosen",
         },
     )
@@ -65,6 +66,7 @@ class VesselMode(ComponentMode):
         json_schema_extra={
             "group": GroupParameterCategory.PROPERTY.value,
             "editable": False,
+            "creation_editable": True,
             "lock_reason": "Internal Chosen",
         },
     )
@@ -75,6 +77,7 @@ class VesselMode(ComponentMode):
         json_schema_extra={
             "group": GroupParameterCategory.PROPERTY.value,
             "editable": False,
+            "creation_editable": True,
             "lock_reason": "Internal Chosen",
         },
     )

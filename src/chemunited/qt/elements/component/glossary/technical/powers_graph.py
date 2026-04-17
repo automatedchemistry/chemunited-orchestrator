@@ -10,7 +10,7 @@ class PowerControl(GraphComponent[NeutralComponentData]):
     SVG_SCALE: ClassVar[float] = 0.8
 
     def build(self, svg_path: str | None = None) -> None:
-        super().build(svg_path=f":/components_icons/components/Power.svg")
+        super().build(svg_path=":/components_icons/components/Power.svg")
 
 
 class PowerSwitch(GraphComponent[NeutralComponentData]):
@@ -19,7 +19,7 @@ class PowerSwitch(GraphComponent[NeutralComponentData]):
     SVG_SCALE: ClassVar[float] = 0.8
 
     def build(self, svg_path: str | None = None) -> None:
-        super().build(svg_path=f":/components_icons/components/Power.svg")
+        super().build(svg_path=":/components_icons/components/Power.svg")
 
 
 class PhidgetBubbleSensorPowerComponent(GraphComponent[NeutralComponentData]):
@@ -28,4 +28,4 @@ class PhidgetBubbleSensorPowerComponent(GraphComponent[NeutralComponentData]):
     SVG_SCALE: ClassVar[float] = 0.8
 
     def build(self, svg_path: str | None = None) -> None:
-        super().build(svg_path=f":/components_icons/components/Power.svg")
+        super().build(svg_path=":/components_icons/components/Power.svg")

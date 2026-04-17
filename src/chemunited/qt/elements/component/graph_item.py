@@ -34,7 +34,6 @@ from PyQt5.QtWidgets import (
     QGraphicsRectItem,
     QStyleOptionGraphicsItem,
 )
-from qfluentwidgets import isDarkTheme
 
 from chemunited.core.common.constant import PATTERN_DIMENSION
 from chemunited.core.common.enums import ConnectionType as CoreConnectionType
@@ -192,7 +191,7 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
         self.build_connections_points()
 
         self.build_labels_and_flags()
-    
+
     def build_connections_points(self) -> None:
         # Connection points — one per port.
         for port_num, port in self._data.ports_by_number.items():
@@ -213,7 +212,7 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
             point.setZValue(1)
             self._points[port_num] = point
             self.addToGroup(point)
-        
+
     def build_labels_and_flags(self) -> None:
         # Port labels — positioned outward from the connection point.
         for port_num, port in self._data.ports_by_number.items():
@@ -222,7 +221,7 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
             self._port_labels[port_num] = label
             label.setVisible(port.show_in_graph)
             self.addToGroup(label)
-        
+
         # Plain children — follow the group but don't affect its bounding rect.
         self._name = TextElement(self._data.name, parent=self)
 

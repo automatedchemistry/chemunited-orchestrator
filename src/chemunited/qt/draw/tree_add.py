@@ -14,7 +14,7 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from qfluentwidgets import TreeWidget, isDarkTheme
+from qfluentwidgets import TreeWidget
 
 from chemunited.core.components.enums import ComponentType
 from chemunited.qt.elements.component import list_components
@@ -60,20 +60,17 @@ def _figure_name_candidates(component_name: str) -> list[str]:
 
 
 def _component_icon(component_name: str) -> QIcon:
-    themed_suffix = "DARK" if isDarkTheme() else "LIGHT"
 
     for figure_name in _figure_name_candidates(component_name):
-        resource_path = (
-            f":/components_icons/components/{figure_name}{themed_suffix}.svg"
-        )
+        resource_path = f":/components_icons/components/{figure_name}.svg"
         if _path_exists(resource_path):
             return QIcon(resource_path)
 
-        local_svg = _COMPONENTS_DIR / f"{figure_name}{themed_suffix}.svg"
+        local_svg = _COMPONENTS_DIR / f"{figure_name}.svg"
         if local_svg.exists():
             return QIcon(str(local_svg))
 
-        local_png = _COMPONENTS_DIR / f"{figure_name}{themed_suffix}.png"
+        local_png = _COMPONENTS_DIR / f"{figure_name}.png"
         if local_png.exists():
             return QIcon(str(local_png))
 

@@ -2,13 +2,18 @@ import numpy as np
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPainterPath
 
+from chemunited.core.common.constant import PATTERN_DIMENSION
 from chemunited.qt.elements.component.component_parts import SceneItem
 from chemunited.qt.utils.math_functions import multi_peak
 
 
 class Spectrum(SceneItem):
     def __init__(
-        self, width: int = ..., height: int | None = None, color=Qt.red, parent=None
+        self,
+        width: int = PATTERN_DIMENSION,
+        height: int | None = None,
+        color=Qt.red,
+        parent=None,
     ):
         super().__init__(width, height, parent)
         self.color = color

@@ -51,6 +51,7 @@ class ComponentMode(BaseModel, populate_by_name=True):
         json_schema_extra={
             "group": GroupParameterCategory.GENERAL.value,
             "editable": False,
+            "creation_editable": True,
         },
     )
     figure: str = Field(

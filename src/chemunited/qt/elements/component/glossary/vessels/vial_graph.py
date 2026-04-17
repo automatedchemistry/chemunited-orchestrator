@@ -10,10 +10,10 @@ from chemunited.core.common.enums import (
     GroupParameterCategory,
     PhaseKind,
 )
-from chemunited.core.compounds import VolumeContentBase
 from chemunited.core.components import VesselComponentData, VesselMode
 from chemunited.core.components.enums import InternalEdgeRole
 from chemunited.core.components.internals import InternalEdge, InventoryNode, Port
+from chemunited.core.compounds import VolumeContentBase
 from chemunited.qt.elements.component.component_parts import SceneItem, SvgLayer
 from chemunited.qt.elements.component.graph_item import GraphComponent
 from chemunited.qt.utils.math_functions import position_to_letter
@@ -131,6 +131,7 @@ class VialMode(VesselMode):
         json_schema_extra={
             "group": GroupParameterCategory.PROPERTY.value,
             "editable": False,
+            "creation_editable": True,
             "lock_reason": "Internal Chosen",
             "visible": True,
         },
@@ -143,6 +144,7 @@ class VialMode(VesselMode):
         json_schema_extra={
             "group": GroupParameterCategory.PROPERTY.value,
             "editable": False,
+            "creation_editable": True,
             "lock_reason": "Internal Chosen",
             "visible": True,
         },

@@ -3,7 +3,7 @@ from typing import ClassVar, Generic, TypeVar
 
 import numpy as np
 from PyQt5.QtCore import QPointF, QRectF, Qt
-from PyQt5.QtGui import QPainter, QPainterPath, QPen
+from PyQt5.QtGui import QPainterPath, QPen
 from PyQt5.QtWidgets import QGraphicsObject, QGraphicsPathItem
 
 from chemunited.core.components.glossary.rotary_valve import (
@@ -59,7 +59,7 @@ class RotorChannel(QGraphicsObject):
 class RotaryValveGraph(GraphComponent[ValveT], Generic[ValveT]):
     SVG_SCALE: ClassVar[float] = 4.0
 
-    def __init__(self, data: ValveComponentData) -> None:
+    def __init__(self, data: ValveT) -> None:
         super().__init__(data)
         self._internal_channel: RotorChannel | None = None
 

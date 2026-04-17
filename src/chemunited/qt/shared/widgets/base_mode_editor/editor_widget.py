@@ -67,12 +67,14 @@ class BaseModeEditorWidget(QWidget):
         model_class: type[BaseModel],
         instance: BaseModel | None = None,
         field_overrides: dict[str, Mapping[str, object]] | None = None,
+        creation_mode: bool = False,
         parent: QWidget | None = None,
     ) -> None:
         super().__init__(parent)
         self._model_class = model_class
         self._instance = instance
         self._field_overrides = field_overrides or {}
+        self._creation_mode = creation_mode
         self._cards: dict[str, BaseFieldCard] = {}
         self._setup_ui()
 
@@ -143,6 +145,8 @@ class BaseModeEditorWidget(QWidget):
             for name in by_group[group]:
                 field_info = fields[name]
                 extras = dict(_field_extras(field_info))
+                if self._creation_mode and extras.get("creation_editable"):
+                    extras["editable"] = True
                 extras.update(self._field_overrides.get(name, {}))
                 card = CardFactory.build(
                     name,

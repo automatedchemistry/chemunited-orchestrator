@@ -12,7 +12,7 @@ class SyringePump(GraphComponent[FlowSourceData]):
     METADATA: ClassVar[type[FlowSourceData]] = FlowSourceData
     BASEMODE: ClassVar[type[FlowSourceMode]] = FlowSourceMode
 
-    def build(self) -> None:
+    def build(self, svg_path: str | None = None) -> None:
         self._data.ports_by_number[1].relative_position = (-50, 11.5)
         svg_path = ":/components_icons/components/SyringePlunger.svg"
         if QFile.exists(svg_path):
