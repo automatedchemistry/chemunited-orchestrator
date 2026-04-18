@@ -74,14 +74,14 @@ class BaseConnectionItem(MovablePathItem):
 
     @property
     def base_mode_instance(self) -> EdgeMode:
+        self._sync_path_data()
         data = asdict(self._data)
         mode_data = {
             name: value for name, value in data.items() if name in EdgeMode.model_fields
         }
         return EdgeMode.model_validate(mode_data)
 
-    @override
-    def rebuild_path(self) -> None:
+    def _sync_path_data(self) -> None:
         p1 = self._origin_port.scenePos()
         p2 = self._destination_port.scenePos()
         self._origin = [p1.x(), p1.y()]
@@ -89,6 +89,10 @@ class BaseConnectionItem(MovablePathItem):
         self._data.inflection_points = [
             (point[0], point[1]) for point in self._inflection_points
         ]
+
+    @override
+    def rebuild_path(self) -> None:
+        self._sync_path_data()
         super().rebuild_path()
 
     @override

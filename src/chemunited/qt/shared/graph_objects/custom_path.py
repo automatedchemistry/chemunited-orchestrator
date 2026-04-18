@@ -139,7 +139,7 @@ class MovablePathItem(PathElementItem):
     def _on_handle_moved(self) -> None:
         """Called by any DraggablePoint when it is dragged."""
         self._inflection_points = [[h.pos().x(), h.pos().y()] for h in self._handles]
-        self._build_painter_path()
+        self.rebuild_path()
 
     def _build_painter_path(self) -> None:
         """Convert the current point list to a QPainterPath and apply it."""

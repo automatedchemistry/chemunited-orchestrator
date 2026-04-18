@@ -22,6 +22,7 @@ def test_save_draw_writes_python_setup(tmp_path):
                     "origin_port": 2,
                     "destination_port": 1,
                     "length": "100 mm",
+                    "inflection_points": [[50.0, 25.0]],
                 }
             ],
         },
@@ -37,6 +38,7 @@ def test_save_draw_writes_python_setup(tmp_path):
     assert "platform.add_connection(" in content
     assert "destiny='ReactorA'" in content
     assert "destiny_port=1" in content
+    assert "inflection_points=[[50.0, 25.0]]" in content
 
 
 def test_load_draw_executes_python_setup(tmp_path):

@@ -147,7 +147,16 @@ class OrchestratorDraw(OrchestratorCore):
         # Verify if the origin and detination has the same category
         port_1_object = self.components[origin].inf.ports_by_number[origin_port]
         port_2_object = self.components[destiny].inf.ports_by_number[destiny_port]
-        if port_1_object.category != port_2_object.category:
+        requested_classification = kwargs.get("classification")
+        classification = (
+            port_1_object.category
+            if requested_classification is None
+            else ConnectionType(requested_classification)
+        )
+        if (
+            requested_classification is None
+            and port_1_object.category != port_2_object.category
+        ):
             raise ValueError(
                 "Origin and detination must have the same category. Now they are: "
                 f"{port_1_object.category.name} and {port_2_object.category.name}"
@@ -157,13 +166,15 @@ class OrchestratorDraw(OrchestratorCore):
         origin_cp = self.components[origin].graph.get_connection_point(origin_port)
         destiny_cp = self.components[destiny].graph.get_connection_point(destiny_port)
 
-        if port_1_object.category == ConnectionType.HYDRAULIC:
-            diameter = ChemUnitQuantity(
-                kwargs.get("diameter", ChemUnitQuantity("1 mm"))
+        if classification == ConnectionType.HYDRAULIC:
+            diameter = ChemUnitQuantity.from_any(
+                kwargs.get("diameter", ChemUnitQuantity("1 mm")), default_unit="mm"
             )
             if diameter.to_base_units().magnitude <= 0:
                 raise ValueError("Diameter must be greater than 0")
-            length = ChemUnitQuantity(kwargs.get("length", ChemUnitQuantity("100 mm")))
+            length = ChemUnitQuantity.from_any(
+                kwargs.get("length", ChemUnitQuantity("100 mm")), default_unit="mm"
+            )
             if length.to_base_units().magnitude <= 0:
                 raise ValueError("Length must be greater than 0")
         else:
@@ -175,7 +186,7 @@ class OrchestratorDraw(OrchestratorCore):
             destination=destiny,
             origin_port=origin_port,
             destination_port=destiny_port,
-            classification=port_1_object.category,
+            classification=classification,
             length=length,
             diameter=diameter,
             straight_path=kwargs.get("straight_path", True),
@@ -187,9 +198,9 @@ class OrchestratorDraw(OrchestratorCore):
         if data.name in self.connections:
             raise ValueError(f"Connection '{data.name}' already exists")
 
-        cls = _CONNECTION_FACTORY.get(port_1_object.category)
+        cls = _CONNECTION_FACTORY.get(classification)
         if cls is None:
-            raise ValueError(f"Unknown connection category: {port_1_object.category}")
+            raise ValueError(f"Unknown connection category: {classification}")
         connection = cls(origin_port=origin_cp, destination_port=destiny_cp, data=data)
 
         self.parent_ref.scene_attribute.addItem(connection)

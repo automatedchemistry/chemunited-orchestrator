@@ -83,6 +83,19 @@ class TestAddConnection:
         connection = two_pumps.orchestrator.connections[CONNECTION_NAME]
         assert connection in two_pumps.scene_attribute.items()
 
+    def test_moved_inflection_point_is_saved_in_draw_data(
+        self, two_pumps_connected: SetupWindow
+    ):
+        connection = two_pumps_connected.orchestrator.connections[CONNECTION_NAME]
+        connection.addInflectionPoint()
+        connection._handles[0].setPos(123.0, 45.0)
+
+        assert connection.inf.inflection_points == [(123.0, 45.0)]
+
+        draw_data = two_pumps_connected.orchestrator._build_draw_data()
+
+        assert draw_data["connections"][0]["inflection_points"] == [[123.0, 45.0]]
+
     def test_saved_movement_connection_can_use_mixed_port_categories(
         self, window: SetupWindow
     ):
@@ -93,7 +106,7 @@ class TestAddConnection:
         )
         window.orchestrator.add_component(
             name="gantry",
-            figure="gantry3D",
+            figure="Gantry3D",
             position=(100.0, 0.0),
             connections_number=1,
         )

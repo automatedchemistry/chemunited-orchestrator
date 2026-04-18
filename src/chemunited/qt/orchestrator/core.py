@@ -5,7 +5,7 @@ from qfluentwidgets import InfoBar, InfoBarPosition
 
 from chemunited.qt.elements.access import Components, Connections
 from chemunited.qt.protocols.workflows import ProcessWorkflow
-from chemunited.qt.shared.enums import WindowCategory
+from chemunited.qt.shared.enums import WindowCategory, SetupStepMode
 from chemunited.qt.shared.logger_queue import LOG_QUEUE
 
 if TYPE_CHECKING:
@@ -87,3 +87,9 @@ class OrchestratorCore(QObject):
             self._build_infor_flyout(r)
             self._additional_behaviours_logg(r)
             self.parent_ref.FrameLoggings.append_record(r)
+
+    def switch_to_step(self, step: SetupStepMode) -> None:
+        for component in self.components.values():
+            component.graph.set_frame_mode(step)
+        for connection in self.connections.values():
+            connection.set_frame_mode(step)

@@ -37,8 +37,10 @@ class FrameBase(QFrame):
         parent: QWidget | None = None,
         graph: QWidget | None = None,
         workflow: QWidget | None = None,
+        classification: str = "",
     ) -> None:
         super().__init__(parent)
+        self.classification = classification
 
         self._graph: QWidget | None = None
         self._workflow: QWidget | None = None

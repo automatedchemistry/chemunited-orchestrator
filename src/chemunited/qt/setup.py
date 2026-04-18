@@ -1,5 +1,6 @@
 from typing import override
 
+from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtGui import QKeySequence
 from qfluentwidgets import (
     Action,
@@ -7,6 +8,7 @@ from qfluentwidgets import (
     NavigationItemPosition,
     RoundMenu,
 )
+from .shared.enums import SetupStepMode
 
 from .draw.graph import DrawGraphicView
 from .draw.tree_add import TreeAddItem
@@ -35,11 +37,17 @@ class SetupWindow(MainWindowBase):
 
         # Draw frame
         self.drawGraph = DrawGraphicView(self.scene_attribute, self)
-        self.drawFrame = FrameBase(parent=self)
+        self.drawFrame = FrameBase(
+            parent=self,
+            classification=SetupStepMode.DESIGN,
+        )
         self.tree_add = TreeAddItem(self)
 
         # Protocol frame
-        self.protocolFrame = FrameBase(parent=self)
+        self.protocolFrame = FrameBase(
+            parent=self,
+            classification=SetupStepMode.PROTOCOLS,
+        )
         self.protocolGraph = ProtocolGraphicView(self.scene_attribute, self)
         self.workflows_protocol = WorkflowsWidget(self)
         self.command_list = CommandList(self)
@@ -51,6 +59,9 @@ class SetupWindow(MainWindowBase):
         self.protocols_widget = ProtocolsWidget(self)
 
         self.buildUi()
+
+        # Signal connections
+        self.SegmentWindow.current_widget_changed.connect(self._on_current_widget_changed)
 
     def initProjectMenu(self) -> None:
         self.project_menu = RoundMenu(parent=self)
@@ -221,3 +232,8 @@ class SetupWindow(MainWindowBase):
 
     def open_recent_project(self, path):
         self.orchestrator.open_recent_project(path)
+
+    @pyqtSlot(str)
+    def _on_current_widget_changed(self, classification: str) -> None:
+        if classification in SetupStepMode:
+            self.orchestrator.switch_to_step(SetupStepMode(classification))
