@@ -21,7 +21,8 @@ my_experiment/                       ← working directory (source of truth)
 ├── .gitignore                       ← excludes __pycache__, connectivity, etc.
 │
 ├── draw/
-│   └── setup.py                     ← Python draw setup script
+│   ├── setup.py                     ← Python draw setup script
+│   └── platform.svg                 ← generated platform drawing export
 │
 ├── protocols/
 │   ├── __init__.py                  ← auto-generated process registry (PROCESSES dict)
@@ -87,6 +88,17 @@ def build_draw(platform):
         classification="hydraulic",
     )
 ```
+
+---
+
+### `draw/platform.svg`
+
+Generated visual export of the current platform drawing. ChemUnited refreshes
+this file on project save so the platform can be viewed in external tools
+without opening the Qt application.
+
+The SVG is a companion preview only. Project loading still uses
+`draw/setup.py` as the source of truth.
 
 ---
 
@@ -216,6 +228,7 @@ my_experiment.chemunited  (ZIP)
 ├── pyproject.toml
 ├── __init__.py
 ├── draw/setup.py
+├── draw/platform.svg
 ├── protocols/__init__.py
 ├── protocols/main_parameters.py
 ├── protocols/calibration.py
@@ -249,6 +262,7 @@ Write manifest.json, pyproject.toml, __init__.py
 Write protocols/__init__.py  (empty PROCESSES dict)
 Write protocols/main_parameters.py  (from template)
 Create draw/setup.py  (empty canvas)
+Create draw/platform.svg  (generated platform drawing)
 Create connectivity/associations.json  (empty)
 Init Git repo → first commit "Initialize ChemUnited project"
 ```
@@ -284,6 +298,7 @@ Continue as open existing project
 User clicks Save Protocol Script
         ↓
 manifest.json updated (last_modified)
+Refresh draw/setup.py and draw/platform.svg
 Pack working directory → my_experiment.chemunited
 (.git and .gitignore excluded from ZIP)
 ```
@@ -300,8 +315,13 @@ Pack working directory → my_experiment.chemunited
 | Simulation state | Always recomputed |
 | Protocol run logs / results | Stored separately in a `runs/` output folder |
 
-The principle: **store only what the user authored, never what the
-application computed from it.**
+`draw/platform.svg` is the one generated companion file stored with the project.
+It is refreshed on save for sharing and documentation, but it is never used to
+reconstruct the platform.
+
+The principle: **store only what the user authored as load-bearing project
+state.** Generated exports such as `draw/platform.svg` are convenience outputs,
+not inputs.
 
 ---
 
@@ -316,7 +336,7 @@ Auto-commits are created silently on every save:
 
 | User action | Commit message |
 |---|---|
-| Save Draw canvas | `Update platform layout` |
+| Save Draw canvas | `Update platform layout` (`draw/setup.py` + `draw/platform.svg`) |
 | Save process file | `Update process: react` |
 | Add new process | `Add process: react` |
 | Delete process | `Remove process: react` |
@@ -342,6 +362,7 @@ because device addresses are machine-specific.
 |---|---|
 | `project/manifest.py` | Read / write `manifest.json` |
 | `project/storage.py` | All file I/O — pack, unpack, draw, processes, parameters, connectivity |
+| `project/platform_svg.py` | Export the current Qt platform scene to `draw/platform.svg` |
 | `project/git_manager.py` | All Git operations — init, commit, snapshot, status, remote |
 | `project/session.py` | Single entry point for the GUI — orchestrates storage + Git |
 | `project/writer.py` | Generate new `.py` files from Qt resource templates |

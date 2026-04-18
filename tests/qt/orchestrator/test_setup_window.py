@@ -6,6 +6,8 @@ What is tested:
 - duplicate name raises ValueError
 """
 
+import zipfile
+
 import pytest
 from PyQt5.QtGui import QKeySequence
 from pytestqt.qtbot import QtBot
@@ -13,6 +15,7 @@ from qfluentwidgets import NavigationTreeWidget
 
 from chemunited.core.common.enums import ConnectionType
 from chemunited.qt.project.recent import RecentProjectsStore
+from chemunited.qt.project.session import ProjectSession
 from chemunited.qt.setup import SetupWindow
 
 
@@ -66,42 +69,32 @@ class TestAddComponent:
         assert component.inf.length.to_base_units().magnitude == pytest.approx(0.1)
         assert component.inf.diameter.to_base_units().magnitude == pytest.approx(0.001)
 
-    def test_component_legacy_figure_alias_is_supported(self, window: SetupWindow):
+    def test_gantry3d_component_restores_movement_ports(self, window: SetupWindow):
         window.orchestrator.add_component(
             name="gantry",
-            figure="gantry3D",
+            figure="Gantry3D",
             position=(0.0, 0.0),
             connections_number=6,
         )
 
         component = window.orchestrator.components["gantry"]
-        assert component.inf.figure == "gantry3D"
+        assert component.inf.figure == "Gantry3D"
         assert len(component.inf.ports_by_number) == 7
 
-    def test_pool_component_restores_flow_and_heat_ports(self, window: SetupWindow):
-        window.orchestrator.add_component(
-            name="pool",
-            figure="Pool",
-            position=(0.0, 0.0),
-            connections_number=3,
-        )
-
-        component = window.orchestrator.components["pool"]
-        assert set(component.inf.ports_by_number) == {1, 2, 3, 4, 5}
-        assert component.inf.ports_by_number[1].category == ConnectionType.HYDRAULIC
-        assert component.inf.ports_by_number[4].category == ConnectionType.HEAT
-
-    def test_photoreactor_restores_heat_port(self, window: SetupWindow):
+    def test_photoreactor_restores_flow_ports(self, window: SetupWindow):
         window.orchestrator.add_component(
             name="photo reactor",
-            figure="Photoreactor",
+            figure="PhotoReactor",
             position=(0.0, 0.0),
         )
 
         component = window.orchestrator.components["photo reactor"]
-        assert component.inf.ports_by_number[3].category == ConnectionType.HEAT
+        assert component.inf.figure == "PhotoReactor"
+        assert set(component.inf.ports_by_number) == {1, 2}
+        assert component.inf.ports_by_number[1].category == ConnectionType.HYDRAULIC
+        assert component.inf.ports_by_number[2].category == ConnectionType.HYDRAULIC
 
-    def test_thermal_controls_restore_connection_ports(self, window: SetupWindow):
+    def test_thermal_controls_restore_heat_ports(self, window: SetupWindow):
         window.orchestrator.add_component(
             name="peltier",
             figure="PeltierCoolerTemperatureControl",
@@ -115,10 +108,12 @@ class TestAddComponent:
 
         peltier = window.orchestrator.components["peltier"]
         chiller = window.orchestrator.components["chiller"]
+        assert set(peltier.inf.ports_by_number) == {1}
         assert peltier.inf.ports_by_number[1].category == ConnectionType.HEAT
-        assert set(chiller.inf.ports_by_number) == {1, 2}
+        assert set(chiller.inf.ports_by_number) == {1}
+        assert chiller.inf.ports_by_number[1].category == ConnectionType.HEAT
 
-    def test_pressure_control_restores_two_pressure_ports(self, window: SetupWindow):
+    def test_pressure_control_restores_pressure_port(self, window: SetupWindow):
         window.orchestrator.add_component(
             name="PressureControl",
             figure="PressureControl",
@@ -126,8 +121,8 @@ class TestAddComponent:
         )
 
         component = window.orchestrator.components["PressureControl"]
-        assert set(component.inf.ports_by_number) == {1, 2}
-        assert component.inf.ports_by_number[2].category == ConnectionType.HYDRAULIC
+        assert set(component.inf.ports_by_number) == {1}
+        assert component.inf.ports_by_number[1].category == ConnectionType.HYDRAULIC
 
     def test_duplicate_name_raises(self, window: SetupWindow):
         window.orchestrator.add_component(
@@ -196,6 +191,31 @@ class TestAddComponent:
         assert session.draw_data == {"components": [], "connections": []}
         assert session.export_destination == source_file
         assert store.list() == [source_file.resolve()]
+
+    def test_save_exports_platform_svg_into_project_archive(
+        self, window: SetupWindow, tmp_path
+    ):
+        working_dir = tmp_path / "demo"
+        session = ProjectSession()
+        session.new(name="demo", location=tmp_path, init_git=False)
+        window.orchestrator.working_dir = working_dir
+        window.orchestrator._session = session
+
+        window.orchestrator.add_component(
+            name="PumpA",
+            figure="HPLCPump",
+            position=(0.0, 0.0),
+        )
+
+        window.orchestrator.save()
+
+        svg_path = working_dir / "draw" / "platform.svg"
+        assert svg_path.exists()
+        assert "<svg" in svg_path.read_text(encoding="utf-8")
+        assert window.orchestrator._session.source_file == tmp_path / "demo.chemunited"
+
+        with zipfile.ZipFile(tmp_path / "demo.chemunited") as archive:
+            assert "draw/platform.svg" in archive.namelist()
 
     def test_build_draw_data_persists_current_component_geometry(
         self, window: SetupWindow

@@ -61,7 +61,10 @@ class GitManager:
     # ── Auto-commit helpers (called by session on each save) ───────────────────
 
     def commit_draw(self) -> None:
-        self._auto_commit(["draw/setup.py"], "Update platform layout")
+        self._auto_commit(
+            ["draw/setup.py", "draw/platform.svg"],
+            "Update platform layout",
+        )
 
     def commit_process(
         self,

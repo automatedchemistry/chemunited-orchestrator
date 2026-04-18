@@ -4,6 +4,10 @@ from loguru import logger
 from PyQt5.QtWidgets import QFileDialog, QMessageBox
 
 from chemunited.qt.project.manifest import ProjectManifest
+from chemunited.qt.project.platform_svg import (
+    PLATFORM_SVG_RELATIVE_PATH,
+    export_platform_svg,
+)
 from chemunited.qt.project.recent import RecentProjectsStore
 from chemunited.qt.project.session import ProjectSession
 from chemunited.qt.shared.enums import WindowCategory
@@ -48,6 +52,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
         self.working_dir = chemunited_path.parent / chemunited_path.stem
         self._session = ProjectSession()
         self._session.new(name=self.working_dir.name, location=self.working_dir.parent)
+        self._save_platform_svg()
         self._session.save_draw(self._build_draw_data())
         self._session.export_chemunited(chemunited_path)
 
@@ -105,6 +110,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
                 )
 
         export_destination = export_destination or self._session.source_file
+        self._save_platform_svg()
         self._session.save_draw(self._build_draw_data())
         self._session.export_chemunited(export_destination)
 
@@ -142,6 +148,14 @@ class OrchestratorProjectFile(OrchestratorExecution):
         if path.suffix.lower() != ".chemunited":
             return path.with_suffix(".chemunited")
         return path
+
+    def _save_platform_svg(self) -> None:
+        if self.working_dir is None:
+            return
+        export_platform_svg(
+            self.parent_ref.scene_attribute,
+            self.working_dir / PLATFORM_SVG_RELATIVE_PATH,
+        )
 
     def _record_recent_project(self, path: Path | None) -> None:
         if path is None:
