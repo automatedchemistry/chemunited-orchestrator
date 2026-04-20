@@ -147,6 +147,7 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
         self.build_bounding_rect()
         self.setPos(*data.position)
         self.setRotation(data.angle)
+        self._apply_mirror(data.mirror)
         self.set_frame_mode(SetupStepMode.DESIGN)  # initialise badge/warning visibility
 
     # -- properties --
@@ -301,15 +302,22 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
 
     # ── public API ─────────────────────────────────────────────────
 
+    def _apply_mirror(self, mirror: bool) -> None:
+        t = QTransform()
+        if mirror:
+            t.scale(-1, 1)
+        self.setTransform(t)
+
     def sync(self, mode: BaseModel) -> None:
         """Reconcile visuals when ComponentData is updated externally.
 
-        Only position and angle are expected to change after construction.
+        Only position, angle, and mirror are expected to change after construction.
         Rebuilding the full item tree on every sync would be wasteful.
         """
         self._data.update(mode)
         self.setPos(self._data.position[0], self._data.position[1])
         self.setRotation(self._data.angle)
+        self._apply_mirror(self._data.mirror)
         # Rotation changes the bounding rect, so re-position plain children.
         self.post_layout()
 

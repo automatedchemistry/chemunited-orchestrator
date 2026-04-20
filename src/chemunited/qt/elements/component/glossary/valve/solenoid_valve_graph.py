@@ -20,8 +20,8 @@ class SolenideValveData(ValveComponentData):
 
     def internal_structure(self):
         super().internal_structure()
-        self.ports_by_number[1].relative_position = (-45, 25)
-        self.ports_by_number[2].relative_position = (45, 25)
+        self.ports_by_number[1].relative_position = (-22.5, 12.5)
+        self.ports_by_number[2].relative_position = (22.5, 12.5)
 
 
 class SolenideValveMode(ComponentMode):
@@ -50,6 +50,7 @@ class SolenideValveMode(ComponentMode):
 class SolenoidValve(GraphComponent[SolenideValveData]):
     METADATA: ClassVar[type[SolenideValveData]] = SolenideValveData
     BASEMODE: ClassVar[type[SolenideValveMode]] = SolenideValveMode
+    SVG_SCALE: ClassVar[float] = 1.0
 
 
 @dataclass
@@ -59,11 +60,12 @@ class SolenideValve2WayData(ValveComponentData):
 
     def internal_structure(self):
         super().internal_structure()
-        self.ports_by_number[0].relative_position = (40, 20)
-        self.ports_by_number[1].relative_position = (-40, 8)
-        self.ports_by_number[2].relative_position = (-40, 30)
+        self.ports_by_number[0].relative_position = (20, 10)
+        self.ports_by_number[1].relative_position = (-20, 4)
+        self.ports_by_number[2].relative_position = (-20, 15)
 
 
 class SolenoidValve2Way(GraphComponent[SolenideValve2WayData]):
     METADATA: ClassVar[type[SolenideValve2WayData]] = SolenideValve2WayData
     BASEMODE: ClassVar[type[SolenideValveMode]] = SolenideValveMode
+    SVG_SCALE: ClassVar[float] = 1.0

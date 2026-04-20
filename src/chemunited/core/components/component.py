@@ -79,6 +79,12 @@ class ComponentMode(BaseModel, populate_by_name=True):
         description="Component Position in the Scene",
         json_schema_extra={"group": GroupParameterCategory.GENERAL.value},
     )
+    mirror: bool = Field(
+        default=False,
+        title="Mirror Component",
+        description="Horizontal mirror of the component figure",
+        json_schema_extra={"group": GroupParameterCategory.GENERAL.value},
+    )
 
     @field_validator("name")
     def validate_name(cls, value: str) -> str:
@@ -113,6 +119,7 @@ class ComponentData(Element):
     figure: str = ""
     position: tuple[float, float] = (0, 0)
     angle: int = 0
+    mirror: bool = False
     COMPONENT_TYPE: ClassVar[ComponentType] = ComponentType.ELECTRONIC
     port_pairs: list[tuple[int, ...]] = field(default_factory=list, init=False)
     ports_by_number: dict[int, Port] = field(default_factory=dict, init=False)

@@ -68,6 +68,9 @@ class DrawGraphicView(GraphCore):
         for item in self._scene().items():
             if isinstance(item, (ConnectionPoint, DraggablePoint)):
                 item.setZValue(FRONT_SCENE_Z_VALUE)
+                parent = item.parentItem()
+                if parent is not None:
+                    parent.setZValue(FRONT_SCENE_Z_VALUE)
 
     def _cleanup(self) -> None:
         if self._temp_connection is not None:

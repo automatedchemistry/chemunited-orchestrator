@@ -81,6 +81,17 @@ class VesselMode(ComponentMode):
             "lock_reason": "Internal Chosen",
         },
     )
+    pressure_access: bool = Field(
+        default=True,
+        title="Pressure Access",
+        description="Whether the component allows air pressure access.",
+        json_schema_extra={
+            "group": GroupParameterCategory.PROPERTY.value,
+            "editable": False,
+            "creation_editable": True,
+            "lock_reason": "Internal Chosen",
+        },
+    )
 
 
 def _centered_offsets(count: int) -> list[float]:
