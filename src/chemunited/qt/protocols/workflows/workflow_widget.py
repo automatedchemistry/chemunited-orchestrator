@@ -1,5 +1,3 @@
-from typing import TYPE_CHECKING
-
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import QHBoxLayout, QStackedWidget, QVBoxLayout, QWidget
@@ -10,9 +8,6 @@ from chemunited.qt.shared.enums import WindowCategory
 from .controller import WorkflowController
 from .process_workflow import ProcessWorkflow
 from .workflow_frames import WorkflowGraph
-
-if TYPE_CHECKING:
-    pass
 
 
 class WorkflowsWidget(QWidget):

@@ -219,22 +219,29 @@ def load_process_classes(working_dir: Path) -> dict:
     Dynamically import protocols/__init__.py and return the PROCESSES dict.
     Returns {} if the package cannot be loaded.
     """
+    import sys
+
     init_path = working_dir / "protocols" / "__init__.py"
     if not init_path.exists():
         return {}
+
+    pkg_name = f"_chemunited_protocols_{abs(hash(working_dir.resolve()))}"
     try:
         spec = importlib.util.spec_from_file_location(
-            "protocols",
+            pkg_name,
             init_path,
             submodule_search_locations=[str(working_dir / "protocols")],
         )
         if spec is None or spec.loader is None:
             return {}
         module = importlib.util.module_from_spec(spec)
+        sys.modules[pkg_name] = module
         spec.loader.exec_module(module)
         return getattr(module, "PROCESSES", {})
     except Exception:
         return {}
+    finally:
+        sys.modules.pop(pkg_name, None)
 
 
 # ── Main parameters ────────────────────────────────────────────────────────────

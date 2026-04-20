@@ -70,11 +70,13 @@ class OrchestratorProjectFile(OrchestratorExecution):
     def open_project(self, path: Path) -> None:
         session = self._open_session(path)
         draw_data = session.load_draw()
+        process_classes = session.load_process_classes()
 
         self._reset_project_state()
         self._session = session
         self.working_dir = session.working_dir
         self._restore_draw_data(draw_data)
+        self._restore_protocols(process_classes)
 
         logger.bind(window=WindowCategory.SETUP).success(f"Project loaded from {path}")
         self._record_recent_project(path)
@@ -242,6 +244,85 @@ class OrchestratorProjectFile(OrchestratorExecution):
             ),
             **payload,
         )
+
+    def _restore_protocols(self, process_classes: dict) -> None:
+        manifest_order = (
+            self._session.manifest.processes_order
+            if self._session and self._session.manifest
+            else []
+        )
+        names = manifest_order + [n for n in process_classes if n not in manifest_order]
+
+        for name in names:
+            cls = process_classes.get(name)
+            if cls is None:
+                continue
+            try:
+                workflow = self._workflow_from_process_class(name, cls)
+            except Exception as exc:
+                logger.bind(window=WindowCategory.SETUP).warning(
+                    f"Could not restore protocol {name!r}: {exc}"
+                )
+                continue
+            self.protocols[name] = workflow
+            self.parent_ref.workflows_protocol.add_process(name, workflow)
+
+        self.parent_ref.protocols_widget.sync_list()
+
+    @staticmethod
+    def _workflow_from_process_class(name: str, cls) -> ProcessWorkflow:
+        from chemunited.qt.shared.enums.protocols_enum import ProtocolBlock
+        from chemunited.qt.protocols.workflows.workflow_rules import (
+            default_terminal_block_specs,
+            resolve_render_start_role,
+        )
+
+        config_cls = cls.__orig_bases__[0].__args__[0]
+        graph = cls(config=config_cls()).build_workflow()
+        workflow = ProcessWorkflow(name)
+        terminal_names = {spec.name for spec in default_terminal_block_specs()}
+
+        for node_id, attrs in graph.nodes(data=True):
+            if node_id in terminal_names:
+                pos = attrs.get("position")
+                block = workflow.get_block(node_id)
+                if pos is not None and block is not None:
+                    block.position = tuple(pos)
+                continue
+
+            workflow.add_block(
+                node_id=node_id,
+                method=attrs.get("method") or node_id,
+                position=attrs.get("position", (0.0, 0.0)),
+                label=attrs.get("label"),
+                description=attrs.get("description"),
+                block_tag=ProtocolBlock.SCRIPT,
+            )
+
+        for source, target, attrs in graph.edges(data=True):
+            loopback = attrs.get("loopback", False)
+            condition = attrs.get("condition")
+            trigger_on = attrs.get("trigger_on", False)
+            source_block = workflow.get_block(source)
+            source_tag = source_block.block_tag if source_block else ProtocolBlock.SCRIPT
+            start_role = resolve_render_start_role(
+                source_tag,
+                start_role=None,
+                loopback=loopback,
+                trigger_on=trigger_on,
+                condition=condition,
+            )
+            workflow.add_connection(
+                source, target,
+                start_role=start_role,
+                condition=condition,
+                loopback=loopback,
+                trigger_on=trigger_on,
+                label=attrs.get("label", ""),
+                max_iterations=attrs.get("max_iterations"),
+            )
+
+        return workflow
 
     def _save_protocols(self) -> None:
         if self._session is None or self.working_dir is None:

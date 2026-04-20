@@ -145,7 +145,7 @@ class SetupWindow(MainWindowBase):
         self.drawFrame.addNavigationAction(
             icon=OrchestratorIcon.HOME,
             text="Home",
-            onClick=self.drawGraph.recenter_view,
+            onClick=self.recenter_views,
             position=NavigationItemPosition.TOP,
             tooltip="Recenter the view",
         )
@@ -179,7 +179,7 @@ class SetupWindow(MainWindowBase):
         self.protocolFrame.addNavigationAction(
             icon=OrchestratorIcon.HOME,
             text="Home",
-            onClick=self.protocolGraph.recenter_view,
+            onClick=self.recenter_views,
             position=NavigationItemPosition.TOP,
             tooltip="Recenter the view",
         )
@@ -232,6 +232,11 @@ class SetupWindow(MainWindowBase):
 
     def open_recent_project(self, path):
         self.orchestrator.open_recent_project(path)
+
+    def recenter_views(self):
+        self.drawGraph.recenter_view()
+        self.protocolGraph.recenter_view()
+        self.workflows_protocol.recenter_view()
 
     @pyqtSlot(str)
     def _on_current_widget_changed(self, classification: str) -> None:
