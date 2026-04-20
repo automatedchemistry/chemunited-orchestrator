@@ -69,12 +69,13 @@ class WorkflowController(QObject):
     ) -> BlockData:
         name = generate_block_name(self._workflow.block_names(), block_tag)
         block = self._workflow.add_block(
-            name=name,
-            pos=pos,
+            node_id=name,
+            method=name,
+            position=pos,
             block_tag=block_tag,
             ports_numbers=ports_numbers,
         )
-        self.block_added.emit(block.name)
+        self.block_added.emit(block.node_id)
         return block
 
     def remove_block(self, name: str) -> None:

@@ -8,7 +8,7 @@ import networkx as nx
 from pydantic import BaseModel, ConfigDict
 from typing import TYPE_CHECKING
 
-from workflow import (
+from chemunited.workflow import (
     NodeExecutionContext,
     Process,
     WorkflowEdgeSpec,
@@ -42,31 +42,7 @@ class ---CLASS_NAME---(Process[---CLASS_NAME---Config]):
     def build_workflow(self) -> nx.DiGraph:
         graph = nx.DiGraph()
 
-        graph.add_node(
-            "IN",
-            **WorkflowNodeSpec(
-                node_id="IN",
-                method="start",
-                label="Start",
-            ).model_dump(exclude_none=True),
-        )
-        graph.add_node(
-            "OUT",
-            **WorkflowNodeSpec(
-                node_id="OUT",
-                method="finish",
-                label="Finish",
-            ).model_dump(exclude_none=True),
-        )
-
-        graph.add_edge(
-            "IN",
-            "OUT",
-            **WorkflowEdgeSpec(
-                condition=True,
-                label="done",
-            ).model_dump(exclude_none=True),
-        )
+        ---WORKFLOW_DEFINITION---
 
         return graph
 

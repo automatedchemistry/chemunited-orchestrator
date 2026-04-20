@@ -272,9 +272,9 @@ class WorkflowGraph(GraphCore):
         return labels[block_tag]
 
     def _add_node_from_block(self, block: BlockData) -> WorkflowNode:
-        title, subtitle = self._display_text(block.name, block.block_tag)
+        title, subtitle = self._display_text(block.node_id, block.block_tag)
         node = WorkflowNode(
-            node_name=block.name,
+            node_name=block.node_id,
             block_tag=block.block_tag,
             title=title,
             subtitle=subtitle,
@@ -282,9 +282,9 @@ class WorkflowGraph(GraphCore):
             protected=block.protected,
             on_position_changed=self._on_node_moved,
         )
-        node.sync_position(block.pos)
+        node.sync_position(block.position)
         self.scene_attribute.addItem(node)
-        self._nodes[block.name] = node
+        self._nodes[block.node_id] = node
         return node
 
     def _resolve_start_port(
@@ -463,8 +463,8 @@ class WorkflowGraph(GraphCore):
             return
 
         node.protected = block.protected
-        if (node.pos().x(), node.pos().y()) != block.pos:
-            node.sync_position(block.pos)
+        if (node.pos().x(), node.pos().y()) != block.position:
+            node.sync_position(block.position)
         self._sync_input_ports(name)
         self.update_connections()
 

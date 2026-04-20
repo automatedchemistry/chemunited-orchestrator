@@ -5,38 +5,51 @@ from pathlib import Path
 from typing import Any, Iterator
 
 from networkx import DiGraph
+from pydantic import ConfigDict
 
 from chemunited.qt.shared.enums.protocols_enum import ProtocolBlock
+from chemunited.workflow.models import WorkflowNodeSpec
 
 from .exceptions import WorkflowRuleViolation
 from .workflow_rules import default_terminal_block_specs
 
 
-@dataclass(slots=True)
-class BlockData:
-    name: str
-    process: str
+class BlockData(WorkflowNodeSpec):
+    """GUI-side block model — extends WorkflowNodeSpec with Qt-specific fields."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
+
+    # Override position to be non-optional in the GUI context
+    position: tuple[float, float] = (0.0, 0.0)
+
+    # Qt-specific fields (not part of the workflow spec)
+    process: str = ""
     file: str | None = None
-    pos: tuple[float, float] = field(default_factory=lambda: (0.0, 0.0))
     block_tag: ProtocolBlock = ProtocolBlock.SCRIPT
     ports_numbers: int = 1
     file_path: Path | None = None
-    call_function: str = ""
-    docstring: str = ""
     protected: bool = False
 
     def to_attrs(self) -> dict[str, Any]:
-        return {
-            "process": self.process,
-            "file": self.file,
-            "pos": self.pos,
-            "block_tag": self.block_tag,
-            "ports_numbers": self.ports_numbers,
-            "file_path": self.file_path,
-            "call_function": self.call_function,
-            "docstring": self.docstring,
-            "protected": self.protected,
+        return self.model_dump(exclude={"node_id"})
+
+    def to_script(self, indent: str = "        ") -> str:
+        spec_keys = set(WorkflowNodeSpec.model_fields)
+        kwargs = {
+            k: v
+            for k, v in self.model_dump(include=spec_keys).items()
+            if v is not None and v != ""
         }
+        kwarg_lines = "".join(
+            f"\n{indent}        {k}={v!r}," for k, v in kwargs.items()
+        )
+        return (
+            f"{indent}graph.add_node(\n"
+            f'{indent}    "{self.node_id}",\n'
+            f"{indent}    **WorkflowNodeSpec({kwarg_lines}\n"
+            f"{indent}    ).model_dump(exclude_none=True),\n"
+            f"{indent})"
+        )
 
 
 @dataclass(slots=True)
@@ -49,7 +62,7 @@ class ConnectionData:
     inflection_points: list[tuple[float, float]] = field(default_factory=list)
     max_iterations: int | None = None
 
-    def copy(self) -> "ConnectionData":
+    def copy(self) -> ConnectionData:
         return replace(
             self,
             inflection_points=[
@@ -67,6 +80,34 @@ class ConnectionData:
             "inflection_points": [tuple(point) for point in self.inflection_points],
             "max_iterations": self.max_iterations,
         }
+
+    def to_script(self, start: str, end: str, indent: str = "        ") -> str:
+        if self.loopback:
+            lines = [
+                f"{indent}graph.add_edge(",
+                f'{indent}    "{start}",',
+                f'{indent}    "{end}",',
+                f"{indent}    loopback=True,",
+                f"{indent}    trigger_on={self.trigger_on!r},",
+            ]
+            if self.label:
+                lines.append(f"{indent}    label={self.label!r},")
+            if self.max_iterations is not None:
+                lines.append(f"{indent}    max_iterations={self.max_iterations!r},")
+            lines.append(f"{indent})")
+            return "\n".join(lines)
+
+        spec_kwargs = f"\n{indent}        condition={self.condition!r},"
+        if self.label:
+            spec_kwargs += f"\n{indent}        label={self.label!r},"
+        return (
+            f"{indent}graph.add_edge(\n"
+            f'{indent}    "{start}",\n'
+            f'{indent}    "{end}",\n'
+            f"{indent}    **WorkflowEdgeSpec({spec_kwargs}\n"
+            f"{indent}    ).model_dump(exclude_none=True),\n"
+            f"{indent})"
+        )
 
 
 class ProcessWorkflow:
@@ -110,7 +151,7 @@ class ProcessWorkflow:
         return connection
 
     def _store_block(self, block: BlockData) -> None:
-        self._graph.add_node(block.name, **{self._NODE_KEY: block})
+        self._graph.add_node(block.node_id, **{self._NODE_KEY: block})
 
     def _store_connection(self, start: str, end: str, data: ConnectionData) -> None:
         self._graph.add_edge(start, end, **{self._EDGE_KEY: data})
@@ -168,30 +209,32 @@ class ProcessWorkflow:
 
     def add_block(
         self,
-        name: str,
+        node_id: str,
+        method: str,
         file: str | None = None,
-        pos: tuple[float, float] = (0.0, 0.0),
+        position: tuple[float, float] = (0.0, 0.0),
         block_tag: ProtocolBlock = ProtocolBlock.SCRIPT,
         ports_numbers: int = 1,
         *,
         file_path: Path | None = None,
-        call_function: str = "",
-        docstring: str = "",
+        label: str | None = None,
+        description: str | None = None,
         protected: bool = False,
     ) -> BlockData:
-        if self.has_block(name):
-            raise WorkflowRuleViolation(f"Workflow block '{name}' already exists")
+        if self.has_block(node_id):
+            raise WorkflowRuleViolation(f"Workflow block '{node_id}' already exists")
 
         block = BlockData(
-            name=name,
+            node_id=node_id,
+            method=method,
             process=self._process,
             file=file,
-            pos=(float(pos[0]), float(pos[1])),
+            position=(float(position[0]), float(position[1])),
             block_tag=block_tag,
             ports_numbers=max(1, ports_numbers),
             file_path=file_path,
-            call_function=call_function,
-            docstring=docstring,
+            label=label,
+            description=description,
             protected=protected,
         )
         self._store_block(block)
@@ -207,7 +250,7 @@ class ProcessWorkflow:
 
     def move_block(self, name: str, pos: tuple[float, float]) -> BlockData:
         block = self._require_block(name)
-        block.pos = (float(pos[0]), float(pos[1]))
+        block.position = (float(pos[0]), float(pos[1]))
         return block
 
     def rename_process(self, name: str) -> None:
@@ -275,8 +318,9 @@ class ProcessWorkflow:
             block = self.get_block(spec.name)
             if block is None:
                 self.add_block(
-                    name=spec.name,
-                    pos=spec.pos,
+                    node_id=spec.name,
+                    method=spec.method,
+                    position=spec.pos,
                     block_tag=spec.block_tag,
                     protected=spec.protected,
                 )
@@ -303,11 +347,11 @@ class ProcessWorkflow:
     def get_file_path(self, node: str) -> Path:
         return self._require_block(node).file_path or Path("")
 
-    def get_call_function(self, node: str) -> str:
-        return self._require_block(node).call_function
+    def get_method(self, node: str) -> str:
+        return self._require_block(node).method
 
-    def get_docstring(self, node: str) -> str:
-        return self._require_block(node).docstring
+    def get_description(self, node: str) -> str:
+        return self._require_block(node).description or ""
 
     def export_script_attributes(self, name: str) -> str:
         block = self._require_block(name)

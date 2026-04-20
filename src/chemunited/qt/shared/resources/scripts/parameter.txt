@@ -3,7 +3,6 @@
 # Project name: ---PROJECT_NAME---
 from chemunited.core.utils import ChemQuantityValidator, ChemUnitQuantity
 from pydantic import BaseModel, Field, ConfigDict
-from PyQt5.QtWidgets import QApplication
 from typing import Annotated
 
 

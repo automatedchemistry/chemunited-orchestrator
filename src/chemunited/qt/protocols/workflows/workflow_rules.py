@@ -13,6 +13,7 @@ class TerminalBlockSpec:
     name: str
     block_tag: ProtocolBlock
     pos: tuple[float, float]
+    method: str = ""
     protected: bool = True
 
 
@@ -29,11 +30,13 @@ def default_terminal_block_specs() -> tuple[TerminalBlockSpec, ...]:
             name="start",
             block_tag=ProtocolBlock.START,
             pos=(200.0, 300.0),
+            method="start",
         ),
         TerminalBlockSpec(
             name="end",
             block_tag=ProtocolBlock.END,
             pos=(800.0, 300.0),
+            method="finish",
         ),
     )
 

@@ -112,14 +112,15 @@ class OrchestratorProtocols(OrchestratorDraw):
             if block.protected:
                 continue  # terminal blocks already created by ensure_terminal_blocks
             dest.add_block(
-                name=block.name,
+                node_id=block.node_id,
+                method=block.method,
                 file=block.file,
-                pos=block.pos,
+                position=block.position,
                 block_tag=block.block_tag,
                 ports_numbers=block.ports_numbers,
                 file_path=block.file_path,
-                call_function=block.call_function,
-                docstring=block.docstring,
+                label=block.label,
+                description=block.description,
                 protected=block.protected,
             )
         for start, end, conn in source.iter_connections():

@@ -1,3 +1,6 @@
+from __future__ import annotations
+
+from datetime import datetime, timezone
 from pathlib import Path
 
 from loguru import logger
@@ -10,6 +13,8 @@ from chemunited.qt.project.platform_svg import (
 )
 from chemunited.qt.project.recent import RecentProjectsStore
 from chemunited.qt.project.session import ProjectSession
+from chemunited.qt.project.writer import render_python_script
+from chemunited.qt.protocols.workflows import ProcessWorkflow
 from chemunited.qt.shared.enums import WindowCategory
 
 from .draw import call_component_model
@@ -54,6 +59,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
         self._session.new(name=self.working_dir.name, location=self.working_dir.parent)
         self._save_platform_svg()
         self._session.save_draw(self._build_draw_data())
+        self._session.save_main_parameters(self._render_main_parameters_script(self.working_dir))
         self._session.export_chemunited(chemunited_path)
 
         logger.bind(window=WindowCategory.SETUP).info(
@@ -112,7 +118,9 @@ class OrchestratorProjectFile(OrchestratorExecution):
         export_destination = export_destination or self._session.source_file
         self._save_platform_svg()
         self._session.save_draw(self._build_draw_data())
-        # TODO: save protocols
+        self._save_protocols()
+        self._session.save_main_parameters(self._render_main_parameters_script(self.working_dir))
+        self._session.save_connectivity(self._build_connectivity_data())
         self._session.export_chemunited(export_destination)
 
         if comment:
@@ -234,6 +242,63 @@ class OrchestratorProjectFile(OrchestratorExecution):
             ),
             **payload,
         )
+
+    def _save_protocols(self) -> None:
+        if self._session is None or self.working_dir is None:
+            return
+        for name, workflow in self.protocols.items():
+            self._session.save_process(name, self._render_new_process_script(name, workflow, self.working_dir))
+        if self._session.manifest is not None:
+            self._session.manifest.processes_order = list(self.protocols.keys())
+
+    @staticmethod
+    def _render_main_parameters_script(working_dir: Path) -> str:
+        return render_python_script(
+            script="parameter",
+            overwrite={
+                "---DATA---": datetime.now(timezone.utc).isoformat(),
+                "---PROJECT_NAME---": working_dir.name,
+            },
+        )
+
+    def _render_new_process_script(self, name: str, workflow: ProcessWorkflow, working_dir: Path) -> str:
+        class_name = name.replace("_", " ").title().replace(" ", "") + "Process"
+        template = render_python_script(
+            script="process",
+            overwrite={
+                "---DATE---": datetime.now(timezone.utc).isoformat(),
+                "---PROJECT_NAME---": working_dir.name,
+                "---PROCESS_NAME---": name,
+                "---CLASS_NAME---": class_name,
+                "---PROCESS_LABEL---": name,
+                "---PROCESS_DESCRIPTION---": "",
+            },
+        )
+        workflow_def = self._render_workflow_definition(workflow)
+        return template.replace("        ---WORKFLOW_DEFINITION---", workflow_def)
+
+    @staticmethod
+    def _render_workflow_definition(workflow: ProcessWorkflow) -> str:
+        indent = "        "
+        sections = (
+            [block.to_script(indent) for _, block in workflow.iter_blocks()]
+            + [conn.to_script(start, end, indent) for start, end, conn in workflow.iter_connections()]
+        )
+        return "\n\n".join(sections) if sections else f"{indent}pass"
+
+    def _build_connectivity_data(self) -> dict:
+        existing: dict[str, dict] = {}
+        server_url = ""
+        if self._session is not None:
+            raw = self._session.load_connectivity()
+            server_url = raw.get("server_url", "")
+            for assoc in raw.get("associations", []):
+                existing[assoc["component"]] = assoc
+        associations = [
+            existing.get(name, {"component": name, "device_name": "", "device_url": ""})
+            for name in self.components
+        ]
+        return {"server_url": server_url, "associations": associations}
 
     def _build_draw_data(self) -> dict:
         components = [
