@@ -188,7 +188,7 @@ class SetupWindow(MainWindowBase):
             icon=FluentIcon.SAVE,
             text="Save",
             onClick=self.save,
-            position=NavigationItemPosition.TOP,
+            position=NavigationItemPosition.BOTTOM,
             tooltip="Save the graph",
         )
 

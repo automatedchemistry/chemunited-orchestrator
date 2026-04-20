@@ -7,3 +7,4 @@ from chemunited.qt.elements.component.graph_item import GraphComponent
 class PhotoSensor(GraphComponent[NeutralComponentData]):
     METADATA: ClassVar[type[NeutralComponentData]] = NeutralComponentData
     BASEMODE: ClassVar[type[ComponentMode]] = ComponentMode
+    SVG_SCALE: ClassVar[float] = 0.5

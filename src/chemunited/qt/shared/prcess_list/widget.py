@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import QFrame, QHBoxLayout, QSizePolicy, QSpacerItem, QVBoxLayout
 from qfluentwidgets import PushButton
 
@@ -31,7 +31,7 @@ class ProcessWidget(QFrame):
         separator.setFixedHeight(1)
         outer.addWidget(separator)
 
-        self._btn_layout = QHBoxLayout()
+        self._btn_layout = QVBoxLayout()
         self._btn_layout.setContentsMargins(8, 6, 8, 6)
         self._btn_layout.setSpacing(4)
         self._btn_layout.addItem(
@@ -44,7 +44,7 @@ class ProcessWidget(QFrame):
         btn.setToolTip(tip)
         btn.clicked.connect(callable)
         count = self._btn_layout.count()
-        self._btn_layout.insertWidget(count - 1, btn)
+        self._btn_layout.insertWidget(count - 1, btn, alignment=Qt.AlignCenter)
         return btn
 
     def add_separator(self) -> None:
@@ -53,7 +53,7 @@ class ProcessWidget(QFrame):
         sep.setFrameShadow(QFrame.Sunken)
         sep.setFixedWidth(1)
         count = self._btn_layout.count()
-        self._btn_layout.insertWidget(count - 1, sep)
+        self._btn_layout.insertWidget(count - 1, sep, alignment=Qt.AlignCenter)
 
     def sync_list(self):
         self._list.sync()

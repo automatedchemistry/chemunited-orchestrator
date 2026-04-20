@@ -112,6 +112,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
         export_destination = export_destination or self._session.source_file
         self._save_platform_svg()
         self._session.save_draw(self._build_draw_data())
+        # TODO: save protocols
         self._session.export_chemunited(export_destination)
 
         if comment:

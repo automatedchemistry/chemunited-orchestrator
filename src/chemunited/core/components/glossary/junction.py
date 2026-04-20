@@ -56,7 +56,7 @@ class JunctionData(ComponentData):
     @override
     def internal_structure(self):
         self.port_pairs = [(i + 1, 0) for i in range(self.number_ports)]
-        self.ports_by_number = {0: Port(number=0, component=self.name)}
+        self.ports_by_number = {0: Port(number=0, component=self.name, show_in_graph=False)}
         self.internal_edges = {}
         self.internal_inventories = {}
 
