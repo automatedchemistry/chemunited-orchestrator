@@ -16,6 +16,7 @@ from chemunited.qt.elements.connection.connection import (
 )
 from chemunited.qt.shared.enums import SetupStepMode
 from chemunited.qt.shared.graph import GraphCore, SceneCore
+from chemunited.qt.shared.graph_objects.custom_path import DraggablePoint
 from chemunited.qt.shared.icon import OrchestratorIcon
 
 from .tree_add import TreeAddItem
@@ -24,6 +25,7 @@ if TYPE_CHECKING:
     from ..setup import SetupWindow
 
 QT_STRONG_FOCUS = getattr(Qt, "StrongFocus")
+FRONT_SCENE_Z_VALUE = 1_000
 
 
 class DrawGraphicView(GraphCore):
@@ -61,6 +63,11 @@ class DrawGraphicView(GraphCore):
         self._candidate = port
         if port is not None:
             port.setEvidence(True)
+
+    def _bring_points_to_front(self) -> None:
+        for item in self._scene().items():
+            if isinstance(item, (ConnectionPoint, DraggablePoint)):
+                item.setZValue(FRONT_SCENE_Z_VALUE)
 
     def _cleanup(self) -> None:
         if self._temp_connection is not None:
@@ -317,3 +324,8 @@ class DrawGraphicView(GraphCore):
             )
 
         event.acceptProposedAction()
+
+    @override
+    def reset_view(self):
+        self.recenter_view()
+        self._bring_points_to_front()
