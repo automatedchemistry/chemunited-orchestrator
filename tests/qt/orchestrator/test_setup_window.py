@@ -278,6 +278,39 @@ class TestAddComponent:
         )
         assert '__process_label__ = "ReactRenamed"' in renamed_content
 
+    def test_remove_process_deletes_existing_saved_process_file(
+        self, window: SetupWindow, tmp_path
+    ):
+        working_dir = tmp_path / "demo"
+        session = ProjectSession()
+        session.new(name="demo", location=tmp_path, init_git=False)
+        window.orchestrator.working_dir = working_dir
+        window.orchestrator._session = session
+        window.orchestrator.add_process("React")
+        window.orchestrator.save()
+
+        window.orchestrator.remove_process("React")
+
+        assert "React" not in window.orchestrator.protocols
+        assert not (working_dir / "protocols" / "React.py").exists()
+        assert session.list_processes() == []
+
+    def test_remove_process_without_saved_file_does_not_create_files(
+        self, window: SetupWindow, tmp_path
+    ):
+        working_dir = tmp_path / "demo"
+        session = ProjectSession()
+        session.new(name="demo", location=tmp_path, init_git=False)
+        window.orchestrator.working_dir = working_dir
+        window.orchestrator._session = session
+        window.orchestrator.add_process("React")
+
+        window.orchestrator.remove_process("React")
+
+        assert "React" not in window.orchestrator.protocols
+        assert not (working_dir / "protocols" / "React.py").exists()
+        assert session.source_file is None
+
     def test_build_draw_data_persists_current_component_geometry(
         self, window: SetupWindow
     ):

@@ -63,7 +63,6 @@ class OrchestratorProtocols(OrchestratorDraw):
         self.protocols[new_name] = self.protocols.pop(old_name)
         self.parent_ref.workflows_protocol.rename_process(old_name, new_name)
         self.parent_ref.protocols_widget.sync_list()
-        
 
     @pyqtSlot(str)
     def remove_process(self, name: str) -> None:

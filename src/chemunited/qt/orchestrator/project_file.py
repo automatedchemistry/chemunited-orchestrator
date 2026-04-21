@@ -5,6 +5,7 @@ from pathlib import Path
 
 from loguru import logger
 from PyQt5.QtWidgets import QFileDialog, QMessageBox
+from PyQt5.QtCore import pyqtSlot
 
 from chemunited.qt.project.manifest import ProjectManifest
 from chemunited.qt.project.platform_svg import (
@@ -19,6 +20,7 @@ from chemunited.qt.shared.enums import WindowCategory
 
 from .draw import call_component_model
 from .execution import OrchestratorExecution
+from .protocols import is_valid_name
 
 
 class OrchestratorProjectFile(OrchestratorExecution):
@@ -134,11 +136,43 @@ class OrchestratorProjectFile(OrchestratorExecution):
         if self._session.source_file is not None:
             self._record_recent_project(self._session.source_file)
 
+    @pyqtSlot(str, str)
     def rename_process(self, old_name: str, new_name: str) -> None:
-        if old_name in self.protocols or new_name not in self.protocols:
+        # override OrchestratorProtocols.rename_process
+        if not is_valid_name(new_name):
+            self._warn_user(
+                f"Invalid name {new_name!r}. Only letters, numbers, _ and - are allowed."
+            )
             return
+        if old_name not in self.protocols:
+            logger.error(f"Process not found: {old_name!r}")
+            return
+        if new_name in self.protocols:
+            self._warn_user(f"A process named {new_name!r} already exists.")
+            return
+
+        if self._session is None or self.working_dir is None:
+            super().rename_process(old_name, new_name)
+            self.save()
+            return
+
+        saved_processes = set(self._session.list_processes())
+        if old_name not in saved_processes:
+            super().rename_process(old_name, new_name)
+            self.save()
+            return
+
         if self._persist_renamed_process_file(old_name, new_name):
             super().rename_process(old_name, new_name)
+
+    @pyqtSlot(str)
+    def remove_process(self, name: str) -> None:
+        # override OrchestratorProtocols.remove_process
+        if name not in self.protocols:
+            logger.error(f"Process not found: {name!r}")
+            return
+        if self._persist_removed_process_file(name):
+            super().remove_process(name)
 
     def _select_project_file(
         self,
@@ -167,16 +201,9 @@ class OrchestratorProjectFile(OrchestratorExecution):
         return path
 
     def _persist_renamed_process_file(self, old_name: str, new_name: str) -> bool:
-        if self._session is None or self.working_dir is None:
-            self.save()
-            return True
-
-        saved_processes = set(self._session.list_processes())
-        if old_name not in saved_processes:
-            self.save()
-            return True
-
         try:
+            if self._session is None:
+                return False
             self._session.rename_process(old_name, new_name)
         except Exception as exc:
             logger.bind(window=WindowCategory.SETUP).warning(
@@ -186,6 +213,27 @@ class OrchestratorProjectFile(OrchestratorExecution):
             self._warn_user(
                 "The process was not renamed in the editor, and the saved project "
                 "file could not be updated."
+            )
+            return False
+        return True
+
+    def _persist_removed_process_file(self, name: str) -> bool:
+        if self._session is None or self.working_dir is None:
+            return True
+
+        saved_processes = set(self._session.list_processes())
+        if name not in saved_processes:
+            return True
+
+        try:
+            self._session.delete_process(name)
+        except Exception as exc:
+            logger.bind(window=WindowCategory.SETUP).warning(
+                f"Could not delete saved process file {name!r}: {exc}"
+            )
+            self._warn_user(
+                "The process was not removed in the editor because the saved "
+                "project file could not be deleted."
             )
             return False
         return True
