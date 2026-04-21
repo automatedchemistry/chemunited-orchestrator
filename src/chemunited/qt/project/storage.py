@@ -362,7 +362,7 @@ def _render_process_script(
 def _render_build_workflow_method(workflow: ProcessWorkflow) -> str:
     workflow_definition = _render_workflow_definition(workflow)
     return (
-        "def build_workflow(self) -> nx.DiGraph:\n"
+        "    def build_workflow(self) -> nx.DiGraph:\n"
         "        graph = nx.DiGraph()\n\n"
         f"{workflow_definition}\n\n"
         "        return graph"
