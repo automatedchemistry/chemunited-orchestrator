@@ -15,6 +15,7 @@ from typing import Annotated, override
 
 import numpy as np
 from pydantic import Field
+from typing import ClassVar
 
 from chemunited.core.common.enums import GroupParameterCategory
 from chemunited.core.utils.internal_quantity import (
@@ -24,6 +25,7 @@ from chemunited.core.utils.internal_quantity import (
 
 from ..component import ComponentData, ComponentMode
 from ..internals import InternalEdge, Port
+from ..enums import ComponentType
 
 
 class PlugFlowMode(ComponentMode):
@@ -58,7 +60,7 @@ class PlugFlowComponentData(ComponentData):
     port 2 (outlet). Edge length and diameter are updated by
     sync_internal_state() when the user changes geometry in the GUI.
     """
-
+    COMPONENT_TYPE: ClassVar[ComponentType] = ComponentType.UTENSIL
     length: ChemUnitQuantity = ChemUnitQuantity("100 mm")
     diameter: ChemUnitQuantity = ChemUnitQuantity("1 mm")
 

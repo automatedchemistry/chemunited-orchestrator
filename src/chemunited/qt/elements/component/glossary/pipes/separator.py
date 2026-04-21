@@ -2,9 +2,11 @@ from typing import ClassVar
 
 from chemunited.core.components import ComponentData, ComponentMode
 from chemunited.qt.elements.component.graph_item import GraphComponent
+from chemunited.core.components.enums import ComponentType
 
 
 class Separator(GraphComponent[ComponentData]):
+    COMPONENT_TYPE: ClassVar[ComponentType] = ComponentType.UTENSIL
     METADATA: ClassVar[type[ComponentData]] = ComponentData
     BASEMODE: ClassVar[type[ComponentMode]] = ComponentMode
 

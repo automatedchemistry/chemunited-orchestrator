@@ -15,7 +15,7 @@ Sim: all JUNCTION edges are always active — no switching logic required.
 """
 
 from dataclasses import dataclass
-from typing import override
+from typing import override, ClassVar
 
 import numpy as np
 from pydantic import Field
@@ -23,7 +23,7 @@ from pydantic import Field
 from chemunited.core.common.enums import GroupParameterCategory
 
 from ..component import ComponentData, ComponentMode
-from ..enums import InternalEdgeRole
+from ..enums import InternalEdgeRole, ComponentType
 from ..internals import InternalEdge, Port
 
 
@@ -49,7 +49,7 @@ class JunctionData(ComponentData):
     via a JUNCTION edge. Hub port 0 is always open and never carries an
     explicit boundary condition — its pressure is solved by the network.
     """
-
+    COMPONENT_TYPE: ClassVar[ComponentType] = ComponentType.UTENSIL
     number_ports: int = 3
     internal_radius: float = 30
 

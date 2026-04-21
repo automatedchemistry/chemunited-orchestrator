@@ -11,7 +11,7 @@ Sim: DigitalTwinAdapter reads InventoryNode initial conditions to seed runtime
 """
 
 from dataclasses import dataclass
-from typing import Annotated, override
+from typing import Annotated, override, ClassVar
 
 from pydantic import Field
 
@@ -110,8 +110,7 @@ class VesselComponentData(ComponentData):
 
     A HEAT port is always added as the last port for thermal connections.
     """
-
-    COMPONENT_TYPE = ComponentType.UTENSIL
+    COMPONENT_TYPE: ClassVar[ComponentType] = ComponentType.UTENSIL
     capacity: ChemUnitQuantity = ChemUnitQuantity("1 ml")
     top_access: int = 1
     bottom_access: int = 1

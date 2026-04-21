@@ -11,6 +11,7 @@ from chemunited.qt.elements.component.component_parts import SvgLayer
 from chemunited.qt.elements.component.graph_item import GraphComponent
 from chemunited.qt.shared.graph_objects.custom_path import PathElementItem
 from chemunited.qt.utils.math_functions import build_snake_path
+from chemunited.core.components.enums import ComponentType
 
 
 class FlowReactorMode(PlugFlowMode):
@@ -28,6 +29,7 @@ class FlowReactorMode(PlugFlowMode):
 
 
 class FlowReactorData(PlugFlowComponentData):
+    COMPONENT_TYPE: ClassVar[ComponentType] = ComponentType.ELECTRONIC
     heat_exchange: bool = True
 
 
