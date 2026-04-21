@@ -16,6 +16,8 @@ from .orchestrator import Orchestrator
 from .protocols.graph import ProtocolGraphicView
 from .protocols.process_list import ProtocolsWidget
 from .protocols.workflows.workflow_widget import WorkflowsWidget
+from .pre_run.pre_run_frame import PreRunFrame
+from .connectivity.graph import ConnectivityGraphicView
 from .shared.editor.protocols.command_list import CommandList
 from .shared.enums import WindowCategory
 from .shared.graph import SceneCore
@@ -51,6 +53,16 @@ class SetupWindow(MainWindowBase):
         self.protocolGraph = ProtocolGraphicView(self.scene_attribute, self)
         self.workflows_protocol = WorkflowsWidget(self)
         self.command_list = CommandList(self)
+
+        # Connectivity frame
+        self.connectivityFrame = FrameBase(
+            parent=self,
+            classification=SetupStepMode.CONNECTIVITY,
+        )
+        self.connectivityGraph = ConnectivityGraphicView(self.scene_attribute, self)
+
+        # Pre-run frame
+        self.preRunFrame = PreRunFrame(self)
 
         # Main Orchestrator Object
         # It depends on drawGraph being available during construction.
@@ -212,6 +224,38 @@ class SetupWindow(MainWindowBase):
             objectName="protocolFrame",
             text="Protocol",
             icon=FluentIcon.MOVIE,
+        )
+
+        self.connectivityFrame.setGraphWidget(self.connectivityGraph)
+
+        self.connectivityFrame.addNavigationAction(
+            icon=OrchestratorIcon.HOME,
+            text="Home",
+            onClick=self.recenter_views,
+            position=NavigationItemPosition.TOP,
+            tooltip="Recenter the view",
+        )
+
+        self.connectivityFrame.addNavigationAction(
+            icon=FluentIcon.SAVE,
+            text="Save",
+            onClick=self.save,
+            position=NavigationItemPosition.BOTTOM,
+            tooltip="Save the graph",
+        )
+
+        self.SegmentWindow.addSubInterface(
+            widget=self.connectivityFrame,
+            objectName="connectivityFrame",
+            text="Connectivity",
+            icon=FluentIcon.CONNECT,
+        )
+
+        self.SegmentWindow.addSubInterface(
+            widget=self.preRunFrame,
+            objectName="preRunFrame",
+            text="Pre-run",
+            icon=FluentIcon.ACCEPT_MEDIUM,
         )
 
         self.addSubInterface(
