@@ -38,8 +38,11 @@ def call_component_model(figure: str) -> type[BaseModel]:
     return components[figure].BASEMODE
 
 
-def _log_draw_error(parent_ref, message: str) -> None:
-    logger.bind(window=parent_ref.WINDOW_TYPE).error(message)
+def _log_draw_error(parent_ref, message: str, exc: Exception | None = None) -> None:
+    bound_logger = logger.bind(window=parent_ref.WINDOW_TYPE)
+    if exc is not None:
+        bound_logger = bound_logger.opt(exception=exc)
+    bound_logger.error(message)
 
 
 class OrchestratorDraw(OrchestratorCore):
@@ -70,7 +73,7 @@ class OrchestratorDraw(OrchestratorCore):
         try:
             mode_class = call_component_model(figure)
         except AttributeError as exc:
-            _log_draw_error(self.parent_ref, str(exc))
+            _log_draw_error(self.parent_ref, str(exc), exc)
             return
         suggested_name = self._suggest_name(figure)
 

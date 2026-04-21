@@ -79,7 +79,7 @@ def write_python_script(
         formatted_code = black.format_str(raw_code, mode=mode)
         file_path.write_text(formatted_code, encoding="utf-8")
     except Exception as e:
-        logger.error(f"[WARN] Black formatting failed, crude version kept: {e}")
+        logger.opt(exception=e).error("Black formatting failed, crude version kept.")
 
 
 if __name__ == "__main__":

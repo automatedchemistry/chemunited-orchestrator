@@ -41,8 +41,23 @@ class OrchestratorCore(QObject):
 
     # Basic notifications - Gui inspect reports
 
+    @staticmethod
+    def _format_infor_flyout_content(r: dict[str, Any]) -> str:
+        message = str(r.get("message", "") or "")
+        exc = r.get("exception")
+        if exc is None:
+            return message
+
+        exc_type_obj = getattr(exc, "type", None)
+        exc_type = exc_type_obj.__name__ if exc_type_obj is not None else "Exception"
+        exc_value = str(getattr(exc, "value", "") or "").strip()
+        summary = exc_type if not exc_value else f"{exc_type}: {exc_value}"
+        if summary and summary not in message:
+            return f"{message}\n{summary}\nSee Detailed Records for traceback."
+        return f"{message}\nSee Detailed Records for traceback."
+
     def _build_infor_flyout(self, r: dict[str, Any]):
-        message = r.get("message", "")
+        message = self._format_infor_flyout_content(r)
         self.last_log = message
         level = str(r.get("level").name).lower()  # type:ignore[union-attr]
         duration = r.get("extra", {}).get("duration", 4000)

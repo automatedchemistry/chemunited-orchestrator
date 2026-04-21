@@ -75,7 +75,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
             draw_data = session.load_draw()
             process_classes = session.load_process_classes()
         except Exception as exc:
-            logger.bind(window=WindowCategory.SETUP).error(
+            logger.bind(window=WindowCategory.SETUP).opt(exception=exc).error(
                 f"Could not open project '{path.name}': {exc}"
             )
             return
@@ -212,7 +212,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
                 return False
             self._session.rename_process(old_name, new_name)
         except Exception as exc:
-            logger.bind(window=WindowCategory.SETUP).warning(
+            logger.bind(window=WindowCategory.SETUP).opt(exception=exc).warning(
                 "Could not rename saved process file "
                 f"{old_name!r} -> {new_name!r}: {exc}"
             )
@@ -234,7 +234,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
         try:
             self._session.delete_process(name)
         except Exception as exc:
-            logger.bind(window=WindowCategory.SETUP).warning(
+            logger.bind(window=WindowCategory.SETUP).opt(exception=exc).warning(
                 f"Could not delete saved process file {name!r}: {exc}"
             )
             self._warn_user(
@@ -300,7 +300,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
                 self.add_component(**self._validated_component_payload(dict(component)))
             except Exception as exc:
                 name = dict(component).get("name", "unknown")
-                logger.bind(window=WindowCategory.SETUP).warning(
+                logger.bind(window=WindowCategory.SETUP).opt(exception=exc).warning(
                     f"Skipped component '{name}': {exc}"
                 )
 
@@ -308,7 +308,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
             try:
                 self._restore_connection(dict(connection))
             except Exception as exc:
-                logger.bind(window=WindowCategory.SETUP).warning(
+                logger.bind(window=WindowCategory.SETUP).opt(exception=exc).warning(
                     f"Skipped connection: {exc}"
                 )
 
@@ -355,7 +355,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
             try:
                 workflow = self._workflow_from_process_class(name, cls)
             except Exception as exc:
-                logger.bind(window=WindowCategory.SETUP).warning(
+                logger.bind(window=WindowCategory.SETUP).opt(exception=exc).warning(
                     f"Could not restore protocol {name!r}: {exc}"
                 )
                 continue

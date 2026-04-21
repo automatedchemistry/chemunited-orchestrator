@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import traceback as traceback_module
 from collections import deque
 from datetime import datetime
 from html import escape
@@ -87,6 +88,27 @@ def _severity_styles(sev_key: str) -> dict[str, str]:
     resolved["developer_border"] = developer_border
     resolved["meta_fg"] = meta_fg
     return resolved
+
+
+def _format_exception_traceback(exc: Any) -> str:
+    tb = getattr(exc, "traceback", None)
+    if tb is None:
+        return ""
+
+    exc_type = getattr(exc, "type", None)
+    exc_value = getattr(exc, "value", None)
+
+    try:
+        formatted = "".join(
+            traceback_module.format_exception(exc_type, exc_value, tb)
+        ).strip()
+    except Exception:
+        try:
+            formatted = "".join(traceback_module.format_tb(tb)).strip()
+        except Exception:
+            formatted = str(tb).strip()
+
+    return formatted
 
 
 class FrameLoggings(QFrame):
@@ -293,7 +315,7 @@ class FrameLoggings(QFrame):
 
             tb = getattr(exc, "traceback", None)
             if tb is not None:
-                tb_str = escape(str(tb))
+                tb_str = escape(_format_exception_traceback(exc))
                 traceback_block = f"""
                 <div class="msg"><b>Traceback</b>:</div>
                 <pre>{tb_str}</pre>
