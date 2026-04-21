@@ -16,7 +16,7 @@ from chemunited.workflow import (
 )
 
 if TYPE_CHECKING:
-    from ..protocols.main_parameters import MainParameters
+    from .main_parameters import MainParameter
 
 
 # ── Process configuration ──────────────────────────────────────────────────────

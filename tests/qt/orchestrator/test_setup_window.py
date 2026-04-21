@@ -217,6 +217,24 @@ class TestAddComponent:
         with zipfile.ZipFile(tmp_path / "demo.chemunited") as archive:
             assert "draw/platform.svg" in archive.namelist()
 
+    def test_save_does_not_overwrite_existing_process_file(
+        self, window: SetupWindow, tmp_path
+    ):
+        working_dir = tmp_path / "demo"
+        session = ProjectSession()
+        session.new(name="demo", location=tmp_path, init_git=False)
+        existing_process = working_dir / "protocols" / "React.py"
+        existing_process.parent.mkdir(parents=True, exist_ok=True)
+        existing_content = "# keep existing process implementation\n"
+        existing_process.write_text(existing_content, encoding="utf-8")
+        window.orchestrator.working_dir = working_dir
+        window.orchestrator._session = session
+        window.orchestrator.add_process("React")
+
+        window.orchestrator.save()
+
+        assert existing_process.read_text(encoding="utf-8") == existing_content
+
     def test_build_draw_data_persists_current_component_geometry(
         self, window: SetupWindow
     ):

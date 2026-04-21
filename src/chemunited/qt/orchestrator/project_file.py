@@ -327,8 +327,17 @@ class OrchestratorProjectFile(OrchestratorExecution):
     def _save_protocols(self) -> None:
         if self._session is None or self.working_dir is None:
             return
+        existing_processes = set(self._session.list_processes())
         for name, workflow in self.protocols.items():
-            self._session.save_process(name, self._render_new_process_script(name, workflow, self.working_dir))
+            # Project save may scaffold a new process file, but it should not
+            # overwrite an existing implementation module.
+            if name in existing_processes:
+                continue
+            self._session.save_process(
+                name,
+                self._render_new_process_script(name, workflow, self.working_dir),
+            )
+            existing_processes.add(name)
         if self._session.manifest is not None:
             self._session.manifest.processes_order = list(self.protocols.keys())
 
