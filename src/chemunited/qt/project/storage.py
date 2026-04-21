@@ -186,20 +186,21 @@ def rename_process(working_dir: Path, old_name: str, new_name: str) -> None:
     old_path = working_dir / "protocols" / f"{old_name}.py"
     new_path = working_dir / "protocols" / f"{new_name}.py"
     if old_path.exists():
-        old_path.rename(new_path)
+        if new_path.exists():
+            raise FileExistsError(f"Process file already exists: {new_path}")
+        content = _retitle_process_content(
+            old_path.read_text(encoding="utf-8"),
+            old_name,
+            new_name,
+        )
+        new_path.write_text(content, encoding="utf-8")
+        old_path.unlink()
     _refresh_protocols_init(working_dir)
 
 
 def duplicate_process(working_dir: Path, source_name: str, new_name: str) -> None:
     content = load_process(working_dir, source_name)
-    # Update the class name inside the file to match the new name
-    old_class = _class_name(source_name)
-    new_class = _class_name(new_name)
-    content = content.replace(old_class, new_class)
-    content = content.replace(
-        f'__process_label__ = "{source_name}"',
-        f'__process_label__ = "{new_name}"',
-    )
+    content = _retitle_process_content(content, source_name, new_name)
     save_process(working_dir, new_name, content)
 
 
@@ -295,3 +296,21 @@ def _refresh_protocols_init(working_dir: Path) -> None:
 def _class_name(process_name: str) -> str:
     """react -> ReactProcess,  my_process -> MyProcessProcess"""
     return process_name.replace("_", " ").title().replace(" ", "") + "Process"
+
+
+def _retitle_process_content(
+    content: str, source_name: str, new_name: str
+) -> str:
+    old_class = _class_name(source_name)
+    new_class = _class_name(new_name)
+    updated = content.replace(old_class, new_class)
+    updated = updated.replace(
+        f"# Process name: {source_name}",
+        f"# Process name: {new_name}",
+    )
+    updated = updated.replace(f'"""{source_name}"""', f'"""{new_name}"""')
+    updated = updated.replace(
+        f'__process_label__ = "{source_name}"',
+        f'__process_label__ = "{new_name}"',
+    )
+    return updated

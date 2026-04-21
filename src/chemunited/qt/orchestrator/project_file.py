@@ -134,6 +134,12 @@ class OrchestratorProjectFile(OrchestratorExecution):
         if self._session.source_file is not None:
             self._record_recent_project(self._session.source_file)
 
+    def rename_process(self, old_name: str, new_name: str) -> None:
+        if old_name in self.protocols or new_name not in self.protocols:
+            return
+        if self._persist_renamed_process_file(old_name, new_name):
+            super().rename_process(old_name, new_name)
+
     def _select_project_file(
         self,
         title: str,
@@ -159,6 +165,30 @@ class OrchestratorProjectFile(OrchestratorExecution):
         if path.suffix.lower() != ".chemunited":
             return path.with_suffix(".chemunited")
         return path
+
+    def _persist_renamed_process_file(self, old_name: str, new_name: str) -> bool:
+        if self._session is None or self.working_dir is None:
+            self.save()
+            return True
+
+        saved_processes = set(self._session.list_processes())
+        if old_name not in saved_processes:
+            self.save()
+            return True
+
+        try:
+            self._session.rename_process(old_name, new_name)
+        except Exception as exc:
+            logger.bind(window=WindowCategory.SETUP).warning(
+                "Could not rename saved process file "
+                f"{old_name!r} -> {new_name!r}: {exc}"
+            )
+            self._warn_user(
+                "The process was not renamed in the editor, and the saved project "
+                "file could not be updated."
+            )
+            return False
+        return True
 
     def _save_platform_svg(self) -> None:
         if self.working_dir is None:

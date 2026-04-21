@@ -235,6 +235,49 @@ class TestAddComponent:
 
         assert existing_process.read_text(encoding="utf-8") == existing_content
 
+    def test_rename_process_saves_project_when_original_file_is_missing(
+        self, window: SetupWindow, tmp_path
+    ):
+        working_dir = tmp_path / "demo"
+        session = ProjectSession()
+        session.new(name="demo", location=tmp_path, init_git=False)
+        window.orchestrator.working_dir = working_dir
+        window.orchestrator._session = session
+        window.orchestrator.add_process("React")
+
+        window.orchestrator.rename_process("React", "ReactRenamed")
+
+        renamed_process = working_dir / "protocols" / "ReactRenamed.py"
+        assert renamed_process.exists()
+        assert not (working_dir / "protocols" / "React.py").exists()
+        assert session.source_file == tmp_path / "demo.chemunited"
+
+    def test_rename_process_updates_existing_saved_process_file(
+        self, window: SetupWindow, tmp_path
+    ):
+        working_dir = tmp_path / "demo"
+        session = ProjectSession()
+        session.new(name="demo", location=tmp_path, init_git=False)
+        window.orchestrator.working_dir = working_dir
+        window.orchestrator._session = session
+        window.orchestrator.add_process("React")
+        window.orchestrator.save()
+
+        window.orchestrator.rename_process("React", "ReactRenamed")
+
+        old_process = working_dir / "protocols" / "React.py"
+        renamed_process = working_dir / "protocols" / "ReactRenamed.py"
+        renamed_content = renamed_process.read_text(encoding="utf-8")
+
+        assert not old_process.exists()
+        assert renamed_process.exists()
+        assert 'class ReactRenamedProcessConfig(BaseModel):' in renamed_content
+        assert (
+            "class ReactRenamedProcess(Process[ReactRenamedProcessConfig]):"
+            in renamed_content
+        )
+        assert '__process_label__ = "ReactRenamed"' in renamed_content
+
     def test_build_draw_data_persists_current_component_geometry(
         self, window: SetupWindow
     ):
