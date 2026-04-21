@@ -405,17 +405,17 @@ class OrchestratorProjectFile(OrchestratorExecution):
     def _save_protocols(self) -> None:
         if self._session is None or self.working_dir is None:
             return
-        existing_processes = set(self._session.list_processes())
         for name, workflow in self.protocols.items():
-            # Project save may scaffold a new process file, but it should not
-            # overwrite an existing implementation module.
-            if name in existing_processes:
+            synced = self._session.sync_process(name, workflow)
+            if synced:
                 continue
-            self._session.save_process(
-                name,
-                self._render_new_process_script(name, workflow, self.working_dir),
+            logger.bind(window=WindowCategory.SETUP).warning(
+                f"Could not sync saved process file for {name!r}."
             )
-            existing_processes.add(name)
+            self._warn_user(
+                "A saved process file could not be updated safely. "
+                f"The existing file for {name!r} was left unchanged."
+            )
         if self._session.manifest is not None:
             self._session.manifest.processes_order = list(self.protocols.keys())
 
@@ -428,31 +428,6 @@ class OrchestratorProjectFile(OrchestratorExecution):
                 "---PROJECT_NAME---": working_dir.name,
             },
         )
-
-    def _render_new_process_script(self, name: str, workflow: ProcessWorkflow, working_dir: Path) -> str:
-        class_name = name.replace("_", " ").title().replace(" ", "") + "Process"
-        template = render_python_script(
-            script="process",
-            overwrite={
-                "---DATE---": datetime.now(timezone.utc).isoformat(),
-                "---PROJECT_NAME---": working_dir.name,
-                "---PROCESS_NAME---": name,
-                "---CLASS_NAME---": class_name,
-                "---PROCESS_LABEL---": name,
-                "---PROCESS_DESCRIPTION---": "",
-            },
-        )
-        workflow_def = self._render_workflow_definition(workflow)
-        return template.replace("        ---WORKFLOW_DEFINITION---", workflow_def)
-
-    @staticmethod
-    def _render_workflow_definition(workflow: ProcessWorkflow) -> str:
-        indent = "        "
-        sections = (
-            [block.to_script(indent) for _, block in workflow.iter_blocks()]
-            + [conn.to_script(start, end, indent) for start, end, conn in workflow.iter_connections()]
-        )
-        return "\n\n".join(sections) if sections else f"{indent}pass"
 
     def _build_connectivity_data(self) -> dict:
         existing: dict[str, dict] = {}

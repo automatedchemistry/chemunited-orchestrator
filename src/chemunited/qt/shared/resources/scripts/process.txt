@@ -40,6 +40,8 @@ class ---CLASS_NAME---(Process[---CLASS_NAME---Config]):
     __process_description__ = "---PROCESS_DESCRIPTION---"
 
     def build_workflow(self) -> nx.DiGraph:
+        """Build the workflow graph automatically."""
+        # Do not touch edit this method
         graph = nx.DiGraph()
 
         ---WORKFLOW_DEFINITION---

@@ -1,11 +1,13 @@
 from __future__ import annotations
 
+import ast
 import importlib.util
 import json
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
+from chemunited.qt.protocols.workflows import ProcessWorkflow
 from chemunited.qt.project.writer import render_python_script
 from chemunited.qt.utils.files import load_attribute
 
@@ -170,6 +172,30 @@ def save_process(working_dir: Path, process_name: str, content: str) -> None:
     _refresh_protocols_init(working_dir)
 
 
+def sync_process(
+    working_dir: Path,
+    process_name: str,
+    workflow: ProcessWorkflow,
+) -> bool:
+    path = working_dir / "protocols" / f"{process_name}.py"
+    if not path.exists():
+        save_process(
+            working_dir,
+            process_name,
+            _render_process_script(working_dir, process_name, workflow),
+        )
+        return True
+
+    original = path.read_text(encoding="utf-8")
+    updated = _sync_process_content(original, process_name, workflow)
+    if updated is None:
+        return False
+    if updated != original:
+        path.write_text(updated, encoding="utf-8")
+    _refresh_protocols_init(working_dir)
+    return True
+
+
 def load_process(working_dir: Path, process_name: str) -> str:
     path = working_dir / "protocols" / f"{process_name}.py"
     return path.read_text(encoding="utf-8") if path.exists() else ""
@@ -294,8 +320,357 @@ def _refresh_protocols_init(working_dir: Path) -> None:
 
 
 def _class_name(process_name: str) -> str:
-    """react -> ReactProcess,  my_process -> MyProcessProcess"""
-    return process_name.replace("_", " ").title().replace(" ", "") + "Process"
+    """react -> ReactProcess,  my_process -> MyProcessProcess,  ReactRenamed -> ReactRenamedProcess"""
+    parts = process_name.split("_")
+    return "".join(p[:1].upper() + p[1:] for p in parts if p) + "Process"
+
+
+def _render_process_script(
+    working_dir: Path,
+    process_name: str,
+    workflow: ProcessWorkflow,
+) -> str:
+    class_name = _class_name(process_name)
+    template = render_python_script(
+        script="process",
+        overwrite={
+            "---DATE---": datetime.now(timezone.utc).isoformat(),
+            "---PROJECT_NAME---": working_dir.name,
+            "---PROCESS_NAME---": process_name,
+            "---CLASS_NAME---": class_name,
+            "---PROCESS_LABEL---": process_name,
+            "---PROCESS_DESCRIPTION---": "",
+        },
+    )
+    workflow_definition = _render_workflow_definition(workflow)
+    content = template.replace("        ---WORKFLOW_DEFINITION---", workflow_definition)
+    method_block = _render_new_process_methods(workflow)
+    if not method_block:
+        return content
+    return content.replace(
+        "\n\n# =============================================",
+        f"\n\n{method_block}\n\n# =============================================",
+        1,
+    )
+
+
+def _render_build_workflow_method(workflow: ProcessWorkflow) -> str:
+    workflow_definition = _render_workflow_definition(workflow)
+    return (
+        "def build_workflow(self) -> nx.DiGraph:\n"
+        "        graph = nx.DiGraph()\n\n"
+        f"{workflow_definition}\n\n"
+        "        return graph"
+    )
+
+
+def _render_workflow_definition(workflow: ProcessWorkflow) -> str:
+    indent = "        "
+    sections = [block.to_script(indent) for _, block in workflow.iter_blocks()] + [
+        conn.to_script(start, end, indent)
+        for start, end, conn in workflow.iter_connections()
+    ]
+    return "\n\n".join(sections) if sections else f"{indent}pass"
+
+
+def _sync_process_content(
+    original: str,
+    process_name: str,
+    workflow: ProcessWorkflow,
+) -> str | None:
+    try:
+        tree = ast.parse(original)
+    except SyntaxError:
+        return None
+
+    class_name = _class_name(process_name)
+    class_node = next(
+        (
+            node
+            for node in tree.body
+            if isinstance(node, ast.ClassDef) and node.name == class_name
+        ),
+        None,
+    )
+    if class_node is None or not class_node.body:
+        return None
+
+    build_workflow_node = next(
+        (
+            node
+            for node in class_node.body
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and node.name == "build_workflow"
+        ),
+        None,
+    )
+    if build_workflow_node is None:
+        return None
+
+    previous_managed_methods = _extract_managed_methods(build_workflow_node)
+    if previous_managed_methods is None:
+        return None
+
+    new_managed_methods = _workflow_managed_methods(workflow)
+    return _rewrite_process_class(
+        original,
+        class_node,
+        build_workflow_node,
+        previous_managed_methods,
+        new_managed_methods,
+        workflow,
+    )
+
+
+def _extract_managed_methods(
+    build_workflow_node: ast.FunctionDef | ast.AsyncFunctionDef,
+) -> list[str] | None:
+    names: list[str] = []
+    saw_add_node = False
+
+    for node in ast.walk(build_workflow_node):
+        if not (
+            isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Attribute)
+            and node.func.attr == "add_node"
+        ):
+            continue
+        saw_add_node = True
+        method_name = _extract_method_name_from_add_node(node)
+        if method_name is None:
+            return None
+        if method_name not in names:
+            names.append(method_name)
+
+    return names if saw_add_node else []
+
+
+def _extract_method_name_from_add_node(node: ast.Call) -> str | None:
+    method_name: str | None = None
+    node_id: str | None = None
+
+    if node.args:
+        node_id = _string_constant(node.args[0])
+
+    for keyword in node.keywords:
+        if keyword.arg == "method":
+            method_name = _string_constant(keyword.value) or method_name
+            continue
+        if keyword.arg == "node_id":
+            node_id = _string_constant(keyword.value) or node_id
+            continue
+        if keyword.arg is None:
+            extracted = _extract_method_name_from_nodespec(keyword.value)
+            if extracted is None:
+                continue
+            extracted_method, extracted_node_id = extracted
+            method_name = extracted_method or method_name
+            node_id = extracted_node_id or node_id
+
+    return method_name or node_id
+
+
+def _extract_method_name_from_nodespec(
+    node: ast.AST,
+) -> tuple[str | None, str | None] | None:
+    for child in ast.walk(node):
+        if not (
+            isinstance(child, ast.Call)
+            and isinstance(child.func, ast.Name)
+            and child.func.id == "WorkflowNodeSpec"
+        ):
+            continue
+
+        method_name: str | None = None
+        node_id: str | None = None
+        for keyword in child.keywords:
+            if keyword.arg == "method":
+                method_name = _string_constant(keyword.value)
+            elif keyword.arg == "node_id":
+                node_id = _string_constant(keyword.value)
+        return method_name, node_id
+
+    return None
+
+
+def _string_constant(node: ast.AST) -> str | None:
+    if isinstance(node, ast.Constant) and isinstance(node.value, str):
+        return node.value
+    return None
+
+
+def _workflow_managed_methods(workflow: ProcessWorkflow) -> list[str]:
+    names: list[str] = []
+    for _, block in workflow.iter_blocks():
+        if not block.method or block.method in names:
+            continue
+        names.append(block.method)
+    return names
+
+
+def _rewrite_process_class(
+    original: str,
+    class_node: ast.ClassDef,
+    build_workflow_node: ast.FunctionDef | ast.AsyncFunctionDef,
+    previous_managed_methods: list[str],
+    new_managed_methods: list[str],
+    workflow: ProcessWorkflow,
+) -> str:
+    lines = original.splitlines(keepends=True)
+    body_items = list(class_node.body)
+    function_items = [
+        node
+        for node in body_items
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+    ]
+    existing_method_names = {node.name for node in function_items}
+    obsolete_methods = {
+        name
+        for name in previous_managed_methods
+        if name not in new_managed_methods and name in existing_method_names
+    }
+    preserved_managed_names = {
+        name
+        for name in previous_managed_methods
+        if name in new_managed_methods and name in existing_method_names
+    }
+    missing_methods = [
+        name for name in new_managed_methods if name not in existing_method_names
+    ]
+    stub_block = "\n\n".join(_render_method_stub(name) for name in missing_methods)
+
+    body_start = _node_start_offset(body_items[0], lines)
+    class_end = _node_end_offset(class_node, lines)
+    chunks = [original[:body_start]]
+    current = body_start
+
+    preserved_items = [
+        node
+        for node in function_items
+        if node.name in preserved_managed_names and node.name != "build_workflow"
+    ]
+    insert_after_item = preserved_items[-1] if preserved_items else None
+    build_index = body_items.index(build_workflow_node)
+    insert_before_item = None
+    if insert_after_item is None and stub_block:
+        insert_before_item = next(
+            (
+                node
+                for node in body_items[build_index + 1 :]
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+                and node.name not in obsolete_methods
+            ),
+            None,
+        )
+
+    inserted_stubs = False
+    for node in body_items:
+        start = _node_start_offset(node, lines)
+        end = _node_end_offset(node, lines)
+
+        if node is build_workflow_node:
+            line_start = _node_line_start_offset(node, lines)
+            chunks.append(original[current:line_start])
+            chunks.append(_render_build_workflow_method(workflow))
+            current = end
+            continue
+
+        if (
+            isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and node.name in obsolete_methods
+        ):
+            chunks.append(original[current:start])
+            current = end
+            continue
+
+        if node is insert_before_item and not inserted_stubs and stub_block:
+            line_start = _node_line_start_offset(node, lines)
+            chunks.append(original[current:line_start])
+            chunks.append(stub_block)
+            chunks.append("\n\n")
+            chunks.append(original[line_start:end])
+            current = end
+            inserted_stubs = True
+            continue
+
+        chunks.append(original[current:end])
+        current = end
+
+        if node is insert_after_item and not inserted_stubs and stub_block:
+            chunks.append("\n\n")
+            chunks.append(stub_block)
+            inserted_stubs = True
+
+    remainder = original[current:class_end]
+    if not inserted_stubs and stub_block:
+        chunks.append(remainder)
+        _append_separated_block(chunks, stub_block)
+        remainder = ""
+    else:
+        chunks.append(remainder)
+
+    chunks.append(original[class_end:])
+    return "".join(chunks)
+
+
+def _append_separated_block(chunks: list[str], block: str) -> None:
+    if chunks:
+        previous = chunks[-1]
+        if previous.endswith("\n\n"):
+            pass
+        elif previous.endswith("\n"):
+            chunks.append("\n")
+        else:
+            chunks.append("\n\n")
+        chunks.append(block)
+        return
+    chunks.append(block)
+
+
+def _node_start_offset(node: ast.AST, lines: list[str]) -> int:
+    decorators = getattr(node, "decorator_list", [])
+    start_node = decorators[0] if decorators else node
+    return _line_col_to_offset(lines, start_node.lineno, start_node.col_offset)
+
+
+def _node_line_start_offset(node: ast.AST, lines: list[str]) -> int:
+    decorators = getattr(node, "decorator_list", [])
+    start_node = decorators[0] if decorators else node
+    return _line_col_to_offset(lines, start_node.lineno, 0)
+
+
+def _node_end_offset(node: ast.AST, lines: list[str]) -> int:
+    return _line_col_to_offset(lines, node.end_lineno, node.end_col_offset)
+
+
+def _line_col_to_offset(lines: list[str], lineno: int, col_offset: int) -> int:
+    return sum(len(line) for line in lines[: lineno - 1]) + col_offset
+
+
+def _render_method_stub(method_name: str) -> str:
+    status_message = _default_status_message(method_name)
+    return (
+        f"    def {method_name}(self, ctx: NodeExecutionContext) -> bool:\n"
+        f'        ctx.runtime.status_message = "{status_message}"\n'
+        "        return True"
+    )
+
+
+def _default_status_message(method_name: str) -> str:
+    if method_name == "start":
+        return "Started."
+    if method_name == "finish":
+        return "Finished."
+    label = method_name.replace("_", " ").title()
+    return f"{label} ran."
+
+
+def _render_new_process_methods(workflow: ProcessWorkflow) -> str:
+    return "\n\n".join(
+        _render_method_stub(method_name)
+        for method_name in _workflow_managed_methods(workflow)
+        if method_name not in {"start", "finish"}
+    )
 
 
 def _retitle_process_content(

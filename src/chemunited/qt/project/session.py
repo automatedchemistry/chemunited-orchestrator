@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from .git_manager import GitManager
 from .manifest import ProjectManifest
@@ -19,8 +20,12 @@ from .storage import (
     save_draw,
     save_main_parameters,
     save_process,
+    sync_process,
     unpack,
 )
+
+if TYPE_CHECKING:
+    from chemunited.qt.protocols.workflows import ProcessWorkflow
 
 
 class ProjectSession:
@@ -110,6 +115,12 @@ class ProjectSession:
         save_process(self._require_working_dir(), process_name, content)
         if self.git:
             self.git.commit_process(process_name)
+
+    def sync_process(self, process_name: str, workflow: ProcessWorkflow) -> bool:
+        synced = sync_process(self._require_working_dir(), process_name, workflow)
+        if synced and self.git:
+            self.git.commit_process(process_name)
+        return synced
 
     def load_process(self, process_name: str) -> str:
         return load_process(self._require_working_dir(), process_name)

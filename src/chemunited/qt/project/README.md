@@ -122,6 +122,14 @@ A process file is generated from the `process.txt` Qt resource template
 when the user clicks **New Process**. After creation the user edits it
 directly in the script editor or any external IDE.
 
+On project save, ChemUnited treats process files in two modes:
+- if `protocols/<process>.py` does not exist yet, it scaffolds a new file
+  from the template;
+- if the file already exists, it updates the `build_workflow()` method in
+  place, preserves workflow-managed methods that still exist, adds default
+  stubs for newly introduced workflow methods, removes obsolete
+  workflow-managed methods, and leaves unrelated helper methods untouched.
+
 **Class naming convention:** `react.py` must contain `ReactProcess`.
 The rule is `process_name → title-case + "Process"`:
 
@@ -299,6 +307,7 @@ User clicks Save Protocol Script
         ↓
 manifest.json updated (last_modified)
 Refresh draw/setup.py and draw/platform.svg
+Sync each protocols/<process>.py file in place
 Pack working directory → my_experiment.chemunited
 (.git and .gitignore excluded from ZIP)
 ```
@@ -361,7 +370,7 @@ because device addresses are machine-specific.
 | Module | Responsibility |
 |---|---|
 | `project/manifest.py` | Read / write `manifest.json` |
-| `project/storage.py` | All file I/O — pack, unpack, draw, processes, parameters, connectivity |
+| `project/storage.py` | All file I/O — pack, unpack, draw, process sync/update, parameters, connectivity |
 | `project/platform_svg.py` | Export the current Qt platform scene to `draw/platform.svg` |
 | `project/git_manager.py` | All Git operations — init, commit, snapshot, status, remote |
 | `project/session.py` | Single entry point for the GUI — orchestrates storage + Git |

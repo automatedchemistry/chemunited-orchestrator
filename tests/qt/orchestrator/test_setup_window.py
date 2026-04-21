@@ -171,9 +171,22 @@ class TestAddComponent:
             def __init__(self, source_file):
                 self.source_file = source_file
                 self.export_destination = None
+                self.manifest = None
 
             def save_draw(self, draw_data):
                 self.draw_data = draw_data
+
+            def sync_process(self, _process_name, _workflow):
+                return True
+
+            def save_main_parameters(self, _content):
+                pass
+
+            def load_connectivity(self):
+                return {"server_url": "", "associations": []}
+
+            def save_connectivity(self, _data):
+                pass
 
             def export_chemunited(self, destination=None):
                 self.export_destination = destination
@@ -217,7 +230,7 @@ class TestAddComponent:
         with zipfile.ZipFile(tmp_path / "demo.chemunited") as archive:
             assert "draw/platform.svg" in archive.namelist()
 
-    def test_save_does_not_overwrite_existing_process_file(
+    def test_save_syncs_existing_process_file_in_place(
         self, window: SetupWindow, tmp_path
     ):
         working_dir = tmp_path / "demo"
@@ -225,15 +238,108 @@ class TestAddComponent:
         session.new(name="demo", location=tmp_path, init_git=False)
         existing_process = working_dir / "protocols" / "React.py"
         existing_process.parent.mkdir(parents=True, exist_ok=True)
-        existing_content = "# keep existing process implementation\n"
-        existing_process.write_text(existing_content, encoding="utf-8")
+        existing_process.write_text(
+            """
+from __future__ import annotations
+
+import networkx as nx
+from pydantic import BaseModel, ConfigDict
+
+from chemunited.workflow import (
+    NodeExecutionContext,
+    Process,
+    WorkflowEdgeSpec,
+    WorkflowNodeSpec,
+)
+
+
+class ReactProcessConfig(BaseModel):
+    model_config = ConfigDict(frozen=True)
+
+
+class ReactProcess(Process[ReactProcessConfig]):
+    \"\"\"React\"\"\"
+
+    __process_label__ = "React"
+    __process_description__ = ""
+
+    def build_workflow(self) -> nx.DiGraph:
+        graph = nx.DiGraph()
+
+        graph.add_node(
+            "start",
+            **WorkflowNodeSpec(
+                node_id="start",
+                method="start",
+                position=(0.0, 0.0),
+            ).model_dump(exclude_none=True),
+        )
+
+        graph.add_node(
+            "legacy_node",
+            **WorkflowNodeSpec(
+                node_id="legacy_node",
+                method="legacy_step",
+                position=(100.0, 0.0),
+            ).model_dump(exclude_none=True),
+        )
+
+        graph.add_node(
+            "end",
+            **WorkflowNodeSpec(
+                node_id="end",
+                method="finish",
+                position=(200.0, 0.0),
+            ).model_dump(exclude_none=True),
+        )
+
+        graph.add_edge(
+            "start",
+            "legacy_node",
+            **WorkflowEdgeSpec(
+                condition=True,
+            ).model_dump(exclude_none=True),
+        )
+
+        graph.add_edge(
+            "legacy_node",
+            "end",
+            **WorkflowEdgeSpec(
+                condition=True,
+            ).model_dump(exclude_none=True),
+        )
+
+        return graph
+
+    def legacy_step(self, ctx: NodeExecutionContext) -> bool:
+        ctx.runtime.status_message = "Legacy step"
+        return True
+
+    def _prepare_stock(self) -> str:
+        return "helper"
+""".strip()
+            + "\n",
+            encoding="utf-8",
+        )
         window.orchestrator.working_dir = working_dir
         window.orchestrator._session = session
         window.orchestrator.add_process("React")
+        workflow = window.orchestrator.protocols["React"]
+        workflow.add_block(
+            node_id="fresh_node",
+            method="fresh_step",
+            position=(100.0, 100.0),
+        )
+        workflow.add_connection("start", "fresh_node")
+        workflow.add_connection("fresh_node", "end")
 
         window.orchestrator.save()
 
-        assert existing_process.read_text(encoding="utf-8") == existing_content
+        updated = existing_process.read_text(encoding="utf-8")
+        assert '"fresh_node"' in updated
+        assert "def legacy_step(" not in updated
+        assert 'def fresh_step(self, ctx: NodeExecutionContext) -> bool:' in updated
+        assert 'def _prepare_stock(self) -> str:' in updated
 
     def test_rename_process_saves_project_when_original_file_is_missing(
         self, window: SetupWindow, tmp_path
