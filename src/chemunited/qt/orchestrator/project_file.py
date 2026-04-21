@@ -70,9 +70,15 @@ class OrchestratorProjectFile(OrchestratorExecution):
         self._record_recent_project(chemunited_path)
 
     def open_project(self, path: Path) -> None:
-        session = self._open_session(path)
-        draw_data = session.load_draw()
-        process_classes = session.load_process_classes()
+        try:
+            session = self._open_session(path)
+            draw_data = session.load_draw()
+            process_classes = session.load_process_classes()
+        except Exception as exc:
+            logger.bind(window=WindowCategory.SETUP).error(
+                f"Could not open project '{path.name}': {exc}"
+            )
+            return
 
         self._reset_project_state()
         self._session = session
@@ -290,10 +296,21 @@ class OrchestratorProjectFile(OrchestratorExecution):
 
     def _restore_draw_data(self, draw_data: dict) -> None:
         for component in draw_data.get("components", []):
-            self.add_component(**self._validated_component_payload(dict(component)))
+            try:
+                self.add_component(**self._validated_component_payload(dict(component)))
+            except Exception as exc:
+                name = dict(component).get("name", "unknown")
+                logger.bind(window=WindowCategory.SETUP).warning(
+                    f"Skipped component '{name}': {exc}"
+                )
 
         for connection in draw_data.get("connections", []):
-            self._restore_connection(dict(connection))
+            try:
+                self._restore_connection(dict(connection))
+            except Exception as exc:
+                logger.bind(window=WindowCategory.SETUP).warning(
+                    f"Skipped connection: {exc}"
+                )
 
     def _validated_component_payload(self, payload: dict) -> dict:
         payload.pop("type", None)

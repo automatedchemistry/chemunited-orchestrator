@@ -3,4 +3,4 @@ from chemunited.qt.shared.graph import GraphCore
 
 
 class ProtocolGraphicView(GraphCore):
-    MODE = SetupStepMode.DETAIL
+    MODE = SetupStepMode.PROTOCOLS

@@ -438,3 +438,75 @@ class ReactProcess(Process[ReactProcessConfig]):
 
         assert saved_component["position"] == [123.5, 456.25]
         assert saved_component["angle"] == 90
+
+    def test_segment_window_switching_updates_component_and_connection_modes(
+        self, window: SetupWindow, qtbot: QtBot
+    ):
+        window.orchestrator.add_component(
+            name="PumpA",
+            figure="HPLCPump",
+            position=(0.0, 0.0),
+        )
+        window.orchestrator.add_component(
+            name="PumpB",
+            figure="HPLCPump",
+            position=(200.0, 0.0),
+        )
+        window.orchestrator.add_connection(
+            origin="PumpA",
+            destiny="PumpB",
+            origin_port=2,
+            destiny_port=1,
+        )
+
+        component = window.orchestrator.components["PumpA"].graph
+        connection = window.orchestrator.connections["PumpA_2_PumpB_1"]
+        connection.addInflectionPoint()
+        qtbot.wait(0)
+
+        expected_port_visibility = {
+            port_num: port.show_in_graph
+            for port_num, port in window.orchestrator.components[
+                "PumpA"
+            ].inf.ports_by_number.items()
+        }
+
+        assert {
+            port_num: point.isVisible() for port_num, point in component._points.items()
+        } == expected_port_visibility
+        assert {
+            port_num: label.isVisible()
+            for port_num, label in component._port_labels.items()
+        } == expected_port_visibility
+        assert all(handle.isVisible() for handle in connection._handles)
+
+        window.SegmentWindow.switchTo(window.protocolFrame)
+        qtbot.wait(0)
+
+        assert {
+            port_num: point.isVisible() for port_num, point in component._points.items()
+        } == expected_port_visibility
+        assert {
+            port_num: label.isVisible()
+            for port_num, label in component._port_labels.items()
+        } == expected_port_visibility
+        assert all(not handle.isVisible() for handle in connection._handles)
+
+        window.SegmentWindow.switchTo(window.connectivityFrame)
+        qtbot.wait(0)
+
+        assert not any(point.isVisible() for point in component._points.values())
+        assert not any(label.isVisible() for label in component._port_labels.values())
+        assert all(not handle.isVisible() for handle in connection._handles)
+
+        window.SegmentWindow.switchTo(window.drawFrame)
+        qtbot.wait(0)
+
+        assert {
+            port_num: point.isVisible() for port_num, point in component._points.items()
+        } == expected_port_visibility
+        assert {
+            port_num: label.isVisible()
+            for port_num, label in component._port_labels.items()
+        } == expected_port_visibility
+        assert all(handle.isVisible() for handle in connection._handles)

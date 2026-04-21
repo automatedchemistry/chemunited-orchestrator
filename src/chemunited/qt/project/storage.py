@@ -58,7 +58,12 @@ def load_draw(working_dir: Path) -> dict:
         raise ValueError(f"Draw setup file must define build_draw(platform): {path}")
 
     recorder = _DrawRecorder()
-    build_draw(recorder)
+    try:
+        build_draw(recorder)
+    except Exception as exc:
+        raise ValueError(
+            f"Error in draw setup script '{path.name}': {type(exc).__name__}: {exc}"
+        ) from exc
     return recorder.data()
 
 

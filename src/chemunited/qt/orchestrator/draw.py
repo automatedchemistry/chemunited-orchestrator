@@ -38,6 +38,10 @@ def call_component_model(figure: str) -> type[BaseModel]:
     return components[figure].BASEMODE
 
 
+def _log_draw_error(parent_ref, message: str) -> None:
+    logger.bind(window=parent_ref.WINDOW_TYPE).error(message)
+
+
 class OrchestratorDraw(OrchestratorCore):
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -63,7 +67,11 @@ class OrchestratorDraw(OrchestratorCore):
         figure: str,
         position: tuple[float, float],
     ):
-        mode_class = call_component_model(figure)
+        try:
+            mode_class = call_component_model(figure)
+        except AttributeError as exc:
+            _log_draw_error(self.parent_ref, str(exc))
+            return
         suggested_name = self._suggest_name(figure)
 
         dialog = BaseModeDialog(
@@ -92,9 +100,11 @@ class OrchestratorDraw(OrchestratorCore):
         **kwargs,
     ):
         if not name:
-            raise ValueError("Component name is required")
+            _log_draw_error(self.parent_ref, "Component name is required.")
+            return
         if name in self.components:
-            raise ValueError(f"Component '{name}' already exists")
+            _log_draw_error(self.parent_ref, f"Component '{name}' already exists.")
+            return
 
         component = create_component(
             figure=figure,
@@ -111,7 +121,8 @@ class OrchestratorDraw(OrchestratorCore):
     @pyqtSlot(ConnectionPoint, ConnectionPoint)
     def request_add_connection(self, origin: ConnectionPoint, destiny: ConnectionPoint):
         if origin.parent_ref._data.name == destiny.parent_ref._data.name:
-            raise ValueError("Cannot connect a component to itself")
+            _log_draw_error(self.parent_ref, "Cannot connect a component to itself.")
+            return
 
         self.add_connection(
             origin=origin.parent_ref._data.name,
@@ -130,21 +141,27 @@ class OrchestratorDraw(OrchestratorCore):
     ):
         # Verify if the components do exist
         if origin not in self.components:
-            raise ValueError(f"Component '{origin}' does not exist")
+            _log_draw_error(self.parent_ref, f"Component '{origin}' does not exist.")
+            return
         if destiny not in self.components:
-            raise ValueError(f"Component '{destiny}' does not exist")
+            _log_draw_error(self.parent_ref, f"Component '{destiny}' does not exist.")
+            return
 
         # Verify if the ports do exist
         if origin_port not in self.components[origin].inf.ports_by_number:
-            raise ValueError(
-                f"Port '{origin_port}' does not exist in component '{origin}'"
+            _log_draw_error(
+                self.parent_ref,
+                f"Port '{origin_port}' does not exist in component '{origin}'.",
             )
+            return
         if destiny_port not in self.components[destiny].inf.ports_by_number:
-            raise ValueError(
-                f"Port '{destiny_port}' does not exist in component '{destiny}'"
+            _log_draw_error(
+                self.parent_ref,
+                f"Port '{destiny_port}' does not exist in component '{destiny}'.",
             )
+            return
 
-        # Verify if the origin and detination has the same category
+        # Verify if the origin and destination have the same category
         port_1_object = self.components[origin].inf.ports_by_number[origin_port]
         port_2_object = self.components[destiny].inf.ports_by_number[destiny_port]
         requested_classification = kwargs.get("classification")
@@ -157,10 +174,12 @@ class OrchestratorDraw(OrchestratorCore):
             requested_classification is None
             and port_1_object.category != port_2_object.category
         ):
-            raise ValueError(
-                "Origin and detination must have the same category. Now they are: "
-                f"{port_1_object.category.name} and {port_2_object.category.name}"
+            _log_draw_error(
+                self.parent_ref,
+                "Origin and destination must have the same category. "
+                f"Got: {port_1_object.category.name} and {port_2_object.category.name}.",
             )
+            return
 
         # Resolve the ConnectionPoint UI objects (needed for scenePos)
         origin_cp = self.components[origin].graph.get_connection_point(origin_port)
@@ -171,12 +190,14 @@ class OrchestratorDraw(OrchestratorCore):
                 kwargs.get("diameter", ChemUnitQuantity("1 mm")), default_unit="mm"
             )
             if diameter.to_base_units().magnitude <= 0:
-                raise ValueError("Diameter must be greater than 0")
+                _log_draw_error(self.parent_ref, "Diameter must be greater than 0.")
+                return
             length = ChemUnitQuantity.from_any(
                 kwargs.get("length", ChemUnitQuantity("100 mm")), default_unit="mm"
             )
             if length.to_base_units().magnitude <= 0:
-                raise ValueError("Length must be greater than 0")
+                _log_draw_error(self.parent_ref, "Length must be greater than 0.")
+                return
         else:
             length = ChemUnitQuantity("0 mm")
             diameter = ChemUnitQuantity("0 mm")
@@ -196,11 +217,13 @@ class OrchestratorDraw(OrchestratorCore):
         data = EdgeData.from_mode(mode)
 
         if data.name in self.connections:
-            raise ValueError(f"Connection '{data.name}' already exists")
+            _log_draw_error(self.parent_ref, f"Connection '{data.name}' already exists.")
+            return
 
         cls = _CONNECTION_FACTORY.get(classification)
         if cls is None:
-            raise ValueError(f"Unknown connection category: {classification}")
+            _log_draw_error(self.parent_ref, f"Unknown connection category: {classification}.")
+            return
         connection = cls(origin_port=origin_cp, destination_port=destiny_cp, data=data)
 
         self.parent_ref.scene_attribute.addItem(connection)
@@ -237,7 +260,8 @@ class OrchestratorDraw(OrchestratorCore):
 
     def remove_connection(self, name: str) -> None:
         if name not in self.connections:
-            raise ValueError(f"Connection '{name}' does not exist")
+            _log_draw_error(self.parent_ref, f"Connection '{name}' does not exist.")
+            return
         connection = self.connections.pop(name)
         connection.remove()
         self._prepare_item_for_removal(connection)
@@ -249,7 +273,8 @@ class OrchestratorDraw(OrchestratorCore):
 
     def remove_component(self, name: str) -> None:
         if name not in self.components:
-            raise ValueError(f"Component '{name}' does not exist")
+            _log_draw_error(self.parent_ref, f"Component '{name}' does not exist.")
+            return
         # Remove any connections that reference this component before removing it,
         # otherwise their port callbacks will dangle on a deleted graph item.
         attached = [
@@ -271,6 +296,7 @@ class OrchestratorDraw(OrchestratorCore):
 
     def show_properties(self, name: str) -> None:
         if name not in self.components:
-            raise ValueError(f"Component '{name}' does not exist")
+            _log_draw_error(self.parent_ref, f"Component '{name}' does not exist.")
+            return
         component = self.components[name]
         component.widget.show()

@@ -283,6 +283,8 @@ class SetupWindow(MainWindowBase):
         self.workflows_protocol.recenter_view()
 
     @pyqtSlot(str)
-    def _on_current_widget_changed(self, classification: str) -> None:
-        if classification in SetupStepMode:
-            self.orchestrator.switch_to_step(SetupStepMode(classification))
+    def _on_current_widget_changed(self, _route_key: str) -> None:
+        current_widget = self.SegmentWindow.stackedWidget.currentWidget()
+        classification = getattr(current_widget, "classification", None)
+        if isinstance(classification, SetupStepMode):
+            self.orchestrator.switch_to_step(classification)

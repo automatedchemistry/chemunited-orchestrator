@@ -324,6 +324,9 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
     def _restore_port_graph_visibility(self) -> None:
         """Apply each port's declared graph visibility to its point and label."""
         for port_num, port in self._data.ports_by_number.items():
+            point = self._points.get(port_num)
+            if point is not None:
+                point.setVisible(port.show_in_graph)
             label = self._port_labels.get(port_num)
             if label is not None:
                 label.setVisible(port.show_in_graph)
