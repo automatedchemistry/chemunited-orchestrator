@@ -273,7 +273,7 @@ class SetupWindow(MainWindowBase):
 
     def save(self) -> None:
         current_widget = self.SegmentWindow.stackedWidget.currentWidget()
-        classification = getattr(current_widget, "classification", None)
+        classification = getattr(current_widget, "classification", SetupStepMode.DESIGN)
         comment = self._SAVE_COMMENTS.get(classification, "Save: project updated")
         self.orchestrator.save(comment)
 

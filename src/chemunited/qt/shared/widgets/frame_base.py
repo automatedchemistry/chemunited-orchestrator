@@ -198,6 +198,7 @@ class FrameBase(QFrame):
 
         self.stackedWidget.setCurrentWidget(widget)
         self.navigationInterface.setCurrentItem(widget.objectName())
+        QTimer.singleShot(0, self._restoreCollapsedSplitterSizes)
 
     def resetSplitterSizes(self) -> None:
         total_width = max(self.width(), 600)
@@ -216,6 +217,22 @@ class FrameBase(QFrame):
             workflow_height = 0
 
         self.graphWorkflowSplitter.setSizes([graph_height, workflow_height])
+
+    def _restoreCollapsedSplitterSizes(self) -> None:
+        content_sizes = self.contentSplitter.sizes()
+        workflow_sizes = self.graphWorkflowSplitter.sizes()
+        options_collapsed = (
+            self.optionsFrame.isVisible()
+            and len(content_sizes) > 1
+            and content_sizes[1] == 0
+        )
+        workflow_collapsed = (
+            self.workflowFrame.isVisible()
+            and len(workflow_sizes) > 1
+            and workflow_sizes[1] == 0
+        )
+        if options_collapsed or workflow_collapsed:
+            self.resetSplitterSizes()
 
     def _restoreCurrentOptionSelection(self) -> None:
         widget = self.stackedWidget.currentWidget()
