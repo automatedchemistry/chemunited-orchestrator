@@ -17,10 +17,62 @@ from chemunited.qt.project.session import ProjectSession
 from chemunited.qt.project.writer import render_python_script
 from chemunited.qt.protocols.workflows import ProcessWorkflow
 from chemunited.qt.shared.enums import WindowCategory
+from chemunited.qt.shared.enums.protocols_enum import ProtocolBlock
 
 from .draw import call_component_model
 from .execution import OrchestratorExecution
 from .protocols import is_valid_name
+
+
+def _coerce_block_tag(value: object) -> ProtocolBlock | None:
+    if isinstance(value, ProtocolBlock):
+        return value
+    if isinstance(value, str):
+        try:
+            return ProtocolBlock(value)
+        except ValueError:
+            return None
+    return None
+
+
+def _infer_block_tag(node_id: str, attrs: dict, graph) -> ProtocolBlock:
+    saved_block_tag = _coerce_block_tag(attrs.get("block_tag"))
+    if saved_block_tag is not None:
+        return saved_block_tag
+
+    outgoing_edges = list(graph.out_edges(node_id, data=True))
+    if any(edge_attrs.get("loopback") is True for _, _, edge_attrs in outgoing_edges):
+        return ProtocolBlock.LOOP
+    if any(edge_attrs.get("condition") is False for _, _, edge_attrs in outgoing_edges):
+        return ProtocolBlock.IF
+
+    candidate_names = [node_id]
+    method_name = attrs.get("method")
+    if isinstance(method_name, str):
+        candidate_names.append(method_name)
+
+    lowered_candidates = [candidate.lower() for candidate in candidate_names]
+    if any(
+        candidate == "loop" or candidate.startswith("loop_")
+        for candidate in lowered_candidates
+    ):
+        return ProtocolBlock.LOOP
+    if any(
+        candidate in {"if", "conditional"}
+        or candidate.startswith("if_")
+        or candidate.startswith("conditional_")
+        for candidate in lowered_candidates
+    ):
+        return ProtocolBlock.IF
+    return ProtocolBlock.SCRIPT
+
+
+def _coerce_ports_numbers(value: object) -> int:
+    try:
+        ports_numbers = int(value)
+    except (TypeError, ValueError):
+        return 1
+    return max(1, ports_numbers)
 
 
 class OrchestratorProjectFile(OrchestratorExecution):
@@ -366,7 +418,6 @@ class OrchestratorProjectFile(OrchestratorExecution):
 
     @staticmethod
     def _workflow_from_process_class(name: str, cls) -> ProcessWorkflow:
-        from chemunited.qt.shared.enums.protocols_enum import ProtocolBlock
         from chemunited.qt.protocols.workflows.workflow_rules import (
             default_terminal_block_specs,
             resolve_render_start_role,
@@ -391,7 +442,8 @@ class OrchestratorProjectFile(OrchestratorExecution):
                 position=attrs.get("position", (0.0, 0.0)),
                 label=attrs.get("label"),
                 description=attrs.get("description"),
-                block_tag=ProtocolBlock.SCRIPT,
+                block_tag=_infer_block_tag(node_id, attrs, graph),
+                ports_numbers=_coerce_ports_numbers(attrs.get("ports_numbers", 1)),
             )
 
         for source, target, attrs in graph.edges(data=True):

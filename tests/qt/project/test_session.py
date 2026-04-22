@@ -6,9 +6,11 @@ from textwrap import dedent
 
 import pytest
 
+from chemunited.qt.orchestrator.project_file import OrchestratorProjectFile
 from chemunited.qt.project.manifest import ProjectManifest
 from chemunited.qt.project.session import ProjectSession
 from chemunited.qt.protocols.workflows import ProcessWorkflow
+from chemunited.qt.shared.enums.protocols_enum import ProtocolBlock
 
 
 def _write_project(working_dir, draw_content: str) -> None:
@@ -255,3 +257,222 @@ def test_sync_process_leaves_invalid_existing_file_unchanged(tmp_path):
 
     assert synced is False
     assert process_path.read_text(encoding="utf-8") == original
+
+
+def test_sync_process_roundtrip_preserves_special_block_types_and_loopback(tmp_path):
+    session = ProjectSession()
+    session.new(name="demo", location=tmp_path, init_git=False)
+
+    workflow = ProcessWorkflow("React")
+    workflow.add_block(
+        node_id="conditional_1",
+        method="conditional_1",
+        position=(100.0, 0.0),
+        block_tag=ProtocolBlock.IF,
+    )
+    workflow.add_block(
+        node_id="script_1",
+        method="script_1",
+        position=(220.0, 0.0),
+    )
+    workflow.add_block(
+        node_id="loop_1",
+        method="loop_1",
+        position=(340.0, 0.0),
+        block_tag=ProtocolBlock.LOOP,
+    )
+    workflow.add_connection("start", "conditional_1")
+    workflow.add_connection(
+        "conditional_1",
+        "script_1",
+        start_role="top",
+        condition=False,
+    )
+    workflow.add_connection(
+        "conditional_1",
+        "end",
+        start_role="bottom",
+        condition=True,
+    )
+    workflow.add_connection("script_1", "loop_1")
+    workflow.add_connection("loop_1", "end")
+    workflow.add_connection(
+        "loop_1",
+        "script_1",
+        start_role="bottom",
+        loopback=True,
+        trigger_on=False,
+    )
+
+    synced = session.sync_process("React", workflow)
+
+    assert synced is True
+    content = (tmp_path / "demo" / "protocols" / "React.py").read_text(encoding="utf-8")
+    assert "block_tag='if'" in content
+    assert "block_tag='loop'" in content
+
+    restored_classes = session.load_process_classes()
+    restored = OrchestratorProjectFile._workflow_from_process_class(
+        "React",
+        restored_classes["React"],
+    )
+
+    assert restored.get_block("conditional_1").block_tag == ProtocolBlock.IF
+    assert restored.get_block("loop_1").block_tag == ProtocolBlock.LOOP
+    conditional_false = restored.get_connection("conditional_1", "script_1")
+    assert conditional_false is not None
+    assert conditional_false.start_role == "top"
+    loopback = restored.get_connection("loop_1", "script_1")
+    assert loopback is not None
+    assert loopback.loopback is True
+    assert loopback.start_role == "bottom"
+
+
+def test_restore_workflow_infers_legacy_block_types_when_not_explicitly_saved(tmp_path):
+    session = ProjectSession()
+    session.new(name="demo", location=tmp_path, init_git=False)
+    session.save_process(
+        "React",
+        dedent(
+            """
+            from __future__ import annotations
+
+            import networkx as nx
+            from pydantic import BaseModel, ConfigDict
+
+            from chemunited.workflow import (
+                NodeExecutionContext,
+                Process,
+                WorkflowEdgeSpec,
+                WorkflowNodeSpec,
+            )
+
+
+            class ReactProcessConfig(BaseModel):
+                model_config = ConfigDict(frozen=True)
+
+
+            class ReactProcess(Process[ReactProcessConfig]):
+                \"\"\"React\"\"\"
+
+                __process_label__ = "React"
+                __process_description__ = ""
+
+                def build_workflow(self) -> nx.DiGraph:
+                    graph = nx.DiGraph()
+
+                    graph.add_node(
+                        "start",
+                        **WorkflowNodeSpec(
+                            node_id="start",
+                            method="start",
+                            position=(0.0, 0.0),
+                        ).model_dump(exclude_none=True),
+                    )
+
+                    graph.add_node(
+                        "conditional_1",
+                        **WorkflowNodeSpec(
+                            node_id="conditional_1",
+                            method="conditional_1",
+                            position=(100.0, 0.0),
+                        ).model_dump(exclude_none=True),
+                    )
+
+                    graph.add_node(
+                        "script_1",
+                        **WorkflowNodeSpec(
+                            node_id="script_1",
+                            method="script_1",
+                            position=(200.0, 0.0),
+                        ).model_dump(exclude_none=True),
+                    )
+
+                    graph.add_node(
+                        "loop_1",
+                        **WorkflowNodeSpec(
+                            node_id="loop_1",
+                            method="loop_1",
+                            position=(300.0, 0.0),
+                        ).model_dump(exclude_none=True),
+                    )
+
+                    graph.add_node(
+                        "end",
+                        **WorkflowNodeSpec(
+                            node_id="end",
+                            method="finish",
+                            position=(400.0, 0.0),
+                        ).model_dump(exclude_none=True),
+                    )
+
+                    graph.add_edge(
+                        "start",
+                        "conditional_1",
+                        **WorkflowEdgeSpec(condition=True).model_dump(exclude_none=True),
+                    )
+
+                    graph.add_edge(
+                        "conditional_1",
+                        "script_1",
+                        **WorkflowEdgeSpec(condition=False).model_dump(exclude_none=True),
+                    )
+
+                    graph.add_edge(
+                        "conditional_1",
+                        "end",
+                        **WorkflowEdgeSpec(condition=True).model_dump(exclude_none=True),
+                    )
+
+                    graph.add_edge(
+                        "script_1",
+                        "loop_1",
+                        **WorkflowEdgeSpec(condition=True).model_dump(exclude_none=True),
+                    )
+
+                    graph.add_edge(
+                        "loop_1",
+                        "end",
+                        **WorkflowEdgeSpec(condition=True).model_dump(exclude_none=True),
+                    )
+
+                    graph.add_edge(
+                        "loop_1",
+                        "script_1",
+                        loopback=True,
+                        trigger_on=False,
+                    )
+
+                    return graph
+
+                def start(self, ctx: NodeExecutionContext) -> bool:
+                    return True
+
+                def conditional_1(self, ctx: NodeExecutionContext) -> bool:
+                    return True
+
+                def script_1(self, ctx: NodeExecutionContext) -> bool:
+                    return True
+
+                def loop_1(self, ctx: NodeExecutionContext) -> bool:
+                    return True
+
+                def finish(self, ctx: NodeExecutionContext) -> bool:
+                    return True
+            """
+        ).strip()
+        + "\n",
+    )
+
+    restored_classes = session.load_process_classes()
+    restored = OrchestratorProjectFile._workflow_from_process_class(
+        "React",
+        restored_classes["React"],
+    )
+
+    assert restored.get_block("conditional_1").block_tag == ProtocolBlock.IF
+    assert restored.get_block("loop_1").block_tag == ProtocolBlock.LOOP
+    loopback = restored.get_connection("loop_1", "script_1")
+    assert loopback is not None
+    assert loopback.loopback is True
+    assert loopback.start_role == "bottom"

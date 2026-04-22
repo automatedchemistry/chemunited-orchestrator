@@ -43,13 +43,17 @@ class BlockData(WorkflowNodeSpec):
         kwarg_lines = "".join(
             f"\n{indent}        {k}={v!r}," for k, v in kwargs.items()
         )
-        return (
-            f"{indent}graph.add_node(\n"
-            f'{indent}    "{self.node_id}",\n'
+        lines = [
+            f"{indent}graph.add_node(",
+            f'{indent}    "{self.node_id}",',
             f"{indent}    **WorkflowNodeSpec({kwarg_lines}\n"
-            f"{indent}    ).model_dump(exclude_none=True),\n"
-            f"{indent})"
-        )
+            f"{indent}    ).model_dump(exclude_none=True),",
+            f"{indent}    block_tag={self.block_tag.value!r},",
+        ]
+        if self.ports_numbers != 1:
+            lines.append(f"{indent}    ports_numbers={self.ports_numbers!r},")
+        lines.append(f"{indent})")
+        return "\n".join(lines)
 
 
 @dataclass(slots=True)
