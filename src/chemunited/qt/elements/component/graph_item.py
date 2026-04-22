@@ -345,8 +345,11 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
         +--------------+---------+-----------+--------+-------------+-------+---------+
 
         *CONNECTIVITY: warning is shown only when show_warning(True) was previously called.
+        *CONNECTIVITY: not electronic components are hidden
         """
         self._mode = mode
+        # Always show the component in the graph as a default behavior
+        self.setVisible(True)
 
         if mode == SetupStepMode.DESIGN:
             self.setFlag(QGraphicsItem.ItemIsMovable, True)  # type: ignore
@@ -375,6 +378,10 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
                 self._badge.setVisible(True)
             # Respect the previously stored warning state — do not force visible.
             self._warning.setVisible(self._warning_active)
+
+            # If component is not electronic, hide it
+            if not self._data.is_electronic:
+                self.setVisible(False)
 
     def set_online(self, online: bool, api: str = "") -> None:
         """Drive the connectivity badge. Called by ConnectivityManager."""

@@ -102,6 +102,22 @@ class BaseConnectionItem(MovablePathItem):
         super().setStraight(value)
 
     def set_frame_mode(self, mode: SetupStepMode) -> None:
+        """
+        Visibility rules per mode:
+
+        +--------------+---------+-----------+--------+
+        | mode         | visible | _handles  | path   |
+        +==============+=========+===========+========+
+        | DESIGN       | yes     | yes       | yes    |
+        | PROTOCOLS    | yes     | no        | yes    |
+        | CONNECTIVITY | yes     | no        | no     |
+        +--------------+---------+-----------+--------+
+        """
+        if mode == SetupStepMode.CONNECTIVITY:
+            self.hide()
+        else:
+            self.show()
+
         if mode != SetupStepMode.DESIGN:
             for p in self._handles:
                 p.hide()

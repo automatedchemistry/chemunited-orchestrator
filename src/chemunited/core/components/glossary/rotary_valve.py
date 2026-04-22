@@ -152,7 +152,7 @@ class ValveComponentData(ComponentData):
     the rotor layout — the sim adapter calls this on each protocol switch command.
     """
 
-    COMPONENT_TYPE = ComponentType.UTENSIL
+    COMPONENT_TYPE = ComponentType.ELECTRONIC
     # Internally properties (It will be overwritten according to the valve topology)
     stator_ports: ValvePortLayout = field(
         default_factory=lambda: _copy_port_layout(DEFAULT_STATOR_PORTS)

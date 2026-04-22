@@ -5,9 +5,12 @@ from chemunited.qt.elements.component.graph_item import GraphComponent
 from chemunited.core.components.enums import ComponentType
 
 
-class Source(GraphComponent[PressureControlData]):
+class SourceData(PressureControlData):
     COMPONENT_TYPE: ClassVar[ComponentType] = ComponentType.UTENSIL
-    METADATA: ClassVar[type[PressureControlData]] = PressureControlData
+
+
+class Source(GraphComponent[SourceData]):
+    METADATA: ClassVar[type[PressureControlData]] = SourceData
     BASEMODE: ClassVar[type[PressureControlMode]] = PressureControlMode
     SVG_SCALE: ClassVar[float] = 1.0
 

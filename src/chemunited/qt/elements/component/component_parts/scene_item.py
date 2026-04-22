@@ -1,11 +1,12 @@
 from typing import ClassVar
 
-from PyQt5.QtCore import QPointF, QRectF, Qt, QTimer
+from PyQt5.QtCore import QRectF, Qt, QTimer
 from PyQt5.QtGui import QBrush, QColor, QFont, QPainterPath, QPen
 from PyQt5.QtWidgets import QGraphicsObject
 from qfluentwidgets import isDarkTheme
 
 from chemunited.core.common.constant import PATTERN_DIMENSION
+from .svg_layer import SvgLayer
 
 QT_NO_PEN = getattr(Qt, "NoPen")
 
@@ -93,36 +94,39 @@ class SceneItem(QGraphicsObject):
         self.update()
 
 
-class ConnectivityBadge(SceneItem):
+class ConnectivityBadge(SvgLayer):
     """
     WiFi-arc connectivity indicator.
     Shown only on electronic (device) components.
 
-    Online  → green arcs + API address below
-    Offline → red arcs + diagonal strike + API address below (muted)
+    Online  → QResource(":/icons/online.svg")
+    Offline → QResource(":/icons/offline.svg")
     """
-
-    COLOR_ONLINE: QColor = QColor("#4CAF50")  # green
-    COLOR_OFFLINE: QColor = QColor("#F44336")  # red
-    COLOR_API_ON: QColor = QColor("#4CAF50")
-    COLOR_API_OFF: QColor = QColor("#888888")  # muted gray when offline
+    ONLINE_SVG = ":/icons/online.svg"
+    OFFLINE_SVG = ":/icons/offline.svg"
+    COLOR_API_ON = QColor("#4CAF50")
+    COLOR_API_OFF = QColor("#888888")
 
     def __init__(self, dimension: int = PATTERN_DIMENSION, parent=None):
-        super().__init__(width=dimension, height=dimension, parent=parent)
-        self.radius = dimension / 2
+        super().__init__(
+            svg_path=self.OFFLINE_SVG,
+            scale=dimension,
+            parent=parent,
+        )
         self._status: bool = False
         self._api: str = ""
 
     # ── public API ────────────────────────────────────────────────
 
     def setStatus(self, online: bool, api: str = "") -> None:
-        self._status = online
+        self._status = bool(online)
         self._api = api
+        self.update_figure(self.ONLINE_SVG if self._status else self.OFFLINE_SVG)
         self.update()
 
     # ── painting ──────────────────────────────────────────────────
 
-    def paint(self, painter, option, widget=None):
+    def _paint_legacy(self, painter, option, widget=None):
         color = self.COLOR_ONLINE if self._status else self.COLOR_OFFLINE
 
         painter.setBrush(Qt.transparent)
@@ -160,6 +164,30 @@ class ConnectivityBadge(SceneItem):
                 Qt.AlignHCenter | Qt.AlignTop,
                 self._api,
             )
+
+    def paint(self, painter, option, widget=None):
+        super().paint(painter, option, widget)
+        if not self._api:
+            return
+
+        painter.save()
+        painter.setPen(
+            QPen(self.COLOR_API_ON if self._status else self.COLOR_API_OFF)
+        )
+        font = QFont()
+        font.setPointSizeF(max(6.0, self._scale * 0.25))
+        painter.setFont(font)
+        painter.drawText(
+            QRectF(
+                -self._scale * 2,
+                self._scale * 0.7,
+                self._scale * 4,
+                self._scale * 0.8,
+            ),
+            Qt.AlignHCenter | Qt.AlignTop,
+            self._api,
+        )
+        painter.restore()
 
 
 class WarningDisplay(SceneItem):
