@@ -1,6 +1,6 @@
 from typing import ClassVar
 
-from PyQt5.QtCore import QRectF, Qt, QTimer
+from PyQt5.QtCore import QPointF, QRectF, Qt, QTimer
 from PyQt5.QtGui import QBrush, QColor, QFont, QPainterPath, QPen
 from PyQt5.QtWidgets import QGraphicsObject
 from qfluentwidgets import isDarkTheme
@@ -102,8 +102,8 @@ class ConnectivityBadge(SvgLayer):
     Online  → QResource(":/icons/online.svg")
     Offline → QResource(":/icons/offline.svg")
     """
-    ONLINE_SVG = ":/icons/online.svg"
-    OFFLINE_SVG = ":/icons/offline.svg"
+    ONLINE_SVG = ":/icons/icons/online.svg"
+    OFFLINE_SVG = ":/icons/icons/offline.svg"
     COLOR_API_ON = QColor("#4CAF50")
     COLOR_API_OFF = QColor("#888888")
 
