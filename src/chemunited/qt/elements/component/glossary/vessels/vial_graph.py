@@ -96,7 +96,8 @@ class VialData(VesselComponentData):
                         self.row,
                         y_offset=CELL_SIZE / 2,
                     ),
-                    show_in_graph=False,
+                    category=ConnectionType.MOVEMENT,
+                    show_in_graph=True,
                 )
                 self.port_pairs.append((port_number,))
                 self.internal_edges[(port_number, inventory_key)] = InternalEdge(

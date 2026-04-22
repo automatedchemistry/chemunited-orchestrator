@@ -94,7 +94,7 @@ class Gantry3DData(ComponentData):
         for i in range(self.connections_number):
             if i % 20 == 0:
                 factor_x = 0
-                factor_y += 0.3
+                factor_y += 0.4
             self.ports_by_number[i + 2] = Port(
                 number=i + 2,
                 component=self.name,
@@ -103,6 +103,6 @@ class Gantry3DData(ComponentData):
                     factor_x - 2 * PATTERN_DIMENSION,
                     factor_y * PATTERN_DIMENSION + 10,
                 ),
-                show_in_graph=False,
+                show_in_graph=True,
             )
-            factor_x += 10
+            factor_x += 14
