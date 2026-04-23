@@ -1,0 +1,145 @@
+<mxfile host="app.diagrams.net" modified="2026-04-23T12:00:00.000Z" agent="Codex" version="24.7.17">
+  <diagram id="workflow-architecture" name="Workflow Architecture">
+    <mxGraphModel dx="1600" dy="1000" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1600" pageHeight="1000" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+
+        <mxCell id="10" value="Host App / Integration" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cccccc;fontStyle=1;fontSize=18;align=left;verticalAlign=top;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="360" height="560" as="geometry" />
+        </mxCell>
+        <mxCell id="11" value="SetupWindow&#xa;Creates protocolFrame, ProtocolsWidget, WorkflowsWidget, and CommandList&#xa;Mounts the workflow editor into the Protocols area" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="40" y="60" width="320" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="12" value="ProtocolsWidget&#xa;Process list UI&#xa;Add / rename / remove / duplicate / select" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="40" y="180" width="150" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="13" value="CommandList&#xa;Drag command entries onto the workflow canvas" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="210" y="180" width="150" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="14" value="OrchestratorProtocols&#xa;Single writer for self.protocols: dict[str, ProcessWorkflow]&#xa;Coordinates add / rename / remove / select with WorkflowsWidget" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="40" y="300" width="320" height="120" as="geometry" />
+        </mxCell>
+
+        <mxCell id="20" value="Workflows Module" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cccccc;fontStyle=1;fontSize=18;align=left;verticalAlign=top;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="400" y="20" width="760" height="560" as="geometry" />
+        </mxCell>
+        <mxCell id="21" value="WorkflowsWidget&#xa;Process-level container&#xa;Owns one WorkflowController and one WorkflowGraph per process&#xa;Uses QStackedWidget to show the active process" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="420" y="60" width="720" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="31" value="One process = 1 ProcessWorkflow + 1 WorkflowController + 1 WorkflowGraph" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eaf6e8;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="420" y="150" width="720" height="35" as="geometry" />
+        </mxCell>
+        <mxCell id="22" value="WorkflowGraph&#xa;Interactive canvas&#xa;Builds the scene, handles menus, deletion, zoom, drag/drop, and connection gestures" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="430" y="220" width="220" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="23" value="WorkflowController&#xa;Only writer to the model&#xa;Validates, mutates ProcessWorkflow, and emits Qt update signals" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="690" y="220" width="210" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="24" value="workflow_rules.py&#xa;Terminal blocks&#xa;Auto naming&#xa;Connection validation&#xa;Edge metadata derivation&#xa;Render-role helpers" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="930" y="220" width="190" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="25" value="ProcessWorkflow&#xa;Authoritative in-memory model for one process&#xa;Wraps a networkx.DiGraph&#xa;Ensures protected start / end blocks exist" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="690" y="380" width="210" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="26" value="BlockData&#xa;Extends WorkflowNodeSpec with block_tag, ports_numbers, file info, protection, position" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="930" y="380" width="190" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="27" value="ConnectionData&#xa;condition, loopback, trigger_on, label, inflection_points, max_iterations" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="930" y="450" width="190" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="28" value="WorkflowNode&#xa;Block shape, icon, title, progress bar, and port layout" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="430" y="380" width="220" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="29" value="WorkflowAccessPoints&#xa;Clickable left / right / top / bottom port groups" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="430" y="445" width="220" height="50" as="geometry" />
+        </mxCell>
+        <mxCell id="30" value="WorkflowConnection&#xa;Orthogonal edge routing, semantic colors, labels, and inflection handles" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=12;" vertex="1" parent="1">
+          <mxGeometry x="430" y="510" width="220" height="50" as="geometry" />
+        </mxCell>
+
+        <mxCell id="40" value="Persistence / Runtime Boundary" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#cccccc;fontStyle=1;fontSize=18;align=left;verticalAlign=top;spacing=12;" vertex="1" parent="1">
+          <mxGeometry x="20" y="600" width="1540" height="330" as="geometry" />
+        </mxCell>
+        <mxCell id="41" value="ProjectSession + storage.py&#xa;sync_process() and render helpers&#xa;Turn ProcessWorkflow into Python source" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="40" y="650" width="300" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="42" value="Generated Process Python&#xa;build_workflow() returns nx.DiGraph&#xa;Persists WorkflowNodeSpec / WorkflowEdgeSpec plus editor attrs like block_tag" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="390" y="650" width="360" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="43" value="project_file.py&#xa;_workflow_from_process_class()&#xa;Loads process classes, calls build_workflow(), and rebuilds ProcessWorkflow" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="800" y="650" width="300" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="44" value="chemunited.workflow (outside this module)&#xa;compiler.py + executor.py + process.py&#xa;Consumes the authored graph at runtime" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eeeeee;strokeColor=#666666;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="1150" y="650" width="370" height="110" as="geometry" />
+        </mxCell>
+        <mxCell id="45" value="Current caveat&#xa;CommandList drag/drop creates COMMAND blocks, but command and component payload is currently emitted as a signal hook rather than stored in BlockData itself." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=13;" vertex="1" parent="1">
+          <mxGeometry x="40" y="790" width="1480" height="90" as="geometry" />
+        </mxCell>
+
+        <mxCell id="100" value="mounts into protocolFrame" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#6c8ebf;fontSize=11;" edge="1" parent="1" source="11" target="21">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="101" value="process actions" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#6c8ebf;fontSize=11;" edge="1" parent="1" source="12" target="14">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="102" value="creates / selects workflow views" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#6c8ebf;fontSize=11;" edge="1" parent="1" source="14" target="21">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="103" value="owns self.protocols[name]" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#6c8ebf;fontSize=11;" edge="1" parent="1" source="14" target="25">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="104" value="drag / drop command" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#6c8ebf;fontSize=11;" edge="1" parent="1" source="13" target="22">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="110" value="one per process" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#82b366;fontSize=11;" edge="1" parent="1" source="21" target="22">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="111" value="menus, clicks, drags" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#82b366;fontSize=11;" edge="1" parent="1" source="22" target="23">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="112" value="validate + derive attrs" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#82b366;fontSize=11;" edge="1" parent="1" source="23" target="24">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="113" value="apply mutations" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#82b366;fontSize=11;" edge="1" parent="1" source="23" target="25">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="114" value="Qt update signals" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#82b366;fontSize=11;dashed=1;" edge="1" parent="1" source="23" target="22">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="115" value="build scene items" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#82b366;fontSize=11;" edge="1" parent="1" source="22" target="28">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="116" value="contains ports" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#82b366;fontSize=11;" edge="1" parent="1" source="28" target="29">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="117" value="create / update edges" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#82b366;fontSize=11;" edge="1" parent="1" source="22" target="30">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="118" value="nodes" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#82b366;fontSize=11;" edge="1" parent="1" source="25" target="26">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="119" value="edges" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#82b366;fontSize=11;" edge="1" parent="1" source="25" target="27">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+
+        <mxCell id="120" value="save / sync" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#d79b00;fontSize=11;" edge="1" parent="1" source="25" target="41">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="121" value="render build_workflow()" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#d79b00;fontSize=11;" edge="1" parent="1" source="41" target="42">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="122" value="load process class" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#d79b00;fontSize=11;" edge="1" parent="1" source="42" target="43">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="123" value="rebuild model" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#d79b00;fontSize=11;" edge="1" parent="1" source="43" target="25">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="124" value="runtime execution input" style="edgeStyle=orthogonalEdgeStyle;rounded=0;orthogonalLoop=1;jettySize=auto;html=1;endArrow=block;endFill=1;strokeColor=#666666;fontSize=11;" edge="1" parent="1" source="42" target="44">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

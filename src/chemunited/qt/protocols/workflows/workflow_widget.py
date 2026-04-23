@@ -3,11 +3,10 @@ from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import QHBoxLayout, QStackedWidget, QVBoxLayout, QWidget
 from qfluentwidgets import StrongBodyLabel
 
+from chemunited.qt.protocols.workflows.controller import WorkflowController
+from chemunited.qt.protocols.workflows.process_workflow import ProcessWorkflow
+from chemunited.qt.protocols.workflows.workflow_frames import WorkflowGraph
 from chemunited.qt.shared.enums import WindowCategory
-
-from .controller import WorkflowController
-from .process_workflow import ProcessWorkflow
-from .workflow_frames import WorkflowGraph
 
 
 class WorkflowsWidget(QWidget):

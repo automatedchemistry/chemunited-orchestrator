@@ -75,6 +75,23 @@ def _coerce_ports_numbers(value: object) -> int:
     return max(1, ports_numbers)
 
 
+def _coerce_inflection_points(value: object) -> list[tuple[float, float]]:
+    if not isinstance(value, (list, tuple)):
+        return []
+
+    points: list[tuple[float, float]] = []
+    for point in value:
+        if not isinstance(point, (list, tuple)) or len(point) != 2:
+            continue
+        try:
+            x = float(point[0])
+            y = float(point[1])
+        except (TypeError, ValueError):
+            continue
+        points.append((x, y))
+    return points
+
+
 class OrchestratorProjectFile(OrchestratorExecution):
 
     def __init__(self, parent):
@@ -466,6 +483,9 @@ class OrchestratorProjectFile(OrchestratorExecution):
                 loopback=loopback,
                 trigger_on=trigger_on,
                 label=attrs.get("label", ""),
+                inflection_points=_coerce_inflection_points(
+                    attrs.get("inflection_points")
+                ),
                 max_iterations=attrs.get("max_iterations"),
             )
 

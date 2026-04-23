@@ -138,6 +138,10 @@ class ConnectionData:
             ]
             if self.label:
                 lines.append(f"{indent}    label={self.label!r},")
+            if self.inflection_points:
+                lines.append(
+                    f"{indent}    inflection_points={self.inflection_points!r},"
+                )
             if self.max_iterations is not None:
                 lines.append(f"{indent}    max_iterations={self.max_iterations!r},")
             lines.append(f"{indent})")
@@ -146,6 +150,10 @@ class ConnectionData:
         spec_kwargs = f"\n{indent}        condition={self.condition!r},"
         if self.label:
             spec_kwargs += f"\n{indent}        label={self.label!r},"
+        if self.inflection_points:
+            spec_kwargs += (
+                f"\n{indent}        inflection_points={self.inflection_points!r},"
+            )
         return (
             f"{indent}graph.add_edge(\n"
             f'{indent}    "{start}",\n'
@@ -409,9 +417,3 @@ class ProcessWorkflow:
                 value = f"'{value}'"
             result += f"{key}={value},"
         return result
-
-    def get_metadata(self, node: str) -> BlockData | None:
-        return self.get_block(node)
-
-    def iter_metadata(self) -> Iterator[tuple[str, BlockData]]:
-        return self.iter_blocks()

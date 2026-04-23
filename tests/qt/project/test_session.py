@@ -287,6 +287,7 @@ def test_sync_process_roundtrip_preserves_special_block_types_and_loopback(tmp_p
         "script_1",
         start_role="top",
         condition=False,
+        inflection_points=[(180.0, 40.0), (220.0, 40.0)],
     )
     workflow.add_connection(
         "conditional_1",
@@ -302,6 +303,7 @@ def test_sync_process_roundtrip_preserves_special_block_types_and_loopback(tmp_p
         start_role="bottom",
         loopback=True,
         trigger_on=False,
+        inflection_points=[(300.0, -20.0)],
     )
 
     synced = session.sync_process("React", workflow)
@@ -310,6 +312,8 @@ def test_sync_process_roundtrip_preserves_special_block_types_and_loopback(tmp_p
     content = (tmp_path / "demo" / "protocols" / "React.py").read_text(encoding="utf-8")
     assert "block_tag='if'" in content
     assert "block_tag='loop'" in content
+    assert "inflection_points=[(180.0, 40.0), (220.0, 40.0)]" in content
+    assert "inflection_points=[(300.0, -20.0)]" in content
 
     restored_classes = session.load_process_classes()
     restored = OrchestratorProjectFile._workflow_from_process_class(
@@ -322,10 +326,12 @@ def test_sync_process_roundtrip_preserves_special_block_types_and_loopback(tmp_p
     conditional_false = restored.get_connection("conditional_1", "script_1")
     assert conditional_false is not None
     assert conditional_false.start_role == "top"
+    assert conditional_false.inflection_points == [(180.0, 40.0), (220.0, 40.0)]
     loopback = restored.get_connection("loop_1", "script_1")
     assert loopback is not None
     assert loopback.loopback is True
     assert loopback.start_role == "bottom"
+    assert loopback.inflection_points == [(300.0, -20.0)]
 
 
 def test_restore_workflow_infers_legacy_block_types_when_not_explicitly_saved(tmp_path):

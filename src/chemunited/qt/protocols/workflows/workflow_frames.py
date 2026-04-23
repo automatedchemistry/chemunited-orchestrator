@@ -14,6 +14,9 @@ from chemunited.qt.shared.enums.protocols_enum import ProtocolBlock
 from chemunited.qt.shared.graph import GraphCore, SceneCore
 from chemunited.qt.shared.icon import OrchestratorIcon
 
+from chemunited.qt.shared.editor.protocols.command import CommandEditorDialog
+from chemunited.qt.shared.editor.protocols.script import ScriptEditor
+
 from .controller import WorkflowController
 from .elements.access_point import WorkflowAccessPoints
 from .elements.work_connection import WorkflowConnection
@@ -57,6 +60,8 @@ class WorkflowGraph(GraphCore):
         self._nodes: dict[str, WorkflowNode] = {}
         self._connections: dict[tuple[str, str], WorkflowConnection] = {}
         self._selected_port: WorkflowAccessPoints | None = None
+
+        self._script_editor: ScriptEditor | None = None
 
         self._bind_controller()
         self.build_from_model()
@@ -112,8 +117,25 @@ class WorkflowGraph(GraphCore):
         super().doubleClickEvent(event)
 
     def _handle_node_double_click(self, node: WorkflowNode):
-        if self.window_container != WindowCategory.SETUP:
-            return
+        data = self.mode.get_node(node.node_name)
+        tag = data.block_tag
+
+        # It should return if
+        # 1 - the tag is start or end
+        # 2 - The workflow is not in SETUP mode
+        # 3 - The script file does not exist or is not valid
+
+   
+
+        if tag == ProtocolBlock.COMMAND:
+            ...
+        else:
+            if not self._script_editor:
+                self._script_editor = ScriptEditor(
+                    path=self.model.script.path,
+                    parent=self,
+                )
+            self._script_editor.show()
 
     @override
     def mousePressEvent(self, event):

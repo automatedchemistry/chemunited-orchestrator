@@ -32,6 +32,7 @@ dependencies = [
     "rich",
     "requests",
     "rich-click",
+    "QScintilla"
 ]
 
 [project.scripts]
