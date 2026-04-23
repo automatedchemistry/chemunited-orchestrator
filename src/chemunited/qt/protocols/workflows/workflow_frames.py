@@ -16,8 +16,7 @@ from chemunited.qt.shared.enums.protocols_enum import ProtocolBlock
 from chemunited.qt.shared.graph import GraphCore, SceneCore
 from chemunited.qt.shared.icon import OrchestratorIcon
 
-from chemunited.qt.shared.editor.protocols.script import ScriptEditorWindow
-
+from .editor import ProcessScriptEditorWindow
 from .controller import WorkflowController
 from .elements.access_point import WorkflowAccessPoints
 from .elements.work_connection import WorkflowConnection
@@ -62,7 +61,7 @@ class WorkflowGraph(GraphCore):
         self._connections: dict[tuple[str, str], WorkflowConnection] = {}
         self._selected_port: WorkflowAccessPoints | None = None
 
-        self._script_editor: ScriptEditorWindow | None = None
+        self._script_editor: ProcessScriptEditorWindow | None = None
 
         self._bind_controller()
         self.build_from_model()
@@ -138,17 +137,21 @@ class WorkflowGraph(GraphCore):
         if not data.file:
             data.file = script_path.name
 
+        class_name = f"{data.process}Process"
         if (
             self._script_editor is None
             or self._script_editor.editor.path != script_path
         ):
             if self._script_editor is not None:
                 self._script_editor.close()
-            self._script_editor = ScriptEditorWindow(
+            self._script_editor = ProcessScriptEditorWindow(
                 path=script_path,
+                class_name=class_name,
                 parent=self,
             )
 
+        if data.method:
+            self._script_editor.focus_method(data.method)
         self._script_editor.show()
         self._script_editor.raise_()
         self._script_editor.activateWindow()

@@ -15,37 +15,6 @@ from .exceptions import WorkflowRuleViolation
 from .workflow_rules import default_terminal_block_specs
 
 
-def _function_block_from_file(file_path: Path, function_name: str) -> str:
-    try:
-        source = file_path.read_text(encoding="utf-8")
-    except (OSError, UnicodeError):
-        return ""
-
-    try:
-        tree = ast.parse(source)
-    except SyntaxError:
-        return ""
-
-    matches = [
-        node
-        for node in ast.walk(tree)
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
-        and node.name == function_name
-    ]
-    if not matches:
-        return ""
-
-    def _start_lineno(node: ast.FunctionDef | ast.AsyncFunctionDef) -> int:
-        if node.decorator_list:
-            return node.decorator_list[0].lineno
-        return node.lineno
-
-    matches.sort(key=lambda node: (_start_lineno(node), node.col_offset))
-    target = matches[0]
-    lines = source.splitlines(keepends=True)
-    return "".join(lines[_start_lineno(target) - 1 : target.end_lineno]).rstrip()
-
-
 class BlockData(WorkflowNodeSpec):
     """GUI-side block model — extends WorkflowNodeSpec with Qt-specific fields."""
 
@@ -61,16 +30,6 @@ class BlockData(WorkflowNodeSpec):
     ports_numbers: int = 1
     file_path: Path | None = None
     protected: bool = False
-    _SCRIPT_BLOCK: str = ""
-
-    @property
-    def script_method_block(self) -> str:
-        if self.file_path and self.file:
-            self._SCRIPT_BLOCK = _function_block_from_file(
-                self.file_path,
-                self.method or self.node_id,
-            )
-        return self._SCRIPT_BLOCK
 
     def to_attrs(self) -> dict[str, Any]:
         return self.model_dump(exclude={"node_id"})
