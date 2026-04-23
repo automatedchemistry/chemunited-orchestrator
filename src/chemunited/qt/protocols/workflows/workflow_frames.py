@@ -1,6 +1,8 @@
 from __future__ import annotations
 
+import ast
 from functools import partial
+from pathlib import Path
 from typing import override
 import json
 
@@ -14,8 +16,7 @@ from chemunited.qt.shared.enums.protocols_enum import ProtocolBlock
 from chemunited.qt.shared.graph import GraphCore, SceneCore
 from chemunited.qt.shared.icon import OrchestratorIcon
 
-from chemunited.qt.shared.editor.protocols.command import CommandEditorDialog
-from chemunited.qt.shared.editor.protocols.script import ScriptEditor
+from chemunited.qt.shared.editor.protocols.script import ScriptEditorWindow
 
 from .controller import WorkflowController
 from .elements.access_point import WorkflowAccessPoints
@@ -61,7 +62,7 @@ class WorkflowGraph(GraphCore):
         self._connections: dict[tuple[str, str], WorkflowConnection] = {}
         self._selected_port: WorkflowAccessPoints | None = None
 
-        self._script_editor: ScriptEditor | None = None
+        self._script_editor: ScriptEditorWindow | None = None
 
         self._bind_controller()
         self.build_from_model()
@@ -108,34 +109,78 @@ class WorkflowGraph(GraphCore):
         self.scale(zoom_factor, zoom_factor)
 
     @override
-    def doubleClickEvent(self, event):
+    def mouseDoubleClickEvent(self, event):
         item = self.itemAt(event.pos())
-        if isinstance(item, WorkflowNode):
-            self._handle_node_double_click(item)
+        context_target = self._resolve_context_target(item)
+        if isinstance(context_target, WorkflowNode):
+            self._handle_node_double_click(context_target)
             event.accept()
             return
-        super().doubleClickEvent(event)
+        super().mouseDoubleClickEvent(event)
 
     def _handle_node_double_click(self, node: WorkflowNode):
-        data = self.mode.get_node(node.node_name)
+        if self.window_container != WindowCategory.SETUP:
+            return
+
+        data = self.controller.get_block(node.node_name)
+        if data is None:
+            return
+
         tag = data.block_tag
+        if tag in {ProtocolBlock.START, ProtocolBlock.END, ProtocolBlock.COMMAND}:
+            return
 
-        # It should return if
-        # 1 - the tag is start or end
-        # 2 - The workflow is not in SETUP mode
-        # 3 - The script file does not exist or is not valid
+        script_path = self._resolve_script_path(data)
+        if not self._is_valid_script_file(script_path):
+            return
 
-   
+        data.file_path = script_path
+        if not data.file:
+            data.file = script_path.name
 
-        if tag == ProtocolBlock.COMMAND:
-            ...
-        else:
-            if not self._script_editor:
-                self._script_editor = ScriptEditor(
-                    path=self.model.script.path,
-                    parent=self,
-                )
-            self._script_editor.show()
+        if (
+            self._script_editor is None
+            or self._script_editor.editor.path != script_path
+        ):
+            if self._script_editor is not None:
+                self._script_editor.close()
+            self._script_editor = ScriptEditorWindow(
+                path=script_path,
+                parent=self,
+            )
+
+        self._script_editor.show()
+        self._script_editor.raise_()
+        self._script_editor.activateWindow()
+
+    def _resolve_script_path(self, block: BlockData) -> Path | None:
+        if block.file_path is not None:
+            return Path(block.file_path)
+
+        if block.file:
+            file_path = Path(block.file)
+            if file_path.is_file():
+                return file_path
+
+        orchestrator = getattr(self.parent_ref, "orchestrator", None)
+        working_dir = getattr(orchestrator, "working_dir", None)
+        process_name = block.process or self.model.process
+        if working_dir is None or not process_name:
+            return None
+        return Path(working_dir) / "protocols" / f"{process_name}.py"
+
+    @staticmethod
+    def _is_valid_script_file(path: Path | None) -> bool:
+        if path is None or not path.is_file():
+            return False
+
+        try:
+            source = path.read_text(encoding="utf-8")
+            ast.parse(source)
+        except (OSError, UnicodeError, SyntaxError):
+            return False
+
+        return True
 
     @override
     def mousePressEvent(self, event):
@@ -603,3 +648,8 @@ class WorkflowGraph(GraphCore):
     def clear_workflow(self):
         self._clear_selected_port()
         self.controller.clear_workflow()
+
+    def __del__(self):
+        if self._script_editor is not None:
+            self._script_editor.close()
+        super().__del__()
