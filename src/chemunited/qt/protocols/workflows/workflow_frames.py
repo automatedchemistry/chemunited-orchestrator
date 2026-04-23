@@ -4,7 +4,6 @@ import ast
 from functools import partial
 from pathlib import Path
 from typing import override
-import json
 
 from PyQt5.QtCore import QPointF, QRectF, Qt
 from PyQt5.QtGui import QColor, QPainter, QPen
@@ -254,20 +253,16 @@ class WorkflowGraph(GraphCore):
     def dropEvent(self, event):
         """
         Add a command block from the command list.
-        data format: {"command": "[COMMAND_NAME]", "command_key": "[COMMAND_KEY]", "component": "[COMPONENT_NAME]", ...}
+        data format: "self.platform['component'].put('command', ...)"
         """
         if not event.mimeData().hasFormat(CommandList.MIME):
             event.ignore()
             return
 
-        data = bytes(event.mimeData().data(CommandList.MIME)).decode("utf-8")
-        parsed_data = json.loads(data)
-        command_name = parsed_data["command"]
-        component_name = parsed_data["component"]
+        line_script = bytes(event.mimeData().data(CommandList.MIME)).decode("utf-8")
         self.controller.add_command_block(
             pos=(self.mapToScene(event.pos()).x(), self.mapToScene(event.pos()).y()),
-            command=command_name,
-            component=component_name
+            line_script=line_script,
         )
         event.acceptProposedAction()
     

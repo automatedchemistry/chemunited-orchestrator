@@ -19,7 +19,7 @@ class WorkflowController(QObject):
     block_updated = pyqtSignal(str)
     block_removed = pyqtSignal(str)
 
-    command_block_added = pyqtSignal(str, str)
+    command_block_added = pyqtSignal(str)
     
     connection_added = pyqtSignal(str, str)
     connection_updated = pyqtSignal(str, str)
@@ -67,10 +67,9 @@ class WorkflowController(QObject):
     def add_command_block(
         self,
         pos: tuple[float, float],
-        command: str,
-        component: str,
+        line_script: str,
     ) -> BlockData:
-        self.command_block_added.emit(command, component)
+        self.command_block_added.emit(line_script)
         return self.add_block(
             block_tag=ProtocolBlock.COMMAND,
             pos=pos,

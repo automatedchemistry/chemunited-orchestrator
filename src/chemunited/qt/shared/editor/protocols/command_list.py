@@ -1,8 +1,5 @@
 from __future__ import annotations
-
-import json
 from dataclasses import dataclass
-from typing import TypedDict, cast
 
 from loguru import logger
 from PyQt5.QtCore import QMimeData, QSize, Qt, pyqtSignal
@@ -55,64 +52,6 @@ def get_protocol_by_figure(
             return protocol_cls(component_name or figure)
 
     raise AttributeError(f"Protocol {figure}Protocols not found")
-
-
-class CommandPayload(TypedDict):
-    component: str
-    figure: str
-    protocol: str
-    command_key: str
-    command: str
-    method: str
-    signature_class: str
-    parameters: list[str]
-    snippet: str
-
-
-def _user_parameter_names(command_instance: CommandSignature) -> list[str]:
-    return [
-        name
-        for name in type(command_instance).model_fields
-        if name not in CommandSignature.model_fields
-    ]
-
-
-def _format_value(value: object) -> str:
-    if hasattr(value, "magnitude") and hasattr(value, "units"):
-        return f'"{value}"'
-    return repr(value)
-
-
-def _build_snippet(command_instance: CommandSignature) -> str:
-    method = command_instance.method.lower()
-    command_name = command_instance.command
-    component_name = command_instance.component
-    values = command_instance.model_dump()
-
-    user_fields = [
-        (name, values[name])
-        for name in type(command_instance).model_fields
-        if name not in CommandSignature.model_fields and name in values
-    ]
-
-    extra_fields: list[tuple[str, object]] = []
-    if values.get("wait_time"):
-        extra_fields.append(("wait_time", values["wait_time"]))
-    if values.get("wait_feedback_status"):
-        extra_fields.append(("wait_feedback_status", values["wait_feedback_status"]))
-
-    arguments = user_fields + extra_fields
-    if not arguments:
-        return f'platform["{component_name}"].{method}("{command_name}")'
-
-    lines = [
-        f'platform["{component_name}"].{method}(',
-        f'    "{command_name}",',
-    ]
-    for name, value in arguments:
-        lines.append(f"    {name}={_format_value(value)},")
-    lines.append(")")
-    return "\n".join(lines)
 
 
 @dataclass(slots=True)
@@ -245,10 +184,10 @@ class _ComponentCard(QFrame):
 
 class CommandList(TreeWidget):
     ROLE_KIND = Qt.UserRole + 1  # type: ignore[attr-defined]
-    ROLE_PAYLOAD = Qt.UserRole + 2  # type: ignore[attr-defined]
+    ROLE_LINE_SCRIPT = Qt.UserRole + 2  # type: ignore[attr-defined]
     MIME = "application/x-chemunited-command"
 
-    command_activated = pyqtSignal(object)
+    command_activated = pyqtSignal(str)
     snippet_activated = pyqtSignal(str)
 
     def __init__(self, parent=None):
@@ -310,24 +249,6 @@ class CommandList(TreeWidget):
             )
         return sources
 
-    def _payload_for_command(
-        self,
-        source: _ProtocolSource,
-        command_key: str,
-        command_instance: CommandSignature,
-    ) -> CommandPayload:
-        return {
-            "component": source.component_name,
-            "figure": source.figure,
-            "protocol": type(source.protocol).__name__,
-            "command_key": command_key,
-            "command": command_instance.command,
-            "method": command_instance.method,
-            "signature_class": type(command_instance).__name__,
-            "parameters": _user_parameter_names(command_instance),
-            "snippet": _build_snippet(command_instance),
-        }
-
     def sync_protocols(self, components_figures: list[str] | None = None):
         self.clear()
 
@@ -358,15 +279,6 @@ class CommandList(TreeWidget):
             component_item = QTreeWidgetItem(self)
             component_item.setText(0, "")
             component_item.setData(0, self.ROLE_KIND, "component")
-            component_item.setData(
-                0,
-                self.ROLE_PAYLOAD,
-                {
-                    "component": source.component_name,
-                    "figure": source.figure,
-                    "protocol": type(source.protocol).__name__,
-                },
-            )
             component_item.setToolTip(
                 0,
                 f"{source.component_name}\nFigure: {source.figure}",
@@ -387,21 +299,16 @@ class CommandList(TreeWidget):
             )
 
             for command_key, _command_class, command_instance in command_entries:
-
-                payload = self._payload_for_command(
-                    source=source,
-                    command_key=command_key,
-                    command_instance=command_instance,
-                )
+                line_script = command_instance.line_script
                 subtitle = (
                     f"{source.component_name} | {command_instance.method} | "
-                    f"{len(payload['parameters'])} parameter(s)"
+                    f"{len(command_instance.parameters)} parameter(s)"
                 )
                 item = QTreeWidgetItem(component_item)
                 item.setData(0, QT_DISPLAY_ROLE, "")
                 item.setData(0, self.ROLE_KIND, "command")
-                item.setData(0, self.ROLE_PAYLOAD, payload)
-                item.setToolTip(0, str(payload["snippet"]))
+                item.setData(0, self.ROLE_LINE_SCRIPT, line_script)
+                item.setToolTip(0, line_script)
                 item.setFlags(
                     QT_ITEM_IS_ENABLED | QT_ITEM_IS_SELECTABLE | QT_ITEM_IS_DRAG_ENABLED
                 )
@@ -421,24 +328,18 @@ class CommandList(TreeWidget):
         self.expandAll()
         return total_commands
 
-    def current_payload(self) -> CommandPayload | None:
+    def current_line_script(self) -> str | None:
         item = self.currentItem()
         if item is None or item.data(0, self.ROLE_KIND) != "command":
             return None
 
-        payload = item.data(0, self.ROLE_PAYLOAD)
-        if isinstance(payload, dict):
-            return cast(CommandPayload, payload)
+        line_script = item.data(0, self.ROLE_LINE_SCRIPT)
+        if isinstance(line_script, str):
+            return line_script
         return None
 
     def current_snippet(self) -> str | None:
-        payload = self.current_payload()
-        if payload is None:
-            return None
-        snippet = payload.get("snippet")
-        if isinstance(snippet, str):
-            return snippet
-        return None
+        return self.current_line_script()
 
     def mimeTypes(self) -> list[str]:
         return [self.MIME, "text/plain"]
@@ -451,14 +352,13 @@ class CommandList(TreeWidget):
         if command_item is None:
             return None
 
-        payload = command_item.data(0, self.ROLE_PAYLOAD)
-        if not isinstance(payload, dict):
+        line_script = command_item.data(0, self.ROLE_LINE_SCRIPT)
+        if not isinstance(line_script, str):
             return None
 
-        command_payload = cast(CommandPayload, payload)
         mime_data = QMimeData()
-        mime_data.setData(self.MIME, json.dumps(command_payload).encode("utf-8"))
-        mime_data.setText(command_payload["snippet"])
+        mime_data.setData(self.MIME, line_script.encode("utf-8"))
+        mime_data.setText(line_script)
         return mime_data
 
     def startDrag(self, supportedActions) -> None:
@@ -489,14 +389,12 @@ class CommandList(TreeWidget):
         if item.data(0, self.ROLE_KIND) != "command":
             return
 
-        payload = item.data(0, self.ROLE_PAYLOAD)
-        if not isinstance(payload, dict):
+        line_script = item.data(0, self.ROLE_LINE_SCRIPT)
+        if not isinstance(line_script, str):
             return
 
-        self.command_activated.emit(payload)
-        snippet = payload.get("snippet")
-        if isinstance(snippet, str):
-            self.snippet_activated.emit(snippet)
+        self.command_activated.emit(line_script)
+        self.snippet_activated.emit(line_script)
 
 
 if __name__ == "__main__":

@@ -25,7 +25,7 @@ class ScriptEditorWindow(QMainWindow):
         self.resize(800, 600)  # optional default size
         self.setMinimumSize(600, 600)
 
-        self.editor = ScriptEditor(path=path, parent=self)
+        self.editor = self._make_editor(path)
 
         self.navigationInterface = NavigationInterface(self, showMenuButton=True)
 
@@ -33,6 +33,9 @@ class ScriptEditorWindow(QMainWindow):
         self.initlayout()
 
         self.initNavigation()
+
+    def _make_editor(self, path: Path) -> EditorBase:
+        return ScriptEditor(path=path, parent=self)
 
     def initlayout(self):
 

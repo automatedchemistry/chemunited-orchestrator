@@ -32,5 +32,18 @@ class CommandSignature(BaseModel):
             if name not in base_fields
         }
 
+    @property
+    def line_script(self) -> str:
+        parameters = ", ".join(
+            f"{name}={repr(value)}" for name, value in self.parameters.items()
+        )
+        if parameters:
+            return (
+                f"self.platform[{repr(self.component)}].{'put' if self.method == 'PUT' else 'get'}({repr(self.command)}, {parameters})"
+            )
+        return (
+            f"self.platform[{repr(self.component)}].{'put' if self.method == 'PUT' else 'get'}({repr(self.command)})"
+        )
+
     def validate_feedback_answer(self, answer: Any) -> bool:
         return answer == self.feedback_answer
