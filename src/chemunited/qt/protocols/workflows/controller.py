@@ -18,6 +18,9 @@ class WorkflowController(QObject):
     block_added = pyqtSignal(str)
     block_updated = pyqtSignal(str)
     block_removed = pyqtSignal(str)
+
+    command_block_added = pyqtSignal(str, str)
+    
     connection_added = pyqtSignal(str, str)
     connection_updated = pyqtSignal(str, str)
     connection_removed = pyqtSignal(str, str)
@@ -60,6 +63,19 @@ class WorkflowController(QObject):
     def rename_process(self, name: str) -> None:
         self._workflow.rename_process(name)
         self.model_reset.emit()
+
+    def add_command_block(
+        self,
+        pos: tuple[float, float],
+        command: str,
+        component: str,
+    ) -> BlockData:
+        self.command_block_added.emit(command, component)
+        return self.add_block(
+            block_tag=ProtocolBlock.COMMAND,
+            pos=pos,
+            ports_numbers=1,
+        )
 
     def add_block(
         self,

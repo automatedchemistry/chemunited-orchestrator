@@ -7,3 +7,4 @@ class ProtocolBlock(str, Enum):
     END = "end"
     LOOP = "loop"
     IF = "if"
+    COMMAND = "command"

@@ -100,6 +100,7 @@ class WorkflowNode(QGraphicsItemGroup):
                 ProtocolBlock.END: QColor("#C0392B"),
                 ProtocolBlock.LOOP: QColor("#1B8F5A"),
                 ProtocolBlock.IF: QColor("#C98200"),
+                ProtocolBlock.COMMAND: QColor("#D16946"),
             }[self.block_tag],
         }
 
@@ -110,6 +111,7 @@ class WorkflowNode(QGraphicsItemGroup):
             ProtocolBlock.IF: OrchestratorIcon.IF,
             ProtocolBlock.START: OrchestratorIcon.PLAY,
             ProtocolBlock.END: OrchestratorIcon.STOP,
+            ProtocolBlock.COMMAND: OrchestratorIcon.PROCESS,
         }[self.block_tag]
 
     def _apply_body_style(self, selected: bool = False):

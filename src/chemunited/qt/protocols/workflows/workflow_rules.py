@@ -46,6 +46,7 @@ def generate_block_name(existing_names: Iterable[str], block_tag: ProtocolBlock)
         ProtocolBlock.SCRIPT: "script",
         ProtocolBlock.LOOP: "loop",
         ProtocolBlock.IF: "conditional",
+        ProtocolBlock.COMMAND: "command",
     }.get(block_tag)
     if prefix is None:
         raise WorkflowRuleViolation(

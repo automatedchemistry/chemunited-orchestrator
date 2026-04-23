@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 from functools import partial
+from typing import override
+import json
 
 from PyQt5.QtCore import QPointF, QRectF, Qt
 from PyQt5.QtGui import QColor, QPainter, QPen
@@ -19,6 +21,8 @@ from .elements.work_node import WorkflowNode
 from .exceptions import WorkflowRuleViolation
 from .process_workflow import BlockData, ConnectionData
 from .workflow_rules import resolve_render_start_role
+
+from chemunited.qt.shared.editor.protocols.command_list import CommandList
 
 
 class WorkflowGraph(GraphCore):
@@ -70,6 +74,7 @@ class WorkflowGraph(GraphCore):
         self.controller.connection_updated.connect(self._on_connection_updated)
         self.controller.connection_removed.connect(self._on_connection_removed)
 
+    @override
     def drawBackground(self, painter: QPainter | None, rect: QRectF) -> None:
         if painter is None:
             return
@@ -92,10 +97,12 @@ class WorkflowGraph(GraphCore):
             painter.drawLine(int(rect.left()), int(y), int(rect.right()), int(y))
             y += step
 
+    @override
     def wheelEvent(self, event):
         zoom_factor = 1.12 if event.angleDelta().y() > 0 else 1 / 1.12
         self.scale(zoom_factor, zoom_factor)
 
+    @override
     def doubleClickEvent(self, event):
         item = self.itemAt(event.pos())
         if isinstance(item, WorkflowNode):
@@ -108,6 +115,7 @@ class WorkflowGraph(GraphCore):
         if self.window_container != WindowCategory.SETUP:
             return
 
+    @override
     def mousePressEvent(self, event):
         self.setFocus()
         if event.button() == Qt.MouseButton.LeftButton:
@@ -122,6 +130,7 @@ class WorkflowGraph(GraphCore):
 
         super().mousePressEvent(event)
 
+    @override
     def keyPressEvent(self, event):
         if self.window_container != WindowCategory.SETUP:
             return
@@ -135,6 +144,7 @@ class WorkflowGraph(GraphCore):
                 return
         super().keyPressEvent(event)
 
+    @override
     def contextMenuEvent(self, event):
         if self.window_container != WindowCategory.SETUP:
             super().contextMenuEvent(event)
@@ -159,6 +169,38 @@ class WorkflowGraph(GraphCore):
             return
         super().contextMenuEvent(event)
 
+    def dragEnterEvent(self, event):
+        if event.mimeData().hasFormat(CommandList.MIME):
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dragMoveEvent(self, event):
+        if event.mimeData().hasFormat(CommandList.MIME):
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+
+    def dropEvent(self, event):
+        """
+        Add a command block from the command list.
+        data format: {"command": "[COMMAND_NAME]", "command_key": "[COMMAND_KEY]", "component": "[COMPONENT_NAME]", ...}
+        """
+        if not event.mimeData().hasFormat(CommandList.MIME):
+            event.ignore()
+            return
+
+        data = bytes(event.mimeData().data(CommandList.MIME)).decode("utf-8")
+        parsed_data = json.loads(data)
+        command_name = parsed_data["command"]
+        component_name = parsed_data["component"]
+        self.controller.add_command_block(
+            pos=(self.mapToScene(event.pos()).x(), self.mapToScene(event.pos()).y()),
+            command=command_name,
+            component=component_name
+        )
+        event.acceptProposedAction()
+    
     def _build_add_menu(self, scene_pos: QPointF) -> RoundMenu:
         menu = RoundMenu(parent=self)
 
@@ -268,6 +310,7 @@ class WorkflowGraph(GraphCore):
             ProtocolBlock.SCRIPT: (name, "Module"),
             ProtocolBlock.LOOP: (name, "Repeat"),
             ProtocolBlock.IF: (name, "Branch"),
+            ProtocolBlock.COMMAND: (name, "Command"),
         }
         return labels[block_tag]
 
