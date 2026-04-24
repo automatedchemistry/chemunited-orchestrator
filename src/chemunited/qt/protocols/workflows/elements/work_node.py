@@ -125,10 +125,6 @@ class WorkflowNode(QGraphicsItemGroup):
             path.addEllipse(0, 0, width, height)
             return path
 
-        if self.block_tag == ProtocolBlock.SCRIPT:
-            path.addRoundedRect(0, 0, width, height, 14, 14)
-            return path
-
         if self.block_tag == ProtocolBlock.LOOP:
             path.moveTo(18, 0)
             path.lineTo(width - 18, 0)
@@ -139,11 +135,15 @@ class WorkflowNode(QGraphicsItemGroup):
             path.closeSubpath()
             return path
 
-        path.moveTo(width / 2, 0)
-        path.lineTo(width, height / 2)
-        path.lineTo(width / 2, height)
-        path.lineTo(0, height / 2)
-        path.closeSubpath()
+        if self.block_tag == ProtocolBlock.IF:
+            path.moveTo(width / 2, 0)
+            path.lineTo(width, height / 2)
+            path.lineTo(width / 2, height)
+            path.lineTo(0, height / 2)
+            path.closeSubpath()
+            return path
+
+        path.addRoundedRect(0, 0, width, height, 14, 14)
         return path
 
     @staticmethod
