@@ -5,7 +5,6 @@ import textwrap
 from functools import partial
 from pathlib import Path
 from typing import override
-from loguru import logger
 
 from PyQt5.QtCore import QPointF, QRectF, Qt
 from PyQt5.QtGui import QColor, QPainter, QPen
@@ -778,7 +777,7 @@ class WorkflowGraph(GraphCore):
         if not self._is_valid_script_file(script_path):
             return False
 
-        class_name = f"{process_name}Process"
+        class_name = f"{process_name[:1].upper()}{process_name[1:]}Process"
         source = script_path.read_text(encoding="utf-8")
         new_source = (
             _remove_method(source, method_name, class_name)
@@ -809,7 +808,7 @@ class WorkflowGraph(GraphCore):
         if not self._is_valid_script_file(script_path):
             return False
 
-        class_name = f"{process_name}Process"
+        class_name = f"{process_name[:1].upper()}{process_name[1:]}Process"
         source = script_path.read_text(encoding="utf-8")
         new_source = _add_content_to_method(source, method_name, class_name, content)
         if new_source == source:
