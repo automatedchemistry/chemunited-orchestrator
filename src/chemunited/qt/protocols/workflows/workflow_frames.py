@@ -6,6 +6,7 @@ from functools import partial
 from pathlib import Path
 from typing import override
 
+from loguru import logger
 from PyQt5.QtCore import QPointF, QRectF, Qt
 from PyQt5.QtGui import QColor, QPainter, QPen
 from PyQt5.QtWidgets import QFrame, QGraphicsItem, QGraphicsView
@@ -25,7 +26,9 @@ from .exceptions import WorkflowRuleViolation
 from .process_workflow import BlockData, ConnectionData
 from .workflow_rules import resolve_render_start_role
 
+from chemunited.qt.shared.editor.protocols.command import CommandEditorDialog
 from chemunited.qt.shared.editor.protocols.command_list import CommandList
+from chemunited.qt.elements.component.protocols import CommandSignature
 
 
 def _add_method_stub(source: str, method_name: str, class_name: str) -> str:
@@ -139,6 +142,130 @@ def _remove_method(source: str, method_name: str, class_name: str) -> str:
     return "".join(lines)
 
 
+def _extract_method_first_expr(
+    source: str, method_name: str, class_name: str
+) -> str | None:
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return None
+    class_node = next(
+        (n for n in ast.walk(tree) if isinstance(n, ast.ClassDef) and n.name == class_name),
+        None,
+    )
+    if class_node is None:
+        return None
+    method_node = next(
+        (
+            n
+            for n in class_node.body
+            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) and n.name == method_name
+        ),
+        None,
+    )
+    if method_node is None:
+        return None
+    for stmt in method_node.body:
+        if isinstance(stmt, ast.Pass):
+            continue
+        seg = ast.get_source_segment(source, stmt)
+        if seg:
+            return seg.strip()
+    return None
+
+
+def _replace_method_body(
+    source: str, method_name: str, class_name: str, new_content: str
+) -> str:
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return source
+    class_node = next(
+        (n for n in ast.walk(tree) if isinstance(n, ast.ClassDef) and n.name == class_name),
+        None,
+    )
+    if class_node is None:
+        return source
+    method_node = next(
+        (
+            n
+            for n in class_node.body
+            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) and n.name == method_name
+        ),
+        None,
+    )
+    if method_node is None or not method_node.body:
+        return source
+    lines = source.splitlines(keepends=True)
+    newline = "\r\n" if "\r\n" in source else "\n"
+    body_indent = " " * method_node.body[0].col_offset
+    first_body = method_node.body[0].lineno - 1
+    last_body = method_node.end_lineno
+    replacement = f"{body_indent}{new_content.strip()}{newline}"
+    lines[first_body:last_body] = [replacement]
+    return "".join(lines)
+
+
+def _build_command_model(
+    source: str, method_name: str, class_name: str
+) -> "CommandSignature | None":
+    from chemunited.core.utils.internal_quantity import ChemUnitQuantity
+    import chemunited.qt.elements.component.protocols  # ensures subclasses are registered
+
+    line = _extract_method_first_expr(source, method_name, class_name)
+    if not line:
+        return None
+
+    try:
+        expr = ast.parse(line, mode="eval").body
+    except SyntaxError:
+        return None
+    if not isinstance(expr, ast.Call):
+        return None
+    func = expr.func
+    if not isinstance(func, ast.Attribute):
+        return None
+    subscript = func.value
+    if not (isinstance(subscript, ast.Subscript) and isinstance(subscript.slice, ast.Constant)):
+        return None
+    component_name: str = subscript.slice.value
+    if not expr.args or not isinstance(expr.args[0], ast.Constant):
+        return None
+    command_name: str = expr.args[0].value
+
+    eval_ns = {"ChemUnitQuantity": ChemUnitQuantity}
+    kwargs: dict = {}
+    for kw in expr.keywords:
+        try:
+            kwargs[kw.arg] = ast.literal_eval(kw.value)
+        except (ValueError, TypeError):
+            try:
+                kwargs[kw.arg] = eval(ast.unparse(kw.value), eval_ns)
+            except Exception:
+                pass
+
+    def _find_sig_class(cmd: str, base=CommandSignature):
+        for sub in base.__subclasses__():
+            info = sub.model_fields.get("command")
+            if info and info.default == cmd:
+                return sub
+            found = _find_sig_class(cmd, sub)
+            if found:
+                return found
+        return None
+
+    sig_cls = _find_sig_class(command_name)
+    if sig_cls is None:
+        return None
+
+    try:
+        return sig_cls(component=component_name, **kwargs)
+    except Exception:
+        logger.warning(f"Could not instantiate {sig_cls.__name__} for command {command_name!r}")
+        return None
+
+
 class WorkflowGraph(GraphCore):
     """
     A graph view for workflows.
@@ -237,7 +364,7 @@ class WorkflowGraph(GraphCore):
             return
 
         tag = data.block_tag
-        if tag in {ProtocolBlock.START, ProtocolBlock.END, ProtocolBlock.COMMAND}:
+        if tag in {ProtocolBlock.START, ProtocolBlock.END}:
             return
 
         script_path = self._resolve_script_path(data)
@@ -247,6 +374,24 @@ class WorkflowGraph(GraphCore):
         data.file_path = script_path
         if not data.file:
             data.file = script_path.name
+
+        if tag == ProtocolBlock.COMMAND:
+            class_name = f"{data.process[:1].upper()}{data.process[1:]}Process"
+            source = script_path.read_text(encoding="utf-8")
+            command = _build_command_model(source, data.method, class_name)
+            if command is None:
+                logger.warning(f"Could not reconstruct command for block {data.method!r}")
+                return
+            editor = CommandEditorDialog(
+                file_path=script_path,
+                function_name=data.method or "",
+                command_model=command,
+                parent=self,
+            )
+            editor.saved.connect(lambda sig: self._update_command_script(data.method, sig))
+            editor.convert_to_script.connect(lambda _src: self._convert_command_to_script(data))
+            editor.exec_()
+            return
 
         class_name = f"{data.process}Process"
         if (
@@ -823,6 +968,38 @@ class WorkflowGraph(GraphCore):
             self._script_editor.editor.clear_protected_zone()
             self._script_editor.editor.setText(new_source)
         return True
+
+    def _update_command_script(self, method_name: str, sig: CommandSignature) -> None:
+        orchestrator = getattr(self.parent_ref, "orchestrator", None)
+        working_dir = getattr(orchestrator, "working_dir", None)
+        process_name = self.model.process
+        if not working_dir or not process_name:
+            return
+        script_path = Path(working_dir) / "protocols" / f"{process_name}.py"
+        if not self._is_valid_script_file(script_path):
+            return
+        class_name = f"{process_name[:1].upper()}{process_name[1:]}Process"
+        source = script_path.read_text(encoding="utf-8")
+        new_source = _replace_method_body(source, method_name, class_name, sig.line_script)
+        if new_source == source:
+            return
+        script_path.write_text(new_source, encoding="utf-8")
+        if (
+            self._script_editor is not None
+            and self._script_editor.isVisible()
+            and self._script_editor.editor.path == script_path
+        ):
+            self._script_editor.editor.clear_protected_zone()
+            self._script_editor.editor.setText(new_source)
+
+    def _convert_command_to_script(self, data: BlockData) -> None:
+        data.block_tag = ProtocolBlock.SCRIPT
+        self.controller.block_updated.emit(data.node_id)
+        if self._script_editor is not None:
+            self._script_editor.focus_method(data.method)
+            self._script_editor.show()
+            self._script_editor.raise_()
+            self._script_editor.activateWindow()
 
     def __del__(self):
         if self._script_editor is not None:
