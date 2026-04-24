@@ -86,6 +86,10 @@ class OrchestratorProtocols(OrchestratorDraw):
         )
         self.parent_ref.protocols_widget.sync_list()
 
+    @pyqtSlot()
+    def save_protocols(self) -> None:
+        self.parent_ref.save()
+
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------

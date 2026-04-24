@@ -18,12 +18,12 @@ class WorkflowController(QObject):
     block_added = pyqtSignal(str)
     block_updated = pyqtSignal(str)
     block_removed = pyqtSignal(str)
-
-    command_block_added = pyqtSignal(str)
     
     connection_added = pyqtSignal(str, str)
     connection_updated = pyqtSignal(str, str)
     connection_removed = pyqtSignal(str, str)
+
+    request_build_script = pyqtSignal()
 
     def __init__(
         self, workflow: ProcessWorkflow | None = None, parent: QObject | None = None
@@ -63,18 +63,6 @@ class WorkflowController(QObject):
     def rename_process(self, name: str) -> None:
         self._workflow.rename_process(name)
         self.model_reset.emit()
-
-    def add_command_block(
-        self,
-        pos: tuple[float, float],
-        line_script: str,
-    ) -> BlockData:
-        self.command_block_added.emit(line_script)
-        return self.add_block(
-            block_tag=ProtocolBlock.COMMAND,
-            pos=pos,
-            ports_numbers=1,
-        )
 
     def add_block(
         self,
@@ -152,7 +140,10 @@ class WorkflowController(QObject):
     ) -> None:
         self._workflow.update_connection_geometry(start, end, inflection_points)
         self.connection_updated.emit(start, end)
-
+    
+    def save_workflow(self) -> None:
+        self.request_build_script.emit()
+    
     def clear_workflow(self) -> None:
         self._workflow.clear()
         self.model_reset.emit()
