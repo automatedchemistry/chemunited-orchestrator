@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 from pathlib import Path
-from textwrap import indent
 from typing import Mapping
 
 from PyQt5.QtCore import Qt, pyqtSignal
@@ -452,19 +451,15 @@ class CommandEditorDialog(FramelessDialog):
 
         lines = [
             f"platform[{component!r}].{method}(",
-            f"    {command!r},",
+            f"        {command!r},",
         ]
         for name, value in arguments.items():
-            lines.append(f"    {name}={self._format_argument(value)},")
+            lines.append(f"        {name}={self._format_argument(value)},")
         lines.append(")")
         return "\n".join(lines)
 
     def _build_script_source(self) -> str:
-        command_source = indent(self._build_command_source(), "    ")
-        return (
-            "def script(platform, parameters, process_parameters):\n"
-            f"{command_source}\n"
-        )
+        return self._build_command_source()
 
     def _update_preview(self, *_args) -> None:
         self._code_preview_widget.setText(self._build_command_source())
