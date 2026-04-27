@@ -5,16 +5,25 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QWidget
 from pytestqt.qtbot import QtBot
 
+from chemunited.qt.elements.component.protocols.valves import (
+    ThreePortTwoPositionValveProtocols,
+)
 from chemunited.qt.protocols.workflows.controller import WorkflowController
 from chemunited.qt.protocols.workflows.process_workflow import ProcessWorkflow
-from chemunited.qt.protocols.workflows.workflow_frames import WorkflowGraph
+from chemunited.qt.protocols.workflows.workflow_frames import (
+    WorkflowGraph,
+    _build_command_model,
+)
 from chemunited.qt.shared.enums import WindowCategory
 
 
 class _WorkflowHost(QWidget):
-    def __init__(self, working_dir: Path | None):
+    def __init__(self, working_dir: Path | None, components=None):
         super().__init__()
-        self.orchestrator = SimpleNamespace(working_dir=working_dir)
+        self.orchestrator = SimpleNamespace(
+            working_dir=working_dir,
+            components=components or {},
+        )
 
 
 def _make_graph(
@@ -22,8 +31,9 @@ def _make_graph(
     working_dir: Path,
     workflow: ProcessWorkflow,
     qtbot: QtBot,
+    components=None,
 ) -> WorkflowGraph:
-    host = _WorkflowHost(working_dir)
+    host = _WorkflowHost(working_dir, components=components)
     graph = WorkflowGraph(
         parent=host,
         window_container=WindowCategory.SETUP,
@@ -118,3 +128,41 @@ def test_double_click_ignores_invalid_process_file(
     qtbot.wait(0)
 
     assert graph._script_editor is None
+
+
+def test_command_block_reconstruction_uses_component_protocol_metadata(
+    tmp_path: Path,
+    qtbot: QtBot,
+) -> None:
+    protocol = ThreePortTwoPositionValveProtocols("ValveA")
+    components = {
+        "ValveA": SimpleNamespace(protocols=protocol),
+    }
+    workflow = ProcessWorkflow("React")
+    graph = _make_graph(
+        working_dir=tmp_path,
+        workflow=workflow,
+        qtbot=qtbot,
+        components=components,
+    )
+
+    command_class = graph._resolve_command_signature_class("ValveA", "position")
+
+    assert command_class is protocol.commands["position"]
+
+    source = """
+class ReactProcess:
+    def command_1(self, ctx: NodeExecutionContext) -> bool:
+        platform["ValveA"].put("position", connect="[[0, 1]]")
+        return True
+"""
+    command = _build_command_model(
+        source,
+        "command_1",
+        "ReactProcess",
+        sig_cls=command_class,
+    )
+
+    assert command is not None
+    extras = type(command).model_fields["connect"].json_schema_extra or {}
+    assert extras["Options"] == ["[[0, 1]]", "[[0, 2]]"]

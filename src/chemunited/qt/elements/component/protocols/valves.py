@@ -27,7 +27,7 @@ class PositionParameter(CommandSignature):
         description="Ports to connect",
         default="[[0, 1]]",
         json_schema_extra=cast(
-            JsonDict, {"options": []}
+            JsonDict, {"Options": []}
         ),  # options injected per subclass
     )
     disconnect: str = Field(
@@ -67,7 +67,7 @@ class ValvesProtocols(ComponentProtocol):
                     title="Connect",
                     description="Ports to connect",
                     default=cls.DEFAULT,
-                    json_schema_extra=cast(JsonDict, {"options": options}),
+                    json_schema_extra=cast(JsonDict, {"Options": options}),
                 ),
             ),
         )
@@ -153,3 +153,8 @@ class SolenoidValveProtocols(ComponentProtocol):
 
 
 class SolenoidValve2WayProtocols(SolenoidValveProtocols): ...
+
+
+if __name__ == "__main__":
+    valve = ThreePortFourPositionValveProtocols("test")
+    print(valve.commands)

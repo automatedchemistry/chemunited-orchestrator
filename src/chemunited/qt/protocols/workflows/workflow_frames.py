@@ -212,11 +212,10 @@ def _replace_method_body(
     return "".join(lines)
 
 
-def _build_command_model(
+def _parse_command_call(
     source: str, method_name: str, class_name: str
-) -> "CommandSignature | None":
+) -> tuple[str, str, dict[str, object]] | None:
     from chemunited.core.utils.internal_quantity import ChemUnitQuantity
-    import chemunited.qt.elements.component.protocols  # ensures subclasses are registered
 
     line = _extract_method_first_expr(source, method_name, class_name)
     if not line:
@@ -250,17 +249,36 @@ def _build_command_model(
             except Exception:
                 pass
 
+    return component_name, command_name, kwargs
+
+
+def _build_command_model(
+    source: str,
+    method_name: str,
+    class_name: str,
+    sig_cls: type[CommandSignature] | None = None,
+) -> "CommandSignature | None":
+    import chemunited.qt.elements.component.protocols  # ensures subclasses are registered
+
+    parsed = _parse_command_call(source, method_name, class_name)
+    if parsed is None:
+        return None
+    component_name, command_name, kwargs = parsed
+
     def _find_sig_class(cmd: str, base=CommandSignature):
+        matches: list[type[CommandSignature]] = []
         for sub in base.__subclasses__():
             info = sub.model_fields.get("command")
             if info and info.default == cmd:
-                return sub
-            found = _find_sig_class(cmd, sub)
-            if found:
-                return found
-        return None
+                matches.append(sub)
+            matches.extend(_find_sig_class(cmd, sub))
+        return matches
 
-    sig_cls = _find_sig_class(command_name)
+    if sig_cls is None:
+        matches = _find_sig_class(command_name)
+        if matches:
+            # Prefer the most specific subclass when multiple commands share a name.
+            sig_cls = max(matches, key=lambda cls: len(cls.mro()))
     if sig_cls is None:
         return None
 
@@ -383,7 +401,20 @@ class WorkflowGraph(GraphCore):
         if tag == ProtocolBlock.COMMAND:
             class_name = f"{data.process[:1].upper()}{data.process[1:]}Process"
             source = script_path.read_text(encoding="utf-8")
-            command = _build_command_model(source, data.method, class_name)
+            parsed_command = _parse_command_call(source, data.method, class_name)
+            if parsed_command is None:
+                logger.warning(f"Could not parse command block {data.method!r}")
+                return
+            component_name, command_name, _kwargs = parsed_command
+            command = _build_command_model(
+                source,
+                data.method,
+                class_name,
+                sig_cls=self._resolve_command_signature_class(
+                    component_name,
+                    command_name,
+                ),
+            )
             if command is None:
                 logger.warning(f"Could not reconstruct command for block {data.method!r}")
                 return
@@ -416,6 +447,33 @@ class WorkflowGraph(GraphCore):
         self._script_editor.show()
         self._script_editor.raise_()
         self._script_editor.activateWindow()
+
+    def _resolve_command_signature_class(
+        self,
+        component_name: str,
+        command_name: str,
+    ) -> type[CommandSignature] | None:
+        orchestrator = getattr(self.parent_ref, "orchestrator", None)
+        components = getattr(orchestrator, "components", None)
+        if components is None:
+            return None
+
+        manager = components.get(component_name)
+        if manager is None:
+            return None
+
+        protocol = getattr(manager, "protocols", None)
+        commands = getattr(protocol, "commands", None)
+        if not isinstance(commands, dict):
+            return None
+
+        command_class = commands.get(command_name)
+        if (
+            isinstance(command_class, type)
+            and issubclass(command_class, CommandSignature)
+        ):
+            return command_class
+        return None
 
     def _resolve_script_path(self, block: BlockData) -> Path | None:
         if block.file_path is not None:
@@ -1009,4 +1067,3 @@ class WorkflowGraph(GraphCore):
     def __del__(self):
         if self._script_editor is not None:
             self._script_editor.close()
-        super().__del__()
