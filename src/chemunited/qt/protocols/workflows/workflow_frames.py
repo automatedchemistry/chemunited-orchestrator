@@ -61,7 +61,10 @@ def _add_method_stub(source: str, method_name: str, class_name: str) -> str:
             break
 
     newline = "\r\n" if "\r\n" in source else "\n"
-    stub = f"{newline}{indent}async def {method_name}(self):{newline}{indent}    pass{newline}"
+    stub = (
+        f"{newline}{indent}def {method_name}(self, ctx: NodeExecutionContext) -> bool:"
+        f"{newline}{indent}    return True{newline}"
+    )
     lines.insert(class_node.end_lineno, stub)
     return "".join(lines)
 
@@ -101,7 +104,9 @@ def _add_content_to_method(source: str, method_name: str, class_name: str, conte
         f"{body_indent}{line}" if line else "" for line in normalized.splitlines()
     )
     insert_line = method_node.end_lineno or len(lines)
-    lines.insert(insert_line, f"{newline}{formatted}")
+    if isinstance(method_node.body[-1], ast.Return):
+        insert_line = method_node.body[-1].lineno - 1
+    lines.insert(insert_line, f"{formatted}{newline}")
     return "".join(lines)
 
 
