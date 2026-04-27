@@ -11,7 +11,13 @@ from chemunited.qt.setup import SetupWindow
 
 @click.command()
 @click.argument("project_file", type=click.Path(exists=True), required=False)
-def main(project_file: str | None = None) -> None:
+@click.option(
+    "--overwrite",
+    is_flag=True,
+    default=False,
+    help="Overwrite an existing project directory when importing a .chemunited file.",
+)
+def main(project_file: str | None = None, overwrite: bool = False) -> None:
     """Entry point for launching the ChemUnited GUI."""
     if sys.platform == "win32":
         import ctypes
@@ -35,7 +41,7 @@ def main(project_file: str | None = None) -> None:
 
     window = SetupWindow()
     if project_file:
-        window.orchestrator.open_project(Path(project_file).resolve())
+        window.orchestrator.open_project(Path(project_file).resolve(), overwrite=overwrite)
     window.show()
     sys.exit(app.exec_())
 

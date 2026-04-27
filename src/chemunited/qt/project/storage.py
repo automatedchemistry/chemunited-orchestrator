@@ -11,7 +11,7 @@ from chemunited.qt.protocols.workflows import ProcessWorkflow
 from chemunited.qt.project.writer import render_python_script
 from chemunited.qt.utils.files import load_attribute
 
-_PACK_EXCLUDE = {".git", ".gitignore", ".chemunited_session"}
+_PACK_EXCLUDE = {".git", ".gitignore", ".chemunited_session", "__pycache__"}
 _PROTOCOLS_SKIP = {"__init__", "main_parameters"}
 
 

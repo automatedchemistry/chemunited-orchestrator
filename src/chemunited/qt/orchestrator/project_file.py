@@ -138,9 +138,9 @@ class OrchestratorProjectFile(OrchestratorExecution):
         )
         self._record_recent_project(chemunited_path)
 
-    def open_project(self, path: Path) -> None:
+    def open_project(self, path: Path, overwrite: bool = False) -> None:
         try:
-            session = self._open_session(path)
+            session = self._open_session(path, overwrite=overwrite)
             draw_data = session.load_draw()
             process_classes = session.load_process_classes()
         except Exception as exc:
@@ -339,12 +339,12 @@ class OrchestratorProjectFile(OrchestratorExecution):
         )
         return reply == QMessageBox.Yes
 
-    def _open_session(self, path: Path) -> ProjectSession:
+    def _open_session(self, path: Path, overwrite: bool = False) -> ProjectSession:
         session = ProjectSession()
         if path.is_dir():
             session.open_directory(path)
         elif path.suffix.lower() == ".chemunited":
-            session.import_chemunited(path)
+            session.import_chemunited(path, overwrite=overwrite)
         elif path.name == "manifest.json":
             session.open_directory(path.parent)
         else:

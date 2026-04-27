@@ -68,27 +68,37 @@ class ProjectSession:
         self.git = GitManager.open(working_dir)
 
     def import_chemunited(
-        self, chemunited_file: Path, location: Path | None = None
+        self, chemunited_file: Path, location: Path | None = None, overwrite: bool = False
     ) -> None:
         name = chemunited_file.stem
         target = (location or chemunited_file.parent) / name
-        if ProjectManifest.exists(target):
+
+        if ProjectManifest.exists(target) and not overwrite:
             self.open_directory(target)
             self.source_file = chemunited_file
             return
 
         if target.exists():
-            if not target.is_dir() or any(target.iterdir()):
+            if not target.is_dir():
+                raise FileExistsError(
+                    "Cannot import archive: path exists and is not a directory: "
+                    f"{target}"
+                )
+            if any(target.iterdir()) and not ProjectManifest.exists(target):
                 raise FileExistsError(
                     "Cannot import archive into an existing non-project path: "
                     f"{target}"
                 )
 
+        has_existing_git = (target / ".git").is_dir()
         unpack(chemunited_file, target)
         self.working_dir = target
         self.source_file = chemunited_file
         self.manifest = ProjectManifest.load(target)
-        self.git = GitManager.init_from_import(target, chemunited_file.name)
+        if has_existing_git:
+            self.git = GitManager.open(target)
+        else:
+            self.git = GitManager.init_from_import(target, chemunited_file.name)
 
     def export_chemunited(self, destination: Path | None = None) -> Path:
         working_dir = self._require_working_dir()
