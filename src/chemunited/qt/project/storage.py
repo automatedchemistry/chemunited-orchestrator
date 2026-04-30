@@ -8,7 +8,7 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from chemunited.qt.protocols.workflows import ProcessWorkflow
-from chemunited.qt.project.writer import render_python_script
+from chemunited.qt.project.writer import render_python_script, write_python_script
 from chemunited.qt.utils.files import load_attribute
 
 _PACK_EXCLUDE = {".git", ".gitignore", ".chemunited_session", "__pycache__"}
@@ -34,6 +34,20 @@ def unpack(chemunited_file: Path, target_dir: Path) -> None:
 
 def _is_excluded(file: Path, root: Path) -> bool:
     return any(part in _PACK_EXCLUDE for part in file.relative_to(root).parts)
+
+
+# ── API script ────────────────────────────────────────────────────────────────
+
+
+def write_api_script(working_dir: Path, port: int = 3116) -> None:
+    write_python_script(
+        working_dir / "api.py",
+        script="api",
+        overwrite={
+            "---PROJECT_NAME---": working_dir.name,
+            "---PORT---": str(port),
+        },
+    )
 
 
 # ── Draw (unchanged) ───────────────────────────────────────────────────────────

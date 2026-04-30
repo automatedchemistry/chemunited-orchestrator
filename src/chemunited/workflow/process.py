@@ -11,6 +11,7 @@ from pydantic import BaseModel
 from .compiler import compile_workflow
 from .executor import WorkflowExecutor
 from .models import WorkflowResult
+from .orchestrator import Platform
 
 ConfigT = TypeVar("ConfigT", bound=BaseModel)
 
@@ -20,6 +21,11 @@ class Process(ABC, Generic[ConfigT]):
 
     def __init__(self, config: ConfigT) -> None:
         self.config = config
+        self.main_parameters: BaseModel | None = None
+        self.platform = Platform()
+    
+    def set_main_parameters(self, main_parameters: BaseModel) -> None:
+        self.main_parameters = main_parameters
 
     @abstractmethod
     def build_workflow(self) -> nx.DiGraph:

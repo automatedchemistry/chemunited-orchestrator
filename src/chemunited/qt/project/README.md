@@ -16,6 +16,8 @@ my_experiment/                       ← working directory (source of truth)
 ├── manifest.json                    ← project identity and process order
 ├── pyproject.toml                   ← makes the project pip-installable
 ├── __init__.py                      ← top-level package marker
+├── main.py                          ← entry point: run the configured sequence
+├── api.py                           ← FastAPI server: configure and inspect before running
 │
 ├── .git/                            ← version history (never packed)
 ├── .gitignore                       ← excludes __pycache__, connectivity, etc.
@@ -59,6 +61,54 @@ working directory and the `.chemunited` file.
 
 `processes_order` controls the order in which processes appear in the
 Protocols and Pre-Running panels.
+
+---
+
+### `main.py`
+
+Entry point for executing the configured protocol. Holds the `MainParameter`
+instance and the process sequence, and wires them together before running.
+
+```python
+from protocols.main_parameters import MainParameter
+from protocols import PROCESSES
+
+MAIN_PARAMETER = MainParameter()
+PROCESSES_INSTANCES = {}
+
+if __name__ == "__main__":
+    for process_id in PROCESSES_INSTANCES:
+        PROCESSES_INSTANCES[process_id].main_parameter = MAIN_PARAMETER
+```
+
+The user edits `MAIN_PARAMETER` fields and `PROCESSES_INSTANCES` directly,
+or uses the API server (`api.py`) to configure them before running.
+
+---
+
+### `api.py`
+
+A FastAPI server that exposes HTTP endpoints for configuring and inspecting
+the protocol before execution. Generated once at project creation and
+portable — it can be run from any location:
+
+```bash
+python path/to/my_experiment/api.py
+```
+
+Opening `http://localhost:3162` redirects to the interactive Swagger docs.
+
+The server is built on three reusable controllers from `chemunited.workflow.api`:
+
+| Controller | Prefix | Purpose |
+|---|---|---|
+| `MainParamsController` | `/main-params` | View and update `MainParameter` fields |
+| `ProcessesController` | `/processes` | List available process types and their config schemas |
+| `SequenceController` | `/sequence` | Build the ordered run list; each entry carries its own config copy |
+
+A dedicated `/report` endpoint returns the full pre-run snapshot — main
+parameters, sequence length, and every process config — for inspection before
+committing to a run.
 
 ---
 
@@ -235,6 +285,8 @@ my_experiment.chemunited  (ZIP)
 ├── manifest.json
 ├── pyproject.toml
 ├── __init__.py
+├── main.py
+├── api.py
 ├── draw/setup.py
 ├── draw/platform.svg
 ├── protocols/__init__.py
@@ -267,6 +319,8 @@ Provide project name and working directory
         ↓
 Create working directory
 Write manifest.json, pyproject.toml, __init__.py
+Write main.py  (from template)
+Write api.py   (from template, imports chemunited.workflow.api controllers)
 Write protocols/__init__.py  (empty PROCESSES dict)
 Write protocols/main_parameters.py  (from template)
 Create draw/setup.py  (empty canvas)
