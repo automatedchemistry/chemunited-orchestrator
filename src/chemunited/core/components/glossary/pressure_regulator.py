@@ -13,7 +13,7 @@ Sim: setpoint_pa is read by the adapter each time step to evaluate the
 """
 
 from dataclasses import dataclass
-from typing import Annotated, override, ClassVar
+from typing import Annotated, ClassVar, override
 
 from pydantic import Field
 
@@ -24,8 +24,8 @@ from chemunited.core.utils.internal_quantity import (
 )
 
 from ..component import ComponentData, ComponentMode
-from ..internals import InternalEdge, Port
 from ..enums import ComponentType
+from ..internals import InternalEdge, Port
 
 
 class BackPressureRegulatorMode(ComponentMode):
@@ -47,6 +47,7 @@ class BackPressureRegulatorData(ComponentData):
     TRANSPORT edge. Edge starts closed — the sim adapter toggles it each
     time step based on the upstream pressure vs. setpoint comparison.
     """
+
     COMPONENT_TYPE: ClassVar[ComponentType] = ComponentType.UTENSIL
     setpoint: ChemUnitQuantity = ChemUnitQuantity("1 bar")
 

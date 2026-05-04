@@ -125,7 +125,9 @@ class GraphCore(QGraphicsView):
         return self.scene_attribute.background_color()
 
     def _default_grid_line_color(self) -> QColor:
-        background = self._grid_background_color or self._default_grid_background_color()
+        background = (
+            self._grid_background_color or self._default_grid_background_color()
+        )
         if background.lightness() < 128:
             return QColor(255, 255, 255, 24)
         return QColor(0, 0, 0, 16)

@@ -70,7 +70,10 @@ class ProjectSession:
         self.git = GitManager.open(working_dir)
 
     def import_chemunited(
-        self, chemunited_file: Path, location: Path | None = None, overwrite: bool = False
+        self,
+        chemunited_file: Path,
+        location: Path | None = None,
+        overwrite: bool = False,
     ) -> None:
         name = chemunited_file.stem
         target = (location or chemunited_file.parent) / name

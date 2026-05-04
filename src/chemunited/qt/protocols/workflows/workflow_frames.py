@@ -12,23 +12,22 @@ from PyQt5.QtGui import QColor, QPainter, QPen
 from PyQt5.QtWidgets import QFrame, QGraphicsItem, QGraphicsView
 from qfluentwidgets import Action, RoundMenu, isDarkTheme
 
+from chemunited.qt.elements.component.protocols import CommandSignature
+from chemunited.qt.shared.editor.protocols.command import CommandEditorDialog
+from chemunited.qt.shared.editor.protocols.command_list import CommandList
 from chemunited.qt.shared.enums import SetupStepMode, WindowCategory
 from chemunited.qt.shared.enums.protocols_enum import ProtocolBlock
 from chemunited.qt.shared.graph import GraphCore, SceneCore
 from chemunited.qt.shared.icon import OrchestratorIcon
 
-from .editor import ProcessScriptEditorWindow
 from .controller import WorkflowController
+from .editor import ProcessScriptEditorWindow
 from .elements.access_point import WorkflowAccessPoints
 from .elements.work_connection import WorkflowConnection
 from .elements.work_node import WorkflowNode
 from .exceptions import WorkflowRuleViolation
 from .process_workflow import BlockData, ConnectionData
 from .workflow_rules import resolve_render_start_role
-
-from chemunited.qt.shared.editor.protocols.command import CommandEditorDialog
-from chemunited.qt.shared.editor.protocols.command_list import CommandList
-from chemunited.qt.elements.component.protocols import CommandSignature
 
 
 def _add_method_stub(source: str, method_name: str, class_name: str) -> str:
@@ -38,7 +37,11 @@ def _add_method_stub(source: str, method_name: str, class_name: str) -> str:
         return source
 
     class_node = next(
-        (n for n in ast.walk(tree) if isinstance(n, ast.ClassDef) and n.name == class_name),
+        (
+            n
+            for n in ast.walk(tree)
+            if isinstance(n, ast.ClassDef) and n.name == class_name
+        ),
         None,
     )
     if class_node is None:
@@ -65,11 +68,14 @@ def _add_method_stub(source: str, method_name: str, class_name: str) -> str:
         f"{newline}{indent}def {method_name}(self, ctx: NodeExecutionContext) -> bool:"
         f"{newline}{indent}    return True{newline}"
     )
-    lines.insert(class_node.end_lineno, stub)
+    insert_at = class_node.end_lineno or len(lines)
+    lines.insert(insert_at, stub)
     return "".join(lines)
 
 
-def _add_content_to_method(source: str, method_name: str, class_name: str, content: str) -> str:
+def _add_content_to_method(
+    source: str, method_name: str, class_name: str, content: str
+) -> str:
     if not content.strip():
         return source
 
@@ -79,7 +85,11 @@ def _add_content_to_method(source: str, method_name: str, class_name: str, conte
         return source
 
     class_node = next(
-        (n for n in ast.walk(tree) if isinstance(n, ast.ClassDef) and n.name == class_name),
+        (
+            n
+            for n in ast.walk(tree)
+            if isinstance(n, ast.ClassDef) and n.name == class_name
+        ),
         None,
     )
     if class_node is None:
@@ -89,7 +99,8 @@ def _add_content_to_method(source: str, method_name: str, class_name: str, conte
         (
             n
             for n in class_node.body
-            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) and n.name == method_name
+            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and n.name == method_name
         ),
         None,
     )
@@ -117,7 +128,11 @@ def _remove_method(source: str, method_name: str, class_name: str) -> str:
         return source
 
     class_node = next(
-        (n for n in ast.walk(tree) if isinstance(n, ast.ClassDef) and n.name == class_name),
+        (
+            n
+            for n in ast.walk(tree)
+            if isinstance(n, ast.ClassDef) and n.name == class_name
+        ),
         None,
     )
     if class_node is None:
@@ -127,7 +142,8 @@ def _remove_method(source: str, method_name: str, class_name: str) -> str:
         (
             n
             for n in class_node.body
-            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) and n.name == method_name
+            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and n.name == method_name
         ),
         None,
     )
@@ -136,7 +152,9 @@ def _remove_method(source: str, method_name: str, class_name: str) -> str:
 
     lines = source.splitlines(keepends=True)
     start = (
-        method_node.decorator_list[0].lineno if method_node.decorator_list else method_node.lineno
+        method_node.decorator_list[0].lineno
+        if method_node.decorator_list
+        else method_node.lineno
     ) - 1
     end = method_node.end_lineno
 
@@ -155,7 +173,11 @@ def _extract_method_first_expr(
     except SyntaxError:
         return None
     class_node = next(
-        (n for n in ast.walk(tree) if isinstance(n, ast.ClassDef) and n.name == class_name),
+        (
+            n
+            for n in ast.walk(tree)
+            if isinstance(n, ast.ClassDef) and n.name == class_name
+        ),
         None,
     )
     if class_node is None:
@@ -164,7 +186,8 @@ def _extract_method_first_expr(
         (
             n
             for n in class_node.body
-            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) and n.name == method_name
+            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and n.name == method_name
         ),
         None,
     )
@@ -187,7 +210,11 @@ def _replace_method_body(
     except SyntaxError:
         return source
     class_node = next(
-        (n for n in ast.walk(tree) if isinstance(n, ast.ClassDef) and n.name == class_name),
+        (
+            n
+            for n in ast.walk(tree)
+            if isinstance(n, ast.ClassDef) and n.name == class_name
+        ),
         None,
     )
     if class_node is None:
@@ -196,7 +223,8 @@ def _replace_method_body(
         (
             n
             for n in class_node.body
-            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef)) and n.name == method_name
+            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and n.name == method_name
         ),
         None,
     )
@@ -231,7 +259,10 @@ def _parse_command_call(
     if not isinstance(func, ast.Attribute):
         return None
     subscript = func.value
-    if not (isinstance(subscript, ast.Subscript) and isinstance(subscript.slice, ast.Constant)):
+    if not (
+        isinstance(subscript, ast.Subscript)
+        and isinstance(subscript.slice, ast.Constant)
+    ):
         return None
     component_name: str = subscript.slice.value
     if not expr.args or not isinstance(expr.args[0], ast.Constant):
@@ -239,8 +270,10 @@ def _parse_command_call(
     command_name: str = expr.args[0].value
 
     eval_ns = {"ChemUnitQuantity": ChemUnitQuantity}
-    kwargs: dict = {}
+    kwargs: dict[str, object] = {}
     for kw in expr.keywords:
+        if kw.arg is None:
+            continue
         try:
             kwargs[kw.arg] = ast.literal_eval(kw.value)
         except (ValueError, TypeError):
@@ -258,7 +291,6 @@ def _build_command_model(
     class_name: str,
     sig_cls: type[CommandSignature] | None = None,
 ) -> "CommandSignature | None":
-    import chemunited.qt.elements.component.protocols  # ensures subclasses are registered
 
     parsed = _parse_command_call(source, method_name, class_name)
     if parsed is None:
@@ -283,9 +315,11 @@ def _build_command_model(
         return None
 
     try:
-        return sig_cls(component=component_name, **kwargs)
+        return sig_cls.model_validate({"component": component_name, **kwargs})
     except Exception:
-        logger.warning(f"Could not instantiate {sig_cls.__name__} for command {command_name!r}")
+        logger.warning(
+            f"Could not instantiate {sig_cls.__name__} for command {command_name!r}"
+        )
         return None
 
 
@@ -393,6 +427,7 @@ class WorkflowGraph(GraphCore):
         script_path = self._resolve_script_path(data)
         if not self._is_valid_script_file(script_path):
             return
+        assert script_path is not None
 
         data.file_path = script_path
         if not data.file:
@@ -416,7 +451,9 @@ class WorkflowGraph(GraphCore):
                 ),
             )
             if command is None:
-                logger.warning(f"Could not reconstruct command for block {data.method!r}")
+                logger.warning(
+                    f"Could not reconstruct command for block {data.method!r}"
+                )
                 return
             editor = CommandEditorDialog(
                 file_path=script_path,
@@ -424,8 +461,12 @@ class WorkflowGraph(GraphCore):
                 command_model=command,
                 parent=self,
             )
-            editor.saved.connect(lambda sig: self._update_command_script(data.method, sig))
-            editor.convert_to_script.connect(lambda _src: self._convert_command_to_script(data))
+            editor.saved.connect(
+                lambda sig: self._update_command_script(data.method, sig)
+            )
+            editor.convert_to_script.connect(
+                lambda _src: self._convert_command_to_script(data)
+            )
             editor.exec_()
             return
 
@@ -468,9 +509,8 @@ class WorkflowGraph(GraphCore):
             return None
 
         command_class = commands.get(command_name)
-        if (
-            isinstance(command_class, type)
-            and issubclass(command_class, CommandSignature)
+        if isinstance(command_class, type) and issubclass(
+            command_class, CommandSignature
         ):
             return command_class
         return None
@@ -588,7 +628,7 @@ class WorkflowGraph(GraphCore):
         # stub already written by sync_script via _on_block_added; inject the command line
         self._inject_to_script(block.node_id, line_script)
         event.acceptProposedAction()
-    
+
     def _build_add_menu(self, scene_pos: QPointF) -> RoundMenu:
         menu = RoundMenu(parent=self)
 
@@ -973,7 +1013,7 @@ class WorkflowGraph(GraphCore):
     def clear_workflow(self):
         self._clear_selected_port()
         self.controller.clear_workflow()
-    
+
     def sync_script(self, method_name: str, removed: bool = False) -> bool:
         orchestrator = getattr(self.parent_ref, "orchestrator", None)
         working_dir = getattr(orchestrator, "working_dir", None)
@@ -1043,7 +1083,9 @@ class WorkflowGraph(GraphCore):
             return
         class_name = f"{process_name[:1].upper()}{process_name[1:]}Process"
         source = script_path.read_text(encoding="utf-8")
-        new_source = _replace_method_body(source, method_name, class_name, sig.line_script)
+        new_source = _replace_method_body(
+            source, method_name, class_name, sig.line_script
+        )
         if new_source == source:
             return
         script_path.write_text(new_source, encoding="utf-8")

@@ -4,9 +4,9 @@ from pathlib import Path
 
 from loguru import logger
 from PyQt5.Qsci import QsciScintilla
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor, QDropEvent, QKeyEvent
-from PyQt5.QtWidgets import QVBoxLayout, QWidget
+from PyQt5.QtWidgets import QWidget
 
 from chemunited.qt.shared.editor.base import EditorBase
 from chemunited.qt.shared.editor.protocols.script import ScriptEditorWindow
@@ -43,7 +43,9 @@ class ProtectedZoneEditor(EditorBase):
         self._protected = False
         last = self.lines() - 1
         if last >= 0:
-            self.clearIndicatorRange(0, 0, last, self.lineLength(last), self._DIM_INDICATOR)
+            self.clearIndicatorRange(
+                0, 0, last, self.lineLength(last), self._DIM_INDICATOR
+            )
 
     def _apply_dim_overlay(self) -> None:
         last = self.lines() - 1
@@ -97,9 +99,16 @@ class ProtectedZoneEditor(EditorBase):
 
         # Always allow: navigation, undo/redo, copy, select-all, find
         if (
-            key in (
-                Qt.Key.Key_Left, Qt.Key.Key_Right, Qt.Key.Key_Up, Qt.Key.Key_Down,
-                Qt.Key.Key_Home, Qt.Key.Key_End, Qt.Key.Key_PageUp, Qt.Key.Key_PageDown,
+            key
+            in (
+                Qt.Key.Key_Left,
+                Qt.Key.Key_Right,
+                Qt.Key.Key_Up,
+                Qt.Key.Key_Down,
+                Qt.Key.Key_Home,
+                Qt.Key.Key_End,
+                Qt.Key.Key_PageUp,
+                Qt.Key.Key_PageDown,
                 Qt.Key.Key_Escape,
             )
             or (ctrl and key in (Qt.Key.Key_Z, Qt.Key.Key_Y))
@@ -114,7 +123,11 @@ class ProtectedZoneEditor(EditorBase):
 
         # Backspace at col 0 would merge with the line above
         if key == Qt.Key.Key_Backspace:
-            if cur_col == 0 and cur_line > 0 and not self._is_in_editable_zone(cur_line - 1):
+            if (
+                cur_col == 0
+                and cur_line > 0
+                and not self._is_in_editable_zone(cur_line - 1)
+            ):
                 event.ignore()
                 return
             if not self._is_in_editable_zone(cur_line):
@@ -146,7 +159,10 @@ class ProtectedZoneEditor(EditorBase):
     def paste(self) -> None:
         if self._protected:
             cur_line, _ = self.getCursorPosition()
-            if not self._is_in_editable_zone(cur_line) or self._selection_touches_protected():
+            if (
+                not self._is_in_editable_zone(cur_line)
+                or self._selection_touches_protected()
+            ):
                 return
         super().paste()
 
@@ -237,8 +253,21 @@ class ProcessScriptEditorWindow(ScriptEditorWindow):
         self.editor.ensureLineVisible(line)
         self.editor.setFocus()
 
-        body_start = max(method_node.body[0].lineno - 1, 0) if method_node.body else line
-        body_end = max((method_node.end_lineno or (method_node.body[0].lineno if method_node.body else method_node.lineno)) - 1, 0)
+        body_start = (
+            max(method_node.body[0].lineno - 1, 0) if method_node.body else line
+        )
+        body_end = max(
+            (
+                method_node.end_lineno
+                or (
+                    method_node.body[0].lineno
+                    if method_node.body
+                    else method_node.lineno
+                )
+            )
+            - 1,
+            0,
+        )
         self.editor.set_protected_zone(body_start, body_end)
 
     def format_with_black(self) -> None:
@@ -274,7 +303,9 @@ class ProcessScriptEditorWindow(ScriptEditorWindow):
             None,
         )
         if class_node is None:
-            logger.error("Class '{}' was not found in '{}'.", self._class_name, self.editor.path)
+            logger.error(
+                "Class '{}' was not found in '{}'.", self._class_name, self.editor.path
+            )
             return
 
         method_node = next(

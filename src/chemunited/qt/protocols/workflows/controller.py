@@ -18,7 +18,7 @@ class WorkflowController(QObject):
     block_added = pyqtSignal(str)
     block_updated = pyqtSignal(str)
     block_removed = pyqtSignal(str)
-    
+
     connection_added = pyqtSignal(str, str)
     connection_updated = pyqtSignal(str, str)
     connection_removed = pyqtSignal(str, str)
@@ -140,10 +140,10 @@ class WorkflowController(QObject):
     ) -> None:
         self._workflow.update_connection_geometry(start, end, inflection_points)
         self.connection_updated.emit(start, end)
-    
+
     def save_workflow(self) -> None:
         self.request_build_script.emit()
-    
+
     def clear_workflow(self) -> None:
         self._workflow.clear()
         self.model_reset.emit()

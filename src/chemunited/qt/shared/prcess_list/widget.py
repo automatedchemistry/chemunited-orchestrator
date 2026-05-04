@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtWidgets import QFrame, QHBoxLayout, QSizePolicy, QSpacerItem, QVBoxLayout
+from PyQt5.QtWidgets import QFrame, QSizePolicy, QSpacerItem, QVBoxLayout
 from qfluentwidgets import PushButton
 
 from .list import ProcessList

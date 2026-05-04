@@ -7,8 +7,8 @@ import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-from chemunited.qt.protocols.workflows import ProcessWorkflow
 from chemunited.qt.project.writer import render_python_script, write_python_script
+from chemunited.qt.protocols.workflows import ProcessWorkflow
 from chemunited.qt.utils.files import load_attribute
 
 _PACK_EXCLUDE = {".git", ".gitignore", ".chemunited_session", "__pycache__"}
@@ -649,17 +649,31 @@ def _append_separated_block(chunks: list[str], block: str) -> None:
 def _node_start_offset(node: ast.AST, lines: list[str]) -> int:
     decorators = getattr(node, "decorator_list", [])
     start_node = decorators[0] if decorators else node
-    return _line_col_to_offset(lines, start_node.lineno, start_node.col_offset)
+    lineno = getattr(start_node, "lineno", None)
+    col_offset = getattr(start_node, "col_offset", None)
+    if lineno is None or col_offset is None:
+        msg = f"AST node {type(start_node).__name__} is missing location metadata"
+        raise ValueError(msg)
+    return _line_col_to_offset(lines, lineno, col_offset)
 
 
 def _node_line_start_offset(node: ast.AST, lines: list[str]) -> int:
     decorators = getattr(node, "decorator_list", [])
     start_node = decorators[0] if decorators else node
-    return _line_col_to_offset(lines, start_node.lineno, 0)
+    lineno = getattr(start_node, "lineno", None)
+    if lineno is None:
+        msg = f"AST node {type(start_node).__name__} is missing location metadata"
+        raise ValueError(msg)
+    return _line_col_to_offset(lines, lineno, 0)
 
 
 def _node_end_offset(node: ast.AST, lines: list[str]) -> int:
-    return _line_col_to_offset(lines, node.end_lineno, node.end_col_offset)
+    end_lineno = getattr(node, "end_lineno", None)
+    end_col_offset = getattr(node, "end_col_offset", None)
+    if end_lineno is None or end_col_offset is None:
+        msg = f"AST node {type(node).__name__} is missing end location metadata"
+        raise ValueError(msg)
+    return _line_col_to_offset(lines, end_lineno, end_col_offset)
 
 
 def _line_col_to_offset(lines: list[str], lineno: int, col_offset: int) -> int:
@@ -692,9 +706,7 @@ def _render_new_process_methods(workflow: ProcessWorkflow) -> str:
     )
 
 
-def _retitle_process_content(
-    content: str, source_name: str, new_name: str
-) -> str:
+def _retitle_process_content(content: str, source_name: str, new_name: str) -> str:
     old_class = _class_name(source_name)
     new_class = _class_name(new_name)
     updated = content.replace(old_class, new_class)

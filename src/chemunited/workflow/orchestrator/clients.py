@@ -17,18 +17,14 @@ class BaseClient:
     def __init__(self, url: str | AnyHttpUrl):
         self.base_url = str(url).rstrip("/")
         self._session = requests.Session()
-        self._session.hooks["response"] = [
-            self.raise_for_status, self.log_responses
-        ]
-        self.is_online # Check if the service is online
+        self._session.hooks["response"] = [self.raise_for_status, self.log_responses]
+        self.is_online  # Check if the service is online
 
     @property
     def is_online(self) -> bool:
         try:
             self._session.get(self.base_url, timeout=0.1)
-            logger.info(
-                f"HTTP session is online for {self.base_url}"
-            )
+            logger.info(f"HTTP session is online for {self.base_url}")
             return True
         except requests.exceptions.ConnectionError:
             logger.warning(f"HTTP session is offline for {self.base_url}")

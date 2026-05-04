@@ -4,8 +4,8 @@ from datetime import datetime, timezone
 from pathlib import Path
 
 from loguru import logger
-from PyQt5.QtWidgets import QFileDialog, QMessageBox
 from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtWidgets import QFileDialog, QMessageBox
 
 from chemunited.qt.project.manifest import ProjectManifest
 from chemunited.qt.project.platform_svg import (
@@ -68,6 +68,8 @@ def _infer_block_tag(node_id: str, attrs: dict, graph) -> ProtocolBlock:
 
 
 def _coerce_ports_numbers(value: object) -> int:
+    if not isinstance(value, (int, float, str)):
+        return 1
     try:
         ports_numbers = int(value)
     except (TypeError, ValueError):
@@ -130,7 +132,9 @@ class OrchestratorProjectFile(OrchestratorExecution):
         self._session.new(name=self.working_dir.name, location=self.working_dir.parent)
         self._save_platform_svg()
         self._session.save_draw(self._build_draw_data())
-        self._session.save_main_parameters(self._render_main_parameters_script(self.working_dir))
+        self._session.save_main_parameters(
+            self._render_main_parameters_script(self.working_dir)
+        )
         self._session.export_chemunited(chemunited_path)
 
         logger.bind(window=WindowCategory.SETUP).info(
@@ -198,7 +202,9 @@ class OrchestratorProjectFile(OrchestratorExecution):
         self._save_platform_svg()
         self._session.save_draw(self._build_draw_data())
         self._save_protocols()
-        self._session.save_main_parameters(self._render_main_parameters_script(self.working_dir))
+        self._session.save_main_parameters(
+            self._render_main_parameters_script(self.working_dir)
+        )
         self._session.save_connectivity(self._build_connectivity_data())
         self._session.export_chemunited(export_destination)
 
@@ -468,7 +474,9 @@ class OrchestratorProjectFile(OrchestratorExecution):
             condition = attrs.get("condition")
             trigger_on = attrs.get("trigger_on", False)
             source_block = workflow.get_block(source)
-            source_tag = source_block.block_tag if source_block else ProtocolBlock.SCRIPT
+            source_tag = (
+                source_block.block_tag if source_block else ProtocolBlock.SCRIPT
+            )
             start_role = resolve_render_start_role(
                 source_tag,
                 start_role=None,
@@ -477,7 +485,8 @@ class OrchestratorProjectFile(OrchestratorExecution):
                 condition=condition,
             )
             workflow.add_connection(
-                source, target,
+                source,
+                target,
                 start_role=start_role,
                 condition=condition,
                 loopback=loopback,

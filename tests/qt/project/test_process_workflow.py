@@ -27,7 +27,7 @@ def test_script_method_block_extracts_class_method_and_caches(tmp_path: Path):
 
     block_source = block.script_method_block
 
-    assert 'def prepare_sample(self, ctx) -> bool:' in block_source
+    assert "def prepare_sample(self, ctx) -> bool:" in block_source
     assert 'ctx.runtime.status_message = "Prepared"' in block_source
 
     script_path.unlink()

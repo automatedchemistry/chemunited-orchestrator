@@ -5,14 +5,13 @@ import typing
 import uuid
 from dataclasses import dataclass
 from typing import Any
-from pathlib import Path
 
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, HTTPException  # type: ignore[import-not-found]
 from loguru import logger
 from pydantic import BaseModel, ValidationError
-from chemunited.workflow.process import Process
-from chemunited.workflow.orchestrator import Platform
 
+from chemunited.workflow.orchestrator import Platform
+from chemunited.workflow.process import Process
 
 # ── Shared helpers ─────────────────────────────────────────────────────────────
 
@@ -58,7 +57,9 @@ class ReplaceSequenceItem(BaseModel):
 
 
 class RunController:
-    def __init__(self, params: BaseModel, processes: dict[str, type], platform: Platform) -> None:
+    def __init__(
+        self, params: BaseModel, processes: dict[str, type], platform: Platform
+    ) -> None:
         self._params: BaseModel = params
         self._processes = processes
         self._platform = platform
@@ -66,24 +67,98 @@ class RunController:
 
         self.router = APIRouter()
 
-        self.router.add_api_route("/main-params", self.get_main_params, methods=["GET"], tags=["Main Parameters"], summary="Get current main parameters")
-        self.router.add_api_route("/main-params/schema", self.get_main_params_schema, methods=["GET"], tags=["Main Parameters"], summary="JSON Schema for main parameters")
-        self.router.add_api_route("/main-params", self.update_main_params, methods=["PATCH"], tags=["Main Parameters"], summary="Update main parameters")
+        self.router.add_api_route(
+            "/main-params",
+            self.get_main_params,
+            methods=["GET"],
+            tags=["Main Parameters"],
+            summary="Get current main parameters",
+        )
+        self.router.add_api_route(
+            "/main-params/schema",
+            self.get_main_params_schema,
+            methods=["GET"],
+            tags=["Main Parameters"],
+            summary="JSON Schema for main parameters",
+        )
+        self.router.add_api_route(
+            "/main-params",
+            self.update_main_params,
+            methods=["PATCH"],
+            tags=["Main Parameters"],
+            summary="Update main parameters",
+        )
 
-        self.router.add_api_route("/processes", self.list_processes, methods=["GET"], tags=["Processes"], summary="List available process types with their config schemas")
+        self.router.add_api_route(
+            "/processes",
+            self.list_processes,
+            methods=["GET"],
+            tags=["Processes"],
+            summary="List available process types with their config schemas",
+        )
 
-        self.router.add_api_route("/sequence", self.get_sequence, methods=["GET"], tags=["Sequence"], summary="Get the current process sequence")
-        self.router.add_api_route("/sequence", self.add_to_sequence, methods=["POST"], status_code=201, tags=["Sequence"], summary="Append a process to the sequence")
-        self.router.add_api_route("/sequence", self.replace_sequence, methods=["PUT"], tags=["Sequence"], summary="Replace the entire sequence (atomic)")
-        self.router.add_api_route("/sequence/{index}", self.delete_sequence, methods=["DELETE"], status_code=204, tags=["Sequence"], summary="Remove a process from the sequence")
-        self.router.add_api_route("/sequence/{index}/config", self.patch_config, methods=["PATCH"], tags=["Sequence"], summary="Update config of a process in the sequence")
+        self.router.add_api_route(
+            "/sequence",
+            self.get_sequence,
+            methods=["GET"],
+            tags=["Sequence"],
+            summary="Get the current process sequence",
+        )
+        self.router.add_api_route(
+            "/sequence",
+            self.add_to_sequence,
+            methods=["POST"],
+            status_code=201,
+            tags=["Sequence"],
+            summary="Append a process to the sequence",
+        )
+        self.router.add_api_route(
+            "/sequence",
+            self.replace_sequence,
+            methods=["PUT"],
+            tags=["Sequence"],
+            summary="Replace the entire sequence (atomic)",
+        )
+        self.router.add_api_route(
+            "/sequence/{index}",
+            self.delete_sequence,
+            methods=["DELETE"],
+            status_code=204,
+            tags=["Sequence"],
+            summary="Remove a process from the sequence",
+        )
+        self.router.add_api_route(
+            "/sequence/{index}/config",
+            self.patch_config,
+            methods=["PATCH"],
+            tags=["Sequence"],
+            summary="Update config of a process in the sequence",
+        )
 
-        self.router.add_api_route("/execute", self.execute, methods=["POST"], tags=["Run"], summary="Execute the configured sequence")
-        self.router.add_api_route("/stop",    self.stop,    methods=["POST"], tags=["Run"], summary="Stop execution between processes")
-        self.router.add_api_route("/status",  self.status,  methods=["GET"],  tags=["Run"], summary="Check whether the sequence is running")
+        self.router.add_api_route(
+            "/execute",
+            self.execute,
+            methods=["POST"],
+            tags=["Run"],
+            summary="Execute the configured sequence",
+        )
+        self.router.add_api_route(
+            "/stop",
+            self.stop,
+            methods=["POST"],
+            tags=["Run"],
+            summary="Stop execution between processes",
+        )
+        self.router.add_api_route(
+            "/status",
+            self.status,
+            methods=["GET"],
+            tags=["Run"],
+            summary="Check whether the sequence is running",
+        )
 
         self.is_running: bool = False
-    
+
     # ── Main parameters ────────────────────────────────────────────────────────
 
     def get_main_params(self) -> dict[str, Any]:
@@ -137,7 +212,10 @@ class RunController:
         logger.info("PATCH /main-params updates={}", updates)
         if self.is_running:
             logger.warning("PATCH /main-params rejected — workflow is running")
-            raise HTTPException(status_code=409, detail="Cannot update main parameters while workflow is running")
+            raise HTTPException(
+                status_code=409,
+                detail="Cannot update main parameters while workflow is running",
+            )
         try:
             self._params = self._params.model_copy(update=updates)
         except ValidationError as e:
@@ -227,19 +305,32 @@ class RunController:
           "config": { "flow_rate": "10 ml/min" } }
         ```
         """
-        logger.info("POST /sequence process_name={} overrides={}", body.process_name, body.config_overrides)
+        logger.info(
+            "POST /sequence process_name={} overrides={}",
+            body.process_name,
+            body.config_overrides,
+        )
         if self.is_running:
             logger.warning("POST /sequence rejected — workflow is running")
-            raise HTTPException(status_code=409, detail="Cannot add to sequence while workflow is running")
+            raise HTTPException(
+                status_code=409,
+                detail="Cannot add to sequence while workflow is running",
+            )
         cls = self._processes.get(body.process_name)
         if cls is None:
             logger.warning("POST /sequence unknown process: {!r}", body.process_name)
-            raise HTTPException(status_code=404, detail=f"Unknown process: {body.process_name!r}")
+            raise HTTPException(
+                status_code=404, detail=f"Unknown process: {body.process_name!r}"
+            )
         config_cls = _get_config_class(cls)
         try:
             config = config_cls(**body.config_overrides)
         except ValidationError as e:
-            logger.warning("POST /sequence validation error for {!r}: {}", body.process_name, e.errors())
+            logger.warning(
+                "POST /sequence validation error for {!r}: {}",
+                body.process_name,
+                e.errors(),
+            )
             raise HTTPException(status_code=422, detail=e.errors())
         entry = SequenceEntry(
             slot_id=uuid.uuid4().hex[:8],
@@ -248,10 +339,14 @@ class RunController:
         )
         self._entries.append(entry)
         result = _entry_dict(len(self._entries) - 1, entry)
-        logger.info("POST /sequence → slot_id={} index={}", entry.slot_id, result["index"])
+        logger.info(
+            "POST /sequence → slot_id={} index={}", entry.slot_id, result["index"]
+        )
         return result
 
-    def replace_sequence(self, items: list[ReplaceSequenceItem]) -> list[dict[str, Any]]:
+    def replace_sequence(
+        self, items: list[ReplaceSequenceItem]
+    ) -> list[dict[str, Any]]:
         """Replace the entire sequence atomically.
 
         All items are validated before any change is made — if one entry is invalid,
@@ -266,27 +361,44 @@ class RunController:
         ]
         ```
         """
-        logger.info("PUT /sequence {} item(s): {}", len(items), [i.process_name for i in items])
+        logger.info(
+            "PUT /sequence {} item(s): {}", len(items), [i.process_name for i in items]
+        )
         if self.is_running:
             logger.warning("PUT /sequence rejected — workflow is running")
-            raise HTTPException(status_code=409, detail="Cannot replace sequence while workflow is running")
+            raise HTTPException(
+                status_code=409,
+                detail="Cannot replace sequence while workflow is running",
+            )
         new_entries: list[SequenceEntry] = []
         for i, item in enumerate(items):
             cls = self._processes.get(item.process_name)
             if cls is None:
-                logger.warning("PUT /sequence item {}: unknown process {!r}", i, item.process_name)
-                raise HTTPException(status_code=404, detail=f"Item {i}: unknown process {item.process_name!r}")
+                logger.warning(
+                    "PUT /sequence item {}: unknown process {!r}", i, item.process_name
+                )
+                raise HTTPException(
+                    status_code=404,
+                    detail=f"Item {i}: unknown process {item.process_name!r}",
+                )
             config_cls = _get_config_class(cls)
             try:
                 config = config_cls(**item.config_overrides)
             except ValidationError as e:
-                logger.warning("PUT /sequence item {} validation error for {!r}: {}", i, item.process_name, e.errors())
+                logger.warning(
+                    "PUT /sequence item {} validation error for {!r}: {}",
+                    i,
+                    item.process_name,
+                    e.errors(),
+                )
                 raise HTTPException(status_code=422, detail=f"Item {i}: {e.errors()}")
-            new_entries.append(SequenceEntry(
-                slot_id=uuid.uuid4().hex[:8],
-                process_name=item.process_name,
-                config=config,
-            ))
+            new_entries.append(
+                SequenceEntry(
+                    slot_id=uuid.uuid4().hex[:8],
+                    process_name=item.process_name,
+                    config=config,
+                )
+            )
         self._entries.clear()
         self._entries.extend(new_entries)
         result = [_entry_dict(i, e) for i, e in enumerate(self._entries)]
@@ -306,12 +418,26 @@ class RunController:
         logger.info("DELETE /sequence/{}", index)
         if self.is_running:
             logger.warning("DELETE /sequence/{} rejected — workflow is running", index)
-            raise HTTPException(status_code=409, detail="Cannot delete from sequence while workflow is running")
+            raise HTTPException(
+                status_code=409,
+                detail="Cannot delete from sequence while workflow is running",
+            )
         if index < 0 or index >= len(self._entries):
-            logger.warning("DELETE /sequence/{} not found (sequence length={})", index, len(self._entries))
-            raise HTTPException(status_code=404, detail=f"No sequence entry at index {index}")
+            logger.warning(
+                "DELETE /sequence/{} not found (sequence length={})",
+                index,
+                len(self._entries),
+            )
+            raise HTTPException(
+                status_code=404, detail=f"No sequence entry at index {index}"
+            )
         removed = self._entries.pop(index)
-        logger.info("DELETE /sequence/{} removed process={!r} slot_id={}", index, removed.process_name, removed.slot_id)
+        logger.info(
+            "DELETE /sequence/{} removed process={!r} slot_id={}",
+            index,
+            removed.process_name,
+            removed.slot_id,
+        )
 
     def patch_config(self, index: int, updates: dict[str, Any]) -> dict[str, Any]:
         """Update the config of the process at the given index.
@@ -332,16 +458,29 @@ class RunController:
         """
         logger.info("PATCH /sequence/{}/config updates={}", index, updates)
         if self.is_running:
-            logger.warning("PATCH /sequence/{}/config rejected — workflow is running", index)
-            raise HTTPException(status_code=409, detail="Cannot update config in sequence while workflow is running")
+            logger.warning(
+                "PATCH /sequence/{}/config rejected — workflow is running", index
+            )
+            raise HTTPException(
+                status_code=409,
+                detail="Cannot update config in sequence while workflow is running",
+            )
         if index < 0 or index >= len(self._entries):
-            logger.warning("PATCH /sequence/{}/config not found (sequence length={})", index, len(self._entries))
-            raise HTTPException(status_code=404, detail=f"No sequence entry at index {index}")
+            logger.warning(
+                "PATCH /sequence/{}/config not found (sequence length={})",
+                index,
+                len(self._entries),
+            )
+            raise HTTPException(
+                status_code=404, detail=f"No sequence entry at index {index}"
+            )
         entry = self._entries[index]
         try:
             entry.config = entry.config.model_copy(update=updates)
         except ValidationError as e:
-            logger.warning("PATCH /sequence/{}/config validation error: {}", index, e.errors())
+            logger.warning(
+                "PATCH /sequence/{}/config validation error: {}", index, e.errors()
+            )
             raise HTTPException(status_code=422, detail=e.errors())
         result = _entry_dict(index, entry)
         logger.info("PATCH /sequence/{}/config → {}", index, result["config"])
@@ -383,7 +522,9 @@ class RunController:
         logger.info("POST /execute sequence_length={}", len(self._entries))
         if self.is_running:
             logger.warning("POST /execute rejected — already running")
-            raise HTTPException(status_code=409, detail="Cannot execute while workflow is running")
+            raise HTTPException(
+                status_code=409, detail="Cannot execute while workflow is running"
+            )
         if not self._entries:
             logger.warning("POST /execute rejected — sequence is empty")
             raise HTTPException(status_code=400, detail="No processes in sequence")
@@ -393,7 +534,9 @@ class RunController:
         for entry in self._entries:
             process_class = self._processes.get(entry.process_name)
             if process_class is None:
-                raise HTTPException(status_code=404, detail=f"Unknown process: {entry.process_name!r}")
+                raise HTTPException(
+                    status_code=404, detail=f"Unknown process: {entry.process_name!r}"
+                )
             process_instance = process_class(config=entry.config)
             process_instance.main_parameter = self._params
             process_instance.platform = self._platform
@@ -403,16 +546,34 @@ class RunController:
         try:
             for i, process in enumerate(processes):
                 if not self.is_running:
-                    logger.info("POST /execute stopped before process {}/{}", i + 1, len(processes))
+                    logger.info(
+                        "POST /execute stopped before process {}/{}",
+                        i + 1,
+                        len(processes),
+                    )
                     break
-                logger.info("POST /execute running process {}/{}: {!r}", i + 1, len(processes), self._entries[i].process_name)
-                result = await asyncio.to_thread(process.run_workflow, start_node="start")
+                logger.info(
+                    "POST /execute running process {}/{}: {!r}",
+                    i + 1,
+                    len(processes),
+                    self._entries[i].process_name,
+                )
+                result = await asyncio.to_thread(
+                    process.run_workflow, start_node="start"
+                )
                 if result.errors:
-                    logger.error("POST /execute process {!r} failed: {}", self._entries[i].process_name, result.errors)
-                    raise HTTPException(status_code=500, detail={
-                        str(k): str(v) for k, v in result.errors.items()
-                    })
-                logger.info("POST /execute process {}/{} completed", i + 1, len(processes))
+                    logger.error(
+                        "POST /execute process {!r} failed: {}",
+                        self._entries[i].process_name,
+                        result.errors,
+                    )
+                    raise HTTPException(
+                        status_code=500,
+                        detail={str(k): str(v) for k, v in result.errors.items()},
+                    )
+                logger.info(
+                    "POST /execute process {}/{} completed", i + 1, len(processes)
+                )
         finally:
             self.is_running = False
 

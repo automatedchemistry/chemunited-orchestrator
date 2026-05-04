@@ -8,18 +8,17 @@ from qfluentwidgets import (
     NavigationItemPosition,
     RoundMenu,
 )
-from .shared.enums import SetupStepMode
 
+from .connectivity.graph import ConnectivityGraphicView
 from .draw.graph import DrawGraphicView
 from .draw.tree_add import TreeAddItem
 from .orchestrator import Orchestrator
+from .pre_run.pre_run_frame import PreRunFrame
 from .protocols.graph import ProtocolGraphicView
 from .protocols.process_list import ProtocolsWidget
 from .protocols.workflows.workflow_widget import WorkflowsWidget
-from .pre_run.pre_run_frame import PreRunFrame
-from .connectivity.graph import ConnectivityGraphicView
 from .shared.editor.protocols.command_list import CommandList
-from .shared.enums import WindowCategory
+from .shared.enums import SetupStepMode, WindowCategory
 from .shared.graph import SceneCore
 from .shared.icon import OrchestratorIcon
 from .shared.widgets.frame_base import FrameBase
@@ -73,7 +72,9 @@ class SetupWindow(MainWindowBase):
         self.buildUi()
 
         # Signal connections
-        self.SegmentWindow.current_widget_changed.connect(self._on_current_widget_changed)
+        self.SegmentWindow.current_widget_changed.connect(
+            self._on_current_widget_changed
+        )
 
     def initProjectMenu(self) -> None:
         self.project_menu = RoundMenu(parent=self)

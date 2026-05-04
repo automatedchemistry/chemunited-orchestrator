@@ -6,6 +6,7 @@ from PyQt5.QtWidgets import QGraphicsObject
 from qfluentwidgets import isDarkTheme
 
 from chemunited.core.common.constant import PATTERN_DIMENSION
+
 from .svg_layer import SvgLayer
 
 QT_NO_PEN = getattr(Qt, "NoPen")
@@ -102,6 +103,7 @@ class ConnectivityBadge(SvgLayer):
     Online  → QResource(":/icons/online.svg")
     Offline → QResource(":/icons/offline.svg")
     """
+
     ONLINE_SVG = ":/icons/icons/online.svg"
     OFFLINE_SVG = ":/icons/icons/offline.svg"
     COLOR_API_ON = QColor("#4CAF50")
@@ -171,9 +173,7 @@ class ConnectivityBadge(SvgLayer):
             return
 
         painter.save()
-        painter.setPen(
-            QPen(self.COLOR_API_ON if self._status else self.COLOR_API_OFF)
-        )
+        painter.setPen(QPen(self.COLOR_API_ON if self._status else self.COLOR_API_OFF))
         font = QFont()
         font.setPointSizeF(max(6.0, self._scale * 0.25))
         painter.setFont(font)

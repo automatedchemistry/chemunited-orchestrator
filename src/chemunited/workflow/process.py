@@ -24,7 +24,7 @@ class Process(ABC, Generic[ConfigT]):
         self.config = config
         self.main_parameters: BaseModel | None = None
         self.platform = Platform()
-    
+
     def set_main_parameters(self, main_parameters: BaseModel) -> None:
         self.main_parameters = main_parameters
 
@@ -32,14 +32,18 @@ class Process(ABC, Generic[ConfigT]):
     def build_workflow(self) -> nx.DiGraph:
         """Return the authored workflow graph."""
 
-    def run_workflow(self, start_node: str, terminal_observer: bool = True) -> WorkflowResult:
+    def run_workflow(
+        self, start_node: str, terminal_observer: bool = True
+    ) -> WorkflowResult:
         """Compile and execute the workflow from ``start_node``."""
         graph = self.build_workflow()
         compiled = compile_workflow(graph)
 
         if terminal_observer:
             terminal = TerminalWorkflowObserver(compiled, refresh_per_second=5)
-            executor = WorkflowExecutor(compiled, event_listeners=[terminal.handle_event])
+            executor = WorkflowExecutor(
+                compiled, event_listeners=[terminal.handle_event]
+            )
             result = executor.execute(self, start_node=start_node)
             terminal.print_execution_report(result, authored_graph=graph)
             return result

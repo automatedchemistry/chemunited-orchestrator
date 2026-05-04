@@ -1,8 +1,8 @@
 from typing import ClassVar
 
 from chemunited.core.components import PressureControlData, PressureControlMode
-from chemunited.qt.elements.component.graph_item import GraphComponent
 from chemunited.core.components.enums import ComponentType
+from chemunited.qt.elements.component.graph_item import GraphComponent
 
 
 class SourceData(PressureControlData):

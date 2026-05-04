@@ -7,11 +7,11 @@ from PyQt5.QtGui import QColor, QPainterPath, QPolygonF
 from chemunited.core.common.constant import PATTERN_DIMENSION
 from chemunited.core.common.enums import GroupParameterCategory
 from chemunited.core.components import PlugFlowComponentData, PlugFlowMode
+from chemunited.core.components.enums import ComponentType
 from chemunited.qt.elements.component.component_parts import SvgLayer
 from chemunited.qt.elements.component.graph_item import GraphComponent
 from chemunited.qt.shared.graph_objects.custom_path import PathElementItem
 from chemunited.qt.utils.math_functions import build_snake_path
-from chemunited.core.components.enums import ComponentType
 
 
 class FlowReactorMode(PlugFlowMode):

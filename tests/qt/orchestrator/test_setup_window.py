@@ -338,8 +338,8 @@ class ReactProcess(Process[ReactProcessConfig]):
         updated = existing_process.read_text(encoding="utf-8")
         assert '"fresh_node"' in updated
         assert "def legacy_step(" not in updated
-        assert 'def fresh_step(self, ctx: NodeExecutionContext) -> bool:' in updated
-        assert 'def _prepare_stock(self) -> str:' in updated
+        assert "def fresh_step(self, ctx: NodeExecutionContext) -> bool:" in updated
+        assert "def _prepare_stock(self) -> str:" in updated
 
     def test_rename_process_saves_project_when_original_file_is_missing(
         self, window: SetupWindow, tmp_path
@@ -377,7 +377,7 @@ class ReactProcess(Process[ReactProcessConfig]):
 
         assert not old_process.exists()
         assert renamed_process.exists()
-        assert 'class ReactRenamedProcessConfig(BaseModel):' in renamed_content
+        assert "class ReactRenamedProcessConfig(BaseModel):" in renamed_content
         assert (
             "class ReactRenamedProcess(Process[ReactRenamedProcessConfig]):"
             in renamed_content

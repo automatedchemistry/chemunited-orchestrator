@@ -15,11 +15,8 @@ from chemunited.workflow import (
     NodeConfig,
     NodeExecutionContext,
     Process,
-    TerminalWorkflowObserver,
     WorkflowEdgeSpec,
-    WorkflowExecutor,
     WorkflowNodeSpec,
-    compile_workflow,
     configure_terminal_logging,
 )
 

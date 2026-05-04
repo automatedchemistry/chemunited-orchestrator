@@ -81,12 +81,10 @@ def test_sync_process_creates_new_process_file(tmp_path):
 
     synced = session.sync_process("React", workflow)
 
-    content = (tmp_path / "demo" / "protocols" / "React.py").read_text(
-        encoding="utf-8"
-    )
+    content = (tmp_path / "demo" / "protocols" / "React.py").read_text(encoding="utf-8")
     assert synced is True
     assert "class ReactProcess(Process[ReactProcessConfig]):" in content
-    assert 'def script_1(self, ctx: NodeExecutionContext) -> bool:' in content
+    assert "def script_1(self, ctx: NodeExecutionContext) -> bool:" in content
 
 
 def test_sync_process_updates_existing_file_in_place(tmp_path):
@@ -238,9 +236,9 @@ def test_sync_process_updates_existing_file_in_place(tmp_path):
     assert '"Custom start"' in updated
     assert '"Custom finish"' in updated
     assert "def obsolete_step(" not in updated
-    assert 'def fresh_step(self, ctx: NodeExecutionContext) -> bool:' in updated
+    assert "def fresh_step(self, ctx: NodeExecutionContext) -> bool:" in updated
     assert 'ctx.runtime.status_message = "Fresh Step ran."' in updated
-    assert 'def _prepare_stock(self) -> str:' in updated
+    assert "def _prepare_stock(self) -> str:" in updated
 
 
 def test_sync_process_leaves_invalid_existing_file_unchanged(tmp_path):

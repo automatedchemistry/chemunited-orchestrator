@@ -41,7 +41,9 @@ def main(project_file: str | None = None, overwrite: bool = False) -> None:
 
     window = SetupWindow()
     if project_file:
-        window.orchestrator.open_project(Path(project_file).resolve(), overwrite=overwrite)
+        window.orchestrator.open_project(
+            Path(project_file).resolve(), overwrite=overwrite
+        )
     window.show()
     sys.exit(app.exec_())
 

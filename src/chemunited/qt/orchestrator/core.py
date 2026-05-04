@@ -5,7 +5,7 @@ from qfluentwidgets import InfoBar, InfoBarPosition
 
 from chemunited.qt.elements.access import Components, Connections
 from chemunited.qt.protocols.workflows import ProcessWorkflow
-from chemunited.qt.shared.enums import WindowCategory, SetupStepMode
+from chemunited.qt.shared.enums import SetupStepMode, WindowCategory
 from chemunited.qt.shared.logger_queue import LOG_QUEUE
 
 if TYPE_CHECKING:

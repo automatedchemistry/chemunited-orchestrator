@@ -220,12 +220,16 @@ class OrchestratorDraw(OrchestratorCore):
         data = EdgeData.from_mode(mode)
 
         if data.name in self.connections:
-            _log_draw_error(self.parent_ref, f"Connection '{data.name}' already exists.")
+            _log_draw_error(
+                self.parent_ref, f"Connection '{data.name}' already exists."
+            )
             return
 
         cls = _CONNECTION_FACTORY.get(classification)
         if cls is None:
-            _log_draw_error(self.parent_ref, f"Unknown connection category: {classification}.")
+            _log_draw_error(
+                self.parent_ref, f"Unknown connection category: {classification}."
+            )
             return
         connection = cls(origin_port=origin_cp, destination_port=destiny_cp, data=data)
 

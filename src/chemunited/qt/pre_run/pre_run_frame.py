@@ -10,5 +10,4 @@ class PreRunFrame(QFrame):
 
         self.init_ui()
 
-    def init_ui(self):
-        ...
+    def init_ui(self): ...
