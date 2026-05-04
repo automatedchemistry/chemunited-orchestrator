@@ -6,14 +6,35 @@ import uuid
 from dataclasses import dataclass
 from typing import Any
 
+import json
+
 from fastapi import APIRouter, HTTPException  # type: ignore[import-not-found]
+from sse_starlette.sse import EventSourceResponse  # type: ignore[import-not-found]
 from loguru import logger
 from pydantic import BaseModel, ValidationError
 
+from chemunited.workflow.api.sse_observer import APIWorkflowObserver
+from chemunited.workflow.models import WorkflowExecutionEvent
 from chemunited.workflow.orchestrator import Platform
 from chemunited.workflow.process import Process
 
 # ── Shared helpers ─────────────────────────────────────────────────────────────
+
+
+def _event_to_json(event: WorkflowExecutionEvent) -> str:
+    return json.dumps({
+        "event_type": event.event_type.value,
+        "message": event.message,
+        "node_key": list(event.node_key) if event.node_key is not None else None,
+        "state": event.state.value if event.state is not None else None,
+        "result": event.result,
+        "method": event.method,
+        "source": event.source,
+        "target": event.target,
+        "active_predecessor_count": event.active_predecessor_count,
+        "completed_predecessor_count": event.completed_predecessor_count,
+        "timestamp": event.timestamp,
+    })
 
 
 def _get_config_class(process_cls: type) -> type[BaseModel]:
@@ -141,6 +162,13 @@ class RunController:
             methods=["POST"],
             tags=["Run"],
             summary="Execute the configured sequence",
+        )
+        self.router.add_api_route(
+            "/execute/stream",
+            self.execute_stream,
+            methods=["GET"],
+            tags=["Run"],
+            summary="Execute the configured sequence and stream events via SSE",
         )
         self.router.add_api_route(
             "/stop",
@@ -579,6 +607,91 @@ class RunController:
 
         logger.info("POST /execute → completed")
         return {"status": "completed"}
+
+    async def execute_stream(self) -> EventSourceResponse:
+        """Execute the configured sequence and stream each WorkflowExecutionEvent via SSE.
+
+        Each SSE message carries a JSON-serialised `WorkflowExecutionEvent`. The stream
+        closes automatically after the last process emits `EXECUTION_FINISHED`.
+
+        Use the native browser `EventSource` API or any HTTP client that supports
+        `text/event-stream` (e.g. `httpx.stream`).
+
+        Returns `409` if already running, `400` if the sequence is empty.
+        """
+        logger.info("GET /execute/stream sequence_length={}", len(self._entries))
+        if self.is_running:
+            logger.warning("GET /execute/stream rejected — already running")
+            raise HTTPException(
+                status_code=409, detail="Cannot execute while workflow is running"
+            )
+        if not self._entries:
+            logger.warning("GET /execute/stream rejected — sequence is empty")
+            raise HTTPException(status_code=400, detail="No processes in sequence")
+
+        processes: list[Process] = []
+        for entry in self._entries:
+            process_class = self._processes.get(entry.process_name)
+            if process_class is None:
+                raise HTTPException(
+                    status_code=404, detail=f"Unknown process: {entry.process_name!r}"
+                )
+            instance = process_class(config=entry.config)
+            instance.main_parameter = self._params
+            instance.platform = self._platform
+            processes.append(instance)
+
+        loop = asyncio.get_running_loop()
+        queue: asyncio.Queue[WorkflowExecutionEvent | None] = asyncio.Queue()
+        observer = APIWorkflowObserver(loop, queue)
+
+        async def _run() -> None:
+            try:
+                for i, process in enumerate(processes):
+                    if not self.is_running:
+                        logger.info(
+                            "GET /execute/stream stopped before process {}/{}",
+                            i + 1,
+                            len(processes),
+                        )
+                        break
+                    logger.info(
+                        "GET /execute/stream running process {}/{}: {!r}",
+                        i + 1,
+                        len(processes),
+                        self._entries[i].process_name,
+                    )
+                    result = await asyncio.to_thread(
+                        process.run_workflow,
+                        start_node="start",
+                        terminal_observer=False,
+                        extra_listeners=[observer.handle_event],
+                    )
+                    if result.errors:
+                        logger.error(
+                            "GET /execute/stream process {!r} failed: {}",
+                            self._entries[i].process_name,
+                            result.errors,
+                        )
+                        break
+                    logger.info(
+                        "GET /execute/stream process {}/{} completed", i + 1, len(processes)
+                    )
+            finally:
+                self.is_running = False
+                await queue.put(None)
+
+        async def _event_generator():
+            self.is_running = True
+            asyncio.create_task(_run())
+            while True:
+                event = await queue.get()
+                if event is None:
+                    logger.info("GET /execute/stream → closed")
+                    return
+                yield {"data": _event_to_json(event)}
+
+        return EventSourceResponse(_event_generator())
 
     def status(self) -> dict[str, bool]:
         """Check whether a sequence execution is currently in progress.
