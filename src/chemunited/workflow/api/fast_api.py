@@ -8,6 +8,7 @@ from typing import Any
 from pathlib import Path
 
 from fastapi import APIRouter, HTTPException
+from loguru import logger
 from pydantic import BaseModel, ValidationError
 from chemunited.workflow.process import Process
 from chemunited.workflow.orchestrator import Platform
@@ -93,7 +94,9 @@ class RunController:
         { "target_temperature": 60, "solvent": "ethanol", "concentration": 0.5 }
         ```
         """
-        return self._params.model_dump(mode="json")
+        result = self._params.model_dump(mode="json")
+        logger.info("GET /main-params → {}", result)
+        return result
 
     def get_main_params_schema(self) -> dict[str, Any]:
         """Return the JSON Schema for the `MainParameter` model.
@@ -131,13 +134,18 @@ class RunController:
         { "target_temperature": 80, "solvent": "acetonitrile", "concentration": 0.5 }
         ```
         """
+        logger.info("PATCH /main-params updates={}", updates)
         if self.is_running:
+            logger.warning("PATCH /main-params rejected — workflow is running")
             raise HTTPException(status_code=409, detail="Cannot update main parameters while workflow is running")
         try:
             self._params = self._params.model_copy(update=updates)
         except ValidationError as e:
+            logger.warning("PATCH /main-params validation error: {}", e.errors())
             raise HTTPException(status_code=422, detail=e.errors())
-        return self._params.model_dump(mode="json")
+        result = self._params.model_dump(mode="json")
+        logger.info("PATCH /main-params → {}", result)
+        return result
 
     # ── Processes ──────────────────────────────────────────────────────────────
 
@@ -172,6 +180,7 @@ class RunController:
                 "description": getattr(cls, "__process_description__", ""),
                 "config_schema": config_cls.model_json_schema(),
             }
+        logger.info("GET /processes → {} process(es): {}", len(result), list(result))
         return result
 
     # ── Sequence ───────────────────────────────────────────────────────────────
@@ -192,7 +201,9 @@ class RunController:
         ]
         ```
         """
-        return [_entry_dict(i, e) for i, e in enumerate(self._entries)]
+        result = [_entry_dict(i, e) for i, e in enumerate(self._entries)]
+        logger.info("GET /sequence → {} entry(ies)", len(result))
+        return result
 
     def add_to_sequence(self, body: AddToSequenceBody) -> dict[str, Any]:
         """Append a process to the end of the sequence.
@@ -216,15 +227,19 @@ class RunController:
           "config": { "flow_rate": "10 ml/min" } }
         ```
         """
+        logger.info("POST /sequence process_name={} overrides={}", body.process_name, body.config_overrides)
         if self.is_running:
+            logger.warning("POST /sequence rejected — workflow is running")
             raise HTTPException(status_code=409, detail="Cannot add to sequence while workflow is running")
         cls = self._processes.get(body.process_name)
         if cls is None:
+            logger.warning("POST /sequence unknown process: {!r}", body.process_name)
             raise HTTPException(status_code=404, detail=f"Unknown process: {body.process_name!r}")
         config_cls = _get_config_class(cls)
         try:
             config = config_cls(**body.config_overrides)
         except ValidationError as e:
+            logger.warning("POST /sequence validation error for {!r}: {}", body.process_name, e.errors())
             raise HTTPException(status_code=422, detail=e.errors())
         entry = SequenceEntry(
             slot_id=uuid.uuid4().hex[:8],
@@ -232,7 +247,9 @@ class RunController:
             config=config,
         )
         self._entries.append(entry)
-        return _entry_dict(len(self._entries) - 1, entry)
+        result = _entry_dict(len(self._entries) - 1, entry)
+        logger.info("POST /sequence → slot_id={} index={}", entry.slot_id, result["index"])
+        return result
 
     def replace_sequence(self, items: list[ReplaceSequenceItem]) -> list[dict[str, Any]]:
         """Replace the entire sequence atomically.
@@ -249,17 +266,21 @@ class RunController:
         ]
         ```
         """
+        logger.info("PUT /sequence {} item(s): {}", len(items), [i.process_name for i in items])
         if self.is_running:
+            logger.warning("PUT /sequence rejected — workflow is running")
             raise HTTPException(status_code=409, detail="Cannot replace sequence while workflow is running")
         new_entries: list[SequenceEntry] = []
         for i, item in enumerate(items):
             cls = self._processes.get(item.process_name)
             if cls is None:
+                logger.warning("PUT /sequence item {}: unknown process {!r}", i, item.process_name)
                 raise HTTPException(status_code=404, detail=f"Item {i}: unknown process {item.process_name!r}")
             config_cls = _get_config_class(cls)
             try:
                 config = config_cls(**item.config_overrides)
             except ValidationError as e:
+                logger.warning("PUT /sequence item {} validation error for {!r}: {}", i, item.process_name, e.errors())
                 raise HTTPException(status_code=422, detail=f"Item {i}: {e.errors()}")
             new_entries.append(SequenceEntry(
                 slot_id=uuid.uuid4().hex[:8],
@@ -268,7 +289,9 @@ class RunController:
             ))
         self._entries.clear()
         self._entries.extend(new_entries)
-        return [_entry_dict(i, e) for i, e in enumerate(self._entries)]
+        result = [_entry_dict(i, e) for i, e in enumerate(self._entries)]
+        logger.info("PUT /sequence → sequence replaced with {} entry(ies)", len(result))
+        return result
 
     def delete_sequence(self, index: int) -> None:
         """Remove the process at the given 0-based index from the sequence.
@@ -280,11 +303,15 @@ class RunController:
 
         Returns `204 No Content` on success.
         """
+        logger.info("DELETE /sequence/{}", index)
         if self.is_running:
+            logger.warning("DELETE /sequence/{} rejected — workflow is running", index)
             raise HTTPException(status_code=409, detail="Cannot delete from sequence while workflow is running")
         if index < 0 or index >= len(self._entries):
+            logger.warning("DELETE /sequence/{} not found (sequence length={})", index, len(self._entries))
             raise HTTPException(status_code=404, detail=f"No sequence entry at index {index}")
-        self._entries.pop(index)
+        removed = self._entries.pop(index)
+        logger.info("DELETE /sequence/{} removed process={!r} slot_id={}", index, removed.process_name, removed.slot_id)
 
     def patch_config(self, index: int, updates: dict[str, Any]) -> dict[str, Any]:
         """Update the config of the process at the given index.
@@ -303,16 +330,22 @@ class RunController:
           "config": { "flow_rate": "15 ml/min", "residence_time": 120 } }
         ```
         """
+        logger.info("PATCH /sequence/{}/config updates={}", index, updates)
         if self.is_running:
+            logger.warning("PATCH /sequence/{}/config rejected — workflow is running", index)
             raise HTTPException(status_code=409, detail="Cannot update config in sequence while workflow is running")
         if index < 0 or index >= len(self._entries):
+            logger.warning("PATCH /sequence/{}/config not found (sequence length={})", index, len(self._entries))
             raise HTTPException(status_code=404, detail=f"No sequence entry at index {index}")
         entry = self._entries[index]
         try:
             entry.config = entry.config.model_copy(update=updates)
         except ValidationError as e:
+            logger.warning("PATCH /sequence/{}/config validation error: {}", index, e.errors())
             raise HTTPException(status_code=422, detail=e.errors())
-        return _entry_dict(index, entry)
+        result = _entry_dict(index, entry)
+        logger.info("PATCH /sequence/{}/config → {}", index, result["config"])
+        return result
 
     # ── Report ─────────────────────────────────────────────────────────────────
 
@@ -347,9 +380,12 @@ class RunController:
         ```
         *(The sequence loop exits cleanly when `POST /stop` is called between processes.)*
         """
+        logger.info("POST /execute sequence_length={}", len(self._entries))
         if self.is_running:
+            logger.warning("POST /execute rejected — already running")
             raise HTTPException(status_code=409, detail="Cannot execute while workflow is running")
         if not self._entries:
+            logger.warning("POST /execute rejected — sequence is empty")
             raise HTTPException(status_code=400, detail="No processes in sequence")
 
         # Build process instances from the already-configured sequence entries
@@ -365,17 +401,22 @@ class RunController:
 
         self.is_running = True
         try:
-            for process in processes:
+            for i, process in enumerate(processes):
                 if not self.is_running:
+                    logger.info("POST /execute stopped before process {}/{}", i + 1, len(processes))
                     break
+                logger.info("POST /execute running process {}/{}: {!r}", i + 1, len(processes), self._entries[i].process_name)
                 result = await asyncio.to_thread(process.run_workflow, start_node="start")
                 if result.errors:
+                    logger.error("POST /execute process {!r} failed: {}", self._entries[i].process_name, result.errors)
                     raise HTTPException(status_code=500, detail={
                         str(k): str(v) for k, v in result.errors.items()
                     })
+                logger.info("POST /execute process {}/{} completed", i + 1, len(processes))
         finally:
             self.is_running = False
 
+        logger.info("POST /execute → completed")
         return {"status": "completed"}
 
     def status(self) -> dict[str, bool]:
@@ -405,7 +446,10 @@ class RunController:
         { "status": "stop requested" }
         ```
         """
+        logger.info("POST /stop")
         if not self.is_running:
+            logger.warning("POST /stop rejected — workflow is not running")
             raise HTTPException(status_code=400, detail="Workflow is not running")
         self.is_running = False
+        logger.info("POST /stop → stop requested")
         return {"status": "stop requested"}

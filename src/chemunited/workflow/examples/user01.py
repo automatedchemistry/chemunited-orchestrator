@@ -266,15 +266,7 @@ def main() -> None:
         loopback_success_iteration=1,
     )
     process = CustomProcess(config)
-
-    authored_graph = process.build_workflow()
-    compiled = compile_workflow(authored_graph)
-    terminal = TerminalWorkflowObserver(compiled, refresh_per_second=6)
-    executor = WorkflowExecutor(
-        compiled, max_workers=4, event_listeners=[terminal.handle_event]
-    )
-    result = executor.execute(process, start_node="IN")
-    terminal.print_execution_report(result, authored_graph=authored_graph)
+    process.run_workflow(start_node="IN", terminal_observer=True)
 
 
 if __name__ == "__main__":

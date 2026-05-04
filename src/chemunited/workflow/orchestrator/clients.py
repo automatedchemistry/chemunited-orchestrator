@@ -17,6 +17,22 @@ class BaseClient:
     def __init__(self, url: str | AnyHttpUrl):
         self.base_url = str(url).rstrip("/")
         self._session = requests.Session()
+        self._session.hooks["response"] = [
+            self.raise_for_status, self.log_responses
+        ]
+        self.is_online # Check if the service is online
+
+    @property
+    def is_online(self) -> bool:
+        try:
+            self._session.get(self.base_url, timeout=0.1)
+            logger.info(
+                f"HTTP session is online for {self.base_url}"
+            )
+            return True
+        except requests.exceptions.ConnectionError:
+            logger.warning(f"HTTP session is offline for {self.base_url}")
+            return False
 
     @property
     def url(self) -> str:
@@ -67,6 +83,16 @@ class BaseClient:
         """Send a PUT request."""
         kwargs["params"] = self._normalize_params(kwargs.get("params"))
         return self._session.put(self._build_url(url), data=data, **kwargs)
+
+    @staticmethod
+    def raise_for_status(resp, *args, **kwargs):  # noqa
+        """Raise errors for status codes != 200 in session requests."""
+        resp.raise_for_status()
+
+    @staticmethod
+    def log_responses(resp, *args, **kwargs):  # noqa
+        """Log all the requests sent."""
+        logger.debug(f"Reply: '{resp.text}' on {resp.url}")
 
 
 class ComponentClient(BaseClient):
@@ -170,13 +196,6 @@ class ComponentClient(BaseClient):
             feedback_answer=command.feedback_answer,
             **request_kwargs,
         )
-
-    def sent_command(
-        self,
-        command: CommandSignature,
-        **request_kwargs: Any,
-    ) -> requests.Response:
-        return self.send_command(command, **request_kwargs)
 
     def get(
         self,

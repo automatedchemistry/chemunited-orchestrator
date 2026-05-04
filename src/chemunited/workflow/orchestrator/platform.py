@@ -23,7 +23,7 @@ class Platform:
                 data["server_url"] + "/" + association["device_url"]
             )
         return instance
-
-    def __getattr__(self, name: str) -> ComponentClient:
+    
+    def __getitem__(self, name: str) -> ComponentClient:
         """Get a client for a component."""
         return self.components[name]
