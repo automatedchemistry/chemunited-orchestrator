@@ -1,11 +1,18 @@
 import requests
+<<<<<<< HEAD
 from pydantic import BaseModel, AnyHttpUrl, ConfigDict, Field
+=======
+from pydantic import BaseModel, AnyHttpUrl, Field
+>>>>>>> 4b4729a4d8f98026cfe0203cc24014335f1636d3
 from urllib.parse import urlsplit
 
 
 class ComponentConnnectivity(BaseModel):
+<<<<<<< HEAD
     model_config = ConfigDict(validate_assignment=True)
 
+=======
+>>>>>>> 4b4729a4d8f98026cfe0203cc24014335f1636d3
     url: AnyHttpUrl = Field(
         default=AnyHttpUrl("http://0.0.0.0:0000"),
         title="Component URL access",

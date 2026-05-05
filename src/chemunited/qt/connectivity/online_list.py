@@ -20,7 +20,11 @@ if TYPE_CHECKING:
 
 class OnlineList(ListWidget):
     MIME = "application/x-chemunited-online-list"
+<<<<<<< HEAD
     def __init__(self, api_obj, parent=None):
+=======
+    def __init__(self, parent=None):
+>>>>>>> 4b4729a4d8f98026cfe0203cc24014335f1636d3
         super().__init__(parent)
         self.api_obj = api_obj
         self.setDragEnabled(True)
@@ -32,8 +36,13 @@ class OnlineList(ListWidget):
         if item:
             url_c = self.api_obj.currentText() + "/" + item.text()
             mime = QMimeData()
+<<<<<<< HEAD
             mime.setData(self.MIME, url_c.encode("utf-8"))
             mime.setText(url_c)
+=======
+            mime.setData(self.MIME, str(item.text()).encode("utf-8"))
+            mime.setText(item.text())
+>>>>>>> 4b4729a4d8f98026cfe0203cc24014335f1636d3
 
             drag = QDrag(self)
             drag.setMimeData(mime)

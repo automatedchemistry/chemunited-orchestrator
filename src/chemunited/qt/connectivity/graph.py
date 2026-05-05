@@ -1,5 +1,6 @@
 from chemunited.qt.elements.component.graph_item import GraphComponent
 from chemunited.qt.shared.enums import SetupStepMode
+<<<<<<< HEAD
 from chemunited.qt.shared.graph import GraphCore, SceneCore
 from .online_list import OnlineList
 from typing import TYPE_CHECKING, override
@@ -7,17 +8,25 @@ from loguru import logger
 
 if TYPE_CHECKING:
     from ..setup import SetupWindow
+=======
+from chemunited.qt.shared.graph import GraphCore
+from .online_list import OnlineList
+from typing import override
+>>>>>>> 4b4729a4d8f98026cfe0203cc24014335f1636d3
 
 
 class ConnectivityGraphicView(GraphCore):
     MODE = SetupStepMode.CONNECTIVITY
 
+<<<<<<< HEAD
     def __init__(self, scene: SceneCore | None = None, parent=None):
         super().__init__(scene, parent)
         self.setObjectName("ConnectivityGraphicView")
         if parent is not None:
             self.parent_ref: SetupWindow = parent
 
+=======
+>>>>>>> 4b4729a4d8f98026cfe0203cc24014335f1636d3
     @override
     def dragEnterEvent(self, event):
         if event.mimeData().hasFormat(OnlineList.MIME):
@@ -32,6 +41,7 @@ class ConnectivityGraphicView(GraphCore):
         else:
             event.ignore()
 
+<<<<<<< HEAD
     def _component_at_drop_position(self, event) -> GraphComponent | None:
         scene_pos = self.mapToScene(event.pos())
         scene = self.scene()
@@ -72,3 +82,13 @@ class ConnectivityGraphicView(GraphCore):
             print(url_component, component.inf.name)
             
 
+=======
+    @override
+    def dropEvent(self, event):
+        if event.mimeData().hasFormat(OnlineList.MIME):
+            url_component = event.mimeData().data(OnlineList.MIME).data().decode("utf-8")
+            print(url_component)
+            event.acceptProposedAction()
+        else:
+            event.ignore()
+>>>>>>> 4b4729a4d8f98026cfe0203cc24014335f1636d3

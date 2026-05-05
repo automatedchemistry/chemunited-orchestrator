@@ -24,6 +24,7 @@ class ConnectivityWidget(BaseModeEditorWidget):
         """Save the connectivity."""
         super().save()
         if self._component.is_online:
+<<<<<<< HEAD
             logger.success(
                 f"Component {self._component.name} was connected to "
                 f"{self._component.connectivity.url} successfully"
@@ -39,3 +40,8 @@ class ConnectivityWidget(BaseModeEditorWidget):
                 False, ""
             )
 
+=======
+            logger.success(f"Component {self._component.name} was connected to {self.connectivity.url} successfully")
+        else:
+            logger.error(f"Component {self._component.name} was not connected.")
+>>>>>>> 4b4729a4d8f98026cfe0203cc24014335f1636d3
