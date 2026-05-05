@@ -19,6 +19,7 @@ if TYPE_CHECKING:
 
 
 class OnlineList(ListWidget):
+    MIME = "application/x-chemunited-online-list"
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setDragEnabled(True)
@@ -29,6 +30,7 @@ class OnlineList(ListWidget):
         item = self.currentItem()
         if item:
             mime = QMimeData()
+            mime.setData(self.MIME, str(item.text()).encode("utf-8"))
             mime.setText(item.text())
 
             drag = QDrag(self)

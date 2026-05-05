@@ -1,0 +1,29 @@
+from typing import TYPE_CHECKING
+
+from PyQt5.QtWidgets import QWidget
+
+from chemunited.qt.shared.widgets.base_mode_editor import BaseModeEditorWidget
+from chemunited.qt.elements.component.connectivity import ComponentConnnectivity
+
+from loguru import logger
+
+if TYPE_CHECKING:
+    from chemunited.qt.elements.component import ElectronicManager
+
+
+class ConnectivityWidget(BaseModeEditorWidget):
+    def __init__(self, component: ElectronicManager, parent: QWidget | None = None):
+        self._component = component
+        super().__init__(
+            model_class=ComponentConnnectivity,
+            instance=component.connectivity,
+            parent=parent,
+        )
+
+    def save(self) -> None:
+        """Save the connectivity."""
+        super().save()
+        if self._component.is_online:
+            logger.success(f"Component {self._component.name} was connected to {self.connectivity.url} successfully")
+        else:
+            logger.error(f"Component {self._component.name} was not connected.")
