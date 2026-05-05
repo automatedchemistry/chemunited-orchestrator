@@ -10,6 +10,7 @@ from qfluentwidgets import (
 )
 
 from .connectivity.graph import ConnectivityGraphicView
+from .connectivity.online_list import OnlineComponent
 from .draw.graph import DrawGraphicView
 from .draw.tree_add import TreeAddItem
 from .orchestrator import Orchestrator
@@ -59,6 +60,7 @@ class SetupWindow(MainWindowBase):
             classification=SetupStepMode.CONNECTIVITY,
         )
         self.connectivityGraph = ConnectivityGraphicView(self.scene_attribute, self)
+        self.online_list = OnlineComponent(self)
 
         # Pre-run frame
         self.preRunFrame = PreRunFrame(self)
@@ -228,6 +230,13 @@ class SetupWindow(MainWindowBase):
         )
 
         self.connectivityFrame.setGraphWidget(self.connectivityGraph)
+
+        self.connectivityFrame.addSubInterface(
+            widget=self.online_list,
+            routeKey="online_list",
+            text="Online List",
+            icon=OrchestratorIcon.WIFI,
+        )
 
         self.connectivityFrame.addNavigationAction(
             icon=OrchestratorIcon.HOME,

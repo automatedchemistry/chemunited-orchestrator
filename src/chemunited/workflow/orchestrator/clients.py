@@ -22,6 +22,11 @@ class BaseClient:
 
     @property
     def is_online(self) -> bool:
+        """Check if the service is online."""
+        if self.base_url.endswith(":8000") or self.base_url.endswith(":8000/"):
+            # This means that the device name and component URL was not provided
+            # in the associations.json file
+            return False
         try:
             self._session.get(self.base_url, timeout=0.1)
             logger.info(f"HTTP session is online for {self.base_url}")

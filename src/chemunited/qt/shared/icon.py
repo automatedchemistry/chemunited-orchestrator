@@ -56,10 +56,12 @@ class OrchestratorIcon(FluentIconBase, Enum):
     STRING = "string"
     TRASH = "trash"
     TOML = "toml"
+    UPDATE = "update"
     UPLOAD = "upload"
     VARIABLE = "variable"
     WAITING_ICON = "waiting_icon"
     WATER = "water"
+    WIFI = "wifi"
 
     def path(self, theme=Theme.AUTO):
         resource_path = f":/icons/icons/{self.value}_{getIconColor()}.svg"

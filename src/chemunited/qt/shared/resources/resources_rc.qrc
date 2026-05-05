@@ -82,12 +82,16 @@
         <file>icons/trash_black.svg</file>
         <file>icons/trash_white.svg</file>
         <file>icons/toml.svg</file>
+        <file>icons/update_black.svg</file>
+        <file>icons/update_white.svg</file>
         <file>icons/upload_black.svg</file>
         <file>icons/upload_white.svg</file>
         <file>icons/variable_white.svg</file>
         <file>icons/variable_black.svg</file>
         <file>icons/waiting_icon.svg</file>
         <file>icons/water.svg</file>
+        <file>icons/wifi_black.svg</file>
+        <file>icons/wifi_white.svg</file>
     </qresource>
     <qresource prefix="/components_icons">
         <file>components/ADC.svg</file>
