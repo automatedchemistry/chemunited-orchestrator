@@ -1,11 +1,13 @@
 from zeroconf import Zeroconf, ServiceBrowser, ServiceListener
-from flowchem.client.common import FLOWCHEM_TYPE
 from collections import defaultdict
 from loguru import logger
 from typing import Any
 import requests
 import ipaddress
 import time
+
+FLOWCHEM_SUFFIX = "._labthing._tcp.local."
+FLOWCHEM_TYPE = FLOWCHEM_SUFFIX[1:]
 
 
 def access_url(url: str, timeout=5) -> tuple[bool, Any]:

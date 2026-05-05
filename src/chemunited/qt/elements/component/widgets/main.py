@@ -7,8 +7,9 @@ from PyQt5.QtCore import pyqtSlot
 from qfluentwidgets import FluentIcon, NavigationItemPosition
 
 from chemunited.qt.shared.widgets.main_window import WindowBase
-
+from chemunited.qt.shared.icon import OrchestratorIcon
 from .properties import PropertiesWidget
+from .connectivity import ConnectivityWidget
 
 if TYPE_CHECKING:
     from chemunited.qt.elements.component import ElectronicManager, UtensilManager
@@ -21,6 +22,8 @@ class ComponentWidget(WindowBase):
         super().__init__(parent)
         self.component = component
         self.TITLE = f"{component.name} Properties"
+        self.properties_widget: PropertiesWidget
+        self.connectivity_widget: ConnectivityWidget | None = None
         self.buildUi()
         self._connect_signals()
 
@@ -31,6 +34,11 @@ class ComponentWidget(WindowBase):
             component=self.component,
             parent=self,
         )
+        if self.component.inf.is_electronic:
+            self.connectivity_widget = ConnectivityWidget(
+                component=self.component,
+                parent=self,
+            )
 
     @override
     def initNavigation(self):
@@ -41,6 +49,13 @@ class ComponentWidget(WindowBase):
             text="Properties",
             position=NavigationItemPosition.TOP,
         )
+        if self.component.inf.is_electronic:
+            self.addSubInterface(
+                interface=self.connectivity_widget,
+                icon=OrchestratorIcon.WIFI,
+                text="Connectivity",
+                position=NavigationItemPosition.TOP,
+            )
 
     @pyqtSlot(BaseModel)
     def save(self, model: BaseModel):

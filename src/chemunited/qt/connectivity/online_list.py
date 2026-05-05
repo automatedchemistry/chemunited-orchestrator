@@ -19,8 +19,10 @@ if TYPE_CHECKING:
 
 
 class OnlineList(ListWidget):
-    def __init__(self, parent=None):
+    MIME = "application/x-chemunited-online-list"
+    def __init__(self, api_obj, parent=None):
         super().__init__(parent)
+        self.api_obj = api_obj
         self.setDragEnabled(True)
         # Important: allow dragging outside the widget
         self.setDefaultDropAction(Qt.MoveAction)  # type:ignore[attr-defined]
@@ -28,8 +30,10 @@ class OnlineList(ListWidget):
     def startDrag(self, supportedActions):
         item = self.currentItem()
         if item:
+            url_c = self.api_obj.currentText() + "/" + item.text()
             mime = QMimeData()
-            mime.setText(item.text())
+            mime.setData(self.MIME, url_c.encode("utf-8"))
+            mime.setText(url_c)
 
             drag = QDrag(self)
             drag.setMimeData(mime)
@@ -88,7 +92,7 @@ class OnlineComponent(QWidget):
         layout.addWidget(StrongBodyLabel("Available Flowchem servers", parent=self))
         layout.addWidget(self.api)
 
-        self.OnlineList = OnlineList()
+        self.OnlineList = OnlineList(api_obj=self.api)
         widget = QWidget()
         icon = TransparentToolButton(OrchestratorIcon.MOVE, self)
         icon.setToolTip("Item in the list is movable to the graphic")
@@ -144,9 +148,22 @@ class OnlineComponent(QWidget):
                     list_item = QListWidgetItem(QIcon(figure), text)
                     self.OnlineList.addItem(list_item)
 
-                    # Optional: show online/offline status in tooltip
+                    # Optional: show online/offline status and matching classes in the tooltip
                     tooltip = "✅ Online" if status else "❌ Offline"
-                    list_item.setToolTip(f"{text} - {tooltip}")
+                    possible_classes = [
+                        component_class
+                        for component_class in info.get("corresponding_class", [])
+                        if component_class not in {"FlowchemComponent", "object"}
+                    ]
+                    details = (
+                        "\n".join(
+                            f"  - {component_class}"
+                            for component_class in possible_classes
+                        )
+                        if possible_classes
+                        else "  - No information available"
+                    )
+                    list_item.setToolTip(f"{text} - {tooltip}\n{details}")
 
     def associate_item(self, component: str, text: str | None = None):
         """Move selected items from OnlineList to LockList."""
@@ -196,7 +213,7 @@ class OnlineComponent(QWidget):
                 label = widget.findChild(QLabel)
                 if label and label.text() == text:
                     if self._parent:
-                        self._parent.Manager.disassociate_component(component)
+                        self._parent.orchestrator.disassociate_component(component)
                     self.LockList.takeItem(i)
                     break
         self.OnlineList.addItem(QListWidgetItem(icon, text))
