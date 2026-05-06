@@ -374,3 +374,22 @@ class ProcessScriptEditorWindow(ScriptEditorWindow):
         target = matches[0]
         lines = source.splitlines(keepends=True)
         return "".join(lines[_start_lineno(target) - 1 : target.end_lineno]).rstrip()
+
+
+if __name__ == "__main__":
+    import sys
+
+    from PyQt5.QtWidgets import QApplication
+
+    app = QApplication(sys.argv)
+    window = ProcessScriptEditorWindow(
+        Path(__file__).parent.parent.parent
+        / "shared"
+        / "editor"
+        / "protocols"
+        / "example.py",
+        class_name="CustomProcess",
+    )
+    window.focus_method("check_pressure")
+    window.show()
+    sys.exit(app.exec_())

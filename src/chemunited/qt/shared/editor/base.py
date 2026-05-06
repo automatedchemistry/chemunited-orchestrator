@@ -9,8 +9,30 @@ from chemunited.qt.shared.editor.lexer import ThemedLexerPython
 
 
 class EditorBase(QsciScintilla):
+    """
+    Shared source-code editor used inside the script editor window.
+
+    Nomenclature for the visible editor parts:
+
+    - Editor widget: this whole QsciScintilla object. It is the large code area
+      placed in the window by ScriptEditorWindow.
+    - Text area: the main white/dark region where Python source text is edited.
+    - Line-number gutter: margin 0, the vertical strip on the left that shows
+      line numbers such as 1, 2, 3. QScintilla calls this a "margin".
+    - Caret: the text cursor that marks where typing will happen.
+    - Caret line: the highlighted row containing the caret.
+    - Indentation guides: faint vertical guide lines that show nested blocks.
+    - Lexer: the syntax highlighter that colors Python keywords, strings, and
+      comments based on the active theme.
+    - Autosave timer: a debounced timer that writes edits to disk shortly after
+      the user stops typing.
+
+    The surrounding window chrome, title bar, and right navigation rail belong
+    to ScriptEditorWindow, not this base editor widget.
+    """
 
     AUTOSAVE_INTERVAL_MS = 2000
+    LINE_NUMBER_MARGIN_WIDTH = "000000"
 
     def __init__(
         self,
@@ -71,7 +93,7 @@ class EditorBase(QsciScintilla):
         # ─── Line Numbers ───────────────────────────────────
 
         self.setMarginType(0, QsciScintilla.NumberMargin)  # Enable line numbers
-        self.setMarginWidth(0, "000")  # Reserve width
+        self.setMarginWidth(0, self.LINE_NUMBER_MARGIN_WIDTH)  # Reserve gutter width
 
         # Load file content into the editor
         self._load_content()
@@ -120,7 +142,7 @@ class EditorBase(QsciScintilla):
         try:
             savefile = QSaveFile(str(self.full_path))
             if not savefile.open(
-                QIODevice.WriteOnly | QIODevice.Text  # type:ignore[attr-defined]
+                QIODevice.WriteOnly | QIODevice.Text  # type: ignore[attr-defined]
             ):
                 return False, f"Open error: {savefile.errorString()}"
             # QsciScintilla is set to UTF-8; keep encoding consistent
