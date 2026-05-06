@@ -29,8 +29,11 @@ class FlowReactorMode(PlugFlowMode):
 
 
 class FlowReactorData(PlugFlowComponentData):
-    COMPONENT_TYPE: ClassVar[ComponentType] = ComponentType.ELECTRONIC
     heat_exchange: bool = True
+
+
+class PhotoReactorData(FlowReactorData):
+    COMPONENT_TYPE: ClassVar[ComponentType] = ComponentType.ELECTRONIC
 
 
 class PathTubing(PathElementItem):
@@ -96,6 +99,7 @@ class FlowReactor(GraphComponent[FlowReactorData]):
 
 
 class PhotoReactor(FlowReactor):
+    METADATA: ClassVar[type[PhotoReactorData]] = PhotoReactorData
 
     def build(self, svg_path: str | None = None) -> None:
         super().build()

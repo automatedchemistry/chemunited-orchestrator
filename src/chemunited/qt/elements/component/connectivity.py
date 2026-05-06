@@ -42,10 +42,10 @@ class ComponentConnnectivity(BaseModel):
 
 
 if __name__ == "__main__":
-    component = ComponentConnnectivity(url="http://localhost:8000/flume/123456")
+    component = ComponentConnnectivity(url=AnyHttpUrl("http://localhost:8000/flume/123456"))
     print(component.is_online)
     print(component.url_component)
     
-    component_2 = ComponentConnnectivity(url="http://127.0.0.1:1258/spectrometer/123456")
+    component_2 = ComponentConnnectivity(url=AnyHttpUrl("http://127.0.0.1:1258/spectrometer/123456"))
     print(component_2.is_online)
     print(component_2.url_component)

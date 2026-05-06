@@ -20,7 +20,7 @@ class OrchestratorConnectivity(OrchestratorProtocols):
 
         component = self.components[name]
         component.connectivity.url = validated_url
-        component.graph.set_online(component.is_online, component.url_component)
+        component.graph.set_online(component.is_online, str(component.url))
 
         parent_ref = getattr(self, "parent_ref", None)
         if update_online_list and hasattr(parent_ref, "online_list"):

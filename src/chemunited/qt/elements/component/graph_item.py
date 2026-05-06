@@ -123,6 +123,7 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
         self._mode: SetupStepMode = SetupStepMode.DESIGN
         self._deletable: bool = True
         self._warning_active: bool = False
+        self._hover_active: bool = False
 
         # ── group children (contribute to boundingRect) ────────────
         self._svg: SvgLayer | QGraphicsRectItem
@@ -277,10 +278,9 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
 
         # Badge: centred horizontally, placed above the figure with a 4 px gap.
         if self._badge is not None:
-            badge_br = self._badge.boundingRect()
-            self._badge.setPos(
-                -badge_br.width() / 2,
-                br.top() - badge_br.height() - 4,
+            self._badge.set_icon_center(
+                0,
+                br.top() - self._badge.icon_scene_size / 2 - 4,
             )
 
         # Warning: to the left of the figure, vertically centred.
@@ -337,11 +337,11 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
         Visibility rules per mode:
 
         +--------------+---------+-----------+--------+-------------+-------+---------+
-        | mode         | movable | deletable | points | port_labels | badge | warning |
+        | mode         | movable | deletable | points | port_labels | badge      | warning |
         +==============+=========+===========+========+=============+=======+=========+
-        | DESIGN       | yes     | yes       | yes    | yes         | no    | no      |
-        | PROTOCOLS    | yes     | no        | yes    | yes         | no    | no      |
-        | CONNECTIVITY | yes     | no        | no     | no          | yes   | active* |
+        | DESIGN       | yes     | yes       | yes    | yes         | no         | no      |
+        | PROTOCOLS    | yes     | no        | yes    | yes         | no         | no      |
+        | CONNECTIVITY | yes     | no        | no     | no          | yes        | active* |
         +--------------+---------+-----------+--------+-------------+-------+---------+
 
         *CONNECTIVITY: warning is shown only when show_warning(True) was previously called.
@@ -355,16 +355,14 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
             self.setFlag(QGraphicsItem.ItemIsMovable, True)  # type: ignore
             self._deletable = True
             self._restore_port_graph_visibility()
-            if self._badge is not None:
-                self._badge.setVisible(False)
+            self._sync_badge_visibility()
             self._warning.setVisible(False)
 
         elif mode == SetupStepMode.PROTOCOLS:
             self.setFlag(QGraphicsItem.ItemIsMovable, True)  # type: ignore
             self._deletable = False
             self._restore_port_graph_visibility()
-            if self._badge is not None:
-                self._badge.setVisible(False)
+            self._sync_badge_visibility()
             self._warning.setVisible(False)
 
         elif mode == SetupStepMode.CONNECTIVITY:
@@ -374,8 +372,7 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
                 pt.setVisible(False)
             for lbl in self._port_labels.values():
                 lbl.setVisible(False)
-            if self._badge is not None:
-                self._badge.setVisible(True)
+            self._sync_badge_visibility()
             # Respect the previously stored warning state — do not force visible.
             self._warning.setVisible(self._warning_active)
 
@@ -383,10 +380,18 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
             if not self._data.is_electronic:
                 self.setVisible(False)
 
+    def _sync_badge_visibility(self) -> None:
+        if self._badge is None:
+            return
+        badge_visible = self._mode == SetupStepMode.CONNECTIVITY
+        self._badge.setVisible(badge_visible)
+        self._badge.set_api_visible(badge_visible and self._hover_active)
+
     def set_online(self, online: bool, api: str = "") -> None:
         """Drive the connectivity badge. Called by ConnectivityManager."""
         if self._badge is not None:
             self._badge.setStatus(online, api)
+            self.post_layout()
 
     def show_warning(self, visible: bool, message: str = "") -> None:
         """Drive the warning badge. Called by GraphBuilder or SimAdapter.
@@ -529,10 +534,14 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
     # ── Qt overrides ───────────────────────────────────────────────
 
     def hoverEnterEvent(self, event):
+        self._hover_active = True
+        self._sync_badge_visibility()
         self.highlight(True)
         super().hoverEnterEvent(event)
 
     def hoverLeaveEvent(self, event):
+        self._hover_active = False
+        self._sync_badge_visibility()
         self.highlight(False)
         super().hoverLeaveEvent(event)
 

@@ -1,7 +1,7 @@
 from typing import ClassVar
 
 from PyQt5.QtCore import QPointF, QRectF, Qt, QTimer
-from PyQt5.QtGui import QBrush, QColor, QFont, QPainterPath, QPen
+from PyQt5.QtGui import QBrush, QColor, QFont, QFontMetricsF, QPainterPath, QPen
 from PyQt5.QtWidgets import QGraphicsObject
 from qfluentwidgets import isDarkTheme
 
@@ -108,6 +108,9 @@ class ConnectivityBadge(SvgLayer):
     OFFLINE_SVG = ":/icons/icons/offline.svg"
     COLOR_API_ON = QColor("#4CAF50")
     COLOR_API_OFF = QColor("#888888")
+    API_FONT_PIXEL_SIZE = 12
+    API_LABEL_GAP = 3
+    API_LABEL_PADDING = 4
 
     def __init__(self, dimension: int = PATTERN_DIMENSION, parent=None):
         super().__init__(
@@ -117,14 +120,88 @@ class ConnectivityBadge(SvgLayer):
         )
         self._status: bool = False
         self._api: str = ""
+        self._api_visible: bool = False
 
     # ── public API ────────────────────────────────────────────────
 
     def setStatus(self, online: bool, api: str = "") -> None:
+        if self._api_visible and self._api != api:
+            self.prepareGeometryChange()
         self._status = bool(online)
         self._api = api
         self.update_figure(self.ONLINE_SVG if self._status else self.OFFLINE_SVG)
         self.update()
+
+    def set_api_visible(self, visible: bool) -> None:
+        visible = bool(visible)
+        if self._api_visible == visible:
+            return
+        self.prepareGeometryChange()
+        self._api_visible = visible
+        self.update()
+
+    def update_figure(self, svg_path: str) -> None:
+        pos = self.pos()
+        super().update_figure(svg_path)
+        self.setPos(pos)
+
+    def _apply_scale(self) -> None:
+        icon_rect = super().boundingRect()
+        if icon_rect.width() == 0 or icon_rect.height() == 0:
+            return
+
+        factor = self._scale / max(icon_rect.width(), icon_rect.height())
+        self.setScale(factor)
+        self._centre()
+
+    def _centre(self) -> None:
+        icon_rect = super().boundingRect()
+        self.setTransformOriginPoint(icon_rect.center())
+        self.setPos(-icon_rect.center().x(), -icon_rect.center().y())
+
+    def set_icon_center(self, x: float, y: float) -> None:
+        icon_rect = super().boundingRect()
+        self.setPos(x - icon_rect.center().x(), y - icon_rect.center().y())
+
+    @property
+    def icon_scene_size(self) -> float:
+        return self._scale
+
+    def boundingRect(self) -> QRectF:
+        bounds = QRectF(super().boundingRect())
+        if getattr(self, "_api", "") and getattr(self, "_api_visible", False):
+            bounds = bounds.united(self._api_text_rect())
+        return bounds
+
+    def _scene_to_local_size(self, size: float) -> float:
+        scale = self.scale()
+        return size / scale if scale else size
+
+    def _api_font(self) -> QFont:
+        font = QFont()
+        font.setPixelSize(
+            max(1, round(self._scene_to_local_size(self.API_FONT_PIXEL_SIZE)))
+        )
+        font.setBold(True)
+        return font
+
+    def _api_text_rect(self) -> QRectF:
+        icon_rect = super().boundingRect()
+        font = self._api_font()
+        metrics = QFontMetricsF(font)
+        padding = self._scene_to_local_size(self.API_LABEL_PADDING)
+        label_gap = self._scene_to_local_size(self.API_LABEL_GAP)
+        label_width = max(
+            metrics.horizontalAdvance(self._api) + padding * 2,
+            self._scene_to_local_size(self._scale * 2.4),
+        )
+        label_height = metrics.height()
+        return QRectF(
+            icon_rect.center().x() - label_width / 2,
+            icon_rect.bottom() + label_gap,
+            label_width,
+            label_height,
+        )
 
     # ── painting ──────────────────────────────────────────────────
 
@@ -169,22 +246,15 @@ class ConnectivityBadge(SvgLayer):
 
     def paint(self, painter, option, widget=None):
         super().paint(painter, option, widget)
-        if not self._api:
+        if not self._api or not self._api_visible:
             return
 
         painter.save()
         painter.setPen(QPen(self.COLOR_API_ON if self._status else self.COLOR_API_OFF))
-        font = QFont()
-        font.setPointSizeF(max(6.0, self._scale * 0.25))
-        painter.setFont(font)
+        painter.setFont(self._api_font())
         painter.drawText(
-            QRectF(
-                -self._scale * 2,
-                self._scale * 0.7,
-                self._scale * 4,
-                self._scale * 0.8,
-            ),
-            Qt.AlignHCenter | Qt.AlignTop,
+            self._api_text_rect(),
+            Qt.AlignCenter,
             self._api,
         )
         painter.restore()
