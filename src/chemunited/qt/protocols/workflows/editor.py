@@ -16,6 +16,11 @@ class ProtectedZoneEditor(EditorBase):
     """EditorBase subclass with per-range read-only protection and visual dimming."""
 
     _DIM_INDICATOR: int = 8  # INDIC_CONTAINER — first app-reserved Scintilla slot
+    _DIM_ALPHA: int = 18
+    _FOCUS_MARKER: int = 0
+    _FOCUS_MARGIN: int = 1
+    _FOCUS_MARGIN_WIDTH: int = 5
+    _FOCUS_COLOR: QColor = QColor("#3A7AFE")
 
     def __init__(self, path: Path, parent=None) -> None:
         super().__init__(parent=parent, path=path)
@@ -24,13 +29,26 @@ class ProtectedZoneEditor(EditorBase):
         self._body_end: int = 0
         self._prev_line_count: int = 0
         self._setup_dim_indicator()
+        self._setup_focus_margin()
         self.linesChanged.connect(self._on_lines_changed)
 
     def _setup_dim_indicator(self) -> None:
         self.indicatorDefine(QsciScintilla.FullBoxIndicator, self._DIM_INDICATOR)
         self.setIndicatorDrawUnder(self._DIM_INDICATOR, True)
         self.setIndicatorForegroundColor(QColor(128, 128, 128), self._DIM_INDICATOR)
-        self.SendScintilla(QsciScintilla.SCI_INDICSETALPHA, self._DIM_INDICATOR, 60)
+        self.SendScintilla(
+            QsciScintilla.SCI_INDICSETALPHA,
+            self._DIM_INDICATOR,
+            self._DIM_ALPHA,
+        )
+
+    def _setup_focus_margin(self) -> None:
+        self.setMarginType(self._FOCUS_MARGIN, QsciScintilla.SymbolMargin)
+        self.setMarginWidth(self._FOCUS_MARGIN, self._FOCUS_MARGIN_WIDTH)
+        self.setMarginMarkerMask(self._FOCUS_MARGIN, 1 << self._FOCUS_MARKER)
+        self.markerDefine(QsciScintilla.SC_MARK_FULLRECT, self._FOCUS_MARKER)
+        self.setMarkerBackgroundColor(self._FOCUS_COLOR, self._FOCUS_MARKER)
+        self.setMarkerForegroundColor(self._FOCUS_COLOR, self._FOCUS_MARKER)
 
     def set_protected_zone(self, body_start: int, body_end: int) -> None:
         self._protected = True
@@ -38,9 +56,11 @@ class ProtectedZoneEditor(EditorBase):
         self._body_end = body_end
         self._prev_line_count = self.lines()
         self._apply_dim_overlay()
+        self._apply_focus_markers()
 
     def clear_protected_zone(self) -> None:
         self._protected = False
+        self.markerDeleteAll(self._FOCUS_MARKER)
         last = self.lines() - 1
         if last >= 0:
             self.clearIndicatorRange(
@@ -73,6 +93,21 @@ class ProtectedZoneEditor(EditorBase):
             self._body_end += delta
             self._prev_line_count = self.lines()
             self._apply_dim_overlay()
+            self._apply_focus_markers()
+
+    def _apply_focus_markers(self) -> None:
+        self.markerDeleteAll(self._FOCUS_MARKER)
+        if not self._protected:
+            return
+
+        last = self.lines() - 1
+        if last < 0:
+            return
+
+        start = max(self._body_start, 0)
+        end = min(self._body_end, last)
+        for line in range(start, end + 1):
+            self.markerAdd(line, self._FOCUS_MARKER)
 
     def _is_in_editable_zone(self, line: int) -> bool:
         if not self._protected:
