@@ -13,6 +13,12 @@ class ComponentConnnectivity(BaseModel):
     )
 
     @property
+    def base_url(self) -> str:
+        """Get the base url of the component."""
+        split_url = urlsplit(str(self.url))
+        return f"{split_url.scheme}://{split_url.hostname}:{split_url.port}/"
+
+    @property
     def is_online(self) -> bool:
         """Check if the component is online."""
         try:

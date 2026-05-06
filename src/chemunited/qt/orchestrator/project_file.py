@@ -157,6 +157,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
         self._session = session
         self.working_dir = session.working_dir
         self._restore_draw_data(draw_data)
+        self._restore_connectivity_data(session.load_connectivity())
         self._restore_protocols(process_classes)
 
         logger.bind(window=WindowCategory.SETUP).success(f"Project loaded from {path}")
@@ -387,6 +388,29 @@ class OrchestratorProjectFile(OrchestratorExecution):
                     f"Skipped connection: {exc}"
                 )
 
+    def _restore_connectivity_data(self, connectivity_data: dict) -> None:
+        server_url = connectivity_data.get("server_url", "").rstrip("/")
+        for association in connectivity_data.get("associations", []):
+            component_name = association.get("component", "")
+            component_url = (
+                association.get(
+                    "component_url",
+                    association.get("device_url", ""),
+                )
+                or ""
+            ).lstrip("/")
+            if component_name not in self.components:
+                continue
+
+            component = self.components[component_name]
+            if not component.inf.is_electronic:
+                continue
+            if server_url and component_url:
+                self._apply_component_connectivity(
+                    component_name,
+                    f"{server_url}/{component_url}",
+                )
+
     def _validated_component_payload(self, payload: dict) -> dict:
         payload.pop("type", None)
         figure = payload.get("figure")
@@ -528,17 +552,23 @@ class OrchestratorProjectFile(OrchestratorExecution):
         )
 
     def _build_connectivity_data(self) -> dict:
-        existing: dict[str, dict] = {}
         server_url = ""
+        associations: list[dict] = []
         if self._session is not None:
-            raw = self._session.load_connectivity()
-            server_url = raw.get("server_url", "")
-            for assoc in raw.get("associations", []):
-                existing[assoc["component"]] = assoc
-        associations = [
-            existing.get(name, {"component": name, "device_name": "", "device_url": ""})
-            for name in self.components
-        ]
+            # Inspect all electronic component
+            for component in self.components.values():
+                if not component.inf.is_electronic:
+                    continue
+
+                component_url = component.url_component
+                if component_url:
+                    server_url = component.connectivity.base_url.rstrip("/")
+                associations.append(
+                    {
+                        "component": component.name,
+                        "component_url": component_url,
+                    }
+                )
         return {"server_url": server_url, "associations": associations}
 
     def _build_draw_data(self) -> dict:

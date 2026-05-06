@@ -3,13 +3,11 @@
     "associations": [
         {
             "component": "ReagentPump",
-            "device_name": "PumpA",
-            "device_url": "PumpA/pump"
+            "component_url": "PumpA/pump"
         },
         {
             "component": "ReagentValve",
-            "device_name": "MyKnauer",
-            "device_url": "MyKnauer/distribution-valve"
+            "component_url": "MyKnauer/distribution-valve"
         }
     ]
 }

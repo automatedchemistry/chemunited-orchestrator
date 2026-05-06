@@ -115,6 +115,7 @@ class OnlineComponent(QWidget):
         layout.addWidget(update_button)
 
     def update_list(self):
+        self.api.clear()
         FLOWCHEM_SERVERS.update()
         for item in FLOWCHEM_SERVERS.servers:
             self.api.addItem(item)
@@ -165,6 +166,11 @@ class OnlineComponent(QWidget):
                         else "  - No information available"
                     )
                     list_item.setToolTip(f"{text} - {tooltip}\n{details}")
+
+                    used_by = self._component_using_url(urlc)
+                    if used_by is not None:
+                        self.add_to_lock(text, QIcon(figure), used_by)
+                        self.OnlineList.takeItem(self.OnlineList.row(list_item))
 
     def associate_item(self, component: str, text: str | None = None):
         """Move selected items from OnlineList to LockList."""
@@ -218,6 +224,18 @@ class OnlineComponent(QWidget):
                     self.LockList.takeItem(i)
                     break
         self.OnlineList.addItem(QListWidgetItem(icon, text))
+
+    def _component_using_url(self, urlc: str) -> str | None:
+        if not self._parent:
+            return None
+
+        target_url = urlc.rstrip("/")
+        for component in self._parent.orchestrator.components.values():
+            if not component.inf.is_electronic:
+                continue
+            if str(component.url).rstrip("/") == target_url:
+                return component.name
+        return None
 
 
 if __name__ == "__main__":

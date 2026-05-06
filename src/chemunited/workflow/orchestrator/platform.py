@@ -19,8 +19,12 @@ class Platform:
         with open(file_path, "r") as f:
             data = json.load(f)
         for association in data["associations"]:
+            component_url = association.get(
+                "component_url",
+                association.get("device_url", ""),
+            )
             instance.components[association["component"]] = ComponentClient(
-                data["server_url"] + "/" + association["device_url"]
+                data["server_url"].rstrip("/") + "/" + component_url
             )
         return instance
 
