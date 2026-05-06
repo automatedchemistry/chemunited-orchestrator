@@ -104,3 +104,25 @@ def test_focus_markers_follow_inserted_body_lines(
         assert _has_focus_marker(window, line)
 
     window.close()
+
+
+def test_focus_method_collapses_siblings_but_keeps_class_and_method_expanded(
+    tmp_path: Path,
+    qtbot: QtBot,
+) -> None:
+    window = _make_window(tmp_path, qtbot)
+
+    window.focus_method("check_pressure")
+
+    class_line = _line_index(SOURCE, "class CustomProcess")
+    enter_line = _line_index(SOURCE, "def enter")
+    focused_line = _line_index(SOURCE, "def check_pressure")
+    sibling_line = _line_index(SOURCE, "def handle_low_pressure")
+    collapsed = set(window.editor.contractedFolds())
+
+    assert class_line not in collapsed
+    assert focused_line not in collapsed
+    assert enter_line in collapsed
+    assert sibling_line in collapsed
+
+    window.close()

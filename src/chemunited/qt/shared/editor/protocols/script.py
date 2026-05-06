@@ -29,6 +29,8 @@ class ScriptEditorWindow(QMainWindow):
 
         self.navigationInterface = NavigationInterface(self, showMenuButton=True)
 
+        self.parent_ref = parent
+
         # --- central widget ---
         self.initlayout()
 

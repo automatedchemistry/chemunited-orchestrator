@@ -284,6 +284,7 @@ class ProcessScriptEditorWindow(ScriptEditorWindow):
         target_node = method_node.body[0] if method_node.body else method_node
         line = max(target_node.lineno - 1, 0)
         index = max(target_node.col_offset, 0)
+        self._collapse_to_focused_method(tree, class_node, method_node)
         self.editor.setCursorPosition(line, index)
         self.editor.ensureLineVisible(line)
         self.editor.setFocus()
@@ -304,6 +305,24 @@ class ProcessScriptEditorWindow(ScriptEditorWindow):
             0,
         )
         self.editor.set_protected_zone(body_start, body_end)
+
+    def _collapse_to_focused_method(
+        self,
+        tree: ast.Module,
+        class_node: ast.ClassDef | None,
+        method_node: ast.FunctionDef | ast.AsyncFunctionDef,
+    ) -> None:
+        keep_expanded = {id(method_node)}
+        if class_node is not None:
+            keep_expanded.add(id(class_node))
+
+        collapsed_lines = [
+            node.lineno - 1
+            for node in ast.walk(tree)
+            if isinstance(node, (ast.ClassDef, ast.FunctionDef, ast.AsyncFunctionDef))
+            and id(node) not in keep_expanded
+        ]
+        self.editor.setContractedFolds(collapsed_lines)
 
     def format_with_black(self) -> None:
         was_protected = self.editor._protected

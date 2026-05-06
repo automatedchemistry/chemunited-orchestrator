@@ -19,6 +19,8 @@ class EditorBase(QsciScintilla):
     - Text area: the main white/dark region where Python source text is edited.
     - Line-number gutter: margin 0, the vertical strip on the left that shows
       line numbers such as 1, 2, 3. QScintilla calls this a "margin".
+    - Fold gutter: the collapse/expand margin that shows QScintilla's built-in
+      fold controls for ranges such as classes, methods, and indented blocks.
     - Caret: the text cursor that marks where typing will happen.
     - Caret line: the highlighted row containing the caret.
     - Indentation guides: faint vertical guide lines that show nested blocks.
@@ -33,6 +35,7 @@ class EditorBase(QsciScintilla):
 
     AUTOSAVE_INTERVAL_MS = 2000
     LINE_NUMBER_MARGIN_WIDTH = "000000"
+    FOLD_STYLE = QsciScintilla.BoxedTreeFoldStyle
 
     def __init__(
         self,
@@ -83,6 +86,9 @@ class EditorBase(QsciScintilla):
         # Set end-of-line mode and visibility
         self.setEolMode(QsciScintilla.EolWindows)  # Use Windows-style line endings
         self.setEolVisibility(False)  # Hide EOL characters
+
+        # Enable QScintilla's native collapse/expand controls for code blocks.
+        self.setFolding(self.FOLD_STYLE)
 
         # ─── Syntax Highlighting ───────────────────────────
 
