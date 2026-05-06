@@ -2,12 +2,18 @@ from pathlib import Path
 
 import black  # type: ignore[import-not-found]
 from loguru import logger
+from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QHBoxLayout, QMainWindow, QWidget
+from PyQt5.QtWidgets import QDockWidget, QHBoxLayout, QMainWindow, QWidget
 from qfluentwidgets import FluentIcon, NavigationInterface, NavigationItemPosition
 
 from chemunited.qt.shared.editor.base import EditorBase
+from chemunited.qt.shared.editor.protocols.command_list import CommandList
 from chemunited.qt.shared.icon import OrchestratorIcon
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from chemunited.qt.setup import SetupWindow
 
 
 class ScriptEditor(EditorBase):
@@ -35,6 +41,17 @@ class ScriptEditorWindow(QMainWindow):
         self.initlayout()
 
         self.initNavigation()
+
+        # --- command dock ---
+        self.command_list = CommandList(parent=self)
+
+        self.command_dock = QDockWidget("Commands", self)
+        self.command_dock.setWidget(self.command_list)
+        self.command_dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)  # type: ignore[attr-defined]
+        self.addDockWidget(Qt.RightDockWidgetArea, self.command_dock)  # type: ignore[attr-defined]
+        self.command_dock.hide()
+
+        self.command_list.command_activated.connect(self._insert_command)
 
     def _make_editor(self, path: Path) -> EditorBase:
         return ScriptEditor(path=path, parent=self)
@@ -121,14 +138,39 @@ class ScriptEditorWindow(QMainWindow):
                 "Black formatting failed, more detail go to loggings window"
             )
 
+    def _find_orchestrator(self):
+        obj = self.parent()
+        while obj is not None:
+            orchestrator = getattr(obj, "orchestrator", None)
+            if orchestrator is not None:
+                return orchestrator
+            obj = obj.parent()
+        return None
+
     def add_command_window(self):
-        pass
+        if self.command_dock.isVisible():
+            self.command_dock.hide()
+        else:
+            orchestrator = self._find_orchestrator()
+            if orchestrator is not None:
+                self.command_list.parent_ref = orchestrator.parent()
+            self.command_list.sync_protocols()
+            self.command_dock.show()
+
+    def _insert_command(self, line_script: str):
+        line, col = self.editor.getCursorPosition()
+        self.editor.insertAt(line_script + "\n", line, col)
 
     def add_process_parameter(self):
         pass
 
     def add_main_parameter(self):
         pass
+
+    def closeEvent(self, event):
+        """Override close event to handle custom cleanup."""
+        self.command_dock.close()
+        super().closeEvent(event)
 
 
 if __name__ == "__main__":
