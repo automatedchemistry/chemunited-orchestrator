@@ -56,12 +56,12 @@ class OrchestratorConnectivity(OrchestratorProtocols):
         if validate_object:
             status, info = access_url(str(validated_url))
             # Try to find a component-specific icon based on theme
-            possibles_mach = [
-                c
+            possibles_mach: list[str] = [
+                c.lower()
                 for c in info.get("corresponding_class", [])
                 if c not in {"FlowchemComponent", "object"}
             ]
-            if self.components[name].inf.figure not in info.get("corresponding_class", []):
+            if self.components[name].inf.figure.lower() not in possibles_mach:
                 logger.warning(
                     "Association not possible: It was not possible associate the component {name} that represent a "
                     f"{self.components[name].inf.figure} with the online device {validated_url}. "
