@@ -46,6 +46,10 @@ def _indicator_mask_at_line(window: ProcessScriptEditorWindow, line: int) -> int
     return window.editor.SendScintilla(QsciScintilla.SCI_INDICATORALLONFOR, pos)
 
 
+def _line_is_visible(window: ProcessScriptEditorWindow, line: int) -> bool:
+    return bool(window.editor.SendScintilla(QsciScintilla.SCI_GETLINEVISIBLE, line))
+
+
 def test_focus_method_marks_body_lines_not_signature(
     tmp_path: Path,
     qtbot: QtBot,
@@ -124,5 +128,26 @@ def test_focus_method_collapses_siblings_but_keeps_class_and_method_expanded(
     assert focused_line not in collapsed
     assert enter_line in collapsed
     assert sibling_line in collapsed
+
+    window.close()
+
+
+def test_focus_method_reveals_focused_method_after_deferred_fold_pass(
+    tmp_path: Path,
+    qtbot: QtBot,
+) -> None:
+    window = _make_window(tmp_path, qtbot)
+    window.show()
+
+    window.focus_method("check_pressure")
+
+    class_line = _line_index(SOURCE, "class CustomProcess")
+    focused_line = _line_index(SOURCE, "def check_pressure")
+    body_line = _line_index(SOURCE, "ctx.runtime.local_data")
+    qtbot.waitUntil(lambda: _line_is_visible(window, focused_line), timeout=1000)
+
+    assert _line_is_visible(window, class_line)
+    assert _line_is_visible(window, focused_line)
+    assert _line_is_visible(window, body_line)
 
     window.close()

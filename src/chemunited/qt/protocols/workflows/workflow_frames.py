@@ -480,6 +480,7 @@ class WorkflowGraph(GraphCore):
             self._script_editor = ProcessScriptEditorWindow(
                 path=script_path,
                 class_name=class_name,
+                main_parameters_path=script_path.parent / "main_parameters.py",
                 parent=self,
             )
 

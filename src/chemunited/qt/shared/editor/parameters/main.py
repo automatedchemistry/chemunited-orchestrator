@@ -429,7 +429,7 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
     window = MainParametersEditor(
         path=Path(__file__).parent / "example.py",
-        class_name="ProcessParameters",
+        class_name="MainParameter",
     )
     window.show()
     sys.exit(app.exec())

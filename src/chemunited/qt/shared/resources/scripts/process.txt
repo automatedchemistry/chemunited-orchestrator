@@ -22,7 +22,7 @@ if TYPE_CHECKING:
 # ── Process configuration ──────────────────────────────────────────────────────
 
 
-class ---CLASS_NAME---Config(BaseModel):
+class ProcessParameter(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     # Add your process-level parameters here
@@ -33,7 +33,7 @@ class ---CLASS_NAME---Config(BaseModel):
 # ── Process class ──────────────────────────────────────────────────────────────
 
 
-class ---CLASS_NAME---(Process[---CLASS_NAME---Config]):
+class ---CLASS_NAME---(Process[ProcessParameter]):
     """---PROCESS_LABEL---"""
 
     __process_label__ = "---PROCESS_LABEL---"

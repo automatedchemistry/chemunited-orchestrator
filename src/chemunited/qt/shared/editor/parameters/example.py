@@ -15,7 +15,7 @@ def some_method(): ...
 # ---------------------------------------------------------------------------
 
 
-class ProcessParameters(BaseModel):
+class MainParameter(BaseModel):
 
     sample_loop_volume: Annotated[ChemUnitQuantity, ChemQuantityValidator("ml")] = (
         Field(
