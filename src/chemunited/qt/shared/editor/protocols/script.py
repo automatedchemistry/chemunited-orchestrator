@@ -9,6 +9,7 @@ from qfluentwidgets import FluentIcon, NavigationInterface, NavigationItemPositi
 
 from chemunited.qt.shared.editor.base import EditorBase
 from chemunited.qt.shared.editor.protocols.command_list import CommandList
+from chemunited.qt.shared.editor.parameters.drag_list import ParameterDragableList
 from chemunited.qt.shared.icon import OrchestratorIcon
 from typing import TYPE_CHECKING
 
@@ -22,7 +23,7 @@ class ScriptEditor(EditorBase):
 
 
 class ScriptEditorWindow(QMainWindow):
-    def __init__(self, path: Path, parent=None):
+    def __init__(self, path: Path, main_parameters_path: Path | None = None, parent=None):
         super().__init__(parent)
 
         # --- window setup ---
@@ -52,6 +53,34 @@ class ScriptEditorWindow(QMainWindow):
         self.command_dock.hide()
 
         self.command_list.command_activated.connect(self._insert_command)
+
+        # --- process parameter dock ---
+        self.process_parameter_editor = ParameterDragableList(
+            path=path,
+            class_name="ProcessParameter",
+            parent=self,
+        )
+        self.process_parameter_dock = QDockWidget("Process Parameters", self)
+        self.process_parameter_dock.setWidget(self.process_parameter_editor)
+        self.process_parameter_dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)  # type: ignore[attr-defined]
+        self.addDockWidget(Qt.RightDockWidgetArea, self.process_parameter_dock)  # type: ignore[attr-defined]
+        self.process_parameter_dock.hide()
+
+        # --- main parameter dock ---
+        if main_parameters_path is not None:
+            self.main_parameter_editor = ParameterDragableList(
+                path=main_parameters_path,
+                class_name="MainParameter",
+                parent=self,
+            )
+            self.main_parameter_dock = QDockWidget("Main Parameters", self)
+            self.main_parameter_dock.setWidget(self.main_parameter_editor)
+            self.main_parameter_dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)  # type: ignore[attr-defined]
+            self.addDockWidget(Qt.RightDockWidgetArea, self.main_parameter_dock)  # type: ignore[attr-defined]
+            self.main_parameter_dock.hide()
+        else:
+            self.main_parameter_editor = None
+            self.main_parameter_dock = None
 
     def _make_editor(self, path: Path) -> EditorBase:
         return ScriptEditor(path=path, parent=self)
@@ -162,14 +191,27 @@ class ScriptEditorWindow(QMainWindow):
         self.editor.insertAt(line_script + "\n", line, col)
 
     def add_process_parameter(self):
-        pass
+        if self.process_parameter_dock.isVisible():
+            self.process_parameter_dock.hide()
+        else:
+            self.process_parameter_editor.reload()
+            self.process_parameter_dock.show()
 
     def add_main_parameter(self):
-        pass
+        if self.main_parameter_dock is None:
+            return
+        if self.main_parameter_dock.isVisible():
+            self.main_parameter_dock.hide()
+        else:
+            self.main_parameter_editor.reload()
+            self.main_parameter_dock.show()
 
     def closeEvent(self, event):
         """Override close event to handle custom cleanup."""
         self.command_dock.close()
+        self.process_parameter_dock.close()
+        if self.main_parameter_dock is not None:
+            self.main_parameter_dock.close()
         super().closeEvent(event)
 
 
@@ -179,6 +221,9 @@ if __name__ == "__main__":
     from PyQt5.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
-    window = ScriptEditorWindow(Path(__file__).parent / "example.py")
+    window = ScriptEditorWindow(
+        Path(__file__).parent / "example.py",
+        Path(__file__).parent.parent / "parameters" / "example.py"
+    )
     window.show()
     sys.exit(app.exec_())

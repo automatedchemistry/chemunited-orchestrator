@@ -118,6 +118,10 @@ class ParameterDragableList(QWidget):
             item = QListWidgetItem(_build_mode_icon(mode), field_name)
             self._list.addItem(item)
 
+    def reload(self) -> None:
+        self._list.clear()
+        self._populate()
+
 
 if __name__ == "__main__":
     import sys
