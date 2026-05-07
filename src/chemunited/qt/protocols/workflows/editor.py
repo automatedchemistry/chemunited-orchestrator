@@ -3,8 +3,9 @@ import textwrap
 from pathlib import Path
 
 from loguru import logger
+from PyQt5 import sip
 from PyQt5.Qsci import QsciScintilla
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QColor, QDropEvent, QKeyEvent
 from PyQt5.QtWidgets import QWidget
 
@@ -218,10 +219,21 @@ class ProtectedZoneEditor(EditorBase):
 class ProcessScriptEditorWindow(ScriptEditorWindow):
     """Process-specific script editor window with useful methods for the orchestrator."""
 
-    def __init__(self, path: Path, class_name: str, parent: QWidget | None = None):
+    def __init__(
+        self,
+        path: Path,
+        class_name: str,
+        main_parameters_path: Path | None = None,
+        parent: QWidget | None = None,
+    ):
         self._class_name = class_name
         self._current_focused_method: str | None = None
-        super().__init__(path=path, parent=parent)
+        super().__init__(
+            path=path, 
+            class_name=class_name,
+            main_parameters_path=main_parameters_path, 
+            parent=parent
+        )
 
     def _make_editor(self, path: Path) -> ProtectedZoneEditor:
         return ProtectedZoneEditor(path=path, parent=self)
@@ -284,10 +296,6 @@ class ProcessScriptEditorWindow(ScriptEditorWindow):
         target_node = method_node.body[0] if method_node.body else method_node
         line = max(target_node.lineno - 1, 0)
         index = max(target_node.col_offset, 0)
-        self._collapse_to_focused_method(tree, class_node, method_node)
-        self.editor.setCursorPosition(line, index)
-        self.editor.ensureLineVisible(line)
-        self.editor.setFocus()
 
         body_start = (
             max(method_node.body[0].lineno - 1, 0) if method_node.body else line
@@ -304,7 +312,29 @@ class ProcessScriptEditorWindow(ScriptEditorWindow):
             - 1,
             0,
         )
+        self._collapse_to_focused_method(tree, class_node, method_node)
         self.editor.set_protected_zone(body_start, body_end)
+
+        # Defer until Scintilla has finished building fold levels for freshly
+        # loaded text. Applying the folds too early can leave the target method
+        # hidden until the user manually collapses and expands the class.
+        #
+        # ensureLineVisible only unfolds;
+        # SCI_SCROLLCARET is needed to actually scroll the viewport to the cursor.
+        def _apply() -> None:
+            if sip.isdeleted(self) or sip.isdeleted(self.editor):
+                return
+            if self._current_focused_method != name:
+                return
+
+            self._collapse_to_focused_method(tree, class_node, method_node)
+            self._reveal_focused_method(class_node, method_node)
+            self.editor.setCursorPosition(line, index)
+            self.editor.ensureLineVisible(line)
+            self.editor.SendScintilla(QsciScintilla.SCI_SCROLLCARET)
+            self.editor.setFocus()
+
+        QTimer.singleShot(50, _apply)
 
     def _collapse_to_focused_method(
         self,
@@ -323,6 +353,45 @@ class ProcessScriptEditorWindow(ScriptEditorWindow):
             and id(node) not in keep_expanded
         ]
         self.editor.setContractedFolds(collapsed_lines)
+
+    def _reveal_focused_method(
+        self,
+        class_node: ast.ClassDef | None,
+        method_node: ast.FunctionDef | ast.AsyncFunctionDef,
+    ) -> None:
+        """Force the class header and target method block to be visible."""
+        if class_node is not None:
+            class_line = max(class_node.lineno - 1, 0)
+            self.editor.SendScintilla(
+                QsciScintilla.SCI_SETFOLDEXPANDED,
+                class_line,
+                True,
+            )
+            self._show_lines(class_line, class_line)
+
+        method_line = max(method_node.lineno - 1, 0)
+        method_end = max(
+            (method_node.end_lineno or method_node.lineno) - 1, method_line
+        )
+        self.editor.SendScintilla(
+            QsciScintilla.SCI_SETFOLDEXPANDED,
+            method_line,
+            True,
+        )
+        self._show_lines(method_line, method_end)
+
+    def _show_lines(self, start: int, end: int) -> None:
+        last = self.editor.lines() - 1
+        if last < 0:
+            return
+
+        visible_start = min(max(start, 0), last)
+        visible_end = min(max(end, visible_start), last)
+        self.editor.SendScintilla(
+            QsciScintilla.SCI_SHOWLINES,
+            visible_start,
+            visible_end,
+        )
 
     def format_with_black(self) -> None:
         was_protected = self.editor._protected
@@ -443,6 +512,11 @@ if __name__ == "__main__":
         / "protocols"
         / "example.py",
         class_name="CustomProcess",
+        main_parameters_path=Path(__file__).parent.parent.parent
+        / "shared"
+        / "editor"
+        / "parameters"
+        / "example.py",
     )
     window.focus_method("check_pressure")
     window.show()

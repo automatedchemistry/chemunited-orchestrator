@@ -23,7 +23,13 @@ class ScriptEditor(EditorBase):
 
 
 class ScriptEditorWindow(QMainWindow):
-    def __init__(self, path: Path, main_parameters_path: Path | None = None, parent=None):
+    def __init__(
+        self,
+        path: Path,
+        class_name: str | None = None,
+        main_parameters_path: Path | None = None,
+        parent=None
+    ):
         super().__init__(parent)
 
         # --- window setup ---
@@ -57,7 +63,7 @@ class ScriptEditorWindow(QMainWindow):
         # --- process parameter dock ---
         self.process_parameter_editor = ParameterDragableList(
             path=path,
-            class_name="ProcessParameter",
+            class_name=f"{class_name}Config" if class_name else "MainParameter",
             parent=self,
         )
         self.process_parameter_dock = QDockWidget("Process Parameters", self)
@@ -222,8 +228,9 @@ if __name__ == "__main__":
 
     app = QApplication(sys.argv)
     window = ScriptEditorWindow(
-        Path(__file__).parent / "example.py",
-        Path(__file__).parent.parent / "parameters" / "example.py"
+        path=Path(__file__).parent / "example.py",
+        class_name="CustomProcess",
+        main_parameters_path=Path(__file__).parent.parent / "parameters" / "example.py"
     )
     window.show()
     sys.exit(app.exec_())
