@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import copy
-from collections.abc import Callable, Iterator
+from collections.abc import Callable, Iterator, Generator
 from contextlib import contextmanager
 
 from PyQt5.QtCore import Qt
@@ -49,7 +49,7 @@ class ParameterListWidget(SmoothScrollArea):
         self._cards: list[VariableCard] = []
 
     @contextmanager
-    def suspend_writes(self) -> Iterator[None]:
+    def suspend_writes(self) -> Generator[None, None, None]:
         """Temporarily suppress live writes while cards are populated."""
         self._suspend_write_depth += 1
         try:

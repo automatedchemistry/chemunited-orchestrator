@@ -35,6 +35,13 @@ back to disk only after a valid user change.
   - Shows validation errors inline at the bottom of the card
   - Emits a lightweight `changed` signal when the card state changes
 
+- `drag_list.py`
+  - Provides `ParameterDragableList`
+  - Read-only `QListWidget`-based view of Pydantic model field names
+  - Items are draggable as plain text (`text/plain` MIME), suitable for
+    dropping into script editors or code cells
+  - No editing, no validation, no file writes
+
 - `example.py`
   - Example Pydantic model used for manual testing and iteration
 
@@ -79,4 +86,18 @@ window = MainParametersEditor(
     class_name="ProcessParameters",
 )
 window.show()
+```
+
+Draggable field-name list (read-only, drag into a script editor):
+
+```python
+from pathlib import Path
+
+from chemunited.qt.shared.editor.parameters.drag_list import ParameterDragableList
+
+widget = ParameterDragableList(
+    path=Path("path/to/parameters.py"),
+    class_name="ProcessParameters",
+)
+widget.show()
 ```
