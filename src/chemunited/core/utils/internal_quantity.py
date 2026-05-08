@@ -115,7 +115,7 @@ class ChemUnitQuantity(Quantity):
     # ----------- PRETTY PRINT -----------
 
     def __repr__(self):
-        return f"<ChemUnitQuantity({self.magnitude}, '{self.units}')>"
+        return f"{self.magnitude} {self.units}"
 
 
 class ChemQuantityValidator(PydanticPintQuantity):
