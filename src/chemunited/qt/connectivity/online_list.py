@@ -1,18 +1,20 @@
-from chemunited.qt.utils.flowchem_listener import FLOWCHEM_SERVERS, access_url
-from chemunited.qt.shared.icon import OrchestratorIcon
-from qfluentwidgets import (
-    ListWidget,
-    ComboBox,
-    StrongBodyLabel,
-    isDarkTheme,
-    TransparentToolButton,
-    FluentIcon,
-    PushButton
-)
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QListWidgetItem, QLabel, QHBoxLayout
-from PyQt5.QtCore import Qt, QMimeData, QFile
-from PyQt5.QtGui import QDrag, QIcon, QPixmap, QPainter, QColor, QFont
 from typing import TYPE_CHECKING, Optional
+
+from PyQt5.QtCore import QFile, QMimeData, Qt
+from PyQt5.QtGui import QColor, QDrag, QFont, QIcon, QPainter, QPixmap
+from PyQt5.QtWidgets import QHBoxLayout, QLabel, QListWidgetItem, QVBoxLayout, QWidget
+from qfluentwidgets import (
+    ComboBox,
+    FluentIcon,
+    ListWidget,
+    PushButton,
+    StrongBodyLabel,
+    TransparentToolButton,
+    isDarkTheme,
+)
+
+from chemunited.qt.shared.icon import OrchestratorIcon
+from chemunited.qt.utils.flowchem_listener import FLOWCHEM_SERVERS, access_url
 
 if TYPE_CHECKING:
     from chemunited.qt.setup import SetupWindow
@@ -27,7 +29,7 @@ class OnlineList(ListWidget):
         self.setDragEnabled(True)
         # Important: allow dragging outside the widget
         self.setDefaultDropAction(Qt.MoveAction)  # type:ignore[attr-defined]
-    
+
     def startDrag(self, supportedActions):
         item = self.currentItem()
         if item:
@@ -239,8 +241,9 @@ class OnlineComponent(QWidget):
 
 
 if __name__ == "__main__":
-    from PyQt5.QtWidgets import QApplication
     import sys
+
+    from PyQt5.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
     w = OnlineComponent(parent=None)

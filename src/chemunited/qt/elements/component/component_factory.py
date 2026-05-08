@@ -1,11 +1,11 @@
 from typing import Union
-from pydantic import AnyHttpUrl
 
 from loguru import logger
+from pydantic import AnyHttpUrl
 
 import chemunited.qt.elements.component.protocols as protocol_module
-from chemunited.qt.elements.component.connectivity import ComponentConnnectivity
 from chemunited.core.components import ComponentData
+from chemunited.qt.elements.component.connectivity import ComponentConnnectivity
 
 from . import glossary
 from .graph_item import GraphComponent
@@ -38,22 +38,22 @@ class ElectronicManager(UtensilManager):
         super().__init__()
         self.protocols: ComponentProtocol = ComponentProtocol("generic")
         self.connectivity: ComponentConnnectivity = ComponentConnnectivity()
-    
+
     @property
     def url(self) -> AnyHttpUrl:
         """Get the url of the component."""
         return self.connectivity.url
-    
+
     @url.setter
     def url(self, url: AnyHttpUrl):
         """Set the url of the component."""
         self.connectivity.url = url
-    
+
     @property
     def is_online(self) -> bool:
         """Check if the component is online."""
         return self.connectivity.is_online
-    
+
     @property
     def url_component(self) -> str:
         """Get the url of the component."""

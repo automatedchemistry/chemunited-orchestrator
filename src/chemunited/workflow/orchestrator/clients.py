@@ -2,9 +2,10 @@ from __future__ import annotations
 
 import time
 from typing import Any
-from pydantic import AnyHttpUrl
+
 import requests
 from loguru import logger
+from pydantic import AnyHttpUrl
 
 from .models import CommandSignature
 

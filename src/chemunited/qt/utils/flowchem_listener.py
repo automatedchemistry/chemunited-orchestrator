@@ -1,10 +1,11 @@
-from zeroconf import Zeroconf, ServiceBrowser, ServiceListener
-from collections import defaultdict
-from loguru import logger
-from typing import Any
-import requests
 import ipaddress
 import time
+from collections import defaultdict
+from typing import Any
+
+import requests
+from loguru import logger
+from zeroconf import ServiceBrowser, ServiceListener, Zeroconf
 
 FLOWCHEM_SUFFIX = "._labthing._tcp.local."
 FLOWCHEM_TYPE = FLOWCHEM_SUFFIX[1:]
@@ -12,9 +13,7 @@ FLOWCHEM_TYPE = FLOWCHEM_SUFFIX[1:]
 
 def access_url(url: str, timeout=5) -> tuple[bool, Any]:
     try:
-        response = requests.get(
-            url=url, timeout=timeout
-        )
+        response = requests.get(url=url, timeout=timeout)
         if response.status_code == 200:
             try:
                 return True, response.json()

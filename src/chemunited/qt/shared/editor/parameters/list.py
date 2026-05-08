@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 import copy
-from collections.abc import Callable, Iterator, Generator
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
 
 from PyQt5.QtCore import Qt

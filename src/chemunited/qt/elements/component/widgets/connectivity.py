@@ -1,11 +1,10 @@
 from typing import TYPE_CHECKING
 
+from loguru import logger
 from PyQt5.QtWidgets import QWidget
 
-from chemunited.qt.shared.widgets.base_mode_editor import BaseModeEditorWidget
 from chemunited.qt.elements.component.connectivity import ComponentConnnectivity
-
-from loguru import logger
+from chemunited.qt.shared.widgets.base_mode_editor import BaseModeEditorWidget
 
 if TYPE_CHECKING:
     from chemunited.qt.elements.component import ElectronicManager
@@ -32,11 +31,5 @@ class ConnectivityWidget(BaseModeEditorWidget):
                 True, self._component.connectivity.url_component
             )
         else:
-            logger.error(
-                f"Component {self._component.name} was not connected."
-            )
-            self._component.graph.set_online(
-                False, ""
-            )
-
-
+            logger.error(f"Component {self._component.name} was not connected.")
+            self._component.graph.set_online(False, "")

@@ -6,7 +6,7 @@ from pathlib import Path
 from typing import Any
 
 from loguru import logger
-from PyQt5.QtCore import Qt, QMimeData
+from PyQt5.QtCore import QMimeData, Qt
 from PyQt5.QtGui import QDrag, QIcon
 from PyQt5.QtWidgets import QAbstractItemView, QListWidgetItem, QVBoxLayout, QWidget
 from qfluentwidgets import FluentIcon, ListWidget

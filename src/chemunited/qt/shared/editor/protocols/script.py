@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 import black  # type: ignore[import-not-found]
 from loguru import logger
@@ -8,13 +9,12 @@ from PyQt5.QtWidgets import QDockWidget, QHBoxLayout, QMainWindow, QWidget
 from qfluentwidgets import FluentIcon, NavigationInterface, NavigationItemPosition
 
 from chemunited.qt.shared.editor.base import EditorBase
-from chemunited.qt.shared.editor.protocols.command_list import CommandList
 from chemunited.qt.shared.editor.parameters.drag_list import ParameterDragableList
+from chemunited.qt.shared.editor.protocols.command_list import CommandList
 from chemunited.qt.shared.icon import OrchestratorIcon
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from chemunited.qt.setup import SetupWindow
+    pass
 
 
 class ScriptEditor(EditorBase):
@@ -28,7 +28,7 @@ class ScriptEditorWindow(QMainWindow):
         path: Path,
         class_name: str | None = None,
         main_parameters_path: Path | None = None,
-        parent=None
+        parent=None,
     ):
         super().__init__(parent)
 
@@ -73,6 +73,8 @@ class ScriptEditorWindow(QMainWindow):
         self.process_parameter_dock.hide()
 
         # --- main parameter dock ---
+        self.main_parameter_editor: ParameterDragableList | None
+        self.main_parameter_dock: QDockWidget | None
         if main_parameters_path is not None:
             self.main_parameter_editor = ParameterDragableList(
                 path=main_parameters_path,
@@ -204,7 +206,7 @@ class ScriptEditorWindow(QMainWindow):
             self.process_parameter_dock.show()
 
     def add_main_parameter(self):
-        if self.main_parameter_dock is None:
+        if self.main_parameter_dock is None or self.main_parameter_editor is None:
             return
         if self.main_parameter_dock.isVisible():
             self.main_parameter_dock.hide()
@@ -230,7 +232,7 @@ if __name__ == "__main__":
     window = ScriptEditorWindow(
         path=Path(__file__).parent / "example.py",
         class_name="CustomProcess",
-        main_parameters_path=Path(__file__).parent.parent / "parameters" / "example.py"
+        main_parameters_path=Path(__file__).parent.parent / "parameters" / "example.py",
     )
     window.show()
     sys.exit(app.exec_())

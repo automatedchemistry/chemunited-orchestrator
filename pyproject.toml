@@ -32,6 +32,7 @@ dependencies = [
     "rich",
     "requests",
     "rich-click",
+    "zeroconf",
     "QScintilla",
     "fastapi>=0.115",
     "uvicorn[standard]>=0.34",
@@ -119,6 +120,7 @@ module = [
     "rich",
     "rich.*",
     "rich_click",
+    "zeroconf",
     "pydantic_pint",
 ]
 ignore_missing_imports = true

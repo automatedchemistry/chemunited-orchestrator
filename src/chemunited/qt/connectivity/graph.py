@@ -1,9 +1,12 @@
+from typing import TYPE_CHECKING, override
+
+from loguru import logger
+
 from chemunited.qt.elements.component.graph_item import GraphComponent
 from chemunited.qt.shared.enums import SetupStepMode
 from chemunited.qt.shared.graph import GraphCore, SceneCore
+
 from .online_list import OnlineList
-from typing import TYPE_CHECKING, override
-from loguru import logger
 
 if TYPE_CHECKING:
     from ..setup import SetupWindow
@@ -57,7 +60,9 @@ class ConnectivityGraphicView(GraphCore):
 
         component = self._component_at_drop_position(event)
         if component is None:
-            logger.warning(f"No component found at position {self.mapToScene(event.pos())}")
+            logger.warning(
+                f"No component found at position {self.mapToScene(event.pos())}"
+            )
             return
         if not component.inf.is_electronic:
             logger.warning(f"Component {component.inf.name} is not electronic.")
@@ -70,4 +75,3 @@ class ConnectivityGraphicView(GraphCore):
             )
         else:
             print(url_component, component.inf.name)
-        

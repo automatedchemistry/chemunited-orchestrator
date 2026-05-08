@@ -6,10 +6,11 @@ from pydantic import BaseModel
 from PyQt5.QtCore import pyqtSlot
 from qfluentwidgets import FluentIcon, NavigationItemPosition
 
-from chemunited.qt.shared.widgets.main_window import WindowBase
 from chemunited.qt.shared.icon import OrchestratorIcon
-from .properties import PropertiesWidget
+from chemunited.qt.shared.widgets.main_window import WindowBase
+
 from .connectivity import ConnectivityWidget
+from .properties import PropertiesWidget
 
 if TYPE_CHECKING:
     from chemunited.qt.elements.component import ElectronicManager, UtensilManager

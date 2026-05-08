@@ -1,7 +1,9 @@
-from chemunited.qt.utils.flowchem_listener import access_url
-from .protocols import OrchestratorProtocols
-from pydantic import TypeAdapter, ValidationError, AnyHttpUrl
 from loguru import logger
+from pydantic import AnyHttpUrl, TypeAdapter, ValidationError
+
+from chemunited.qt.utils.flowchem_listener import access_url
+
+from .protocols import OrchestratorProtocols
 
 
 class OrchestratorConnectivity(OrchestratorProtocols):
@@ -23,7 +25,11 @@ class OrchestratorConnectivity(OrchestratorProtocols):
         component.graph.set_online(component.is_online, str(component.url))
 
         parent_ref = getattr(self, "parent_ref", None)
-        if update_online_list and hasattr(parent_ref, "online_list"):
+        if (
+            update_online_list
+            and parent_ref is not None
+            and hasattr(parent_ref, "online_list")
+        ):
             parent_ref.online_list.associate_item(
                 component=name,
                 text=component.url_component,
@@ -40,7 +46,7 @@ class OrchestratorConnectivity(OrchestratorProtocols):
         if not hasattr(self.components[name], "connectivity"):
             logger.error(f"Component {name} is not a electronic component.")
             return
-        
+
         connectivity = self.components[name].connectivity
 
         if connectivity.is_online:
@@ -75,7 +81,7 @@ class OrchestratorConnectivity(OrchestratorProtocols):
             validated_url,
             update_online_list=True,
         )
-        
+
     def disassociate_component(self, name: str):
         if name not in self.components:
             logger.error(f"Component {name} not found.")

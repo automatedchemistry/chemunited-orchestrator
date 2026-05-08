@@ -1,6 +1,7 @@
-import requests
-from pydantic import BaseModel, AnyHttpUrl, ConfigDict, Field
 from urllib.parse import urlsplit
+
+import requests
+from pydantic import AnyHttpUrl, BaseModel, ConfigDict, Field
 
 
 class ComponentConnnectivity(BaseModel):
@@ -26,7 +27,7 @@ class ComponentConnnectivity(BaseModel):
             return response.status_code == 200
         except requests.exceptions.RequestException:
             return False
-    
+
     @property
     def url_component(self) -> str:
         """Get the url of the component."""
@@ -42,10 +43,14 @@ class ComponentConnnectivity(BaseModel):
 
 
 if __name__ == "__main__":
-    component = ComponentConnnectivity(url=AnyHttpUrl("http://localhost:8000/flume/123456"))
+    component = ComponentConnnectivity(
+        url=AnyHttpUrl("http://localhost:8000/flume/123456")
+    )
     print(component.is_online)
     print(component.url_component)
-    
-    component_2 = ComponentConnnectivity(url=AnyHttpUrl("http://127.0.0.1:1258/spectrometer/123456"))
+
+    component_2 = ComponentConnnectivity(
+        url=AnyHttpUrl("http://127.0.0.1:1258/spectrometer/123456")
+    )
     print(component_2.is_online)
     print(component_2.url_component)

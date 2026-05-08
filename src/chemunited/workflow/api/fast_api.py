@@ -1,17 +1,16 @@
 from __future__ import annotations
 
 import asyncio
+import json
 import typing
 import uuid
 from dataclasses import dataclass
 from typing import Any
 
-import json
-
 from fastapi import APIRouter, HTTPException  # type: ignore[import-not-found]
-from sse_starlette.sse import EventSourceResponse  # type: ignore[import-not-found]
 from loguru import logger
 from pydantic import BaseModel, ValidationError
+from sse_starlette.sse import EventSourceResponse  # type: ignore[import-not-found]
 
 from chemunited.workflow.api.sse_observer import APIWorkflowObserver
 from chemunited.workflow.models import WorkflowExecutionEvent
@@ -22,19 +21,21 @@ from chemunited.workflow.process import Process
 
 
 def _event_to_json(event: WorkflowExecutionEvent) -> str:
-    return json.dumps({
-        "event_type": event.event_type.value,
-        "message": event.message,
-        "node_key": list(event.node_key) if event.node_key is not None else None,
-        "state": event.state.value if event.state is not None else None,
-        "result": event.result,
-        "method": event.method,
-        "source": event.source,
-        "target": event.target,
-        "active_predecessor_count": event.active_predecessor_count,
-        "completed_predecessor_count": event.completed_predecessor_count,
-        "timestamp": event.timestamp,
-    })
+    return json.dumps(
+        {
+            "event_type": event.event_type.value,
+            "message": event.message,
+            "node_key": list(event.node_key) if event.node_key is not None else None,
+            "state": event.state.value if event.state is not None else None,
+            "result": event.result,
+            "method": event.method,
+            "source": event.source,
+            "target": event.target,
+            "active_predecessor_count": event.active_predecessor_count,
+            "completed_predecessor_count": event.completed_predecessor_count,
+            "timestamp": event.timestamp,
+        }
+    )
 
 
 def _get_config_class(process_cls: type) -> type[BaseModel]:
@@ -675,7 +676,9 @@ class RunController:
                         )
                         break
                     logger.info(
-                        "GET /execute/stream process {}/{} completed", i + 1, len(processes)
+                        "GET /execute/stream process {}/{} completed",
+                        i + 1,
+                        len(processes),
                     )
             finally:
                 self.is_running = False

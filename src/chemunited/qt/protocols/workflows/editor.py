@@ -229,10 +229,10 @@ class ProcessScriptEditorWindow(ScriptEditorWindow):
         self._class_name = class_name
         self._current_focused_method: str | None = None
         super().__init__(
-            path=path, 
+            path=path,
             class_name=class_name,
-            main_parameters_path=main_parameters_path, 
-            parent=parent
+            main_parameters_path=main_parameters_path,
+            parent=parent,
         )
 
     def _make_editor(self, path: Path) -> ProtectedZoneEditor:
