@@ -13,8 +13,10 @@ from PyQt5.QtWidgets import QFrame, QGraphicsItem, QGraphicsView
 from qfluentwidgets import Action, RoundMenu, isDarkTheme
 
 from chemunited.qt.elements.component.protocols import CommandSignature
+from chemunited.qt.protocols.workflows.naming import process_class_name
 from chemunited.qt.shared.editor.protocols.command import CommandEditorDialog
 from chemunited.qt.shared.editor.protocols.command_list import CommandList
+from chemunited.qt.shared.editor.parameters.main import MainParametersEditor
 from chemunited.qt.shared.enums import SetupStepMode, WindowCategory
 from chemunited.qt.shared.enums.protocols_enum import ProtocolBlock
 from chemunited.qt.shared.graph import GraphCore, SceneCore
@@ -357,6 +359,8 @@ class WorkflowGraph(GraphCore):
         self._selected_port: WorkflowAccessPoints | None = None
 
         self._script_editor: ProcessScriptEditorWindow | None = None
+        self._parameters_editor: MainParametersEditor | None = None
+        self._parameters_editor_target: tuple[Path, str] | None = None
 
         self._bind_controller()
         self.build_from_model()
@@ -434,7 +438,7 @@ class WorkflowGraph(GraphCore):
             data.file = script_path.name
 
         if tag == ProtocolBlock.COMMAND:
-            class_name = f"{data.process[:1].upper()}{data.process[1:]}Process"
+            class_name = process_class_name(data.process)
             source = script_path.read_text(encoding="utf-8")
             parsed_command = _parse_command_call(source, data.method, class_name)
             if parsed_command is None:
@@ -470,7 +474,7 @@ class WorkflowGraph(GraphCore):
             editor.exec_()
             return
 
-        class_name = f"{data.process}Process"
+        class_name = process_class_name(data.process)
         if (
             self._script_editor is None
             or self._script_editor.editor.path != script_path
@@ -644,6 +648,12 @@ class WorkflowGraph(GraphCore):
             action.setIcon(icon)
             action.triggered.connect(partial(self.add_block, block_tag, scene_pos))
             menu.addAction(action)
+        menu.addSeparator()
+        open_process_parameters_action = Action(self)
+        open_process_parameters_action.setText("Access Process Parameters")
+        open_process_parameters_action.setIcon(OrchestratorIcon.VARIABLE.icon())
+        open_process_parameters_action.triggered.connect(self.access_process_parameters)
+        menu.addAction(open_process_parameters_action)
 
         return menu
 
@@ -1026,7 +1036,7 @@ class WorkflowGraph(GraphCore):
         if not self._is_valid_script_file(script_path):
             return False
 
-        class_name = f"{process_name[:1].upper()}{process_name[1:]}Process"
+        class_name = process_class_name(process_name)
         source = script_path.read_text(encoding="utf-8")
         new_source = (
             _remove_method(source, method_name, class_name)
@@ -1057,7 +1067,7 @@ class WorkflowGraph(GraphCore):
         if not self._is_valid_script_file(script_path):
             return False
 
-        class_name = f"{process_name[:1].upper()}{process_name[1:]}Process"
+        class_name = process_class_name(process_name)
         source = script_path.read_text(encoding="utf-8")
         new_source = _add_content_to_method(source, method_name, class_name, content)
         if new_source == source:
@@ -1082,7 +1092,7 @@ class WorkflowGraph(GraphCore):
         script_path = Path(working_dir) / "protocols" / f"{process_name}.py"
         if not self._is_valid_script_file(script_path):
             return
-        class_name = f"{process_name[:1].upper()}{process_name[1:]}Process"
+        class_name = process_class_name(process_name)
         source = script_path.read_text(encoding="utf-8")
         new_source = _replace_method_body(
             source, method_name, class_name, sig.line_script
@@ -1107,6 +1117,43 @@ class WorkflowGraph(GraphCore):
             self._script_editor.raise_()
             self._script_editor.activateWindow()
 
+    def access_process_parameters(self) -> None:
+        orchestrator = getattr(self.parent_ref, "orchestrator", None)
+        working_dir = getattr(orchestrator, "working_dir", None)
+        process_name = self.model.process
+        if not working_dir or not process_name:
+            return
+
+        script_path = Path(working_dir) / "protocols" / f"{process_name}.py"
+        if not self._is_valid_script_file(script_path):
+            return
+
+        class_name = f"{process_class_name(process_name)}Config"
+        if (
+            self._parameters_editor is not None
+            and self._parameters_editor_target != (script_path, class_name)
+        ):
+            self._parameters_editor.close()
+            self._parameters_editor = None
+            self._parameters_editor_target = None
+
+        if self._parameters_editor is None:
+            self._parameters_editor = MainParametersEditor(
+                path=script_path,
+                class_name=class_name,
+                parent=self,
+            )
+            self._parameters_editor_target = (script_path, class_name)
+
+        if self._script_editor is not None:
+            self._script_editor.close()
+
+        self._parameters_editor.show()
+        self._parameters_editor.raise_()
+        self._parameters_editor.activateWindow()
+
     def __del__(self):
         if self._script_editor is not None:
             self._script_editor.close()
+        if self._parameters_editor is not None:
+            self._parameters_editor.close()

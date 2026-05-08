@@ -230,6 +230,52 @@ class TestAddComponent:
         with zipfile.ZipFile(tmp_path / "demo.chemunited") as archive:
             assert "draw/platform.svg" in archive.namelist()
 
+    def test_save_preserves_existing_main_parameters_file(
+        self, window: SetupWindow, tmp_path
+    ):
+        working_dir = tmp_path / "demo"
+        session = ProjectSession()
+        session.new(name="demo", location=tmp_path, init_git=False)
+        main_parameters_path = working_dir / "protocols" / "main_parameters.py"
+        main_parameters_path.parent.mkdir(parents=True, exist_ok=True)
+        custom_content = (
+            "from pydantic import BaseModel\n\n"
+            "class MainParameter(BaseModel):\n"
+            "    custom_value: str = 'keep-me'\n"
+        )
+        main_parameters_path.write_text(custom_content, encoding="utf-8")
+        window.orchestrator.working_dir = working_dir
+        window.orchestrator._session = session
+
+        window.orchestrator.save()
+
+        assert main_parameters_path.read_text(encoding="utf-8") == custom_content
+        with zipfile.ZipFile(tmp_path / "demo.chemunited") as archive:
+            assert "protocols/main_parameters.py" in archive.namelist()
+            archived_content = archive.read("protocols/main_parameters.py").decode(
+                "utf-8"
+            )
+            assert archived_content.replace("\r\n", "\n") == custom_content
+
+    def test_save_creates_main_parameters_file_when_missing(
+        self, window: SetupWindow, tmp_path
+    ):
+        working_dir = tmp_path / "demo"
+        session = ProjectSession()
+        session.new(name="demo", location=tmp_path, init_git=False)
+        main_parameters_path = working_dir / "protocols" / "main_parameters.py"
+        if main_parameters_path.exists():
+            main_parameters_path.unlink()
+        window.orchestrator.working_dir = working_dir
+        window.orchestrator._session = session
+
+        window.orchestrator.save()
+
+        content = main_parameters_path.read_text(encoding="utf-8")
+        assert "class MainParameter(BaseModel):" in content
+        with zipfile.ZipFile(tmp_path / "demo.chemunited") as archive:
+            assert "protocols/main_parameters.py" in archive.namelist()
+
     def test_save_syncs_existing_process_file_in_place(
         self, window: SetupWindow, tmp_path
     ):

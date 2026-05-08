@@ -1,3 +1,4 @@
+from pathlib import Path
 from typing import override
 
 from PyQt5.QtCore import pyqtSlot
@@ -19,6 +20,7 @@ from .protocols.graph import ProtocolGraphicView
 from .protocols.process_list import ProtocolsWidget
 from .protocols.workflows.workflow_widget import WorkflowsWidget
 from .shared.editor.protocols.command_list import CommandList
+from .shared.editor.parameters.main import MainParametersEditor
 from .shared.enums import SetupStepMode, WindowCategory
 from .shared.graph import SceneCore
 from .shared.icon import OrchestratorIcon
@@ -53,6 +55,7 @@ class SetupWindow(MainWindowBase):
         self.protocolGraph = ProtocolGraphicView(self.scene_attribute, self)
         self.workflows_protocol = WorkflowsWidget(self)
         self.command_list = CommandList(self)
+        self.parameter_list_widget: MainParametersEditor | None = None
 
         # Connectivity frame
         self.connectivityFrame = FrameBase(
@@ -222,6 +225,14 @@ class SetupWindow(MainWindowBase):
             onClick=self.command_list.sync_protocols,
         )
 
+        self.protocolFrame.addNavigationAction(
+            icon=OrchestratorIcon.VARIABLE,
+            text="Main Parameters",
+            position=NavigationItemPosition.TOP,
+            onClick=self.open_main_parameters_editor,
+            tooltip="Open the main parameters editor",
+        )
+
         self.SegmentWindow.addSubInterface(
             widget=self.protocolFrame,
             objectName="protocolFrame",
@@ -295,6 +306,30 @@ class SetupWindow(MainWindowBase):
 
     def open_recent_project(self, path):
         self.orchestrator.open_recent_project(path)
+
+    def open_main_parameters_editor(self):
+        if self.orchestrator.working_dir is None:
+            return
+
+        if self.parameter_list_widget is None:
+            self.parameter_list_widget = MainParametersEditor(
+                path=Path(
+                    self.orchestrator.working_dir
+                    / "protocols"
+                    / "main_parameters.py"
+                ),
+                class_name="MainParameter",
+                parent=self,
+            )
+        self.parameter_list_widget.show()
+        self.parameter_list_widget.raise_()
+        self.parameter_list_widget.activateWindow()
+
+    def close_main_parameters_editor(self) -> None:
+        if self.parameter_list_widget is None:
+            return
+        self.parameter_list_widget.close()
+        self.parameter_list_widget = None
 
     def recenter_views(self):
         self.drawGraph.recenter_view()

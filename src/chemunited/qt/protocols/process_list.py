@@ -20,14 +20,21 @@ class ProtocolsList(ProcessList):
     )  # (old_name, new_name) — forwarded intention
     remove_requested = pyqtSignal(str)  # user chose Remove
     duplicate_requested = pyqtSignal(str)  # user chose Duplicate — original name only
+    access_parameters_requested = pyqtSignal(str)  # user chose Access Process Parameters
 
     def __init__(self, data: dict, parent=None):
         super().__init__(data, parent)
         self.set_items_renameable(True)
         self.add_items_option("Duplicate", FluentIcon.COPY, "Duplicate this process")
         self.add_items_option("Remove", FluentIcon.DELETE, "Remove this process")
+        self.add_items_option(
+            "Process Parameters",
+            OrchestratorIcon.VARIABLE.icon(),
+            "Access process parameters",
+        )
         self._dispatch["Duplicate"] = self._on_duplicate
         self._dispatch["Remove"] = self._on_remove
+        self._dispatch["Process Parameters"] = self._on_process_parameters
 
     # ------------------------------------------------------------------
     # Override base: forward rename as an intention instead of self-mutating
@@ -35,17 +42,20 @@ class ProtocolsList(ProcessList):
 
     def _on_rename_requested(self, current_name: str, proposed_name: str) -> None:
         self._editing_item = None
-        self.rename_requested.emit(current_name, proposed_name)
+        self.rename_requested.emit(current_name, proposed_name)  # type: ignore
 
     # ------------------------------------------------------------------
     # Dispatch handlers — emit intentions, no mutations
     # ------------------------------------------------------------------
 
     def _on_remove(self, name: str) -> None:
-        self.remove_requested.emit(name)
+        self.remove_requested.emit(name)  # type: ignore
 
     def _on_duplicate(self, name: str) -> None:
-        self.duplicate_requested.emit(name)  # orchestrator generates the new name
+        self.duplicate_requested.emit(name)  # type: ignore
+
+    def _on_process_parameters(self, name: str) -> None:
+        self.access_parameters_requested.emit(name)  # type: ignore
 
     # ------------------------------------------------------------------
     # Called by orchestrator after it has mutated the dict
@@ -79,3 +89,4 @@ class ProtocolsWidget(ProcessWidget):
         self._list.rename_requested.connect(orch.rename_process)
         self._list.remove_requested.connect(orch.remove_process)
         self._list.duplicate_requested.connect(orch.duplicate_process)
+        self._list.access_parameters_requested.connect(orch.access_process_parameters)

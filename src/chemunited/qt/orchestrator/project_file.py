@@ -132,9 +132,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
         self._session.new(name=self.working_dir.name, location=self.working_dir.parent)
         self._save_platform_svg()
         self._session.save_draw(self._build_draw_data())
-        self._session.save_main_parameters(
-            self._render_main_parameters_script(self.working_dir)
-        )
+        self._ensure_main_parameters_script()
         self._session.export_chemunited(chemunited_path)
 
         logger.bind(window=WindowCategory.SETUP).info(
@@ -203,9 +201,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
         self._save_platform_svg()
         self._session.save_draw(self._build_draw_data())
         self._save_protocols()
-        self._session.save_main_parameters(
-            self._render_main_parameters_script(self.working_dir)
-        )
+        self._ensure_main_parameters_script()
         self._session.save_connectivity(self._build_connectivity_data())
         self._session.export_chemunited(export_destination)
 
@@ -359,6 +355,14 @@ class OrchestratorProjectFile(OrchestratorExecution):
         return session
 
     def _reset_project_state(self) -> None:
+        close_main_parameters_editor = getattr(
+            self.parent_ref,
+            "close_main_parameters_editor",
+            None,
+        )
+        if callable(close_main_parameters_editor):
+            close_main_parameters_editor()
+
         for name in list(self.connections.keys()):
             if name in self.connections:
                 self.remove_connection(name)
@@ -540,6 +544,18 @@ class OrchestratorProjectFile(OrchestratorExecution):
             )
         if self._session.manifest is not None:
             self._session.manifest.processes_order = list(self.protocols.keys())
+
+    def _ensure_main_parameters_script(self) -> None:
+        if self._session is None or self.working_dir is None:
+            return
+
+        path = self.working_dir / "protocols" / "main_parameters.py"
+        if path.exists():
+            return
+
+        self._session.save_main_parameters(
+            self._render_main_parameters_script(self.working_dir)
+        )
 
     @staticmethod
     def _render_main_parameters_script(working_dir: Path) -> str:

@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 from chemunited.qt.project.storage import load_draw, save_draw
+from chemunited.qt.protocols.workflows.naming import process_class_name
 
 
 def test_save_draw_writes_python_setup(tmp_path):
@@ -95,3 +96,9 @@ def build_draw(platform):
 
 def test_load_draw_returns_empty_payload_when_setup_is_missing(tmp_path):
     assert load_draw(tmp_path) == {"components": [], "connections": [], "canvas": {}}
+
+
+def test_process_class_name_matches_generated_process_scripts():
+    assert process_class_name("react") == "ReactProcess"
+    assert process_class_name("my_process") == "MyProcessProcess"
+    assert process_class_name("ReactRenamed") == "ReactRenamedProcess"

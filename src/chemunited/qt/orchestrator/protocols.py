@@ -90,6 +90,14 @@ class OrchestratorProtocols(OrchestratorDraw):
     def save_protocols(self) -> None:
         self.parent_ref.save()
 
+    @pyqtSlot(str)
+    def access_process_parameters(self, name: str) -> None:
+        if name not in self.protocols:
+            logger.error(f"Process not found: {name!r}")
+            return
+        if process := self.parent_ref.workflows_protocol[name]:
+            process.access_process_parameters()
+
     # ------------------------------------------------------------------
     # Helpers
     # ------------------------------------------------------------------
