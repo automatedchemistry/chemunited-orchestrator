@@ -19,8 +19,8 @@ from .pre_run.pre_run_frame import PreRunFrame
 from .protocols.graph import ProtocolGraphicView
 from .protocols.process_list import ProtocolsWidget
 from .protocols.workflows.workflow_widget import WorkflowsWidget
-from .shared.editor.protocols.command_list import CommandList
 from .shared.editor.parameters.main import MainParametersEditor
+from .shared.editor.protocols.command_list import CommandList
 from .shared.enums import SetupStepMode, WindowCategory
 from .shared.graph import SceneCore
 from .shared.icon import OrchestratorIcon
@@ -314,9 +314,7 @@ class SetupWindow(MainWindowBase):
         if self.parameter_list_widget is None:
             self.parameter_list_widget = MainParametersEditor(
                 path=Path(
-                    self.orchestrator.working_dir
-                    / "protocols"
-                    / "main_parameters.py"
+                    self.orchestrator.working_dir / "protocols" / "main_parameters.py"
                 ),
                 class_name="MainParameter",
                 parent=self,

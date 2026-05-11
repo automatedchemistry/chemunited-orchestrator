@@ -48,21 +48,30 @@ class _DragListWidget(ListWidget):
     """qfluentwidgets ListWidget that exposes the dragged item as plain text."""
 
     MIME = "application/x-chemunited-parameter-field"
+    PATH_MIME = "application/x-chemunited-parameter-source-path"
 
-    def __init__(self, parent: QWidget | None = None) -> None:
+    def __init__(self, path: Path, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setDragEnabled(True)
         self.setDragDropMode(QAbstractItemView.DragOnly)
         self.setDefaultDropAction(Qt.CopyAction)  # type: ignore[attr-defined]
         self.setSelectionMode(QAbstractItemView.SingleSelection)
+        self._path = path
 
     def startDrag(self, _supported_actions) -> None:  # type: ignore[override]
         item = self.currentItem()
         if item is None:
             return
+        line_tree = "self.config."
+        if self._path.name == "main_parameters.py":
+            line_tree = "self.main_parameters."
+
+        param_line = f"{line_tree}{item.text()}"
+
         mime = QMimeData()
-        mime.setData(self.MIME, item.text().encode("utf-8"))
-        mime.setText(item.text())
+        mime.setData(self.MIME, param_line.encode("utf-8"))
+        mime.setData(self.PATH_MIME, str(self._path).encode("utf-8"))
+        mime.setText(param_line)
         drag = QDrag(self)
         drag.setMimeData(mime)
         drag.exec_(Qt.CopyAction)  # type: ignore[attr-defined]
@@ -77,6 +86,7 @@ class ParameterDragableList(QWidget):
     """
 
     MIME = _DragListWidget.MIME
+    PATH_MIME = _DragListWidget.PATH_MIME
 
     def __init__(
         self,
@@ -88,7 +98,7 @@ class ParameterDragableList(QWidget):
         self._path = path
         self._class_name = class_name
 
-        self._list = _DragListWidget(self)
+        self._list = _DragListWidget(path=self._path, parent=self)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)

@@ -2,11 +2,17 @@
 
 from __future__ import annotations
 
+import importlib.util
+import inspect
+import json
+import sys
 from abc import ABC, abstractmethod
+from pathlib import Path
 from typing import Callable, Generic, TypeVar
 
 import networkx as nx
-from pydantic import BaseModel
+from loguru import logger
+from pydantic import BaseModel, ValidationError
 
 from .compiler import compile_workflow
 from .executor import WorkflowExecutor
@@ -15,6 +21,21 @@ from .orchestrator import Platform
 from .terminal import TerminalWorkflowObserver
 
 ConfigT = TypeVar("ConfigT", bound=BaseModel)
+ModelT = TypeVar("ModelT", bound=BaseModel)
+
+
+def _load_class(file_path: Path, class_name: str) -> type:
+    module_name = (
+        f"_chemunited_process_{file_path.stem}_{abs(hash(file_path.resolve()))}"
+    )
+    spec = importlib.util.spec_from_file_location(module_name, file_path)
+    if spec is None or spec.loader is None:
+        raise ImportError(f"Could not load module {file_path}")
+
+    module = importlib.util.module_from_spec(spec)
+    sys.modules[module_name] = module
+    spec.loader.exec_module(module)
+    return getattr(module, class_name)
 
 
 class Process(ABC, Generic[ConfigT]):
@@ -32,6 +53,85 @@ class Process(ABC, Generic[ConfigT]):
     def build_workflow(self) -> nx.DiGraph:
         """Return the authored workflow graph."""
 
+    def load_parameters(self) -> bool:
+        """Load main and process parameters from files next to the process module."""
+        process_dir = Path(inspect.getfile(self.__class__)).parent
+
+        main_parameters_path = process_dir / "main_parameters.py"
+        if main_parameters_path.exists():
+            try:
+                main_parameters_class = _load_class(
+                    main_parameters_path, "MainParameter"
+                )
+            except AttributeError:
+                logger.error(
+                    f"Could not load parameters from {main_parameters_path}: "
+                    "MainParameter class not found."
+                )
+                return False
+            except Exception as e:
+                logger.error(
+                    f"Could not load parameters from {main_parameters_path}: {e}"
+                )
+                return False
+
+            if main_parameters_class is None:
+                logger.error(
+                    f"Could not load parameters from {main_parameters_path}: "
+                    "MainParameter class not found."
+                )
+                return False
+
+            try:
+                main_parameters = main_parameters_class()
+            except ValidationError as e:
+                logger.error(
+                    f"Could not load parameters from {main_parameters_path}: {e}"
+                )
+                return False
+
+            if not isinstance(main_parameters, BaseModel):
+                logger.error(
+                    f"Could not load parameters from {main_parameters_path}: "
+                    "MainParameter must inherit from pydantic.BaseModel."
+                )
+                return False
+
+            self.main_parameters = main_parameters
+
+        def load_model_json(path: Path, model: ModelT) -> ModelT | None:
+            if not path.exists():
+                return model
+            try:
+                data = json.loads(path.read_text(encoding="utf-8"))
+                return type(model).model_validate(data)
+            except (OSError, json.JSONDecodeError, ValidationError) as e:
+                logger.error(f"Could not load parameters from {path}: {e}")
+                return None
+
+        main_parameters_json_path = process_dir / "main_parameters.json"
+        if main_parameters_json_path.exists():
+            if self.main_parameters is None:
+                logger.error(
+                    f"Could not load parameters from {main_parameters_json_path}: "
+                    "main_parameters.py was not loaded."
+                )
+                return False
+            main_parameters = load_model_json(
+                main_parameters_json_path, self.main_parameters
+            )
+            if main_parameters is None:
+                return False
+            self.main_parameters = main_parameters
+
+        config = load_model_json(
+            process_dir / f"{self.__class__.__name__}.json", self.config
+        )
+        if config is None:
+            return False
+        self.config = config
+        return True
+
     def run_workflow(
         self,
         start_node: str,
@@ -39,6 +139,9 @@ class Process(ABC, Generic[ConfigT]):
         extra_listeners: list[Callable] | None = None,
     ) -> WorkflowResult:
         """Compile and execute the workflow from ``start_node``."""
+        if not self.load_parameters():
+            raise RuntimeError("Could not load parameters from process module.")
+
         graph = self.build_workflow()
         compiled = compile_workflow(graph)
 

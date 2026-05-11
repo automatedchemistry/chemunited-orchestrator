@@ -20,7 +20,9 @@ class ProtocolsList(ProcessList):
     )  # (old_name, new_name) — forwarded intention
     remove_requested = pyqtSignal(str)  # user chose Remove
     duplicate_requested = pyqtSignal(str)  # user chose Duplicate — original name only
-    access_parameters_requested = pyqtSignal(str)  # user chose Access Process Parameters
+    access_parameters_requested = pyqtSignal(
+        str
+    )  # user chose Access Process Parameters
 
     def __init__(self, data: dict, parent=None):
         super().__init__(data, parent)

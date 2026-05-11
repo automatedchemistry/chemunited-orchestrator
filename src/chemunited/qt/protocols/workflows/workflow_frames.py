@@ -14,9 +14,9 @@ from qfluentwidgets import Action, RoundMenu, isDarkTheme
 
 from chemunited.qt.elements.component.protocols import CommandSignature
 from chemunited.qt.protocols.workflows.naming import process_class_name
+from chemunited.qt.shared.editor.parameters.main import MainParametersEditor
 from chemunited.qt.shared.editor.protocols.command import CommandEditorDialog
 from chemunited.qt.shared.editor.protocols.command_list import CommandList
-from chemunited.qt.shared.editor.parameters.main import MainParametersEditor
 from chemunited.qt.shared.enums import SetupStepMode, WindowCategory
 from chemunited.qt.shared.enums.protocols_enum import ProtocolBlock
 from chemunited.qt.shared.graph import GraphCore, SceneCore
@@ -1129,9 +1129,9 @@ class WorkflowGraph(GraphCore):
             return
 
         class_name = f"{process_class_name(process_name)}Config"
-        if (
-            self._parameters_editor is not None
-            and self._parameters_editor_target != (script_path, class_name)
+        if self._parameters_editor is not None and self._parameters_editor_target != (
+            script_path,
+            class_name,
         ):
             self._parameters_editor.close()
             self._parameters_editor = None

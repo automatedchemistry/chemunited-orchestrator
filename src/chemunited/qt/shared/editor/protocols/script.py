@@ -4,7 +4,7 @@ from typing import TYPE_CHECKING
 import black  # type: ignore[import-not-found]
 from loguru import logger
 from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QIcon
+from PyQt5.QtGui import QDropEvent, QIcon
 from PyQt5.QtWidgets import QDockWidget, QHBoxLayout, QMainWindow, QWidget
 from qfluentwidgets import FluentIcon, NavigationInterface, NavigationItemPosition
 
@@ -20,6 +20,21 @@ if TYPE_CHECKING:
 class ScriptEditor(EditorBase):
     def __init__(self, path: Path, parent=None):
         super().__init__(parent, path=path)
+
+    def dropEvent(self, event: QDropEvent) -> None:
+        mime_data = event.mimeData()
+        if mime_data.hasFormat(ParameterDragableList.MIME) and mime_data.hasFormat(
+            ParameterDragableList.PATH_MIME
+        ):
+            source_path = Path(
+                bytes(mime_data.data(ParameterDragableList.PATH_MIME)).decode("utf-8")
+            ).resolve()
+            current_path = self.path.resolve()
+            if source_path != current_path and source_path.name != "main_parameters.py":
+                event.ignore()
+                return
+
+        super().dropEvent(event)
 
 
 class ScriptEditorWindow(QMainWindow):

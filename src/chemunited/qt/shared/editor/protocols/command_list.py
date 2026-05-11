@@ -357,9 +357,10 @@ class CommandList(TreeWidget):
         if not isinstance(line_script, str):
             return None
 
+        indentation = " " * 8
         mime_data = QMimeData()
         mime_data.setData(self.MIME, line_script.encode("utf-8"))
-        mime_data.setText(line_script)
+        mime_data.setText(f"\n{indentation}{line_script}")
         return mime_data
 
     def startDrag(self, supportedActions) -> None:
