@@ -45,6 +45,7 @@ class Process(ABC, Generic[ConfigT]):
         self.config = config
         self.main_parameters: BaseModel | None = None
         self.platform = Platform()
+        self.process_index: int = 0
 
     def set_main_parameters(self, main_parameters: BaseModel) -> None:
         self.main_parameters = main_parameters
@@ -53,7 +54,7 @@ class Process(ABC, Generic[ConfigT]):
     def build_workflow(self) -> nx.DiGraph:
         """Return the authored workflow graph."""
 
-    def load_parameters(self) -> bool:
+    def load_parameters(self, hystoric_file: str | None = None) -> bool:
         """Load main and process parameters from files next to the process module."""
         process_dir = Path(inspect.getfile(self.__class__)).parent
 
@@ -99,37 +100,41 @@ class Process(ABC, Generic[ConfigT]):
 
             self.main_parameters = main_parameters
 
-        def load_model_json(path: Path, model: ModelT) -> ModelT | None:
-            if not path.exists():
-                return model
-            try:
-                data = json.loads(path.read_text(encoding="utf-8"))
-                return type(model).model_validate(data)
-            except (OSError, json.JSONDecodeError, ValidationError) as e:
-                logger.error(f"Could not load parameters from {path}: {e}")
-                return None
+        hystoric_file_path = (
+            process_dir
+            / "protocol_hystoric"
+            / (hystoric_file if hystoric_file is not None else "parameters.json")
+        )
+        if not hystoric_file_path.exists():
+            # It is not problematic to not have a hystoric file.
+            # When the user wants to create a new protocol based on this process,
+            # it should be done through the UI.
+            return True
 
-        main_parameters_json_path = process_dir / "main_parameters.json"
-        if main_parameters_json_path.exists():
-            if self.main_parameters is None:
+        try:
+            data = json.loads(hystoric_file_path.read_text(encoding="utf-8"))
+            if "main_parameter" in data:
+                if self.main_parameters is None:
+                    logger.error(
+                        f"Could not load parameters from {hystoric_file_path}: "
+                        "main_parameters.py was not loaded."
+                    )
+                    return False
+                self.main_parameters = type(self.main_parameters).model_validate(
+                    data["main_parameter"]
+                )
+            key = f"{self.__class__.__name__}_parameters_{self.process_index}"
+            if key in data:
+                self.config = type(self.config).model_validate(data[key])
+            else:
                 logger.error(
-                    f"Could not load parameters from {main_parameters_json_path}: "
-                    "main_parameters.py was not loaded."
+                    f"Could not load parameters from {hystoric_file_path}: "
+                    f"{key} not found."
                 )
                 return False
-            main_parameters = load_model_json(
-                main_parameters_json_path, self.main_parameters
-            )
-            if main_parameters is None:
-                return False
-            self.main_parameters = main_parameters
-
-        config = load_model_json(
-            process_dir / f"{self.__class__.__name__}.json", self.config
-        )
-        if config is None:
+        except (OSError, json.JSONDecodeError, ValidationError) as e:
+            logger.error(f"Could not load parameters from {hystoric_file_path}: {e}")
             return False
-        self.config = config
         return True
 
     def run_workflow(
@@ -137,9 +142,12 @@ class Process(ABC, Generic[ConfigT]):
         start_node: str,
         terminal_observer: bool = True,
         extra_listeners: list[Callable] | None = None,
+        hystoric_file: str | None = None,
+        process_index: int = 0,
     ) -> WorkflowResult:
         """Compile and execute the workflow from ``start_node``."""
-        if not self.load_parameters():
+        self.process_index = process_index
+        if not self.load_parameters(hystoric_file=hystoric_file):
             raise RuntimeError("Could not load parameters from process module.")
 
         graph = self.build_workflow()
