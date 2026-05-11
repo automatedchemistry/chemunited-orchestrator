@@ -65,12 +65,11 @@ class SetupWindow(MainWindowBase):
         self.connectivityGraph = ConnectivityGraphicView(self.scene_attribute, self)
         self.online_list = OnlineComponent(self)
 
-        # Pre-run frame
-        self.preRunFrame = PreRunFrame(self)
-
         # Main Orchestrator Object
         # It depends on drawGraph being available during construction.
         self.orchestrator = Orchestrator(self)
+
+        self.preRunFrame = PreRunFrame(self)  # Pre-run frame
 
         self.protocols_widget = ProtocolsWidget(self)
 

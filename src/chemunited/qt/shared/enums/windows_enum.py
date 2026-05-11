@@ -14,3 +14,4 @@ class SetupStepMode(Enum):
     EXECUTION = auto()
     PROTOCOLS = auto()
     CONNECTIVITY = auto()
+    PRE_RUN = auto()

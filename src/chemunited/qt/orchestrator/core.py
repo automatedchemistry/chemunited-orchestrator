@@ -108,3 +108,5 @@ class OrchestratorCore(QObject):
             component.graph.set_frame_mode(step)
         for connection in self.connections.values():
             connection.set_frame_mode(step)
+        if step == SetupStepMode.PRE_RUN:
+            self.parent_ref.preRunFrame.sync()
