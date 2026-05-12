@@ -14,6 +14,7 @@ from chemunited.qt.utils.files import load_attribute
 
 _PACK_EXCLUDE = {".git", ".gitignore", ".chemunited_session", "__pycache__"}
 _PROTOCOLS_SKIP = {"__init__", "main_parameters"}
+PROTOCOLS_HYSTORIC_DIR = "protocols_hystoric"
 
 
 # ── Pack / Unpack (unchanged) ──────────────────────────────────────────────────
@@ -35,6 +36,12 @@ def unpack(chemunited_file: Path, target_dir: Path) -> None:
 
 def _is_excluded(file: Path, root: Path) -> bool:
     return any(part in _PACK_EXCLUDE for part in file.relative_to(root).parts)
+
+
+def ensure_protocols_hystoric_dir(working_dir: Path) -> Path:
+    path = working_dir / PROTOCOLS_HYSTORIC_DIR
+    path.mkdir(parents=True, exist_ok=True)
+    return path
 
 
 # ── API script ────────────────────────────────────────────────────────────────

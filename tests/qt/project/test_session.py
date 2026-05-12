@@ -67,6 +67,22 @@ def test_import_chemunited_does_not_overwrite_existing_non_project_path(tmp_path
     assert not (working_dir / "draw" / "setup.py").exists()
 
 
+def test_protocols_hystoric_directory_is_created_and_exported(tmp_path):
+    session = ProjectSession()
+    session.new(name="demo", location=tmp_path, init_git=False)
+    working_dir = tmp_path / "demo"
+    history_dir = working_dir / "protocols_hystoric"
+    history_file = history_dir / "react.json"
+
+    assert history_dir.is_dir()
+
+    history_file.write_text('{"process": "react"}\n', encoding="utf-8")
+    archive_path = session.export_chemunited(tmp_path / "demo")
+
+    with zipfile.ZipFile(archive_path, "r") as zf:
+        assert "protocols_hystoric/react.json" in zf.namelist()
+
+
 def test_sync_process_creates_new_process_file(tmp_path):
     session = ProjectSession()
     session.new(name="demo", location=tmp_path, init_git=False)

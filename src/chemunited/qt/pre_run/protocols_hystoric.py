@@ -1,21 +1,22 @@
+import os
 from functools import partial
-from qfluentwidgets import (
-    ScrollArea,
-    GroupHeaderCardWidget,
-    TransparentToolButton,
-    Dialog,
-    TransparentPushButton,
-)
+from pathlib import Path
+from typing import TYPE_CHECKING, Optional
 
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout
+from loguru import logger
 from PyQt5.QtCore import Qt, QUrl
 from PyQt5.QtGui import QDesktopServices
-from typing import TYPE_CHECKING, Optional
-from pathlib import Path
-from loguru import logger
-import os
+from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
+from qfluentwidgets import (
+    GroupHeaderCardWidget,
+    ScrollArea,
+    TransparentPushButton,
+    TransparentToolButton,
+)
 
+from chemunited.qt.project.storage import ensure_protocols_hystoric_dir
 from chemunited.qt.shared.icon import OrchestratorIcon
+
 from .summary_window import SummaryWindow
 
 if TYPE_CHECKING:
@@ -48,23 +49,23 @@ class FileCard(GroupHeaderCardWidget):
         # Action buttons
 
         btn_view = TransparentToolButton(OrchestratorIcon.OPEN_FOLDER)
-        btn_view.clicked.connect(partial(self.__view_folder, file.parent))  # type:ignore
+        btn_view.clicked.connect(partial(self.__view_folder, file.parent))  # type: ignore
         btn_view.setToolTip("Open Local File")
 
         btn_summary = TransparentToolButton(OrchestratorIcon.JSON)
-        btn_summary.clicked.connect(partial(self.show_summary, file))  # type:ignore
+        btn_summary.clicked.connect(partial(self.show_summary, file))  # type: ignore
         btn_summary.setToolTip("Summary")
 
         btn_open = TransparentToolButton(OrchestratorIcon.CHEMUNITED)
-        btn_open.clicked.connect(partial(self._parent.open_monitoring, file))  # type:ignore
+        btn_open.clicked.connect(partial(self._parent.open_monitoring, file))  # type: ignore
         btn_open.setToolTip("Open Monitoring Window")
 
         btn_open_simu = TransparentToolButton(OrchestratorIcon.CHEMUNITED_SIMU)
-        btn_open_simu.clicked.connect(partial(self._parent.open_simulation, file))  # type:ignore
+        btn_open_simu.clicked.connect(partial(self._parent.open_simulation, file))  # type: ignore
         btn_open_simu.setToolTip("Open Simulation Window")
 
         btn_remove = TransparentToolButton(OrchestratorIcon.TRASH)
-        btn_remove.clicked.connect(partial(self.remove_file, file))  # type:ignore
+        btn_remove.clicked.connect(partial(self.remove_file, file))  # type: ignore
         btn_remove.setToolTip("Remove/delete the protocol script")
 
         layout.addWidget(btn_view)
@@ -75,7 +76,7 @@ class FileCard(GroupHeaderCardWidget):
 
         # Add group to card widget
         group = self.addGroup(
-            ":/orchestrator/images/json.svg",
+            ":/icons/icons/json.svg",
             f"{file.name}",
             f"{file.stem}",
             widget=widget,
@@ -108,7 +109,9 @@ class FileCard(GroupHeaderCardWidget):
         self.files[file.stem] = {"file": file, "group": group}
 
     def show_summary(self, file):
-        self.summary_window[file.stem].show()
+        window = self.summary_window.get(file.stem)
+        if window is not None:
+            window.show()
 
     def __view_folder(self, file: Path):
         """Open the file in the OS default program"""
@@ -127,8 +130,8 @@ class FileCard(GroupHeaderCardWidget):
 
         # remove UI group
         if file.stem in self.files:
-            self.summary_window[file.stem].close()
-            self.summary_window.pop(file.stem)
+            if window := self.summary_window.pop(file.stem, None):
+                window.close()
             group = self.files[file.stem]["group"]
             group.setParent(None)  # detach from layout
             group.deleteLater()  # schedule for deletion
@@ -159,15 +162,14 @@ class ProtocolsManageList(ScrollArea):
         self.vBoxLayout.setSpacing(10)
         self.vBoxLayout.setContentsMargins(0, 0, 10, 30)
         self.vBoxLayout.addWidget(
-            self.FileCard, 0, Qt.AlignTop  # type:ignore[attr-defined]
+            self.FileCard, 0, Qt.AlignTop  # type: ignore[attr-defined]
         )
 
     def fill_cards(self):
         if not self.parent_ref.orchestrator.working_dir:
             return
 
-        folder = self.parent_ref.orchestrator.working_dir / "protocols_hystoric"
-        folder.mkdir(parents=True, exist_ok=True)
+        folder = ensure_protocols_hystoric_dir(self.parent_ref.orchestrator.working_dir)
 
         for file in folder.glob("*.json"):
             self.FileCard.add_card(file, ignore_warning=True)

@@ -168,7 +168,7 @@ class ProcessDoubleList(QWidget):
         self.active_list.remove_requested.connect(self._remove_active_process)  # type: ignore[attr-defined]
         self.active_list.access_parameters_requested.connect(self.process_parameters_dialog)  # type: ignore[attr-defined]
         self.main_params_button.clicked.connect(self.main_parameters_dialog)  # type: ignore[attr-defined]
-        self.save_button.clicked.connect(self.parent_ref.orchestrator.save_protocols)  # type: ignore[attr-defined]
+        self.save_button.clicked.connect(self.save_protocols)  # type: ignore[attr-defined]
 
     def _activate_process(self, name: str) -> None:
         protocols = self.parent_ref.orchestrator.protocols
@@ -193,20 +193,19 @@ class ProcessDoubleList(QWidget):
         self.active_list.sync()
 
     def main_parameters_dialog(self) -> None:
+        instance = self._ensure_main_parameters_instance()
+        if instance is None:
+            return
+
         working_dir = self._working_dir()
         if working_dir is None:
             return
-
-        path = working_dir / "protocols" / "main_parameters.py"
-        model_class = self._load_parameter_model(path, "MainParameter")
+        model_class = self._load_parameter_model(
+            working_dir / "protocols" / "main_parameters.py",
+            "MainParameter",
+        )
         if model_class is None:
             return
-
-        instance = self._main_parameters_instance
-        if instance is None:
-            instance = self._default_instance(model_class, path)
-            if instance is None:
-                return
 
         dlg = BaseModeDialog(
             model_class=model_class,
@@ -225,21 +224,20 @@ class ProcessDoubleList(QWidget):
             self._show_warning("The selected active process no longer exists.")
             return
 
+        instance = self._ensure_process_parameter_instance(active_name)
+        if instance is None:
+            return
+
         working_dir = self._working_dir()
         if working_dir is None:
             return
-
         path = working_dir / "protocols" / f"{process_name}.py"
-        class_name = f"{process_class_name(process_name)}Config"
-        model_class = self._load_parameter_model(path, class_name)
+        model_class = self._load_parameter_model(
+            path,
+            f"{process_class_name(process_name)}Config",
+        )
         if model_class is None:
             return
-
-        instance = self._process_parameter_instances.get(active_name)
-        if instance is None:
-            instance = self._default_instance(model_class, path)
-            if instance is None:
-                return
 
         dlg = BaseModeDialog(
             model_class=model_class,
@@ -296,6 +294,56 @@ class ProcessDoubleList(QWidget):
             self._show_warning(f"Could not create parameters from {path.name}: {exc}")
             return None
 
+    def _ensure_main_parameters_instance(self) -> BaseModel | None:
+        if self._main_parameters_instance is not None:
+            return self._main_parameters_instance
+
+        working_dir = self._working_dir()
+        if working_dir is None:
+            return None
+
+        path = working_dir / "protocols" / "main_parameters.py"
+        model_class = self._load_parameter_model(path, "MainParameter")
+        if model_class is None:
+            return None
+
+        instance = self._default_instance(model_class, path)
+        if instance is None:
+            return None
+
+        self._main_parameters_instance = instance
+        return instance
+
+    def _ensure_process_parameter_instance(
+        self,
+        active_name: str,
+    ) -> BaseModel | None:
+        instance = self._process_parameter_instances.get(active_name)
+        if instance is not None:
+            return instance
+
+        process_name = self._active_data.get(active_name)
+        if process_name is None:
+            self._show_warning("The selected active process no longer exists.")
+            return None
+
+        working_dir = self._working_dir()
+        if working_dir is None:
+            return None
+
+        path = working_dir / "protocols" / f"{process_name}.py"
+        class_name = f"{process_class_name(process_name)}Config"
+        model_class = self._load_parameter_model(path, class_name)
+        if model_class is None:
+            return None
+
+        instance = self._default_instance(model_class, path)
+        if instance is None:
+            return None
+
+        self._process_parameter_instances[active_name] = instance
+        return instance
+
     def _show_warning(self, message: str) -> None:
         InfoBar.warning(
             title="Pre-run parameters",
@@ -306,3 +354,18 @@ class ProcessDoubleList(QWidget):
             duration=4000,
             parent=self,
         )
+
+    def save_protocols(self) -> None:
+        # Ensure the active processes is not empty
+        if not self._active_data:
+            self._show_warning("No active processes to save.")
+            return
+
+        if self._ensure_main_parameters_instance() is None:
+            return
+
+        for active_name in self._active_data:
+            if self._ensure_process_parameter_instance(active_name) is None:
+                return
+
+        self.parent_ref.orchestrator.save_protocols_hystoric()

@@ -100,11 +100,17 @@ class Process(ABC, Generic[ConfigT]):
 
             self.main_parameters = main_parameters
 
-        hystoric_file_path = (
-            process_dir
-            / "protocol_hystoric"
-            / (hystoric_file if hystoric_file is not None else "parameters.json")
+        hystoric_filename = (
+            hystoric_file if hystoric_file is not None else "parameters.json"
         )
+        hystoric_file_path = (
+            process_dir.parent / "protocols_hystoric" / hystoric_filename
+        )
+        legacy_hystoric_file_path = (
+            process_dir / "protocol_hystoric" / hystoric_filename
+        )
+        if not hystoric_file_path.exists() and legacy_hystoric_file_path.exists():
+            hystoric_file_path = legacy_hystoric_file_path
         if not hystoric_file_path.exists():
             # It is not problematic to not have a hystoric file.
             # When the user wants to create a new protocol based on this process,

@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import json
+import re
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from loguru import logger
 from PyQt5.QtCore import pyqtSlot
-from PyQt5.QtWidgets import QFileDialog, QMessageBox
+from PyQt5.QtWidgets import QFileDialog, QInputDialog, QMessageBox
 
 from chemunited.qt.project.manifest import ProjectManifest
 from chemunited.qt.project.platform_svg import (
@@ -14,8 +17,10 @@ from chemunited.qt.project.platform_svg import (
 )
 from chemunited.qt.project.recent import RecentProjectsStore
 from chemunited.qt.project.session import ProjectSession
+from chemunited.qt.project.storage import ensure_protocols_hystoric_dir
 from chemunited.qt.project.writer import render_python_script
 from chemunited.qt.protocols.workflows import ProcessWorkflow
+from chemunited.qt.protocols.workflows.naming import process_class_name
 from chemunited.qt.shared.enums import WindowCategory
 from chemunited.qt.shared.enums.protocols_enum import ProtocolBlock
 
@@ -597,3 +602,84 @@ class OrchestratorProjectFile(OrchestratorExecution):
             for conn in self.connections.values()
         ]
         return {"components": components, "connections": connections}
+
+    def save_protocols_hystoric(self) -> None:
+        if self.working_dir is None:
+            self._warn_user("Load or create a project before saving protocol scripts.")
+            return
+
+        folder = ensure_protocols_hystoric_dir(self.working_dir)
+        data: dict[str, dict[str, Any]] = {}
+        pre_run_list = self.parent_ref.preRunFrame.processes_list_widget
+
+        # Main parameters
+        if main_parameters := pre_run_list._main_parameters_instance:
+            data["main_parameter"] = main_parameters.model_dump(mode="json")
+
+        # Process parameters
+        for index, (active_name, process_name) in enumerate(
+            pre_run_list._active_data.items()
+        ):
+            instance = pre_run_list._process_parameter_instances.get(active_name)
+            if instance is None:
+                path = self.working_dir / "protocols" / f"{process_name}.py"
+                class_name = f"{process_class_name(process_name)}Config"
+                model_class = pre_run_list._load_parameter_model(path, class_name)
+                if model_class is None:
+                    return
+                instance = pre_run_list._default_instance(model_class, path)
+                if instance is None:
+                    return
+            key = f"{process_class_name(process_name)}_parameters_{index}"
+            data[key] = instance.model_dump(mode="json")
+
+        if not data:  # Should not happen if pre_run_list._active_data is not empty
+            return
+
+        # Save as <name>_<timestamp>.json, for example:
+        # name_2026-03-27T16-18-00.json
+        name, ok = QInputDialog.getText(
+            self.parent_ref,
+            "Save Protocol Script",
+            "Protocol script name:",
+        )
+        if not ok:
+            return
+
+        filename_base = self._protocols_hystoric_filename_base(name)
+        if not filename_base:
+            self._warn_user(
+                "Protocol script name must contain at least one letter, number, _ or -."
+            )
+            return
+
+        timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H-%M-%S")
+        path = self._next_protocols_hystoric_path(folder, filename_base, timestamp)
+        path.write_text(json.dumps(data, indent=2), encoding="utf-8")
+
+        self.parent_ref.preRunFrame.protocols_list_widget.fill_cards()
+        logger.bind(window=WindowCategory.SETUP).success(
+            f"Protocol script saved to {path}"
+        )
+
+    @staticmethod
+    def _protocols_hystoric_filename_base(name: str) -> str:
+        base = re.sub(r"[^A-Za-z0-9_-]+", "_", name.strip())
+        return base.strip("_-")
+
+    @staticmethod
+    def _next_protocols_hystoric_path(
+        folder: Path,
+        filename_base: str,
+        timestamp: str,
+    ) -> Path:
+        path = folder / f"{filename_base}_{timestamp}.json"
+        if not path.exists():
+            return path
+
+        suffix = 1
+        while True:
+            candidate = folder / f"{filename_base}_{timestamp}_{suffix}.json"
+            if not candidate.exists():
+                return candidate
+            suffix += 1
