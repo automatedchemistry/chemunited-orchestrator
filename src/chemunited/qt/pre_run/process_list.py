@@ -1,13 +1,24 @@
 from __future__ import annotations
 
+from pathlib import Path
 from typing import TYPE_CHECKING
 
+from pydantic import BaseModel, ValidationError
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import QListWidgetItem, QVBoxLayout, QWidget
-from qfluentwidgets import FluentIcon, StrongBodyLabel
+from qfluentwidgets import (
+    FluentIcon,
+    InfoBar,
+    InfoBarPosition,
+    PushButton,
+    StrongBodyLabel,
+)
 
+from chemunited.qt.protocols.workflows.naming import process_class_name
 from chemunited.qt.shared.icon import OrchestratorIcon
 from chemunited.qt.shared.prcess_list import ProcessItem, ProcessList
+from chemunited.qt.shared.widgets.base_mode_editor.dialog import BaseModeDialog
+from chemunited.qt.utils.files import load_class
 
 if TYPE_CHECKING:
     from chemunited.qt.setup import SetupWindow
@@ -69,7 +80,7 @@ class ActiveProcessList(ProcessList):
         for name in list_names - data_keys:
             for i in range(self._list_widget.count()):
                 list_item = self._list_widget.item(i)
-                if list_item.data(Qt.UserRole) == name:
+                if list_item and list_item.data(Qt.UserRole) == name:  # type: ignore[attr-defined]
                     self._list_widget.takeItem(i)
                     break
 
@@ -82,16 +93,16 @@ class ActiveProcessList(ProcessList):
         for opt_name, opt_icon, opt_tip in self._option_specs:
             item.add_option(opt_name, opt_icon, opt_tip)
 
-        item.option_triggered.connect(
+        item.option_triggered.connect(  # type: ignore[attr-defined]
             lambda option_name, _process_name, active_name=name: (
                 self.remove_requested.emit(active_name)  # type: ignore[attr-defined]
                 if option_name == "Remove from Active"
-                else self.access_parameters_requested.emit(str(process_name))  # type: ignore[attr-defined]
+                else self.access_parameters_requested.emit(active_name)  # type: ignore[attr-defined]
             )
         )
 
         list_item = QListWidgetItem()
-        list_item.setData(Qt.UserRole, name)
+        list_item.setData(Qt.UserRole, name)  # type: ignore[attr-defined]
         list_item.setSizeHint(item.sizeHint())
         self._list_widget.addItem(list_item)
         self._list_widget.setItemWidget(list_item, item)
@@ -105,6 +116,8 @@ class ProcessDoubleList(QWidget):
         self.parent_ref = parent
         self._active_data: dict[str, str] = {}
         self._active_index = 0
+        self._main_parameters_instance: BaseModel | None = None
+        self._process_parameter_instances: dict[str, BaseModel] = {}
 
         self.available_list = AvailableProcessList(
             parent.orchestrator.protocols,
@@ -120,15 +133,42 @@ class ProcessDoubleList(QWidget):
         layout.addWidget(StrongBodyLabel("Active", parent=self))
         layout.addWidget(self.active_list, stretch=1)
 
+        button_layout = QVBoxLayout()
+        button_layout.setContentsMargins(0, 4, 0, 0)
+        button_layout.setSpacing(6)
+
+        self.main_params_button = PushButton(
+            OrchestratorIcon.VARIABLE.icon(), "Main Parameters"
+        )
+        button_layout.addWidget(self.main_params_button)
+
+        self.run_monitoring_button = PushButton(
+            OrchestratorIcon.CHEMUNITED.icon(), "Run Monitoring"
+        )
+        self.run_monitoring_button.setEnabled(False)
+        self.run_monitoring_button.setToolTip("Run monitoring is not available yet")
+        button_layout.addWidget(self.run_monitoring_button)
+
+        self.run_simulation_button = PushButton(
+            OrchestratorIcon.CHEMUNITED_SIMU.icon(), "Run Simulation"
+        )
+        self.run_simulation_button.setEnabled(False)
+        self.run_simulation_button.setToolTip("Run simulation is not available yet")
+        button_layout.addWidget(self.run_simulation_button)
+
+        self.save_button = PushButton(FluentIcon.SAVE.icon(), "Save Protocols Script")
+        button_layout.addWidget(self.save_button)
+        layout.addLayout(button_layout)
+
         self.connect_signals()
         self.sync_lists()
 
     def connect_signals(self) -> None:
-        self.available_list.activate_requested.connect(self._activate_process)
-        self.active_list.remove_requested.connect(self._remove_active_process)
-        self.active_list.access_parameters_requested.connect(
-            self.parent_ref.orchestrator.access_process_parameters
-        )
+        self.available_list.activate_requested.connect(self._activate_process)  # type: ignore[attr-defined]
+        self.active_list.remove_requested.connect(self._remove_active_process)  # type: ignore[attr-defined]
+        self.active_list.access_parameters_requested.connect(self.process_parameters_dialog)  # type: ignore[attr-defined]
+        self.main_params_button.clicked.connect(self.main_parameters_dialog)  # type: ignore[attr-defined]
+        self.save_button.clicked.connect(self.parent_ref.orchestrator.save_protocols)  # type: ignore[attr-defined]
 
     def _activate_process(self, name: str) -> None:
         protocols = self.parent_ref.orchestrator.protocols
@@ -140,6 +180,7 @@ class ProcessDoubleList(QWidget):
 
     def _remove_active_process(self, name: str) -> None:
         self._active_data.pop(name, None)
+        self._process_parameter_instances.pop(name, None)
         self.sync_lists()
 
     def sync_lists(self) -> None:
@@ -148,4 +189,120 @@ class ProcessDoubleList(QWidget):
         for active_name, process_name in list(self._active_data.items()):
             if process_name not in available_names:
                 del self._active_data[active_name]
+                self._process_parameter_instances.pop(active_name, None)
         self.active_list.sync()
+
+    def main_parameters_dialog(self) -> None:
+        working_dir = self._working_dir()
+        if working_dir is None:
+            return
+
+        path = working_dir / "protocols" / "main_parameters.py"
+        model_class = self._load_parameter_model(path, "MainParameter")
+        if model_class is None:
+            return
+
+        instance = self._main_parameters_instance
+        if instance is None:
+            instance = self._default_instance(model_class, path)
+            if instance is None:
+                return
+
+        dlg = BaseModeDialog(
+            model_class=model_class,
+            instance=instance,
+            title="Main Parameters",
+            parent=self,
+        )
+        if dlg.exec_():
+            result = dlg.get_result_instance()
+            if result is not None:
+                self._main_parameters_instance = result
+
+    def process_parameters_dialog(self, active_name: str) -> None:
+        process_name = self._active_data.get(active_name)
+        if process_name is None:
+            self._show_warning("The selected active process no longer exists.")
+            return
+
+        working_dir = self._working_dir()
+        if working_dir is None:
+            return
+
+        path = working_dir / "protocols" / f"{process_name}.py"
+        class_name = f"{process_class_name(process_name)}Config"
+        model_class = self._load_parameter_model(path, class_name)
+        if model_class is None:
+            return
+
+        instance = self._process_parameter_instances.get(active_name)
+        if instance is None:
+            instance = self._default_instance(model_class, path)
+            if instance is None:
+                return
+
+        dlg = BaseModeDialog(
+            model_class=model_class,
+            instance=instance,
+            title=f"{process_name} Parameters",
+            parent=self,
+        )
+        if dlg.exec_():
+            result = dlg.get_result_instance()
+            if result is not None:
+                self._process_parameter_instances[active_name] = result
+
+    def _working_dir(self) -> Path | None:
+        working_dir = getattr(self.parent_ref.orchestrator, "working_dir", None)
+        if working_dir is None:
+            self._show_warning("Load or create a project before editing parameters.")
+            return None
+        return Path(working_dir)
+
+    def _load_parameter_model(
+        self,
+        path: Path,
+        class_name: str,
+    ) -> type[BaseModel] | None:
+        if not path.is_file():
+            self._show_warning(f"Parameter file not found: {path.name}")
+            return None
+
+        try:
+            model_class = load_class(path, class_name)
+            rebuild = getattr(model_class, "model_rebuild", None)
+            if callable(rebuild):
+                rebuild(force=True)
+        except Exception as exc:
+            self._show_warning(f"Could not load {class_name}: {exc}")
+            return None
+
+        if not isinstance(model_class, type) or not issubclass(
+            model_class,
+            BaseModel,
+        ):
+            self._show_warning(f"{class_name} must inherit from pydantic.BaseModel.")
+            return None
+        return model_class
+
+    def _default_instance(
+        self,
+        model_class: type[BaseModel],
+        path: Path,
+    ) -> BaseModel | None:
+        try:
+            return model_class()
+        except ValidationError as exc:
+            self._show_warning(f"Could not create parameters from {path.name}: {exc}")
+            return None
+
+    def _show_warning(self, message: str) -> None:
+        InfoBar.warning(
+            title="Pre-run parameters",
+            content=message,
+            orient=Qt.Horizontal,  # type: ignore[attr-defined]
+            isClosable=True,
+            position=InfoBarPosition.TOP,
+            duration=4000,
+            parent=self,
+        )
