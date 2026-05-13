@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from loguru import logger
 from pydantic import BaseModel, ValidationError
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import QListWidgetItem, QVBoxLayout, QWidget
@@ -14,22 +15,32 @@ from qfluentwidgets import (
     StrongBodyLabel,
 )
 
-from chemunited.qt.protocols.workflows.naming import process_class_name
+from chemunited.qt.protocols.workflows.naming import process_config_class_name
 from chemunited.qt.shared.icon import OrchestratorIcon
 from chemunited.qt.shared.prcess_list import ProcessItem, ProcessList
 from chemunited.qt.shared.widgets.base_mode_editor.dialog import BaseModeDialog
 from chemunited.qt.utils.files import load_class
 
 if TYPE_CHECKING:
+    from chemunited.qt.protocols.workflows import ProcessWorkflow
     from chemunited.qt.setup import SetupWindow
 
 
 class AvailableProcessList(ProcessList):
-    """Available protocol catalogue for pre-run selection."""
+    """Available protocol catalogue for pre-run selection.
+
+    The ``data`` mapping is the orchestrator protocol registry:
+    ``{process_name: ProcessWorkflow}``. Its keys are the selectable process
+    names shown in the list and emitted by ``activate_requested``.
+    """
 
     activate_requested = pyqtSignal(str)
 
-    def __init__(self, data: dict, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        data: dict[str, ProcessWorkflow],
+        parent: QWidget | None = None,
+    ) -> None:
         super().__init__(data, parent)
         self.add_items_option("Activate", FluentIcon.ADD, "Add this process to Active")
         self._dispatch["Activate"] = self._on_activate
@@ -39,12 +50,22 @@ class AvailableProcessList(ProcessList):
 
 
 class ActiveProcessList(ProcessList):
-    """Ordered list of processes selected for execution."""
+    """Ordered list of process instances selected for execution.
+
+    The ``data`` mapping is ``{active_name: process_name}``, for example
+    ``{"React_1": "React"}``. ``active_name`` is the unique execution
+    instance stored on the list item, while ``process_name`` is the base
+    process name displayed to the user.
+    """
 
     access_parameters_requested = pyqtSignal(str)
     remove_requested = pyqtSignal(str)
 
-    def __init__(self, data: dict, parent: QWidget | None = None) -> None:
+    def __init__(
+        self,
+        data: dict[str, str],
+        parent: QWidget | None = None,
+    ) -> None:
         super().__init__(data, parent)
         self.add_items_option(
             "Process Parameters",
@@ -87,7 +108,7 @@ class ActiveProcessList(ProcessList):
         for name in data_keys - list_names:
             self._create_and_add_item(name)
 
-    def _create_and_add_item(self, name: str) -> None:
+    def _create_and_add_item(self, name: str) -> ProcessItem:
         process_name = self._data.get(name, name)
         item = ProcessItem(str(process_name))
         for opt_name, opt_icon, opt_tip in self._option_specs:
@@ -106,6 +127,7 @@ class ActiveProcessList(ProcessList):
         list_item.setSizeHint(item.sizeHint())
         self._list_widget.addItem(list_item)
         self._list_widget.setItemWidget(list_item, item)
+        return item
 
 
 class ProcessDoubleList(QWidget):
@@ -192,6 +214,13 @@ class ProcessDoubleList(QWidget):
                 self._process_parameter_instances.pop(active_name, None)
         self.active_list.sync()
 
+    def active_processes_in_order(self) -> list[tuple[str, str]]:
+        return [
+            (active_name, self._active_data[active_name])
+            for active_name in self.active_list.names()
+            if active_name in self._active_data
+        ]
+
     def main_parameters_dialog(self) -> None:
         instance = self._ensure_main_parameters_instance()
         if instance is None:
@@ -232,10 +261,7 @@ class ProcessDoubleList(QWidget):
         if working_dir is None:
             return
         path = working_dir / "protocols" / f"{process_name}.py"
-        model_class = self._load_parameter_model(
-            path,
-            f"{process_class_name(process_name)}Config",
-        )
+        model_class = self._load_process_parameter_model(path, process_name)
         if model_class is None:
             return
 
@@ -282,6 +308,38 @@ class ProcessDoubleList(QWidget):
             self._show_warning(f"{class_name} must inherit from pydantic.BaseModel.")
             return None
         return model_class
+
+    def _load_process_parameter_model(
+        self,
+        path: Path,
+        process_name: str,
+    ) -> type[BaseModel] | None:
+        class_names = (process_config_class_name(process_name),)
+        errors: list[str] = []
+
+        for class_name in class_names:
+            try:
+                model_class = load_class(path, class_name)
+                rebuild = getattr(model_class, "model_rebuild", None)
+                if callable(rebuild):
+                    rebuild(force=True)
+            except Exception as exc:
+                errors.append(f"{class_name}: {exc}")
+                continue
+
+            if not isinstance(model_class, type) or not issubclass(
+                model_class,
+                BaseModel,
+            ):
+                errors.append(f"{class_name}: must inherit from pydantic.BaseModel")
+                continue
+
+            return model_class
+
+        self._show_warning(
+            f"Could not load process parameters from {path.name}: " + "; ".join(errors)
+        )
+        return None
 
     def _default_instance(
         self,
@@ -332,8 +390,7 @@ class ProcessDoubleList(QWidget):
             return None
 
         path = working_dir / "protocols" / f"{process_name}.py"
-        class_name = f"{process_class_name(process_name)}Config"
-        model_class = self._load_parameter_model(path, class_name)
+        model_class = self._load_process_parameter_model(path, process_name)
         if model_class is None:
             return None
 
@@ -354,6 +411,7 @@ class ProcessDoubleList(QWidget):
             duration=4000,
             parent=self,
         )
+        logger.warning(message)
 
     def save_protocols(self) -> None:
         # Ensure the active processes is not empty

@@ -13,7 +13,10 @@ from PyQt5.QtWidgets import QFrame, QGraphicsItem, QGraphicsView
 from qfluentwidgets import Action, RoundMenu, isDarkTheme
 
 from chemunited.qt.elements.component.protocols import CommandSignature
-from chemunited.qt.protocols.workflows.naming import process_class_name
+from chemunited.qt.protocols.workflows.naming import (
+    process_class_name,
+    process_config_class_name,
+)
 from chemunited.qt.shared.editor.parameters.main import MainParametersEditor
 from chemunited.qt.shared.editor.protocols.command import CommandEditorDialog
 from chemunited.qt.shared.editor.protocols.command_list import CommandList
@@ -1128,7 +1131,7 @@ class WorkflowGraph(GraphCore):
         if not self._is_valid_script_file(script_path):
             return
 
-        class_name = f"{process_class_name(process_name)}Config"
+        class_name = process_config_class_name(process_name)
         if self._parameters_editor is not None and self._parameters_editor_target != (
             script_path,
             class_name,

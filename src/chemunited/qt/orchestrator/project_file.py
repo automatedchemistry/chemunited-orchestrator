@@ -146,6 +146,19 @@ class OrchestratorProjectFile(OrchestratorExecution):
         self._record_recent_project(chemunited_path)
 
     def open_project(self, path: Path, overwrite: bool = False) -> None:
+        """Open a project file or manifest-backed project directory.
+
+        The project session is loaded from ``path`` and used to restore the
+        drawing canvas, connectivity graph, protocol classes, working
+        directory, and current session reference. Any error raised while the
+        session is being opened or its required project data is being read is
+        logged for the setup window and leaves the current project unchanged.
+
+        Args:
+            path: Path to a ``.chemunited`` export or project manifest.
+            overwrite: Whether an extracted project directory may replace an
+                existing directory when importing an archive.
+        """
         try:
             session = self._open_session(path, overwrite=overwrite)
             draw_data = session.load_draw()
@@ -618,19 +631,21 @@ class OrchestratorProjectFile(OrchestratorExecution):
 
         # Process parameters
         for index, (active_name, process_name) in enumerate(
-            pre_run_list._active_data.items()
+            pre_run_list.active_processes_in_order()
         ):
             instance = pre_run_list._process_parameter_instances.get(active_name)
             if instance is None:
                 path = self.working_dir / "protocols" / f"{process_name}.py"
-                class_name = f"{process_class_name(process_name)}Config"
-                model_class = pre_run_list._load_parameter_model(path, class_name)
+                model_class = pre_run_list._load_process_parameter_model(
+                    path,
+                    process_name,
+                )
                 if model_class is None:
                     return
                 instance = pre_run_list._default_instance(model_class, path)
                 if instance is None:
                     return
-            key = f"{process_class_name(process_name)}_parameters_{index}"
+            key = f"{process_class_name(process_name)}_{index}"
             data[key] = instance.model_dump(mode="json")
 
         if not data:  # Should not happen if pre_run_list._active_data is not empty

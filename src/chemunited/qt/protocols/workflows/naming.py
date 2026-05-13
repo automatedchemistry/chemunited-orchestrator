@@ -4,3 +4,7 @@
 def process_class_name(process_name: str) -> str:
     parts = process_name.split("_")
     return "".join(part[:1].upper() + part[1:] for part in parts if part) + "Process"
+
+
+def process_config_class_name(process_name: str) -> str:
+    return f"{process_class_name(process_name)}Config"

@@ -211,7 +211,7 @@ class ProtocolsManageList(ScrollArea):
         """Open or create a simulation window for the given protocol file."""
         ...
 
-    def __open_window_instance(self, monitor, file: Path, name: str):
+    def __open_window_instance(self, monitor: MonitorWindow, file: Path, name: str):
         """Open a new window instance to run the simulation or monitoring process."""
 
         wait_window = show_waiting(2)
@@ -221,6 +221,7 @@ class ProtocolsManageList(ScrollArea):
             file.parent.parent.parent, f"{file.parent.parent.name}.chemunited"
         )
         monitor.orchestrator.open_project(chemunited_file)
+        monitor.orchestrator.set_project_protocol_script_dir(file)
         wait_window.close()
 
         # If everything worked, show monitor window
@@ -234,7 +235,7 @@ class ProtocolsManageList(ScrollArea):
 
     def _keep_window_instance(self, monitor: MonitorWindow) -> None:
         self._monitor_windows.append(monitor)
-        monitor.destroyed.connect(
+        monitor.destroyed.connect(  # type: ignore[attr-defined]
             lambda _obj=None, window=monitor: self._forget_window_instance(window)
         )
 

@@ -43,14 +43,14 @@ class SetupWindow(MainWindowBase):
         self.drawGraph = DrawGraphicView(self.scene_attribute, self)
         self.drawFrame = FrameBase(
             parent=self,
-            classification=SetupStepMode.DESIGN,
+            classification=SetupStepMode.DESIGN.name,
         )
         self.tree_add = TreeAddItem(self)
 
         # Protocol frame
         self.protocolFrame = FrameBase(
             parent=self,
-            classification=SetupStepMode.PROTOCOLS,
+            classification=SetupStepMode.PROTOCOLS.name,
         )
         self.protocolGraph = ProtocolGraphicView(self.scene_attribute, self)
         self.workflows_protocol = WorkflowsWidget(self)
@@ -60,7 +60,7 @@ class SetupWindow(MainWindowBase):
         # Connectivity frame
         self.connectivityFrame = FrameBase(
             parent=self,
-            classification=SetupStepMode.CONNECTIVITY,
+            classification=SetupStepMode.CONNECTIVITY.name,
         )
         self.connectivityGraph = ConnectivityGraphicView(self.scene_attribute, self)
         self.online_list = OnlineComponent(self)
@@ -76,7 +76,7 @@ class SetupWindow(MainWindowBase):
         self.buildUi()
 
         # Signal connections
-        self.SegmentWindow.current_widget_changed.connect(
+        self.SegmentWindow.current_widget_changed.connect(  # type: ignore[attr-defined]
             self._on_current_widget_changed
         )
 

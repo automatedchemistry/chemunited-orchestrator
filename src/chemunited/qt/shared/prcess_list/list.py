@@ -31,7 +31,7 @@ class ProcessList(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self._list_widget)
 
-        self._list_widget.currentItemChanged.connect(self._on_selection_changed)
+        self._list_widget.currentItemChanged.connect(self._on_selection_changed)  # type: ignore[attr-defined]
         self.sync()
 
     # ------------------------------------------------------------------
@@ -40,10 +40,10 @@ class ProcessList(QWidget):
 
     def _on_selection_changed(self, current, previous) -> None:
         if current is None:
-            self.selection_changed.emit("")
+            self.selection_changed.emit("")  # type: ignore[attr-defined]
             return
         widget = self._list_widget.itemWidget(current)
-        self.selection_changed.emit(widget.name if widget is not None else "")
+        self.selection_changed.emit(widget.name if widget is not None else "")  # type: ignore[attr-defined]
 
     def _on_edit_started(self, process_name: str) -> None:
         new_item: ProcessItem | None = None
@@ -59,7 +59,7 @@ class ProcessList(QWidget):
         self._editing_item = new_item
 
     def _on_rename_requested(self, current_name: str, proposed_name: str) -> None:
-        self.process_renamed.emit(current_name, proposed_name)
+        self.process_renamed.emit(current_name, proposed_name)  # type: ignore[attr-defined]
         self._editing_item = None
 
     def _on_option_triggered(self, option_name: str, process_name: str) -> None:
@@ -125,18 +125,19 @@ class ProcessList(QWidget):
         for name in data_keys - list_names:
             self._create_and_add_item(name)
 
-    def _create_and_add_item(self, name: str) -> None:
+    def _create_and_add_item(self, name: str) -> ProcessItem | None:
         item = ProcessItem(name)
         if self._rename_enabled:
             item.enable_rename()
         for opt_name, opt_icon, opt_tip in self._option_specs:
             item.add_option(opt_name, opt_icon, opt_tip)
 
-        item.edit_started.connect(self._on_edit_started)
-        item.rename_requested.connect(self._on_rename_requested)
-        item.option_triggered.connect(self._on_option_triggered)
+        item.edit_started.connect(self._on_edit_started)  # type: ignore[attr-defined]
+        item.rename_requested.connect(self._on_rename_requested)  # type: ignore[attr-defined]
+        item.option_triggered.connect(self._on_option_triggered)  # type: ignore[attr-defined]
 
         list_item = QListWidgetItem()
         list_item.setSizeHint(item.sizeHint())
         self._list_widget.addItem(list_item)
         self._list_widget.setItemWidget(list_item, item)
+        return item

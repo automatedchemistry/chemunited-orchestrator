@@ -101,9 +101,9 @@ class ProcessItem(QWidget):
         self._edit = _EditLineEdit(edit_page)
         edit_layout.addWidget(self._edit)
 
-        self._edit.returnPressed.connect(lambda: self._exit_edit_mode(confirm=True))
-        self._edit.escape_pressed.connect(lambda: self._exit_edit_mode(confirm=False))
-        self._edit.focus_lost.connect(lambda: self._exit_edit_mode(confirm=True))
+        self._edit.returnPressed.connect(lambda: self._exit_edit_mode(confirm=True))  # type: ignore
+        self._edit.escape_pressed.connect(lambda: self._exit_edit_mode(confirm=False))  # type: ignore
+        self._edit.focus_lost.connect(lambda: self._exit_edit_mode(confirm=True))  # type: ignore
 
         self._stack.addWidget(edit_page)
 
@@ -119,12 +119,12 @@ class ProcessItem(QWidget):
         """Add a menu option. Action only emits option_triggered — no callable."""
         if self._menu is None:
             self._menu = RoundMenu(parent=self)
-            self._menu_button.clicked.connect(self._show_menu)
+            self._menu_button.clicked.connect(self._show_menu)  # type: ignore
 
         option_name = name
 
         def _on_triggered() -> None:
-            self.option_triggered.emit(option_name, self._name)
+            self.option_triggered.emit(option_name, self._name)  # type: ignore
 
         action = Action(icon, option_name)
         action.setToolTip(tip)
@@ -142,7 +142,7 @@ class ProcessItem(QWidget):
         self._enable_rename = True
         if self._menu is None:
             self._menu = RoundMenu(parent=self)
-            self._menu_button.clicked.connect(self._show_menu)
+            self._menu_button.clicked.connect(self._show_menu)  # type: ignore
         action = Action(FluentIcon.EDIT, "Rename")
         action.setToolTip("Rename this process")
         action.triggered.connect(self._enter_edit_mode)

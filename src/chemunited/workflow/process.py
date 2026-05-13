@@ -129,9 +129,12 @@ class Process(ABC, Generic[ConfigT]):
                 self.main_parameters = type(self.main_parameters).model_validate(
                     data["main_parameter"]
                 )
-            key = f"{self.__class__.__name__}_parameters_{self.process_index}"
+            key = f"{self.__class__.__name__}_{self.process_index}"
+            legacy_key = f"{self.__class__.__name__}_parameters_{self.process_index}"
             if key in data:
                 self.config = type(self.config).model_validate(data[key])
+            elif legacy_key in data:
+                self.config = type(self.config).model_validate(data[legacy_key])
             else:
                 logger.error(
                     f"Could not load parameters from {hystoric_file_path}: "

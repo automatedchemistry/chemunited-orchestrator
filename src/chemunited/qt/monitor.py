@@ -1,6 +1,9 @@
+from loguru import logger
+
 from .monitoring.graph import ExecutionGraph
 from .monitoring.process_list import MonitorProcessesWidget
 from .orchestrator import Orchestrator
+from .pre_run.summary_window import SummaryWindow
 from .protocols.workflows.workflow_widget import WorkflowsWidget
 from .shared.enums import SetupStepMode, WindowCategory
 from .shared.graph import SceneCore
@@ -33,6 +36,8 @@ class MonitorWindow(MainWindowBase):
 
         self.protocols_widget = MonitorProcessesWidget(self)
 
+        self.summary_window = None
+
         self.buildUi()
 
     def buildUi(self):
@@ -57,6 +62,13 @@ class MonitorWindow(MainWindowBase):
             icon=OrchestratorIcon.PROCESS,
         )
 
+        self.executionFrame.addNavigationAction(
+            icon=OrchestratorIcon.JSON,
+            text="Summary",
+            onClick=self.show_summary,
+            tooltip="Show parameters summary",
+        )
+
         self.addSubInterface(
             self.executionFrame,
             text="Execution",
@@ -66,3 +78,11 @@ class MonitorWindow(MainWindowBase):
     def recenter_views(self):
         self.executionGraph.recenter_view()
         self.workflows_protocol.recenter_view()
+
+    def show_summary(self):
+        if file := self.orchestrator.project_protocol_script_dir:
+            if self.summary_window is None:
+                self.summary_window = SummaryWindow.inspect_file(file_path=file)
+            self.summary_window.show()
+        else:
+            logger.error("No project protocol script directory found.")

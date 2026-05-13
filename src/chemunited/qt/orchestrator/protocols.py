@@ -75,16 +75,18 @@ class OrchestratorProtocols(OrchestratorDraw):
 
     @pyqtSlot(str)
     def select_process(self, name: str) -> None:
+        print(f"Selecting process: {name}")
         self.parent_ref.workflows_protocol.select_process(name)
 
     @pyqtSlot(str)
-    def duplicate_process(self, name: str) -> None:
+    def duplicate_process(self, name: str) -> str:
         new_name = self._generate_process_name(base=name)
         self.protocols[new_name] = self._copy_workflow(self.protocols[name], new_name)
         self.parent_ref.workflows_protocol.add_process(
             new_name, self.protocols[new_name]
         )
         self.parent_ref.protocols_widget.sync_list()
+        return new_name
 
     @pyqtSlot()
     def save_protocols(self) -> None:

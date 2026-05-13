@@ -189,7 +189,7 @@ class SummaryWindow(QMainWindow):
         if key == "main_parameter":
             return "Main Parameters"
 
-        match = re.fullmatch(r"(.+)_parameters_(\d+)", key)
+        match = re.fullmatch(r"(.+?)(?:_parameters)?_(\d+)", key)
         if match:
             class_name, index = match.groups()
             spaced = re.sub(r"(?<!^)(?=[A-Z])", " ", class_name).replace(" Process", "")

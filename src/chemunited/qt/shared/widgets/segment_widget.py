@@ -19,8 +19,8 @@ class SegmentWindow(QWidget):
         self.vBoxLayout.addWidget(self.stackedWidget)
         self.vBoxLayout.setContentsMargins(10, 10, 10, 10)
 
-        self.pivot.currentItemChanged.connect(self._switch_to_route_key)
-        self.stackedWidget.currentChanged.connect(self._emit_current_widget_name)
+        self.pivot.currentItemChanged.connect(self._switch_to_route_key)  # type: ignore[attr-defined]
+        self.stackedWidget.currentChanged.connect(self._emit_current_widget_name)  # type: ignore[attr-defined]
 
     def addSubInterface(
         self, widget: QWidget, objectName: str, text, icon: str, onClick: Any = None
@@ -40,4 +40,4 @@ class SegmentWindow(QWidget):
     def _emit_current_widget_name(self, index: int) -> None:
         widget = self.stackedWidget.widget(index)
         if widget is not None:
-            self.current_widget_changed.emit(widget.objectName())
+            self.current_widget_changed.emit(widget.objectName())  # type: ignore[attr-defined]
