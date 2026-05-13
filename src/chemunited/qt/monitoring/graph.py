@@ -1,5 +1,6 @@
-from chemunited.qt.shared.graph import GraphCore, SceneCore
 from typing import TYPE_CHECKING
+
+from chemunited.qt.shared.graph import GraphCore, SceneCore
 
 if TYPE_CHECKING:
     from ..monitor import MonitorWindow

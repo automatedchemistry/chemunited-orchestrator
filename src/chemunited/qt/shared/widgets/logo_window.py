@@ -1,9 +1,10 @@
-from PyQt5.QtCore import Qt, QTimer, QRect, QElapsedTimer
-from PyQt5.QtGui import QPainter, QPen, QColor
-from PyQt5.QtWidgets import QApplication, QWidget, QVBoxLayout
-from PyQt5.QtSvg import QSvgWidget
-import sys
 import math
+import sys
+
+from PyQt5.QtCore import QElapsedTimer, QRect, Qt, QTimer
+from PyQt5.QtGui import QColor, QPainter, QPen
+from PyQt5.QtSvg import QSvgWidget
+from PyQt5.QtWidgets import QApplication, QVBoxLayout, QWidget
 
 
 class SmoothWaitingArc(QWidget):
@@ -96,7 +97,7 @@ def show_waiting(n: int):
 
 
 if __name__ == "__main__":
-    from chemunited.qt import resources_rc
+    from chemunited.qt import resources_rc  # noqa: F401
 
     app = QApplication(sys.argv)
 

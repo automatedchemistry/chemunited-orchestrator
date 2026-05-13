@@ -1,13 +1,13 @@
-from .orchestrator import Orchestrator
 from .monitoring.graph import ExecutionGraph
 from .monitoring.process_list import MonitorProcessesWidget
+from .orchestrator import Orchestrator
 from .protocols.workflows.workflow_widget import WorkflowsWidget
 from .shared.enums import SetupStepMode, WindowCategory
-from .shared.widgets.main_window import MainWindowBase
 from .shared.graph import SceneCore
-from .shared.widgets.frame_base import FrameBase
-from .shared.widgets.segment_widget import SegmentWindow
 from .shared.icon import OrchestratorIcon
+from .shared.widgets.frame_base import FrameBase
+from .shared.widgets.main_window import MainWindowBase
+from .shared.widgets.segment_widget import SegmentWindow
 
 
 class MonitorWindow(MainWindowBase):
@@ -34,10 +34,9 @@ class MonitorWindow(MainWindowBase):
         self.protocols_widget = MonitorProcessesWidget(self)
 
         self.buildUi()
-    
+
     def buildUi(self):
         super().buildUi()
-
 
     def initNavigation(self):
         super().initNavigation()
@@ -63,7 +62,7 @@ class MonitorWindow(MainWindowBase):
             text="Execution",
             icon=OrchestratorIcon.CHEMUNITED,
         )
-    
+
     def recenter_views(self):
         self.executionGraph.recenter_view()
         self.workflows_protocol.recenter_view()

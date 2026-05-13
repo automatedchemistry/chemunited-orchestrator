@@ -1,9 +1,12 @@
-from chemunited.qt.shared.prcess_list import ProcessList, ProcessWidget
-from PyQt5.QtWidgets import QAbstractItemView
 from typing import TYPE_CHECKING
+
+from PyQt5.QtWidgets import QAbstractItemView
+
+from chemunited.qt.shared.prcess_list import ProcessList, ProcessWidget
 
 if TYPE_CHECKING:
     from chemunited.qt.monitor import MonitorWindow
+
 
 class MonitorProcessList(ProcessList):
     def __init__(self, data: dict, parent=None):
@@ -20,7 +23,7 @@ class MonitorProcessesWidget(ProcessWidget):
         )
         self.parent_ref = parent
         self._connect_signals()
-    
+
     def _connect_signals(self) -> None:
         orch = self.parent_ref.orchestrator
         self._list.selection_changed.connect(orch.select_process)
