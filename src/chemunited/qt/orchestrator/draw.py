@@ -48,9 +48,10 @@ def _log_draw_error(parent_ref, message: str, exc: Exception | None = None) -> N
 class OrchestratorDraw(OrchestratorCore):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.parent_ref.drawGraph.connection_requested.connect(
-            self.request_add_connection
-        )
+        if hasattr(self.parent_ref, "drawGraph"):
+            self.parent_ref.drawGraph.connection_requested.connect(  # type: ignore
+                self.request_add_connection
+            )
 
     def _suggest_name(self, figure: str) -> str:
         base = re.sub(r"[^A-Za-z0-9]", "", figure) or "Component"

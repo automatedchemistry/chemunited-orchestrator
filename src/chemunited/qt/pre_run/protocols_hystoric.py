@@ -1,21 +1,24 @@
 import os
 from functools import partial
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING
 
 from loguru import logger
 from PyQt5.QtCore import Qt, QUrl
 from PyQt5.QtGui import QDesktopServices
 from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
 from qfluentwidgets import (
+    Dialog,
     GroupHeaderCardWidget,
     ScrollArea,
     TransparentPushButton,
     TransparentToolButton,
 )
 
+from chemunited.qt.monitor import MonitorWindow
 from chemunited.qt.project.storage import ensure_protocols_hystoric_dir
 from chemunited.qt.shared.icon import OrchestratorIcon
+from chemunited.qt.shared.widgets.logo_window import show_waiting
 
 from .summary_window import SummaryWindow
 
@@ -143,6 +146,7 @@ class ProtocolsManageList(ScrollArea):
     def __init__(self, parent: "SetupWindow"):
         super().__init__(parent=parent)
         self.parent_ref = parent
+        self._monitor_windows: list[MonitorWindow] = []
         self.view = QWidget(self)
 
         self.vBoxLayout = QVBoxLayout(self.view)
@@ -189,10 +193,51 @@ class ProtocolsManageList(ScrollArea):
         for file in to_remove:
             self.FileCard.remove_file(file)
 
-    def open_monitoring(self, file_path: Optional[Path] = None):
+    def open_monitoring(self, file_path: Path):
         """Open or create a monitoring window for the given protocol file."""
+        content = "Do you want to create a new instance to run the monitoring process?"
+        dialog = Dialog("Create a new monitoring", content, self)
+
+        if not dialog.exec():
+            return  # user cancelled
+
+        self.__open_window_instance(
+            monitor=MonitorWindow(),
+            file=file_path,
+            name="Monitoring",
+        )
+
+    def open_simulation(self, file_path: Path):
+        """Open or create a simulation window for the given protocol file."""
         ...
 
-    def open_simulation(self, file_path: Optional[Path] = None):
-        """Open or create a monitoring window for the given protocol file."""
-        ...
+    def __open_window_instance(self, monitor, file: Path, name: str):
+        """Open a new window instance to run the simulation or monitoring process."""
+
+        wait_window = show_waiting(2)
+
+        # Load required scripts
+        chemunited_file = Path(
+            file.parent.parent.parent, f"{file.parent.parent.name}.chemunited"
+        )
+        monitor.orchestrator.open_project(chemunited_file)
+        wait_window.close()
+
+        # If everything worked, show monitor window
+        monitor.show()
+        monitor.raise_()  # bring to front
+        monitor.activateWindow()
+        self._keep_window_instance(monitor)
+        logger.success(
+            f"Window Instance Opened: A new instance to run the {name} was build successfully!"
+        )
+
+    def _keep_window_instance(self, monitor: MonitorWindow) -> None:
+        self._monitor_windows.append(monitor)
+        monitor.destroyed.connect(
+            lambda _obj=None, window=monitor: self._forget_window_instance(window)
+        )
+
+    def _forget_window_instance(self, monitor: MonitorWindow) -> None:
+        if monitor in self._monitor_windows:
+            self._monitor_windows.remove(monitor)
