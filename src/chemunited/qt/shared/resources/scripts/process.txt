@@ -1,7 +1,6 @@
 # Script file of project parameter
 # Updated/Created on: ---DATE---
 # Project name: ---PROJECT_NAME---
-# Process name: ---PROCESS_NAME---
 from __future__ import annotations
 
 import networkx as nx
@@ -24,7 +23,7 @@ if TYPE_CHECKING:
 # ── Process configuration ──────────────────────────────────────────────────────
 
 
-class ---CLASS_NAME---Config(BaseModel):
+class ProcessConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
 
     # Add your process-level parameters here
@@ -35,11 +34,8 @@ class ---CLASS_NAME---Config(BaseModel):
 # ── Process class ──────────────────────────────────────────────────────────────
 
 
-class ---CLASS_NAME---(Process[---CLASS_NAME---Config]):
-    """---PROCESS_LABEL---"""
-
-    __process_label__ = "---PROCESS_LABEL---"
-    __process_description__ = "---PROCESS_DESCRIPTION---"
+class CustomProcess(Process[ProcessConfig]):
+    """User-defined workflow process."""
 
     def build_workflow(self) -> nx.DiGraph:
         """Build the workflow graph automatically."""

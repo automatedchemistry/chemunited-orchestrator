@@ -267,7 +267,7 @@ class RunController:
         {
           "React": {
             "label": "React",
-            "description": "Main reaction step",
+            "description": "",
             "config_schema": {
               "properties": {
                 "flow_rate": { "type": "string", "default": "5 ml/min" },
@@ -283,8 +283,8 @@ class RunController:
         for name, cls in self._processes.items():
             config_cls = _get_config_class(cls)
             result[name] = {
-                "label": getattr(cls, "__process_label__", name),
-                "description": getattr(cls, "__process_description__", ""),
+                "label": name,
+                "description": "",
                 "config_schema": config_cls.model_json_schema(),
             }
         logger.info("GET /processes → {} process(es): {}", len(result), list(result))

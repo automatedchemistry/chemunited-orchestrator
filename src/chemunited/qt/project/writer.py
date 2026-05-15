@@ -88,9 +88,5 @@ if __name__ == "__main__":
         script="process",
         overwrite={
             "---PROJECT_NAME---": "Test Project",
-            "---PROCESS_NAME---": "Test Process",
-            "---CLASS_NAME---": "TestClass",
-            "---PROCESS_LABEL---": "Test Process Label",
-            "---PROCESS_DESCRIPTION---": "Test Process Description",
         },
     )

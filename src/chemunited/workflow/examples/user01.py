@@ -21,7 +21,7 @@ from chemunited.workflow import (
 )
 
 
-class UserProcessConfig(BaseModel):
+class ProcessConfig(BaseModel):
     """Immutable process configuration shared across all nodes."""
 
     model_config = ConfigDict(frozen=True)
@@ -40,7 +40,7 @@ class UserNodeConfig(NodeConfig):
     note: str
 
 
-class CustomProcess(Process[UserProcessConfig]):
+class CustomProcess(Process[ProcessConfig]):
     """User-defined workflow process."""
 
     def build_workflow(self) -> nx.DiGraph:
@@ -258,7 +258,7 @@ def main() -> None:
     """Build, compile, and execute the example workflow."""
 
     configure_terminal_logging()
-    config = UserProcessConfig(
+    config = ProcessConfig(
         primary_route=True,
         loopback_success_iteration=1,
     )

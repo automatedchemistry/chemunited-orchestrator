@@ -20,7 +20,6 @@ from chemunited.qt.project.session import ProjectSession
 from chemunited.qt.project.storage import ensure_protocols_hystoric_dir
 from chemunited.qt.project.writer import render_python_script
 from chemunited.qt.protocols.workflows import ProcessWorkflow
-from chemunited.qt.protocols.workflows.naming import process_class_name
 from chemunited.qt.shared.enums import WindowCategory
 from chemunited.qt.shared.enums.protocols_enum import ProtocolBlock
 
@@ -645,7 +644,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
                 instance = pre_run_list._default_instance(model_class, path)
                 if instance is None:
                     return
-            key = f"{process_class_name(process_name)}_{index}"
+            key = f"{process_name}_{index}"
             data[key] = instance.model_dump(mode="json")
 
         if not data:  # Should not happen if pre_run_list._active_data is not empty

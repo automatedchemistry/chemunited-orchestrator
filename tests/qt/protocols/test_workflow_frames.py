@@ -151,7 +151,7 @@ def test_command_block_reconstruction_uses_component_protocol_metadata(
     assert command_class is protocol.commands["position"]
 
     source = """
-class ReactProcess:
+class CustomProcess:
     def command_1(self, ctx: NodeExecutionContext) -> bool:
         platform["ValveA"].put("position", connect="[[0, 1]]")
         return True
@@ -159,7 +159,7 @@ class ReactProcess:
     command = _build_command_model(
         source,
         "command_1",
-        "ReactProcess",
+        "CustomProcess",
         sig_cls=command_class,
     )
 

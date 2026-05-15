@@ -56,7 +56,9 @@ class Process(ABC, Generic[ConfigT]):
 
     def load_parameters(self, hystoric_file: str | None = None) -> bool:
         """Load main and process parameters from files next to the process module."""
-        process_dir = Path(inspect.getfile(self.__class__)).parent
+        process_path = Path(inspect.getfile(self.__class__))
+        process_dir = process_path.parent
+        process_name = process_path.stem
 
         main_parameters_path = process_dir / "main_parameters.py"
         if main_parameters_path.exists():
@@ -106,11 +108,6 @@ class Process(ABC, Generic[ConfigT]):
         hystoric_file_path = (
             process_dir.parent / "protocols_hystoric" / hystoric_filename
         )
-        legacy_hystoric_file_path = (
-            process_dir / "protocol_hystoric" / hystoric_filename
-        )
-        if not hystoric_file_path.exists() and legacy_hystoric_file_path.exists():
-            hystoric_file_path = legacy_hystoric_file_path
         if not hystoric_file_path.exists():
             # It is not problematic to not have a hystoric file.
             # When the user wants to create a new protocol based on this process,
@@ -129,12 +126,9 @@ class Process(ABC, Generic[ConfigT]):
                 self.main_parameters = type(self.main_parameters).model_validate(
                     data["main_parameter"]
                 )
-            key = f"{self.__class__.__name__}_{self.process_index}"
-            legacy_key = f"{self.__class__.__name__}_parameters_{self.process_index}"
+            key = f"{process_name}_{self.process_index}"
             if key in data:
                 self.config = type(self.config).model_validate(data[key])
-            elif legacy_key in data:
-                self.config = type(self.config).model_validate(data[legacy_key])
             else:
                 logger.error(
                     f"Could not load parameters from {hystoric_file_path}: "

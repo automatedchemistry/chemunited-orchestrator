@@ -11,6 +11,7 @@ from chemunited.qt.project.manifest import ProjectManifest
 from chemunited.qt.project.session import ProjectSession
 from chemunited.qt.protocols.workflows import ProcessWorkflow
 from chemunited.qt.shared.enums.protocols_enum import ProtocolBlock
+from chemunited.qt.utils.files import load_class
 
 
 def _write_project(working_dir, draw_content: str) -> None:
@@ -83,6 +84,57 @@ def test_protocols_hystoric_directory_is_created_and_exported(tmp_path):
         assert "protocols_hystoric/react.json" in zf.namelist()
 
 
+def test_process_load_parameters_uses_process_file_stem(tmp_path):
+    working_dir = tmp_path / "demo"
+    protocols_dir = working_dir / "protocols"
+    protocols_dir.mkdir(parents=True)
+    process_path = protocols_dir / "react.py"
+    process_path.write_text(
+        dedent("""
+            from __future__ import annotations
+
+            import networkx as nx
+            from pydantic import BaseModel, ConfigDict
+
+            from chemunited.workflow import Process
+
+
+            class ProcessConfig(BaseModel):
+                model_config = ConfigDict(frozen=True)
+
+                amount: int = 0
+
+
+            class CustomProcess(Process[ProcessConfig]):
+                def build_workflow(self) -> nx.DiGraph:
+                    return nx.DiGraph()
+            """).strip() + "\n",
+        encoding="utf-8",
+    )
+    history_dir = working_dir / "protocols_hystoric"
+    history_dir.mkdir()
+    (history_dir / "parameters.json").write_text(
+        json.dumps({"react_0": {"amount": 7}}),
+        encoding="utf-8",
+    )
+
+    process_cls = load_class(process_path, "CustomProcess")
+    config_cls = process_cls.__orig_bases__[0].__args__[0]
+    process = process_cls(config_cls())
+
+    assert process.load_parameters() is True
+    assert process.config.amount == 7
+
+    (history_dir / "legacy.json").write_text(
+        json.dumps({"CustomProcess_0": {"amount": 99}}),
+        encoding="utf-8",
+    )
+    legacy_process = process_cls(config_cls())
+
+    assert legacy_process.load_parameters(hystoric_file="legacy.json") is False
+    assert legacy_process.config.amount == 0
+
+
 def test_sync_process_creates_new_process_file(tmp_path):
     session = ProjectSession()
     session.new(name="demo", location=tmp_path, init_git=False)
@@ -99,8 +151,22 @@ def test_sync_process_creates_new_process_file(tmp_path):
 
     content = (tmp_path / "demo" / "protocols" / "React.py").read_text(encoding="utf-8")
     assert synced is True
-    assert "class ReactProcess(Process[ReactProcessConfig]):" in content
+    assert "class ProcessConfig(BaseModel):" in content
+    assert "class CustomProcess(Process[ProcessConfig]):" in content
+    assert "# Process name:" not in content
+    assert "__process_label__" not in content
+    assert "__process_description__" not in content
     assert "def script_1(self, ctx: NodeExecutionContext) -> bool:" in content
+
+    init_content = (tmp_path / "demo" / "protocols" / "__init__.py").read_text(
+        encoding="utf-8"
+    )
+    assert (
+        "from .React import CustomProcess as ReactProcess, "
+        "ProcessConfig as ReactConfig"
+    ) in init_content
+    assert '    "React": ReactProcess,' in init_content
+    assert '    "React": ReactConfig,' in init_content
 
 
 def test_sync_process_updates_existing_file_in_place(tmp_path):
@@ -110,8 +176,7 @@ def test_sync_process_updates_existing_file_in_place(tmp_path):
     process_path = working_dir / "protocols" / "React.py"
     process_path.parent.mkdir(parents=True, exist_ok=True)
     process_path.write_text(
-        dedent(
-            """
+        dedent("""
             from __future__ import annotations
 
             import networkx as nx
@@ -125,15 +190,12 @@ def test_sync_process_updates_existing_file_in_place(tmp_path):
             )
 
 
-            class ReactProcessConfig(BaseModel):
+            class ProcessConfig(BaseModel):
                 model_config = ConfigDict(frozen=True)
 
 
-            class ReactProcess(Process[ReactProcessConfig]):
-                \"\"\"React\"\"\"
-
-                __process_label__ = "React"
-                __process_description__ = ""
+            class CustomProcess(Process[ProcessConfig]):
+                \"\"\"User-defined workflow process.\"\"\"
 
                 def build_workflow(self) -> nx.DiGraph:
                     graph = nx.DiGraph()
@@ -220,9 +282,7 @@ def test_sync_process_updates_existing_file_in_place(tmp_path):
                 def finish(self, ctx: NodeExecutionContext) -> bool:
                     ctx.runtime.status_message = "Custom finish"
                     return True
-            """
-        ).strip()
-        + "\n",
+            """).strip() + "\n",
         encoding="utf-8",
     )
 
@@ -353,8 +413,7 @@ def test_restore_workflow_infers_legacy_block_types_when_not_explicitly_saved(tm
     session.new(name="demo", location=tmp_path, init_git=False)
     session.save_process(
         "React",
-        dedent(
-            """
+        dedent("""
             from __future__ import annotations
 
             import networkx as nx
@@ -368,15 +427,12 @@ def test_restore_workflow_infers_legacy_block_types_when_not_explicitly_saved(tm
             )
 
 
-            class ReactProcessConfig(BaseModel):
+            class ProcessConfig(BaseModel):
                 model_config = ConfigDict(frozen=True)
 
 
-            class ReactProcess(Process[ReactProcessConfig]):
-                \"\"\"React\"\"\"
-
-                __process_label__ = "React"
-                __process_description__ = ""
+            class CustomProcess(Process[ProcessConfig]):
+                \"\"\"User-defined workflow process.\"\"\"
 
                 def build_workflow(self) -> nx.DiGraph:
                     graph = nx.DiGraph()
@@ -479,9 +535,7 @@ def test_restore_workflow_infers_legacy_block_types_when_not_explicitly_saved(tm
 
                 def finish(self, ctx: NodeExecutionContext) -> bool:
                     return True
-            """
-        ).strip()
-        + "\n",
+            """).strip() + "\n",
     )
 
     restored_classes = session.load_process_classes()

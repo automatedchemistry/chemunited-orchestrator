@@ -299,15 +299,12 @@ from chemunited.workflow import (
 )
 
 
-class ReactProcessConfig(BaseModel):
+class ProcessConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
 
 
-class ReactProcess(Process[ReactProcessConfig]):
-    \"\"\"React\"\"\"
-
-    __process_label__ = "React"
-    __process_description__ = ""
+class CustomProcess(Process[ProcessConfig]):
+    \"\"\"User-defined workflow process.\"\"\"
 
     def build_workflow(self) -> nx.DiGraph:
         graph = nx.DiGraph()
@@ -363,8 +360,7 @@ class ReactProcess(Process[ReactProcessConfig]):
 
     def _prepare_stock(self) -> str:
         return "helper"
-""".strip()
-            + "\n",
+""".strip() + "\n",
             encoding="utf-8",
         )
         window.orchestrator.working_dir = working_dir
@@ -414,21 +410,33 @@ class ReactProcess(Process[ReactProcessConfig]):
         window.orchestrator._session = session
         window.orchestrator.add_process("React")
         window.orchestrator.save()
+        original_content = (working_dir / "protocols" / "React.py").read_text(
+            encoding="utf-8"
+        )
 
         window.orchestrator.rename_process("React", "ReactRenamed")
 
         old_process = working_dir / "protocols" / "React.py"
         renamed_process = working_dir / "protocols" / "ReactRenamed.py"
         renamed_content = renamed_process.read_text(encoding="utf-8")
+        init_content = (working_dir / "protocols" / "__init__.py").read_text(
+            encoding="utf-8"
+        )
 
         assert not old_process.exists()
         assert renamed_process.exists()
-        assert "class ReactRenamedProcessConfig(BaseModel):" in renamed_content
+        assert renamed_content == original_content
+        assert "class ProcessConfig(BaseModel):" in renamed_content
+        assert "class CustomProcess(Process[ProcessConfig]):" in renamed_content
+        assert "ReactRenamedProcess" not in renamed_content
+        assert "__process_label__" not in renamed_content
+        assert "__process_description__" not in renamed_content
         assert (
-            "class ReactRenamedProcess(Process[ReactRenamedProcessConfig]):"
-            in renamed_content
-        )
-        assert '__process_label__ = "ReactRenamed"' in renamed_content
+            "from .ReactRenamed import CustomProcess as ReactRenamedProcess, "
+            "ProcessConfig as ReactRenamedConfig"
+        ) in init_content
+        assert '    "ReactRenamed": ReactRenamedProcess,' in init_content
+        assert '    "React": ReactProcess,' not in init_content
 
     def test_remove_process_deletes_existing_saved_process_file(
         self, window: SetupWindow, tmp_path

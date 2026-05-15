@@ -17,6 +17,12 @@ if TYPE_CHECKING:
     pass
 
 
+def _process_parameter_class_name(class_name: str | None) -> str:
+    if class_name == "CustomProcess":
+        return "ProcessConfig"
+    return f"{class_name}Config" if class_name else "MainParameter"
+
+
 class ScriptEditor(EditorBase):
     def __init__(self, path: Path, parent=None):
         super().__init__(parent, path=path)
@@ -78,7 +84,7 @@ class ScriptEditorWindow(QMainWindow):
         # --- process parameter dock ---
         self.process_parameter_editor = ParameterDragableList(
             path=path,
-            class_name=f"{class_name}Config" if class_name else "MainParameter",
+            class_name=_process_parameter_class_name(class_name),
             parent=self,
         )
         self.process_parameter_dock = QDockWidget("Process Parameters", self)

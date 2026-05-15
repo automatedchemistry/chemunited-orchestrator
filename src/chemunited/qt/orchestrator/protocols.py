@@ -75,7 +75,6 @@ class OrchestratorProtocols(OrchestratorDraw):
 
     @pyqtSlot(str)
     def select_process(self, name: str) -> None:
-        print(f"Selecting process: {name}")
         self.parent_ref.workflows_protocol.select_process(name)
 
     @pyqtSlot(str)
