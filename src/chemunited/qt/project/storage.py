@@ -15,9 +15,10 @@ from chemunited.qt.protocols.workflows.naming import (
 )
 from chemunited.qt.utils.files import load_attribute
 
-_PACK_EXCLUDE = {".git", ".gitignore", ".chemunited_session", "__pycache__"}
+_PACK_EXCLUDE = {".git", ".gitignore", ".chemunited_session", "__pycache__", "log"}
 _PROTOCOLS_SKIP = {"__init__", "main_parameters"}
 PROTOCOLS_HYSTORIC_DIR = "protocols_hystoric"
+LOG_DIR = "log"
 
 
 # ── Pack / Unpack (unchanged) ──────────────────────────────────────────────────
@@ -43,6 +44,12 @@ def _is_excluded(file: Path, root: Path) -> bool:
 
 def ensure_protocols_hystoric_dir(working_dir: Path) -> Path:
     path = working_dir / PROTOCOLS_HYSTORIC_DIR
+    path.mkdir(parents=True, exist_ok=True)
+    return path
+
+
+def ensure_log_dir(working_dir: Path) -> Path:
+    path = working_dir / LOG_DIR
     path.mkdir(parents=True, exist_ok=True)
     return path
 

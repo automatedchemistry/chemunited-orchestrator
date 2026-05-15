@@ -17,10 +17,28 @@ __pycache__/
 # Connectivity is machine-specific
 connectivity/associations.json
 
+# Execution logs are local run outputs
+log/
+
 # OS
 .DS_Store
 Thumbs.db
 """
+
+
+def ensure_gitignore(working_dir: Path) -> None:
+    gitignore = working_dir / ".gitignore"
+    if not gitignore.exists():
+        gitignore.write_text(_GITIGNORE, encoding="utf-8")
+        return
+
+    content = gitignore.read_text(encoding="utf-8")
+    if "log/" in content.splitlines():
+        return
+    if content and not content.endswith("\n"):
+        content += "\n"
+    content += "\n# Execution logs are local run outputs\nlog/\n"
+    gitignore.write_text(content, encoding="utf-8")
 
 
 class GitManager:
@@ -34,8 +52,7 @@ class GitManager:
     def init(cls, working_dir: Path) -> GitManager:
         """Initialize a fresh Git repo for a new project."""
         repo = git.Repo.init(working_dir)
-        gitignore = working_dir / ".gitignore"
-        gitignore.write_text(_GITIGNORE, encoding="utf-8")
+        ensure_gitignore(working_dir)
         repo.index.add([".gitignore"])
         repo.index.commit("Initialize ChemUnited project")
         return cls(repo)
@@ -44,8 +61,7 @@ class GitManager:
     def init_from_import(cls, working_dir: Path, source_name: str) -> GitManager:
         """Initialize a fresh Git repo after unpacking a .chemunited file."""
         repo = git.Repo.init(working_dir)
-        gitignore = working_dir / ".gitignore"
-        gitignore.write_text(_GITIGNORE, encoding="utf-8")
+        ensure_gitignore(working_dir)
         repo.index.add(["*"])
         repo.index.commit(f"Imported from {source_name}")
         return cls(repo)
@@ -54,9 +70,11 @@ class GitManager:
     def open(cls, working_dir: Path) -> GitManager | None:
         """Open existing repo, return None if not a Git project."""
         try:
-            return cls(git.Repo(working_dir))
+            repo = git.Repo(working_dir)
         except git.InvalidGitRepositoryError:
             return None
+        ensure_gitignore(working_dir)
+        return cls(repo)
 
     # ── Auto-commit helpers (called by session on each save) ───────────────────
 

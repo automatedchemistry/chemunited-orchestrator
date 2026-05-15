@@ -84,6 +84,23 @@ def test_protocols_hystoric_directory_is_created_and_exported(tmp_path):
         assert "protocols_hystoric/react.json" in zf.namelist()
 
 
+def test_log_directory_is_created_ignored_and_not_exported(tmp_path):
+    session = ProjectSession()
+    session.new(name="demo", location=tmp_path, init_git=False)
+    working_dir = tmp_path / "demo"
+    log_dir = working_dir / "log"
+    log_file = log_dir / "react_2026-03-27T16-18-00__2026-03-27T19-20-00.log"
+
+    assert log_dir.is_dir()
+    assert "log/" in (working_dir / ".gitignore").read_text(encoding="utf-8")
+
+    log_file.write_text("local execution output\n", encoding="utf-8")
+    archive_path = session.export_chemunited(tmp_path / "demo")
+
+    with zipfile.ZipFile(archive_path, "r") as zf:
+        assert not any(name.startswith("log/") for name in zf.namelist())
+
+
 def test_process_load_parameters_uses_process_file_stem(tmp_path):
     working_dir = tmp_path / "demo"
     protocols_dir = working_dir / "protocols"

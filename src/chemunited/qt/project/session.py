@@ -3,11 +3,12 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from .git_manager import GitManager
+from .git_manager import GitManager, ensure_gitignore
 from .manifest import ProjectManifest
 from .storage import (
     delete_process,
     duplicate_process,
+    ensure_log_dir,
     ensure_protocols_hystoric_dir,
     list_processes,
     load_connectivity,
@@ -56,6 +57,8 @@ class ProjectSession:
         self.working_dir = location / name
         self.working_dir.mkdir(parents=True, exist_ok=True)
         ensure_protocols_hystoric_dir(self.working_dir)
+        ensure_log_dir(self.working_dir)
+        ensure_gitignore(self.working_dir)
         self.manifest = ProjectManifest(
             name=name,
             chemunited_version="0.1.0",
@@ -70,6 +73,8 @@ class ProjectSession:
         self.working_dir = working_dir
         self.manifest = ProjectManifest.load(working_dir)
         ensure_protocols_hystoric_dir(working_dir)
+        ensure_log_dir(working_dir)
+        ensure_gitignore(working_dir)
         self.git = GitManager.open(working_dir)
 
     def import_chemunited(
@@ -101,6 +106,8 @@ class ProjectSession:
         has_existing_git = (target / ".git").is_dir()
         unpack(chemunited_file, target)
         ensure_protocols_hystoric_dir(target)
+        ensure_log_dir(target)
+        ensure_gitignore(target)
         self.working_dir = target
         self.source_file = chemunited_file
         self.manifest = ProjectManifest.load(target)
@@ -114,6 +121,8 @@ class ProjectSession:
         manifest = self._require_manifest()
         dest = destination or working_dir.parent / manifest.name
         ensure_protocols_hystoric_dir(working_dir)
+        ensure_log_dir(working_dir)
+        ensure_gitignore(working_dir)
         manifest.save(working_dir)
         pack(working_dir, dest)
         self.source_file = dest.with_suffix(".chemunited")

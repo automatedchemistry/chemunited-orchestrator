@@ -2,9 +2,13 @@ from __future__ import annotations
 
 import asyncio
 import json
+import re
 import typing
 import uuid
+from contextlib import contextmanager
 from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
 from typing import Any
 
 from fastapi import APIRouter, HTTPException  # type: ignore[import-not-found]
@@ -75,16 +79,26 @@ class ReplaceSequenceItem(BaseModel):
     config_overrides: dict[str, Any] = {}
 
 
+class ExecuteBody(BaseModel):
+    protocol_hystoric_name: str | None = None
+    protocol_hystoric_file: str | None = None
+
+
 # ── Controller ─────────────────────────────────────────────────────────────────
 
 
 class RunController:
     def __init__(
-        self, params: BaseModel, processes: dict[str, type], platform: Platform
+        self,
+        params: BaseModel,
+        processes: dict[str, type],
+        platform: Platform | None = None,
+        project_dir: Path | None = None,
     ) -> None:
         self._params: BaseModel = params
         self._processes = processes
-        self._platform = platform
+        self._platform = platform or Platform()
+        self._project_dir = project_dir
         self._entries: list[SequenceEntry] = []
 
         self.router = APIRouter()
@@ -526,7 +540,7 @@ class RunController:
 
     # ── Run ────────────────────────────────────────────────────────────────────
 
-    async def execute(self) -> dict[str, str]:
+    async def execute(self, body: ExecuteBody | None = None) -> dict[str, str]:
         """Execute the configured sequence of processes.
 
         Runs each process in order using the current main parameters, sequence, and
@@ -548,7 +562,16 @@ class RunController:
         ```
         *(The sequence loop exits cleanly when `POST /stop` is called between processes.)*
         """
-        logger.info("POST /execute sequence_length={}", len(self._entries))
+        protocol_hystoric_file = (
+            self._protocol_hystoric_file_from_body(body)
+            if body is not None
+            else None
+        )
+        logger.info(
+            "POST /execute sequence_length={} protocol_hystoric_file={}",
+            len(self._entries),
+            protocol_hystoric_file,
+        )
         if self.is_running:
             logger.warning("POST /execute rejected — already running")
             raise HTTPException(
@@ -571,45 +594,53 @@ class RunController:
             process_instance.platform = self._platform
             processes.append(process_instance)
 
-        self.is_running = True
-        try:
-            for i, process in enumerate(processes):
-                if not self.is_running:
+        with self._execution_log(protocol_hystoric_file):
+            self.is_running = True
+            try:
+                for i, process in enumerate(processes):
+                    if not self.is_running:
+                        logger.info(
+                            "POST /execute stopped before process {}/{}",
+                            i + 1,
+                            len(processes),
+                        )
+                        break
                     logger.info(
-                        "POST /execute stopped before process {}/{}",
+                        "POST /execute running process {}/{}: {!r}",
                         i + 1,
                         len(processes),
-                    )
-                    break
-                logger.info(
-                    "POST /execute running process {}/{}: {!r}",
-                    i + 1,
-                    len(processes),
-                    self._entries[i].process_name,
-                )
-                result = await asyncio.to_thread(
-                    process.run_workflow, start_node="start"
-                )
-                if result.errors:
-                    logger.error(
-                        "POST /execute process {!r} failed: {}",
                         self._entries[i].process_name,
-                        result.errors,
                     )
-                    raise HTTPException(
-                        status_code=500,
-                        detail={str(k): str(v) for k, v in result.errors.items()},
+                    result = await asyncio.to_thread(
+                        process.run_workflow,
+                        start_node="start",
+                        hystoric_file=protocol_hystoric_file,
+                        process_index=i,
                     )
-                logger.info(
-                    "POST /execute process {}/{} completed", i + 1, len(processes)
-                )
-        finally:
-            self.is_running = False
+                    if result.errors:
+                        logger.error(
+                            "POST /execute process {!r} failed: {}",
+                            self._entries[i].process_name,
+                            result.errors,
+                        )
+                        raise HTTPException(
+                            status_code=500,
+                            detail={str(k): str(v) for k, v in result.errors.items()},
+                        )
+                    logger.info(
+                        "POST /execute process {}/{} completed", i + 1, len(processes)
+                    )
+            finally:
+                self.is_running = False
 
         logger.info("POST /execute → completed")
         return {"status": "completed"}
 
-    async def execute_stream(self) -> EventSourceResponse:
+    async def execute_stream(
+        self,
+        protocol_hystoric_name: str | None = None,
+        protocol_hystoric_file: str | None = None,
+    ) -> EventSourceResponse:
         """Execute the configured sequence and stream each WorkflowExecutionEvent via SSE.
 
         Each SSE message carries a JSON-serialised `WorkflowExecutionEvent`. The stream
@@ -620,7 +651,14 @@ class RunController:
 
         Returns `409` if already running, `400` if the sequence is empty.
         """
-        logger.info("GET /execute/stream sequence_length={}", len(self._entries))
+        protocol_hystoric_file = self._normalize_protocol_hystoric_file(
+            protocol_hystoric_file or protocol_hystoric_name
+        )
+        logger.info(
+            "GET /execute/stream sequence_length={} protocol_hystoric_file={}",
+            len(self._entries),
+            protocol_hystoric_file,
+        )
         if self.is_running:
             logger.warning("GET /execute/stream rejected — already running")
             raise HTTPException(
@@ -647,42 +685,45 @@ class RunController:
         observer = APIWorkflowObserver(loop, queue)
 
         async def _run() -> None:
-            try:
-                for i, process in enumerate(processes):
-                    if not self.is_running:
+            with self._execution_log(protocol_hystoric_file):
+                try:
+                    for i, process in enumerate(processes):
+                        if not self.is_running:
+                            logger.info(
+                                "GET /execute/stream stopped before process {}/{}",
+                                i + 1,
+                                len(processes),
+                            )
+                            break
                         logger.info(
-                            "GET /execute/stream stopped before process {}/{}",
+                            "GET /execute/stream running process {}/{}: {!r}",
+                            i + 1,
+                            len(processes),
+                            self._entries[i].process_name,
+                        )
+                        result = await asyncio.to_thread(
+                            process.run_workflow,
+                            start_node="start",
+                            terminal_observer=False,
+                            extra_listeners=[observer.handle_event],
+                            hystoric_file=protocol_hystoric_file,
+                            process_index=i,
+                        )
+                        if result.errors:
+                            logger.error(
+                                "GET /execute/stream process {!r} failed: {}",
+                                self._entries[i].process_name,
+                                result.errors,
+                            )
+                            break
+                        logger.info(
+                            "GET /execute/stream process {}/{} completed",
                             i + 1,
                             len(processes),
                         )
-                        break
-                    logger.info(
-                        "GET /execute/stream running process {}/{}: {!r}",
-                        i + 1,
-                        len(processes),
-                        self._entries[i].process_name,
-                    )
-                    result = await asyncio.to_thread(
-                        process.run_workflow,
-                        start_node="start",
-                        terminal_observer=False,
-                        extra_listeners=[observer.handle_event],
-                    )
-                    if result.errors:
-                        logger.error(
-                            "GET /execute/stream process {!r} failed: {}",
-                            self._entries[i].process_name,
-                            result.errors,
-                        )
-                        break
-                    logger.info(
-                        "GET /execute/stream process {}/{} completed",
-                        i + 1,
-                        len(processes),
-                    )
-            finally:
-                self.is_running = False
-                await queue.put(None)
+                finally:
+                    self.is_running = False
+                    await queue.put(None)
 
         async def _event_generator():
             self.is_running = True
@@ -730,3 +771,68 @@ class RunController:
         self.is_running = False
         logger.info("POST /stop → stop requested")
         return {"status": "stop requested"}
+
+    @contextmanager
+    def _execution_log(self, protocol_hystoric_file: str | None):
+        if self._project_dir is None:
+            yield
+            return
+
+        log_dir = self._project_dir / "log"
+        log_dir.mkdir(parents=True, exist_ok=True)
+        log_path = self._next_log_path(log_dir, protocol_hystoric_file)
+        sink_id = logger.add(
+            log_path,
+            level="DEBUG",
+            encoding="utf-8",
+            format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level:<8} | {message}",
+        )
+        logger.info("Execution log started: {}", log_path)
+        try:
+            yield
+        finally:
+            logger.info("Execution log finished: {}", log_path)
+            logger.remove(sink_id)
+
+    @staticmethod
+    def _next_log_path(
+        log_dir: Path,
+        protocol_hystoric_file: str | None,
+    ) -> Path:
+        raw_stem = (
+            Path(protocol_hystoric_file).stem
+            if protocol_hystoric_file
+            else "execution"
+        )
+        protocol_stem = re.sub(r"[^A-Za-z0-9_-]+", "_", raw_stem).strip("_-")
+        if not protocol_stem:
+            protocol_stem = "execution"
+
+        timestamp = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
+        path = log_dir / f"{protocol_stem}__{timestamp}.log"
+        if not path.exists():
+            return path
+
+        suffix = 1
+        while True:
+            candidate = log_dir / f"{protocol_stem}__{timestamp}_{suffix}.log"
+            if not candidate.exists():
+                return candidate
+            suffix += 1
+
+    @staticmethod
+    def _protocol_hystoric_file_from_body(body: ExecuteBody) -> str | None:
+        return RunController._normalize_protocol_hystoric_file(
+            body.protocol_hystoric_file or body.protocol_hystoric_name
+        )
+
+    @staticmethod
+    def _normalize_protocol_hystoric_file(value: str | None) -> str | None:
+        if not value:
+            return None
+        file_name = Path(value).name
+        if not file_name:
+            return None
+        if not file_name.lower().endswith(".json"):
+            file_name = f"{file_name}.json"
+        return file_name

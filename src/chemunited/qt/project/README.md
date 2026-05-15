@@ -36,6 +36,9 @@ my_experiment/                       ← working directory (source of truth)
 ├── protocols_hystoric/
 │   └── react_2026-03-27T16-18-00.json ← saved protocol script snapshots
 │
+├── log/
+│   └── react_2026-03-27T16-18-00__2026-03-27T19-20-00.log ← execution logs
+│
 └── connectivity/
     └── associations.json            ← device ↔ component mapping (machine-specific)
 ```
@@ -249,6 +252,21 @@ directory structure. JSON files inside it are packed into `.chemunited` exports.
 
 ---
 
+### `log/` — execution logs
+
+Execution logs written by the project API. Each run writes one `.log` file named
+from the protocol history snapshot and the execution timestamp:
+
+```
+log/
+└── react_2026-03-27T16-18-00__2026-03-27T19-20-00.log
+```
+
+The `log/` folder is local runtime output. It is created with the project, but
+it is excluded from Git and from `.chemunited` exports.
+
+---
+
 ### `connectivity/associations.json`
 
 Maps abstract draw components to real FlowChem device endpoints.
@@ -330,6 +348,7 @@ my_experiment.chemunited  (ZIP)
 | `.gitignore` | Irrelevant outside the working directory |
 | `__pycache__/` | Derived, always recomputed |
 | `.chemunited_session` | Local session state |
+| `log/` | Local execution logs |
 
 ---
 
@@ -349,6 +368,7 @@ Write api.py   (from template, imports chemunited.workflow.api controllers)
 Write protocols/__init__.py  (empty PROCESSES and CONFIGS dicts)
 Write protocols/main_parameters.py  (from template)
 Create protocols_hystoric/  (JSON protocol script snapshots)
+Create log/  (local execution logs, ignored by Git/export)
 Create draw/setup.py  (empty canvas)
 Create draw/platform.svg  (generated platform drawing)
 Create connectivity/associations.json  (empty)
@@ -365,6 +385,7 @@ Open Git repo if .git/ present
 Load draw/setup.py → call build_draw(platform) and reconstruct ComponentData / EdgeData
 Load protocols via import protocols.PROCESSES / protocols.CONFIGS
 Ensure protocols_hystoric/ exists
+Ensure log/ exists
 Load connectivity/associations.json
 ```
 
@@ -390,8 +411,9 @@ manifest.json updated (last_modified)
 Refresh draw/setup.py and draw/platform.svg
 Sync each protocols/<process>.py file in place
 Keep protocols_hystoric/*.json files in the working directory/archive
+Keep log/*.log files only in the working directory; never pack them
 Pack working directory → my_experiment.chemunited
-(.git and .gitignore excluded from ZIP)
+(.git, .gitignore, and log/ excluded from ZIP)
 ```
 
 ---
@@ -404,7 +426,7 @@ Pack working directory → my_experiment.chemunited
 | Compiled `nx.DiGraph` | Rebuilt by `build_workflow()` at runtime |
 | `WorkflowExecutor` state | Always restarted |
 | Simulation state | Always recomputed |
-| Protocol run logs / results | Stored separately in a `runs/` output folder |
+| Protocol run logs / results | Stored separately in the local `log/` folder, excluded from Git and `.chemunited` |
 
 `draw/platform.svg` is the one generated companion file stored with the project.
 It is refreshed on save for sharing and documentation, but it is never used to
