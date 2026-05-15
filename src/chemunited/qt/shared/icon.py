@@ -34,6 +34,7 @@ class OrchestratorIcon(FluentIconBase, Enum):
     INTEGER = "integer"
     JSON = "json"
     LIST = "list"
+    LINK = "link"
     LOG = "log"
     LOOP = "block_for"
     MANUAL = "manual"

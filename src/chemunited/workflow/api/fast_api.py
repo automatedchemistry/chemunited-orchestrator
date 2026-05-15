@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import logging
 import re
 import typing
 import uuid
@@ -10,6 +11,14 @@ from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
 from typing import Any
+
+
+class _NoPingFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        return "/ping" not in record.getMessage()
+
+
+logging.getLogger("uvicorn.access").addFilter(_NoPingFilter())
 
 from fastapi import APIRouter, HTTPException  # type: ignore[import-not-found]
 from loguru import logger
@@ -20,6 +29,10 @@ from chemunited.workflow.api.sse_observer import APIWorkflowObserver
 from chemunited.workflow.models import WorkflowExecutionEvent
 from chemunited.workflow.orchestrator import Platform
 from chemunited.workflow.process import Process
+
+# --- API WorkflowObserver ---
+
+PORT = 3162
 
 # ── Shared helpers ─────────────────────────────────────────────────────────────
 
@@ -100,6 +113,7 @@ class RunController:
         self._platform = platform or Platform()
         self._project_dir = project_dir
         self._entries: list[SequenceEntry] = []
+        self._log_path: Path | None = None
 
         self.router = APIRouter()
 
@@ -198,6 +212,12 @@ class RunController:
             methods=["GET"],
             tags=["Run"],
             summary="Check whether the sequence is running",
+        )
+        self.router.add_api_route(
+            "/ping",
+            self.ping,
+            methods=["GET"],
+            include_in_schema=False,
         )
 
         self.is_running: bool = False
@@ -772,6 +792,21 @@ class RunController:
         logger.info("POST /stop → stop requested")
         return {"status": "stop requested"}
 
+    def ping(self) -> dict[str, str]:
+        return {"status": "alive"}
+
+    def log_address(self) -> str:
+        """Returns the absolute path to the log directory.
+
+        **Example response:**
+        ```json
+        { "log_address": "/path/to/project/log" }
+        ```
+        """
+        if self._log_path is None:
+            raise HTTPException(status_code=404, detail="No log address available")
+        return str(self._log_path)
+
     @contextmanager
     def _execution_log(self, protocol_hystoric_file: str | None):
         if self._project_dir is None:
@@ -788,11 +823,13 @@ class RunController:
             format="{time:YYYY-MM-DD HH:mm:ss.SSS} | {level:<8} | {message}",
         )
         logger.info("Execution log started: {}", log_path)
+        self._log_path = log_path
         try:
             yield
         finally:
             logger.info("Execution log finished: {}", log_path)
             logger.remove(sink_id)
+            self._log_path = None
 
     @staticmethod
     def _next_log_path(

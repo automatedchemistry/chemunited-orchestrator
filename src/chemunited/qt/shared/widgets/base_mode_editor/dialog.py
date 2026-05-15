@@ -4,6 +4,7 @@ from pydantic import BaseModel
 from PyQt5.QtWidgets import QVBoxLayout
 from qfluentwidgets import BodyLabel
 from qframelesswindow import FramelessDialog
+from typing import Self
 
 from .editor_widget import BaseModeEditorWidget
 
@@ -30,8 +31,8 @@ class BaseModeDialog(FramelessDialog):
             creation_mode=creation_mode,
             parent=self,
         )
-        self.editor_widget.saved.connect(self.on_save)
-        self.editor_widget.cancelled.connect(self.reject)
+        self.editor_widget.saved.connect(self.on_save)  # type: ignore[attr-defined]
+        self.editor_widget.cancelled.connect(self.reject)  # type: ignore[attr-defined]
         self._result_instance: BaseModel | None = None
 
         self.vBoxLayout = QVBoxLayout(self)

@@ -1,3 +1,3 @@
-from .fast_api import RunController, SequenceEntry
+from .fast_api import PORT, RunController, SequenceEntry
 
-__all__ = ["RunController", "SequenceEntry"]
+__all__ = ["PORT", "RunController", "SequenceEntry"]

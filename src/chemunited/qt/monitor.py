@@ -1,5 +1,9 @@
-from loguru import logger
+from PyQt5.QtCore import QUrl
+from PyQt5.QtGui import QDesktopServices
+from loguru import logger as _logger
+from qfluentwidgets import NavigationItemPosition
 
+from .monitoring.execution_api_process import ApiProcess
 from .monitoring.graph import ExecutionGraph
 from .monitoring.process_list import MonitorProcessesWidget
 from .monitoring.status_animated import AnimatedOnlineIcon
@@ -12,6 +16,8 @@ from .shared.icon import OrchestratorIcon
 from .shared.widgets.frame_base import FrameBase
 from .shared.widgets.main_window import MainWindowBase
 from .shared.widgets.segment_widget import SegmentWindow
+
+logger = _logger.bind(window=WindowCategory.EXECUTION)
 
 
 class MonitorWindow(MainWindowBase):
@@ -34,10 +40,12 @@ class MonitorWindow(MainWindowBase):
 
         # Main Orchestrator Object
         self.orchestrator = Orchestrator(self)
+        self.orchestrator.exposed_logs_class = WindowCategory.EXECUTION
 
         self.protocols_widget = MonitorProcessesWidget(self)
 
         self.summary_window = None
+        self.api_process: ApiProcess | None = None
 
         self.buildUi()
 
@@ -78,6 +86,14 @@ class MonitorWindow(MainWindowBase):
             tooltip="Show parameters summary",
         )
 
+        self.executionFrame.addNavigationAction(
+            icon=OrchestratorIcon.LINK,
+            text="API link",
+            onClick=self._open_api_link,
+            tooltip="Show API link",
+            position=NavigationItemPosition.BOTTOM
+        )
+
         self.addSubInterface(
             self.executionFrame,
             text="Execution",
@@ -93,12 +109,43 @@ class MonitorWindow(MainWindowBase):
             self.status_widget.setIcon(OrchestratorIcon.OFFLINE)
             self.status_widget.setText("Offline")
             self.status_widget.setToolTip("Connect components")
+            if self.api_process is not None:
+                self.api_process.stop_api()
+                self.api_process = None
         else:
+            working_dir = self.orchestrator.working_dir
+            if working_dir is None:
+                logger.error("No project loaded — cannot start API.")
+                return
+            self.api_process = ApiProcess(working_dir, self.FrameLoggings.detail_loggins, self)
+            self.api_process.api_alive.connect(self._on_api_ping)
+            if not self.api_process.start_api():
+                self.api_process = None
+                return
             if self.status_animation is None:
                 self.status_animation = AnimatedOnlineIcon(self.status_widget, self)
             self.status_animation.start()
             self.status_widget.setText("Online")
             self.status_widget.setToolTip("Disconnect components")
+
+    def _open_api_link(self):
+        if self.api_process is not None:
+            QDesktopServices.openUrl(QUrl(self.api_process.url))
+        else:
+            logger.warning("No API running — connect first.")
+
+    def _on_api_ping(self, alive: bool):
+        if alive:
+            self.status_widget.setIcon(OrchestratorIcon.ONLINE)
+            self.status_widget.setToolTip("API alive — disconnect components")
+        else:
+            self.status_widget.setIcon(OrchestratorIcon.OFFLINE)
+            self.status_widget.setToolTip("API unreachable — reconnect?")
+
+    def closeEvent(self, event):
+        if self.api_process is not None:
+            self.api_process.stop_api()
+        super().closeEvent(event)
 
     def recenter_views(self):
         self.executionGraph.recenter_view()
