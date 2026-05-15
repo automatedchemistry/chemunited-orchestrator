@@ -1,7 +1,16 @@
 import json
 import sys
+import requests
+
 from pathlib import Path
-from pydantic import BaseModel, Field, AnyHttpUrl, field_validator, ValidationInfo
+from typing import Any
+from pydantic import (
+    BaseModel,
+    Field,
+    AnyHttpUrl,
+    field_validator,
+    ValidationInfo,
+)
 
 from PyQt5.QtCore import QObject, QProcess, QTimer, QUrl, pyqtSignal
 from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkRequest
@@ -14,6 +23,22 @@ from chemunited.workflow.api import PORT
 
 BASE_URL = f"http://localhost:{PORT}"
 
+
+class ApiClient:
+    """Basic client for the execution API."""
+    def __init__(self, url: AnyHttpUrl):
+        self.url = url
+        self.session = requests.Session()
+    
+    def get(self, endpoint: str, params: dict | None = None, timeout: int = 10) -> Any:
+        return self.session.get(f"{self.url}/{endpoint}", params=params, timeout=timeout).json()
+
+    def put(self, endpoint: str, params: dict | None = None, timeout: int = 10) -> Any:
+        return self.session.put(f"{self.url}/{endpoint}", params=params, timeout=timeout).json()
+
+    def post(self, endpoint: str, data: dict | None = None, timeout: int = 10) -> Any:
+        return self.session.post(f"{self.url}/{endpoint}", json=data, timeout=timeout).json()
+        
 
 class APIAddress(BaseModel):
     already_running: bool = Field(
@@ -58,7 +83,7 @@ class ApiProcess(QObject):
         self._log_browser = log_browser
         self._process = QProcess(self)
         self._nam = QNetworkAccessManager(self)
-        self._url: AnyHttpUrl = AnyHttpUrl(BASE_URL) # default value
+        self.client = ApiClient(AnyHttpUrl(BASE_URL)) # default value
 
         self._ping_timer = QTimer(self)
         self._ping_timer.setInterval(5000)
@@ -70,15 +95,15 @@ class ApiProcess(QObject):
         self._process.started.connect(self._on_started)
 
     @property
-    def url(self) -> str:
-        return str(self._url)
+    def url(self) -> str:       
+        return str(self.client.url)
 
     def start_api(self) -> bool:
         dialog = APIDialog(parent=self._parent_widget)
         if dialog.exec() != dialog.Accepted:
             return False
         if result := dialog.get_result_instance():
-            self._url = getattr(result, "address")
+            self.client.url = getattr(result, "address")
         else:
             return False
             
@@ -112,7 +137,7 @@ class ApiProcess(QObject):
         self._ping_timer.start()
 
     def _ping(self):
-        req = QNetworkRequest(QUrl(f"{self._url}/ping"))
+        req = QNetworkRequest(QUrl(f"{self.client.url}/ping"))
         reply = self._nam.get(req)
         if reply is not None:
             reply.finished.connect(lambda: self._on_ping_reply(reply))
@@ -122,7 +147,7 @@ class ApiProcess(QObject):
         self.api_alive.emit(alive)
 
     def _fetch_log_address(self):
-        req = QNetworkRequest(QUrl(f"{self._url}/log_address"))
+        req = QNetworkRequest(QUrl(f"{self.client.url}/log_address"))
         reply = self._nam.get(req)
         if reply is not None:
             reply.finished.connect(lambda: self._on_log_address_reply(reply))
@@ -141,3 +166,4 @@ class ApiProcess(QObject):
             self._append(path.read_text(errors="replace"))
         else:
             self._append(f"[log file not found] {path}")
+

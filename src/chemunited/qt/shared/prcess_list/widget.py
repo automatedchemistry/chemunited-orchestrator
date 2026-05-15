@@ -19,17 +19,17 @@ class ProcessWidget(QFrame):
         self._list.selection_changed.connect(self.selection_changed)  # type: ignore[attr-defined]
         self._list.process_renamed.connect(self.process_renamed)  # type: ignore[attr-defined]
 
-        outer = QVBoxLayout(self)
-        outer.setContentsMargins(0, 0, 0, 0)
-        outer.setSpacing(0)
+        self.main_layout = QVBoxLayout(self)
+        self.main_layout.setContentsMargins(0, 0, 0, 10)
+        self.main_layout.setSpacing(0)
 
-        outer.addWidget(self._list, stretch=1)
+        self.main_layout.addWidget(self._list, stretch=1)
 
         separator = QFrame(self)
         separator.setFrameShape(QFrame.HLine)
         separator.setFrameShadow(QFrame.Sunken)
         separator.setFixedHeight(1)
-        outer.addWidget(separator)
+        self.main_layout.addWidget(separator)
 
         self._btn_layout = QVBoxLayout()
         self._btn_layout.setContentsMargins(8, 6, 8, 6)
@@ -37,7 +37,7 @@ class ProcessWidget(QFrame):
         self._btn_layout.addItem(
             QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum)
         )
-        outer.addLayout(self._btn_layout)
+        self.main_layout.addLayout(self._btn_layout)
 
     def add_bottom_button(self, name: str, icon, tip: str, callable) -> PushButton:
         btn = PushButton(icon, name, self)

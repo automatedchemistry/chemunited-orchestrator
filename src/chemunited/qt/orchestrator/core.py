@@ -10,13 +10,14 @@ from chemunited.qt.shared.logger_queue import LOG_QUEUE
 
 if TYPE_CHECKING:
     from chemunited.qt.setup import SetupWindow
+    from chemunited.qt.monitor import MonitorWindow
 
 
 class OrchestratorCore(QObject):
 
     MAX_LOG_RECORDS_PER_TICK = 256
 
-    def __init__(self, parent: "SetupWindow"):
+    def __init__(self, parent: "SetupWindow | MonitorWindow"):
         super().__init__(parent)
         self.parent_ref = parent
 

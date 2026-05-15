@@ -155,6 +155,6 @@ class MonitorWindow(MainWindowBase):
         if file := self.orchestrator.project_protocol_script_dir:
             if self.summary_window is None:
                 self.summary_window = SummaryWindow.inspect_file(file_path=file)
-            self.summary_window.show()
+            self.summary_window.show()  # type: ignore[attr-defined]
         else:
             logger.error("No project protocol script directory found.")

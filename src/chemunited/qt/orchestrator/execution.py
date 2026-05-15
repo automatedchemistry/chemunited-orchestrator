@@ -1,7 +1,11 @@
 import json
 from pathlib import Path
+from loguru import logger as _logger
 
+from chemunited.qt.shared.enums import WindowCategory
 from .connectivity import OrchestratorConnectivity
+
+logger = _logger.bind(window=WindowCategory.EXECUTION)
 
 
 def _process_name_from_protocol_key(key: str) -> str | None:
@@ -34,3 +38,35 @@ class OrchestratorExecution(OrchestratorConnectivity):
                 if not actual_process:
                     actual_process = process_name
                     self.select_process(actual_process)
+    
+    def execute(self) -> bool:
+        """
+        Start or stop the execution of the protocol.
+        Return True if the execution was started or keeping to run.
+        Return False if the execution was stopped or failed to start.
+        """
+        if self.parent_ref.status_widget.text() == "Offline":
+            logger.warning("No API running — connect first.")
+            return False
+        status = self.parent_ref.api_process.client.get("status")
+        if status.get("is_running"):
+            # It is running, so the user want to stop the current execution.
+            if not self.parent_ref.api_process.client.post("stop"):
+                logger.error("Failed to stop the current execution.")
+                return True  # Return True because the execution is still running.
+            logger.info("Successfully stopped the current execution.")
+            return False  # Return False because the execution was stopped.
+
+        # It is not running, so the user want to start the current execution.
+
+        event_source = self.parent_ref.api_process.client.get(
+            endpoint="execute/stream",
+            params={
+                "protocol_hystoric_name": str(self.project_protocol_script_dir),
+            },
+        )
+        if event_source is None:
+            logger.error("Failed to start the current execution.")
+            return False  # Return False because the execution was not started.
+        
+        return True
