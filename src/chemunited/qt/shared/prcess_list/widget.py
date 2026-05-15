@@ -16,8 +16,8 @@ class ProcessWidget(QFrame):
     def __init__(self, process_list: ProcessList, parent=None) -> None:
         super().__init__(parent)
         self._list = process_list
-        self._list.selection_changed.connect(self.selection_changed)
-        self._list.process_renamed.connect(self.process_renamed)
+        self._list.selection_changed.connect(self.selection_changed)  # type: ignore[attr-defined]
+        self._list.process_renamed.connect(self.process_renamed)  # type: ignore[attr-defined]
 
         outer = QVBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)
@@ -42,9 +42,9 @@ class ProcessWidget(QFrame):
     def add_bottom_button(self, name: str, icon, tip: str, callable) -> PushButton:
         btn = PushButton(icon, name, self)
         btn.setToolTip(tip)
-        btn.clicked.connect(callable)
+        btn.clicked.connect(callable) # type: ignore[attr-defined]
         count = self._btn_layout.count()
-        self._btn_layout.insertWidget(count - 1, btn, alignment=Qt.AlignCenter)
+        self._btn_layout.insertWidget(count - 1, btn, alignment=Qt.AlignCenter)  # type: ignore[attr-defined]
         return btn
 
     def add_separator(self) -> None:
@@ -53,7 +53,7 @@ class ProcessWidget(QFrame):
         sep.setFrameShadow(QFrame.Sunken)
         sep.setFixedWidth(1)
         count = self._btn_layout.count()
-        self._btn_layout.insertWidget(count - 1, sep, alignment=Qt.AlignCenter)
+        self._btn_layout.insertWidget(count - 1, sep, alignment=Qt.AlignCenter)  # type: ignore[attr-defined]
 
     def sync_list(self):
         self._list.sync()
@@ -97,8 +97,8 @@ if __name__ == "__main__":
         ),
     )
 
-    widget.selection_changed.connect(lambda name: print(f"Selected: {name!r}"))
-    widget.process_renamed.connect(
+    widget.selection_changed.connect(lambda name: print(f"Selected: {name!r}")) # type: ignore[attr-defined]
+    widget.process_renamed.connect(  # type: ignore[attr-defined]
         lambda old, new: print(f"Renamed: {old!r} -> {new!r}")
     )
 

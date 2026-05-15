@@ -87,7 +87,7 @@ class ProtocolsWidget(ProcessWidget):
 
     def _connect_signals(self) -> None:
         orch = self.parent_ref.orchestrator
-        self._list.selection_changed.connect(orch.select_process)
+        self._list.selection_changed.connect(orch.select_process)  # type: ignore[attr-defined]
         self._list.rename_requested.connect(orch.rename_process)
         self._list.remove_requested.connect(orch.remove_process)
         self._list.duplicate_requested.connect(orch.duplicate_process)
