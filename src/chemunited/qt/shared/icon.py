@@ -40,6 +40,8 @@ class OrchestratorIcon(FluentIconBase, Enum):
     MEASURE = "measure"
     MODULE = "module"
     MOVE = "move"
+    OFFLINE = "offline"
+    ONLINE = "online"
     ORCHESTRATOR = "orchestrator"
     OPEN_FOLDER = "open_folder"
     PAUSE = "pause"

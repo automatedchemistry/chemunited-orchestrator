@@ -2,6 +2,7 @@ from loguru import logger
 
 from .monitoring.graph import ExecutionGraph
 from .monitoring.process_list import MonitorProcessesWidget
+from .monitoring.status_animated import AnimatedOnlineIcon
 from .orchestrator import Orchestrator
 from .pre_run.summary_window import SummaryWindow
 from .protocols.workflows.workflow_widget import WorkflowsWidget
@@ -49,6 +50,14 @@ class MonitorWindow(MainWindowBase):
         self.executionFrame.setGraphWidget(self.executionGraph)
         self.executionFrame.setWorkflowWidget(self.workflows_protocol)
 
+        self.status_widget = self.executionFrame.addNavigationAction(
+            icon=OrchestratorIcon.OFFLINE,
+            text="Offline",
+            tooltip="Connect components",
+            onClick=self.switch_components_connection,
+        )
+        self.status_animation: AnimatedOnlineIcon | None = None
+
         self.executionFrame.addNavigationAction(
             icon=OrchestratorIcon.HOME,
             text="Home",
@@ -74,6 +83,22 @@ class MonitorWindow(MainWindowBase):
             text="Execution",
             icon=OrchestratorIcon.CHEMUNITED,
         )
+
+    def switch_components_connection(self):
+        is_connected = self.status_widget.text() == "Online"
+
+        if is_connected:
+            if self.status_animation is not None:
+                self.status_animation.stop(reset_to_online=False)
+            self.status_widget.setIcon(OrchestratorIcon.OFFLINE)
+            self.status_widget.setText("Offline")
+            self.status_widget.setToolTip("Connect components")
+        else:
+            if self.status_animation is None:
+                self.status_animation = AnimatedOnlineIcon(self.status_widget, self)
+            self.status_animation.start()
+            self.status_widget.setText("Online")
+            self.status_widget.setToolTip("Disconnect components")
 
     def recenter_views(self):
         self.executionGraph.recenter_view()

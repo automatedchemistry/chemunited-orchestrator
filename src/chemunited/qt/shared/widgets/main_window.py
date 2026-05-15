@@ -50,7 +50,7 @@ class WindowBase(FramelessWindow):
         self.hBoxLayout.setStretchFactor(self.stackWidget, 1)
 
         self.titleBar.raise_()
-        self.navigationInterface.displayModeChanged.connect(self.titleBar.raise_)
+        self.navigationInterface.displayModeChanged.connect(self.titleBar.raise_)  # type: ignore[attr-defined]
 
     def initNavigation(self):
         """Initialize the navigation interface"""
@@ -60,7 +60,7 @@ class WindowBase(FramelessWindow):
         # set the maximum width
         self.navigationInterface.setExpandWidth(300)
 
-        self.stackWidget.currentChanged.connect(self.onCurrentInterfaceChanged)
+        self.stackWidget.currentChanged.connect(self.onCurrentInterfaceChanged)  # type: ignore[attr-defined]
         self.stackWidget.setCurrentIndex(0)
 
     def initWindow(self):

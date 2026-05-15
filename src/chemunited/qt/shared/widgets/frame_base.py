@@ -47,8 +47,8 @@ class FrameBase(QFrame):
         self._option_pages: dict[str, QWidget] = {}
 
         self.navigationInterface = NavigationInterface(self, showMenuButton=True)
-        self.contentSplitter = QSplitter(Qt.Orientation.Horizontal, self)
-        self.graphWorkflowSplitter = QSplitter(Qt.Orientation.Vertical, self)
+        self.contentSplitter = QSplitter(Qt.Orientation.Horizontal, self)  # type: ignore[call-arg]
+        self.graphWorkflowSplitter = QSplitter(Qt.Orientation.Vertical, self)  # type: ignore[call-arg]
         self.stackedWidget = QStackedWidget(self)
 
         self.graphFrame, self._graphLayout = self._build_host_frame()
@@ -91,7 +91,7 @@ class FrameBase(QFrame):
         self.hBoxLayout.addWidget(self.navigationInterface)
 
         self.navigationInterface.setExpandWidth(220)
-        self.stackedWidget.currentChanged.connect(self._onCurrentOptionChanged)
+        self.stackedWidget.currentChanged.connect(self._onCurrentOptionChanged)  # type: ignore[attr-defined]
 
         self.workflowFrame.hide()
         self.optionsFrame.hide()
@@ -171,7 +171,7 @@ class FrameBase(QFrame):
         position: NavigationItemPosition = NavigationItemPosition.TOP,
         routeKey: str | None = None,
         tooltip: str | None = None,
-    ) -> None:
+    ) -> Any:
         """Add a navigation item that behaves like a button instead of a page tab."""
         route_key = routeKey or text
 
@@ -179,7 +179,7 @@ class FrameBase(QFrame):
             onClick()
             QTimer.singleShot(0, self._restoreCurrentOptionSelection)
 
-        self.navigationInterface.addItem(
+        return self.navigationInterface.addItem(
             routeKey=route_key,
             icon=icon,
             text=text,
