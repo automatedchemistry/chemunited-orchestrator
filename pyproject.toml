@@ -35,6 +35,7 @@ dependencies = [
     "zeroconf",
     "QScintilla",
     "fastapi>=0.115",
+    "mcp>=1.23",
     "uvicorn[standard]>=0.34",
     "sse-starlette>=2.1",
 ]

@@ -14,6 +14,7 @@ from .connectivity.graph import ConnectivityGraphicView
 from .connectivity.online_list import OnlineComponent
 from .draw.graph import DrawGraphicView
 from .draw.tree_add import TreeAddItem
+from .mcp import ProjectMcpService
 from .orchestrator import Orchestrator
 from .pre_run.pre_run_frame import PreRunFrame
 from .protocols.graph import ProtocolGraphicView
@@ -68,6 +69,7 @@ class SetupWindow(MainWindowBase):
         # Main Orchestrator Object
         # It depends on drawGraph being available during construction.
         self.orchestrator = Orchestrator(self)
+        self.mcp_service = ProjectMcpService(self)
 
         self.preRunFrame = PreRunFrame(self)  # Pre-run frame
 
@@ -116,14 +118,33 @@ class SetupWindow(MainWindowBase):
 
         self.project_menu.addSeparator()
 
+        self.refresh_project_action = Action(
+            OrchestratorIcon.UPDATE,
+            "Refresh Project",
+            self,
+        )
+        self.refresh_project_action.triggered.connect(self.refresh_project)
+        self.project_menu.addAction(self.refresh_project_action)
+
+        self.mcp_project_action = Action(
+            OrchestratorIcon.LINK,
+            "Enable MCP",
+            self,
+        )
+        self.mcp_project_action.setCheckable(True)
+        self.mcp_project_action.triggered.connect(self.toggle_mcp_service)
+        self.project_menu.addAction(self.mcp_project_action)
+
         self.save_project_action = Action(FluentIcon.SAVE, "Save Project", self)
         self.save_project_action.setShortcut(QKeySequence.Save)
         self.save_project_action.triggered.connect(self.save)
         self.project_menu.addAction(self.save_project_action)
         self.addAction(self.save_project_action)
+        self.update_project_actions()
 
     def _show_project_menu(self) -> None:
         self.refresh_recent_projects_menu()
+        self.update_project_actions()
 
         current_widget = self.stackWidget.currentWidget()
         if current_widget is not None:
@@ -296,15 +317,60 @@ class SetupWindow(MainWindowBase):
         classification = getattr(current_widget, "classification", SetupStepMode.DESIGN)
         comment = self._SAVE_COMMENTS.get(classification, "Save: project updated")
         self.orchestrator.save(comment)
+        self.update_project_actions()
 
     def add_project(self):
         self.orchestrator.new_project()
+        self.update_project_actions()
 
     def load_project(self):
         self.orchestrator.load()
+        self.update_project_actions()
 
     def open_recent_project(self, path):
         self.orchestrator.open_recent_project(path)
+        self.update_project_actions()
+
+    def refresh_project(self) -> None:
+        self.update_project_actions()
+        if self.orchestrator.refresh_project():
+            self.refresh_project_action.setEnabled(False)
+
+    def update_project_actions(self) -> None:
+        if not hasattr(self, "refresh_project_action"):
+            return
+        block_reason = self.orchestrator.refresh_project_block_reason()
+        self.refresh_project_action.setEnabled(block_reason is None)
+        self.refresh_project_action.setToolTip(
+            block_reason or "Reload the current project from disk"
+        )
+        self._update_mcp_action()
+
+    def toggle_mcp_service(self) -> None:
+        if self.mcp_service.is_running:
+            result = self.mcp_service.stop()
+        else:
+            result = self.mcp_service.start()
+        self.update_project_actions()
+        if not result.ok:
+            self.FrameLoggings.detail_loggins.append(result.message)
+
+    def _update_mcp_action(self) -> None:
+        if not hasattr(self, "mcp_project_action"):
+            return
+        running = self.mcp_service.is_running
+        can_start = self.orchestrator.working_dir is not None
+        self.mcp_project_action.setEnabled(running or can_start)
+        self.mcp_project_action.setChecked(running)
+        self.mcp_project_action.setText("Disable MCP" if running else "Enable MCP")
+        if running and self.mcp_service.url:
+            self.mcp_project_action.setToolTip(f"Project MCP: {self.mcp_service.url}")
+        elif can_start:
+            self.mcp_project_action.setToolTip("Expose project files over local MCP")
+        else:
+            self.mcp_project_action.setToolTip(
+                "Load or create a project before enabling MCP."
+            )
 
     def open_main_parameters_editor(self):
         if self.orchestrator.working_dir is None:
@@ -332,6 +398,11 @@ class SetupWindow(MainWindowBase):
         self.drawGraph.recenter_view()
         self.protocolGraph.recenter_view()
         self.workflows_protocol.recenter_view()
+
+    def closeEvent(self, event):
+        if self.mcp_service.is_running:
+            self.mcp_service.stop()
+        super().closeEvent(event)
 
     @pyqtSlot(str)
     def _on_current_widget_changed(self, _route_key: str) -> None:

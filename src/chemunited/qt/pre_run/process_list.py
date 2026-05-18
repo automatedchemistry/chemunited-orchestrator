@@ -102,7 +102,7 @@ class ActiveProcessList(ProcessList):
             for i in range(self._list_widget.count()):
                 list_item = self._list_widget.item(i)
                 if list_item and list_item.data(Qt.UserRole) == name:  # type: ignore[attr-defined]
-                    self._list_widget.takeItem(i)
+                    self._remove_row(i)
                     break
 
         for name in data_keys - list_names:

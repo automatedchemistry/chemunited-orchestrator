@@ -119,7 +119,7 @@ class ProcessList(QWidget):
                 list_item = self._list_widget.item(i)
                 widget = self._list_widget.itemWidget(list_item)
                 if widget is not None and widget.name == name:
-                    self._list_widget.takeItem(i)
+                    self._remove_row(i)
                     break
 
         for name in data_keys - list_names:
@@ -141,3 +141,14 @@ class ProcessList(QWidget):
         self._list_widget.addItem(list_item)
         self._list_widget.setItemWidget(list_item, item)
         return item
+
+    def _remove_row(self, row: int) -> None:
+        list_item = self._list_widget.item(row)
+        if list_item is None:
+            return
+        widget = self._list_widget.itemWidget(list_item)
+        if widget is not None:
+            self._list_widget.removeItemWidget(list_item)
+            widget.setParent(None)
+            widget.deleteLater()
+        self._list_widget.takeItem(row)

@@ -7,6 +7,7 @@ What is tested:
 """
 
 import zipfile
+from types import SimpleNamespace
 
 import pytest
 from PyQt5.QtGui import QKeySequence
@@ -14,6 +15,7 @@ from pytestqt.qtbot import QtBot
 from qfluentwidgets import NavigationTreeWidget
 
 from chemunited.core.common.enums import ConnectionType
+from chemunited.qt.mcp import McpServiceResult
 from chemunited.qt.project.recent import RecentProjectsStore
 from chemunited.qt.project.session import ProjectSession
 from chemunited.qt.setup import SetupWindow
@@ -145,7 +147,225 @@ class TestAddComponent:
             is window.project_menu_button
         )
         assert window.load_project_action.shortcut() == QKeySequence("Ctrl+A")
+        assert window.refresh_project_action.text() == "Refresh Project"
+        assert not window.refresh_project_action.isEnabled()
+        assert window.mcp_project_action.text() == "Enable MCP"
+        assert not window.mcp_project_action.isEnabled()
         assert window.save_project_action.shortcut() == QKeySequence.Save
+
+    def test_mcp_project_action_is_disabled_without_project(self, window: SetupWindow):
+        window.update_project_actions()
+
+        assert not window.mcp_project_action.isEnabled()
+        assert (
+            window.mcp_project_action.toolTip()
+            == "Load or create a project before enabling MCP."
+        )
+
+    def test_mcp_project_action_starts_and_stops_service(
+        self, window: SetupWindow, tmp_path
+    ):
+        class DummyMcpService:
+            def __init__(self):
+                self.is_running = False
+                self.url = None
+
+            def start(self):
+                self.is_running = True
+                self.url = "http://127.0.0.1:8765/mcp"
+                return McpServiceResult(True, "started", self.url)
+
+            def stop(self):
+                self.is_running = False
+                return McpServiceResult(True, "stopped")
+
+        window.orchestrator.working_dir = tmp_path
+        window.mcp_service = DummyMcpService()
+
+        window.update_project_actions()
+        assert window.mcp_project_action.isEnabled()
+
+        window.toggle_mcp_service()
+
+        assert window.mcp_project_action.isChecked()
+        assert window.mcp_project_action.text() == "Disable MCP"
+        assert (
+            window.mcp_project_action.toolTip()
+            == "Project MCP: http://127.0.0.1:8765/mcp"
+        )
+
+        window.toggle_mcp_service()
+
+        assert not window.mcp_project_action.isChecked()
+        assert window.mcp_project_action.text() == "Enable MCP"
+
+    def test_refresh_project_action_is_disabled_without_project(
+        self, window: SetupWindow
+    ):
+        window.update_project_actions()
+
+        assert not window.refresh_project_action.isEnabled()
+        assert (
+            window.refresh_project_action.toolTip()
+            == "Load or create a project before refreshing."
+        )
+
+    def test_refresh_project_asks_before_reloading(
+        self, window: SetupWindow, tmp_path, monkeypatch
+    ):
+        confirmed: list[bool] = []
+        refreshed: list[bool] = []
+        window.orchestrator.working_dir = tmp_path
+        monkeypatch.setattr(
+            window.orchestrator,
+            "_confirm_refresh_project",
+            lambda: confirmed.append(True) or False,
+        )
+        monkeypatch.setattr(
+            window.orchestrator,
+            "refresh_current_project",
+            lambda: refreshed.append(True) or True,
+        )
+
+        window.refresh_project()
+
+        assert confirmed == [True]
+        assert refreshed == []
+
+    def test_refresh_project_reloads_external_draw_changes(
+        self, window: SetupWindow, tmp_path, monkeypatch, qtbot: QtBot
+    ):
+        session = ProjectSession()
+        session.new(name="demo", location=tmp_path, init_git=False)
+        session.save_draw(
+            {
+                "components": [
+                    {
+                        "name": "PumpA",
+                        "figure": "HPLCPump",
+                        "position": [0.0, 0.0],
+                    }
+                ],
+                "connections": [],
+            }
+        )
+        window.orchestrator.open_project(tmp_path / "demo")
+        source_file = tmp_path / "demo.chemunited"
+        window.orchestrator._session.source_file = source_file
+
+        session.save_draw(
+            {
+                "components": [
+                    {
+                        "name": "PumpB",
+                        "figure": "HPLCPump",
+                        "position": [100.0, 0.0],
+                    }
+                ],
+                "connections": [],
+            }
+        )
+        monkeypatch.setattr(
+            window.orchestrator,
+            "_confirm_refresh_project",
+            lambda: True,
+        )
+
+        window.refresh_project()
+        qtbot.waitUntil(lambda: "PumpB" in window.orchestrator.components, timeout=1000)
+
+        assert "PumpA" not in window.orchestrator.components
+        assert "PumpB" in window.orchestrator.components
+        assert window.orchestrator._session.source_file == source_file
+
+    def test_failed_refresh_keeps_current_project(
+        self, window: SetupWindow, tmp_path
+    ):
+        session = ProjectSession()
+        session.new(name="demo", location=tmp_path, init_git=False)
+        session.save_draw(
+            {
+                "components": [
+                    {
+                        "name": "PumpA",
+                        "figure": "HPLCPump",
+                        "position": [0.0, 0.0],
+                    }
+                ],
+                "connections": [],
+            }
+        )
+        working_dir = tmp_path / "demo"
+        window.orchestrator.open_project(working_dir)
+        (working_dir / "draw" / "setup.py").write_text(
+            "def build_draw(platform):\n    raise RuntimeError('boom')\n",
+            encoding="utf-8",
+        )
+
+        assert window.orchestrator.refresh_current_project() is False
+        assert "PumpA" in window.orchestrator.components
+
+    def test_refresh_project_action_is_disabled_for_online_project_monitor(
+        self, window: SetupWindow, tmp_path
+    ):
+        working_dir = tmp_path / "demo"
+        window.orchestrator.working_dir = working_dir
+        monitor = SimpleNamespace(
+            orchestrator=SimpleNamespace(working_dir=working_dir),
+            status_widget=SimpleNamespace(text=lambda: "Online"),
+            api_process=object(),
+        )
+        window.preRunFrame.protocols_list_widget._monitor_windows.append(monitor)
+
+        window.update_project_actions()
+
+        assert not window.refresh_project_action.isEnabled()
+        assert (
+            window.refresh_project_action.toolTip()
+            == "Disconnect the running project API before refreshing."
+        )
+
+    def test_mcp_refresh_reloads_without_confirmation(
+        self, window: SetupWindow, tmp_path, monkeypatch
+    ):
+        session = ProjectSession()
+        session.new(name="demo", location=tmp_path, init_git=False)
+        session.save_draw(
+            {
+                "components": [
+                    {
+                        "name": "PumpA",
+                        "figure": "HPLCPump",
+                        "position": [0.0, 0.0],
+                    }
+                ],
+                "connections": [],
+            }
+        )
+        window.orchestrator.open_project(tmp_path / "demo")
+        session.save_draw(
+            {
+                "components": [
+                    {
+                        "name": "PumpB",
+                        "figure": "HPLCPump",
+                        "position": [100.0, 0.0],
+                    }
+                ],
+                "connections": [],
+            }
+        )
+        monkeypatch.setattr(
+            window.orchestrator,
+            "_confirm_refresh_project",
+            lambda: pytest.fail("MCP refresh must not show confirmation"),
+        )
+
+        result = window.mcp_service.refresh_project_from_mcp()
+
+        assert result["ok"] is True
+        assert "PumpA" not in window.orchestrator.components
+        assert "PumpB" in window.orchestrator.components
 
     def test_recent_projects_menu_lists_saved_paths(
         self, window: SetupWindow, tmp_path

@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Any
 
 from loguru import logger
-from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtCore import QTimer, pyqtSlot
 from PyQt5.QtWidgets import QFileDialog, QInputDialog, QMessageBox
 
 from chemunited.qt.project.manifest import ProjectManifest
@@ -177,6 +177,64 @@ class OrchestratorProjectFile(OrchestratorExecution):
 
         logger.bind(window=WindowCategory.SETUP).success(f"Project loaded from {path}")
         self._record_recent_project(path)
+
+    def refresh_project(self) -> bool:
+        """Confirm and schedule a project refresh from disk."""
+        if self.refresh_project_block_reason() is not None:
+            return False
+        if not self._confirm_refresh_project():
+            return False
+        QTimer.singleShot(50, self._run_refresh_current_project)
+        return True
+
+    def refresh_project_block_reason(self) -> str | None:
+        if self.working_dir is None:
+            return "Load or create a project before refreshing."
+        if self._has_online_project_monitor():
+            return "Disconnect the running project API before refreshing."
+        return None
+
+    def refresh_current_project(self) -> bool:
+        """Reload the currently open project from its working directory."""
+        if self.working_dir is None:
+            logger.bind(window=WindowCategory.SETUP).warning(
+                "No project loaded — cannot refresh."
+            )
+            return False
+
+        working_dir = self.working_dir
+        source_file = self._session.source_file if self._session is not None else None
+        try:
+            session = ProjectSession()
+            session.open_directory(working_dir)
+            session.source_file = source_file
+            draw_data = session.load_draw()
+            process_classes = session.load_process_classes()
+            connectivity_data = session.load_connectivity()
+        except Exception as exc:
+            logger.bind(window=WindowCategory.SETUP).opt(exception=exc).error(
+                f"Could not refresh project '{working_dir.name}': {exc}"
+            )
+            return False
+
+        self._reset_project_state()
+        self._session = session
+        self.working_dir = session.working_dir
+        self._restore_draw_data(draw_data)
+        self._restore_connectivity_data(connectivity_data)
+        self._restore_protocols(process_classes)
+
+        logger.bind(window=WindowCategory.SETUP).success(
+            f"Project refreshed from {working_dir}"
+        )
+        return True
+
+    def _run_refresh_current_project(self) -> None:
+        if self.refresh_current_project():
+            QTimer.singleShot(0, self._sync_project_views_after_refresh)
+        update_project_actions = getattr(self.parent_ref, "update_project_actions", None)
+        if callable(update_project_actions):
+            update_project_actions()
 
     def open_recent_project(self, path: Path) -> None:
         if not self._confirm_replace_current_project():
@@ -359,6 +417,67 @@ class OrchestratorProjectFile(OrchestratorExecution):
         )
         return reply == QMessageBox.Yes
 
+    def _confirm_refresh_project(self) -> bool:
+        reply = QMessageBox.question(
+            self.parent_ref,
+            "Refresh project?",
+            "Reload the project from disk? "
+            "Unsaved changes in the app will be discarded.",
+            QMessageBox.Yes | QMessageBox.No,
+            QMessageBox.No,
+        )
+        return reply == QMessageBox.Yes
+
+    def _has_online_project_monitor(self) -> bool:
+        working_dir = self.working_dir
+        if working_dir is None:
+            return False
+
+        for monitor in self._project_monitor_windows():
+            monitor_orchestrator = getattr(monitor, "orchestrator", None)
+            monitor_working_dir = getattr(monitor_orchestrator, "working_dir", None)
+            if not self._same_path(working_dir, monitor_working_dir):
+                continue
+
+            status_widget = getattr(monitor, "status_widget", None)
+            status_text = getattr(status_widget, "text", None)
+            if callable(status_text):
+                if status_text() == "Online":
+                    return True
+                continue
+            if getattr(monitor, "api_process", None) is not None:
+                return True
+
+        return False
+
+    def _project_monitor_windows(self) -> list[Any]:
+        pre_run_frame = getattr(self.parent_ref, "preRunFrame", None)
+        protocols_list = getattr(pre_run_frame, "protocols_list_widget", None)
+        return list(getattr(protocols_list, "_monitor_windows", []))
+
+    @staticmethod
+    def _same_path(left: Path | None, right: object) -> bool:
+        if left is None or right is None:
+            return False
+        try:
+            right_path = Path(right)
+        except TypeError:
+            return False
+        return left.resolve() == right_path.resolve()
+
+    def _sync_project_views_after_refresh(self) -> None:
+        protocols_widget = getattr(self.parent_ref, "protocols_widget", None)
+        if protocols_widget is not None:
+            protocols_widget.sync_list()
+
+        command_list = getattr(self.parent_ref, "command_list", None)
+        if command_list is not None:
+            command_list.sync_protocols()
+
+        pre_run_frame = getattr(self.parent_ref, "preRunFrame", None)
+        if pre_run_frame is not None:
+            pre_run_frame.sync()
+
     def _open_session(self, path: Path, overwrite: bool = False) -> ProjectSession:
         session = ProjectSession()
         if path.is_dir():
@@ -380,15 +499,21 @@ class OrchestratorProjectFile(OrchestratorExecution):
         if callable(close_main_parameters_editor):
             close_main_parameters_editor()
 
-        for name in list(self.connections.keys()):
-            if name in self.connections:
-                self.remove_connection(name)
+        cleanup_draw_state = getattr(self.parent_ref.drawGraph, "_cleanup", None)
+        if callable(cleanup_draw_state):
+            cleanup_draw_state()
 
-        for name in list(self.components.keys()):
-            if name in self.components:
-                self.remove_component(name)
+        for component in self.components.values():
+            if component._widget is not None:
+                component._widget.close()
 
-        self.parent_ref.scene_attribute.clearSelection()
+        scene = self.parent_ref.scene_attribute
+        scene.clearSelection()
+        scene.clear()
+        scene.update()
+
+        self.connections.clear()
+        self.components.clear()
         self.clear_protocols()
 
     def _restore_draw_data(self, draw_data: dict) -> None:

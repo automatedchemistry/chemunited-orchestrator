@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from chemunited.qt.project.storage import load_draw, save_draw
+from textwrap import dedent
+
+from chemunited.qt.project.storage import load_draw, load_process_classes, save_draw
 from chemunited.qt.protocols.workflows.naming import (
     process_class_name,
     process_config_class_name,
@@ -105,3 +107,68 @@ def test_process_class_name_matches_generated_process_scripts():
     assert process_class_name("react") == "CustomProcess"
     assert process_class_name("my_process") == "CustomProcess"
     assert process_config_class_name("ReactRenamed") == "ProcessConfig"
+
+
+def test_load_process_classes_reloads_external_process_file_changes(tmp_path):
+    protocols_dir = tmp_path / "protocols"
+    protocols_dir.mkdir()
+    (protocols_dir / "__init__.py").write_text(
+        dedent("""
+            from .React import (
+                CustomProcess as ReactProcess,
+                ProcessConfig as ReactConfig,
+            )
+
+            PROCESSES = {
+                "React": ReactProcess,
+            }
+
+            CONFIGS = {
+                "React": ReactConfig,
+            }
+            """).strip()
+        + "\n",
+        encoding="utf-8",
+    )
+    process_path = protocols_dir / "React.py"
+    process_path.write_text(_process_content("first_node"), encoding="utf-8")
+
+    first_classes = load_process_classes(tmp_path)
+    first_config = first_classes["React"].__orig_bases__[0].__args__[0]
+    first_graph = first_classes["React"](first_config()).build_workflow()
+
+    process_path.write_text(_process_content("second_node"), encoding="utf-8")
+
+    second_classes = load_process_classes(tmp_path)
+    second_config = second_classes["React"].__orig_bases__[0].__args__[0]
+    second_graph = second_classes["React"](second_config()).build_workflow()
+
+    assert "first_node" in first_graph.nodes
+    assert "second_node" not in first_graph.nodes
+    assert "second_node" in second_graph.nodes
+    assert "first_node" not in second_graph.nodes
+
+
+def _process_content(node_id: str) -> str:
+    return (
+        dedent(f"""
+            from __future__ import annotations
+
+            import networkx as nx
+            from pydantic import BaseModel, ConfigDict
+
+            from chemunited.workflow import Process
+
+
+            class ProcessConfig(BaseModel):
+                model_config = ConfigDict(frozen=True)
+
+
+            class CustomProcess(Process[ProcessConfig]):
+                def build_workflow(self) -> nx.DiGraph:
+                    graph = nx.DiGraph()
+                    graph.add_node({node_id!r})
+                    return graph
+            """).strip()
+        + "\n"
+    )

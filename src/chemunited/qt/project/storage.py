@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import ast
+import importlib
 import importlib.util
 import json
 import zipfile
@@ -283,6 +284,8 @@ def load_process_classes(working_dir: Path) -> dict:
         return {}
 
     pkg_name = f"_chemunited_protocols_{abs(hash(working_dir.resolve()))}"
+    importlib.invalidate_caches()
+    _clear_imported_protocol_modules(pkg_name)
     try:
         spec = importlib.util.spec_from_file_location(
             pkg_name,
@@ -298,7 +301,16 @@ def load_process_classes(working_dir: Path) -> dict:
     except Exception:
         return {}
     finally:
-        sys.modules.pop(pkg_name, None)
+        _clear_imported_protocol_modules(pkg_name)
+
+
+def _clear_imported_protocol_modules(package_name: str) -> None:
+    import sys
+
+    prefix = f"{package_name}."
+    for module_name in list(sys.modules):
+        if module_name == package_name or module_name.startswith(prefix):
+            sys.modules.pop(module_name, None)
 
 
 # ── Main parameters ────────────────────────────────────────────────────────────
@@ -332,6 +344,10 @@ def load_connectivity(working_dir: Path) -> dict:
 
 
 # ── protocols/__init__.py registry ────────────────────────────────────────────
+
+
+def refresh_protocols_registry(working_dir: Path) -> None:
+    _refresh_protocols_init(working_dir)
 
 
 def _refresh_protocols_init(working_dir: Path) -> None:

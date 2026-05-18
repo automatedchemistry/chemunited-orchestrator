@@ -32,6 +32,7 @@ class WorkflowsWidget(QWidget):
         for item in self.workflows.values():
             item.clear_workflow()
             self.stacked_graphs.removeWidget(item)
+            item.setParent(None)
             item.deleteLater()
         self.workflows.clear()
         self.controllers.clear()
@@ -103,6 +104,7 @@ class WorkflowsWidget(QWidget):
         graph_widget = self.workflows.pop(name)
         self.controllers.pop(name, None)
         self.stacked_graphs.removeWidget(graph_widget)
+        graph_widget.setParent(None)
         graph_widget.deleteLater()  # Completely release PyQt C++ memory
 
         # If we accidentally deleted the active process, fallback to next existing process
