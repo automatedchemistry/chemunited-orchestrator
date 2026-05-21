@@ -262,19 +262,19 @@ class SetupWindow(MainWindowBase):
 
         self.connectivityFrame.setGraphWidget(self.connectivityGraph)
 
-        self.connectivityFrame.addSubInterface(
-            widget=self.online_list,
-            routeKey="online_list",
-            text="Online List",
-            icon=OrchestratorIcon.WIFI,
-        )
-
         self.connectivityFrame.addNavigationAction(
             icon=OrchestratorIcon.HOME,
             text="Home",
             onClick=self.recenter_views,
             position=NavigationItemPosition.TOP,
             tooltip="Recenter the view",
+        )
+
+        self.connectivityFrame.addSubInterface(
+            widget=self.online_list,
+            routeKey="online_list",
+            text="Online List",
+            icon=OrchestratorIcon.WIFI,
         )
 
         self.connectivityFrame.addNavigationAction(

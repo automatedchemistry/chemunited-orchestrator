@@ -499,9 +499,11 @@ class OrchestratorProjectFile(OrchestratorExecution):
         if callable(close_main_parameters_editor):
             close_main_parameters_editor()
 
-        cleanup_draw_state = getattr(self.parent_ref.drawGraph, "_cleanup", None)
-        if callable(cleanup_draw_state):
-            cleanup_draw_state()
+        if hasattr(self.parent_ref, "drawGraph"):
+            # Only needed for setup window
+            cleanup_draw_state = getattr(self.parent_ref.drawGraph, "_cleanup", None)
+            if callable(cleanup_draw_state):
+                cleanup_draw_state()
 
         for component in self.components.values():
             if component._widget is not None:

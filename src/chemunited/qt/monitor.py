@@ -31,7 +31,7 @@ class MonitorWindow(MainWindowBase):
         self.SegmentWindow = SegmentWindow(self)
 
         # Graph frame
-        self.drawGraph = ExecutionGraph(self.scene_attribute, self)
+        self.executionGraph = ExecutionGraph(self.scene_attribute, self)
         self.workflows_protocol = WorkflowsWidget(self, window=WindowCategory.EXECUTION)
         self.executionFrame = FrameBase(
             parent=self,
@@ -55,7 +55,7 @@ class MonitorWindow(MainWindowBase):
     def initNavigation(self):
         super().initNavigation()
 
-        self.executionFrame.setGraphWidget(self.drawGraph)
+        self.executionFrame.setGraphWidget(self.executionGraph)
         self.executionFrame.setWorkflowWidget(self.workflows_protocol)
 
         self.status_widget = self.executionFrame.addNavigationAction(
@@ -148,7 +148,7 @@ class MonitorWindow(MainWindowBase):
         super().closeEvent(event)
 
     def recenter_views(self):
-        self.drawGraph.recenter_view()
+        self.executionGraph.recenter_view()
         self.workflows_protocol.recenter_view()
 
     def show_summary(self):
