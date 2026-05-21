@@ -397,6 +397,7 @@ class SetupWindow(MainWindowBase):
     def recenter_views(self):
         self.drawGraph.recenter_view()
         self.protocolGraph.recenter_view()
+        self.connectivityGraph.recenter_view()
         self.workflows_protocol.recenter_view()
 
     def closeEvent(self, event):
