@@ -1,71 +1,20 @@
-from dataclasses import dataclass, field
 from typing import ClassVar
 
-from pydantic import Field
-
-from chemunited.core.common.enums import GroupParameterCategory
-from chemunited.core.components import ComponentMode, ValveComponentData
-from chemunited.core.components.glossary.rotary_valve import ValvePortLayout
+from chemunited.core.figure_registry.solenoid_valve import (
+    SolenoidValve2WayData,
+    SolenoidValveData,
+    SolenoidValveMode,
+)
 from chemunited.qt.elements.component.graph_item import GraphComponent
 
 
-@dataclass
-class SolenideValveData(ValveComponentData):
-    stator_ports: ValvePortLayout = field(
-        default_factory=lambda: [(None, 1, None, 2), (None,)]
-    )
-    rotor_ports: ValvePortLayout = field(
-        default_factory=lambda: [(3, None, 3, None), (None,)]
-    )
-
-    def internal_structure(self):
-        super().internal_structure()
-        self.ports_by_number[1].relative_position = (-22.5, 12.5)
-        self.ports_by_number[2].relative_position = (22.5, 12.5)
-
-
-class SolenideValveMode(ComponentMode):
-    normally_open: bool = Field(
-        default=True,
-        title="Normally open/close",
-        description="The status of the valve when it is not energised - Open (allows fluid pass through)",
-        json_schema_extra={
-            "group": GroupParameterCategory.PROPERTY.value,
-            "on_text": "Normally Open",
-            "off_text": "Normally Close",
-        },
-    )
-    opened: bool = Field(
-        default=True,
-        title="Status - open/close",
-        description="The actual valve status",
-        json_schema_extra={
-            "group": GroupParameterCategory.PROPERTY.value,
-            "on_text": "Open",
-            "off_text": "Close",
-        },
-    )
-
-
-class SolenoidValve(GraphComponent[SolenideValveData]):
-    METADATA: ClassVar[type[SolenideValveData]] = SolenideValveData
-    BASEMODE: ClassVar[type[SolenideValveMode]] = SolenideValveMode
+class SolenoidValve(GraphComponent[SolenoidValveData]):
+    METADATA: ClassVar[type[SolenoidValveData]] = SolenoidValveData
+    BASEMODE: ClassVar[type[SolenoidValveMode]] = SolenoidValveMode
     SVG_SCALE: ClassVar[float] = 1.0
 
 
-@dataclass
-class SolenideValve2WayData(ValveComponentData):
-    stator_ports: ValvePortLayout = field(default_factory=lambda: [(1, 2), (0,)])
-    rotor_ports: ValvePortLayout = field(default_factory=lambda: [(3, None), (3,)])
-
-    def internal_structure(self):
-        super().internal_structure()
-        self.ports_by_number[0].relative_position = (20, 10)
-        self.ports_by_number[1].relative_position = (-20, 4)
-        self.ports_by_number[2].relative_position = (-20, 15)
-
-
-class SolenoidValve2Way(GraphComponent[SolenideValve2WayData]):
-    METADATA: ClassVar[type[SolenideValve2WayData]] = SolenideValve2WayData
-    BASEMODE: ClassVar[type[SolenideValveMode]] = SolenideValveMode
+class SolenoidValve2Way(GraphComponent[SolenoidValve2WayData]):
+    METADATA: ClassVar[type[SolenoidValve2WayData]] = SolenoidValve2WayData
+    BASEMODE: ClassVar[type[SolenoidValveMode]] = SolenoidValveMode
     SVG_SCALE: ClassVar[float] = 1.0

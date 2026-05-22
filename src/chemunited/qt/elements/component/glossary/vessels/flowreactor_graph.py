@@ -1,43 +1,22 @@
 from typing import ClassVar
 
-from pydantic import Field
 from PyQt5.QtCore import QPointF
 from PyQt5.QtGui import QColor, QPainterPath, QPolygonF
 
 from chemunited.core.common.constant import PATTERN_DIMENSION
-from chemunited.core.common.enums import GroupParameterCategory
-from chemunited.core.components import PlugFlowComponentData, PlugFlowMode
-from chemunited.core.components.enums import ComponentType
+from chemunited.core.figure_registry.vessels import (
+    FlowReactorData,
+    FlowReactorMode,
+    PhotoReactorData,
+    PhotoReactorMode,
+)
 from chemunited.qt.elements.component.component_parts import SvgLayer
 from chemunited.qt.elements.component.graph_item import GraphComponent
 from chemunited.qt.shared.graph_objects.custom_path import PathElementItem
 from chemunited.qt.utils.math_functions import build_snake_path
 
 
-class FlowReactorMode(PlugFlowMode):
-    heat_exchange: bool = Field(
-        default=True,
-        title="Heat Exchange",
-        description="Whether the component allows heat exchange.",
-        json_schema_extra={
-            "group": GroupParameterCategory.PROPERTY.value,
-            "editable": False,
-            "creation_editable": True,
-            "lock_reason": "Internal Chosen",
-        },
-    )
-
-
-class FlowReactorData(PlugFlowComponentData):
-    heat_exchange: bool = True
-
-
-class PhotoReactorData(FlowReactorData):
-    COMPONENT_TYPE: ClassVar[ComponentType] = ComponentType.ELECTRONIC
-
-
 class PathTubing(PathElementItem):
-
     DEFAULT_COLOR = QColor("#000000")
     DEFAULT_LINE_WIDTH = 5.0
     RADIUS = 3
@@ -100,6 +79,7 @@ class FlowReactor(GraphComponent[FlowReactorData]):
 
 class PhotoReactor(FlowReactor):
     METADATA: ClassVar[type[PhotoReactorData]] = PhotoReactorData
+    BASEMODE: ClassVar[type[PhotoReactorMode]] = PhotoReactorMode
 
     def build(self, svg_path: str | None = None) -> None:
         super().build()

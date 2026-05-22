@@ -1,14 +1,12 @@
 from typing import ClassVar
 
-from chemunited.core.components import ComponentData, ComponentMode
-from chemunited.core.components.enums import ComponentType
+from chemunited.core.figure_registry.pipes import SeparatorData, SeparatorMode
 from chemunited.qt.elements.component.graph_item import GraphComponent
 
 
-class Separator(GraphComponent[ComponentData]):
-    COMPONENT_TYPE: ClassVar[ComponentType] = ComponentType.UTENSIL
-    METADATA: ClassVar[type[ComponentData]] = ComponentData
-    BASEMODE: ClassVar[type[ComponentMode]] = ComponentMode
+class Separator(GraphComponent[SeparatorData]):
+    METADATA: ClassVar[type[SeparatorData]] = SeparatorData
+    BASEMODE: ClassVar[type[SeparatorMode]] = SeparatorMode
 
     def build(self, svg_path: str | None = None) -> None:
         self._data.ports_by_number[1].relative_position = (-40, -26)

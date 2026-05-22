@@ -1,18 +1,14 @@
 from typing import ClassVar
 
-from pydantic import Field
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QBrush, QColor, QPen
 
-from chemunited.core.common.enums import ConnectionType, GroupParameterCategory
-from chemunited.core.components import ComponentMode, NeutralComponentData
-from chemunited.core.components.internals import Port
+from chemunited.core.figure_registry.technical import MultiChannelData, MultiChannelMode
 from chemunited.qt.elements.component.component_parts import SceneItem
 from chemunited.qt.elements.component.graph_item import GraphComponent
 
 
 class MultiChannelBory(SceneItem):
-
     def __init__(self, data: "MultiChannelData") -> None:
         self._data = data
         super().__init__(width=15, height=16 * data.channels + 4)
@@ -28,40 +24,6 @@ class MultiChannelBory(SceneItem):
                 color = QColor("#8BC34A") if value[i] else QColor("#E8F5E9")
                 painter.setPen(QPen(color, 2))
             painter.drawEllipse(-r, int(-self.height / 2 + i * 16 + 4), 2 * r, 2 * r)
-
-
-class MultiChannelMode(ComponentMode):
-    channels: int = Field(
-        default=8,
-        title="Number of Channels",
-        description="Number of Channels",
-        json_schema_extra={
-            "group": GroupParameterCategory.GENERAL.value,
-            "editable": True,
-        },
-        ge=1,
-        le=32,
-    )
-
-
-class MultiChannelData(NeutralComponentData):
-    channels: int = 8
-    active: list[bool] = []
-
-    def internal_structure(self):
-        self.active = [False] * self.channels
-        self.port_pairs = [(i + 1,) for i in range(self.channels)]
-        self.ports_by_number = {
-            i: Port(
-                number=i,
-                component=self.name,
-                relative_position=(0, -(self.channels * 8 + 10) + i * 16),
-                category=ConnectionType.ELECTRONIC,
-            )
-            for i in range(1, self.channels + 1)
-        }
-        self.internal_edges = {}
-        self.internal_inventories = {}
 
 
 class MultiChannelADC(GraphComponent[MultiChannelData]):

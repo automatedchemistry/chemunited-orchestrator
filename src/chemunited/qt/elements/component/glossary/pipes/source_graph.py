@@ -1,17 +1,12 @@
 from typing import ClassVar
 
-from chemunited.core.components import PressureControlData, PressureControlMode
-from chemunited.core.components.enums import ComponentType
+from chemunited.core.figure_registry.pipes import SourceData, SourceMode
 from chemunited.qt.elements.component.graph_item import GraphComponent
 
 
-class SourceData(PressureControlData):
-    COMPONENT_TYPE: ClassVar[ComponentType] = ComponentType.UTENSIL
-
-
 class Source(GraphComponent[SourceData]):
-    METADATA: ClassVar[type[PressureControlData]] = SourceData
-    BASEMODE: ClassVar[type[PressureControlMode]] = PressureControlMode
+    METADATA: ClassVar[type[SourceData]] = SourceData
+    BASEMODE: ClassVar[type[SourceMode]] = SourceMode
     SVG_SCALE: ClassVar[float] = 1.0
 
     def build(self, svg_path: str | None = None) -> None:

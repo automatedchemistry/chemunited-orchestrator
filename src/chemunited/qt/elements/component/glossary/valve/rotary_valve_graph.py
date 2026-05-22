@@ -1,4 +1,3 @@
-from dataclasses import dataclass, field
 from typing import ClassVar, Generic, TypeVar
 
 import numpy as np
@@ -8,7 +7,26 @@ from PyQt5.QtWidgets import QGraphicsObject, QGraphicsPathItem
 
 from chemunited.core.components.glossary.rotary_valve import (
     ValveComponentData,
-    ValvePortLayout,
+)
+from chemunited.core.figure_registry.rotary_valve import (
+    FourPortDistributionValveData,
+    FourPortDistributionValveMode,
+    FourPortFivePositionValveData,
+    FourPortFivePositionValveMode,
+    SixPortDistributionValveData,
+    SixPortDistributionValveMode,
+    SixPortTwoPositionValveData,
+    SixPortTwoPositionValveMode,
+    SixteenPortDistributionValveData,
+    SixteenPortDistributionValveMode,
+    ThreePortFourPositionValveData,
+    ThreePortFourPositionValveMode,
+    ThreePortTwoPositionValveData,
+    ThreePortTwoPositionValveMode,
+    TwelvePortDistributionValveData,
+    TwelvePortDistributionValveMode,
+    TwoPortDistributionValveData,
+    TwoPortDistributionValveMode,
 )
 from chemunited.qt.elements.component.graph_item import GraphComponent
 
@@ -38,19 +56,22 @@ class RotorChannel(QGraphicsObject):
             for i, value in enumerate(self._data.rotor_ports[0]):
                 if value == self._data.rotor_ports[1][0]:
                     rotor_ports[0][i] = None
-                    x2, y2 = self.radius * np.cos(angles[i]), self.radius * np.sin(
-                        angles[i]
+                    x2, y2 = (
+                        self.radius * np.cos(angles[i]),
+                        self.radius * np.sin(angles[i]),
                     )
                     painter.drawLine(QPointF(0, 0), QPointF(x2, y2))
         for i, value in enumerate(self._data.rotor_ports[0]):
             if value:
                 for j, value_2 in enumerate(rotor_ports[0]):
                     if value == value_2 and j != i:
-                        x1, y1 = self.radius * np.cos(angles[i]), self.radius * np.sin(
-                            angles[i]
+                        x1, y1 = (
+                            self.radius * np.cos(angles[i]),
+                            self.radius * np.sin(angles[i]),
                         )
-                        x2, y2 = self.radius * np.cos(angles[j]), self.radius * np.sin(
-                            angles[j]
+                        x2, y2 = (
+                            self.radius * np.cos(angles[j]),
+                            self.radius * np.sin(angles[j]),
                         )
                         painter.drawLine(QPointF(x1, y1), QPointF(x2, y2))
                         break
@@ -87,55 +108,21 @@ class RotaryValveGraph(GraphComponent[ValveT], Generic[ValveT]):
         self.addToGroup(self._internal_channel)
 
 
-@dataclass
-class ThreePortTwoPositionValveData(ValveComponentData):
-    stator_ports: ValvePortLayout = field(
-        default_factory=lambda: [(None, 1, 2, 3), (0,)]
-    )
-    rotor_ports: ValvePortLayout = field(
-        default_factory=lambda: [(4, 4, None, None), (None,)]
-    )
-
-
 class ThreePortTwoPositionValve(RotaryValveGraph[ThreePortTwoPositionValveData]):
     METADATA: ClassVar[type[ThreePortTwoPositionValveData]] = (
         ThreePortTwoPositionValveData
     )
-
-
-@dataclass
-class ThreePortFourPositionValveData(ValveComponentData):
-    stator_ports: ValvePortLayout = field(
-        default_factory=lambda: [(None, 1, 2, 3), (0,)]
+    BASEMODE: ClassVar[type[ThreePortTwoPositionValveMode]] = (
+        ThreePortTwoPositionValveMode
     )
-    rotor_ports: ValvePortLayout = field(default_factory=lambda: [(4, 4, 5, 5), (4,)])
 
 
 class ThreePortFourPositionValve(RotaryValveGraph[ThreePortFourPositionValveData]):
     METADATA: ClassVar[type[ThreePortFourPositionValveData]] = (
         ThreePortFourPositionValveData
     )
-
-
-@dataclass
-class FourPortFivePositionValveData(ValveComponentData):
-    stator_ports: ValvePortLayout = field(
-        default_factory=lambda: [
-            (
-                None,
-                None,
-                1,
-                None,
-                2,
-                None,
-                3,
-                None,
-            ),
-            (0,),
-        ]
-    )
-    rotor_ports: ValvePortLayout = field(
-        default_factory=lambda: [(None, 5, None, None, 4, None, 4, None), (5,)]
+    BASEMODE: ClassVar[type[ThreePortFourPositionValveMode]] = (
+        ThreePortFourPositionValveMode
     )
 
 
@@ -143,42 +130,25 @@ class FourPortFivePositionValve(RotaryValveGraph[FourPortFivePositionValveData])
     METADATA: ClassVar[type[FourPortFivePositionValveData]] = (
         FourPortFivePositionValveData
     )
-
-
-@dataclass
-class SixPortTwoPositionValveData(ValveComponentData):
-    stator_ports: ValvePortLayout = field(
-        default_factory=lambda: [(1, 2, 3, 4, 5, 6), (0,)]
-    )
-    rotor_ports: ValvePortLayout = field(
-        default_factory=lambda: [(7, 7, 8, 8, 9, 9), (None,)]
+    BASEMODE: ClassVar[type[FourPortFivePositionValveMode]] = (
+        FourPortFivePositionValveMode
     )
 
 
 class SixPortTwoPositionValve(RotaryValveGraph[SixPortTwoPositionValveData]):
     METADATA: ClassVar[type[SixPortTwoPositionValveData]] = SixPortTwoPositionValveData
+    BASEMODE: ClassVar[type[SixPortTwoPositionValveMode]] = SixPortTwoPositionValveMode
 
 
 # Distribution valve
-
-
-@dataclass
-class TwoPortDistributionValveData(ValveComponentData):
-    stator_ports: ValvePortLayout = field(default_factory=lambda: [(1, 2), (0,)])
-    rotor_ports: ValvePortLayout = field(default_factory=lambda: [(3, None), (3,)])
 
 
 class TwoPortDistributionValve(RotaryValveGraph[TwoPortDistributionValveData]):
     METADATA: ClassVar[type[TwoPortDistributionValveData]] = (
         TwoPortDistributionValveData
     )
-
-
-@dataclass
-class FourPortDistributionValveData(ValveComponentData):
-    stator_ports: ValvePortLayout = field(default_factory=lambda: [(1, 2, 3, 4), (0,)])
-    rotor_ports: ValvePortLayout = field(
-        default_factory=lambda: [(5, None, None, None), (5,)]
+    BASEMODE: ClassVar[type[TwoPortDistributionValveMode]] = (
+        TwoPortDistributionValveMode
     )
 
 
@@ -186,15 +156,8 @@ class FourPortDistributionValve(RotaryValveGraph[FourPortDistributionValveData])
     METADATA: ClassVar[type[FourPortDistributionValveData]] = (
         FourPortDistributionValveData
     )
-
-
-@dataclass
-class SixPortDistributionValveData(ValveComponentData):
-    stator_ports: ValvePortLayout = field(
-        default_factory=lambda: [(1, 2, 3, 4, 5, 6), (0,)]
-    )
-    rotor_ports: ValvePortLayout = field(
-        default_factory=lambda: [(7, None, None, None, None, None), (7,)]
+    BASEMODE: ClassVar[type[FourPortDistributionValveMode]] = (
+        FourPortDistributionValveMode
     )
 
 
@@ -202,18 +165,8 @@ class SixPortDistributionValve(RotaryValveGraph[SixPortDistributionValveData]):
     METADATA: ClassVar[type[SixPortDistributionValveData]] = (
         SixPortDistributionValveData
     )
-
-
-@dataclass
-class TwelvePortDistributionValveData(ValveComponentData):
-    stator_ports: ValvePortLayout = field(
-        default_factory=lambda: [(1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12), (0,)]
-    )
-    rotor_ports: ValvePortLayout = field(
-        default_factory=lambda: [
-            (13, None, None, None, None, None, None, None, None, None, None, None),
-            (13,),
-        ]
+    BASEMODE: ClassVar[type[SixPortDistributionValveMode]] = (
+        SixPortDistributionValveMode
     )
 
 
@@ -221,42 +174,15 @@ class TwelvePortDistributionValve(RotaryValveGraph[TwelvePortDistributionValveDa
     METADATA: ClassVar[type[TwelvePortDistributionValveData]] = (
         TwelvePortDistributionValveData
     )
-
-
-@dataclass
-class SixteenPortDistributionValveData(ValveComponentData):
-    stator_ports: ValvePortLayout = field(
-        default_factory=lambda: [
-            (1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16),
-            (0,),
-        ]
-    )
-    rotor_ports: ValvePortLayout = field(
-        default_factory=lambda: [
-            (
-                17,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-                None,
-            ),
-            (17,),
-        ]
+    BASEMODE: ClassVar[type[TwelvePortDistributionValveMode]] = (
+        TwelvePortDistributionValveMode
     )
 
 
 class SixteenPortDistributionValve(RotaryValveGraph[SixteenPortDistributionValveData]):
     METADATA: ClassVar[type[SixteenPortDistributionValveData]] = (
         SixteenPortDistributionValveData
+    )
+    BASEMODE: ClassVar[type[SixteenPortDistributionValveMode]] = (
+        SixteenPortDistributionValveMode
     )

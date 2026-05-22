@@ -1,44 +1,11 @@
-from typing import Annotated, ClassVar
+from typing import ClassVar
 
-from pydantic import Field
-
-from chemunited.core.components import VesselComponentData, VesselMode
-from chemunited.core.utils.internal_quantity import (
-    ChemQuantityValidator,
-    ChemUnitQuantity,
-)
+from chemunited.core.figure_registry.pipes import SinkData, SinkMode
 from chemunited.qt.elements.component.graph_item import GraphComponent
 
 
-class SinkMode(VesselMode):
-    capacity: Annotated[ChemUnitQuantity, ChemQuantityValidator("ml")] = Field(
-        default=ChemUnitQuantity("1e10 l"),  # No limit
-        json_schema_extra={
-            "visible": False,
-        },
-    )
-    top_access: int = Field(
-        default=1,
-        json_schema_extra={
-            "visible": False,
-        },
-    )
-    bottom_access: int = Field(
-        default=0,
-        json_schema_extra={
-            "visible": False,
-        },
-    )
-    heat_exchange: bool = Field(
-        default=False,
-        json_schema_extra={
-            "visible": False,
-        },
-    )
-
-
-class Sink(GraphComponent[VesselComponentData]):
-    METADATA: ClassVar[type[VesselComponentData]] = VesselComponentData
+class Sink(GraphComponent[SinkData]):
+    METADATA: ClassVar[type[SinkData]] = SinkData
     BASEMODE: ClassVar[type[SinkMode]] = SinkMode
     SVG_SCALE: ClassVar[float] = 1.0
 
