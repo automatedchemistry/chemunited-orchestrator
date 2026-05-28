@@ -1,13 +1,27 @@
 import json
 from pathlib import Path
+from typing import Any
+from urllib.parse import quote
 
 from loguru import logger as _logger
+from PyQt5.QtCore import QThread, pyqtSignal
 
+from chemunited.qt.monitoring.execution_api_process import ApiClient
 from chemunited.qt.shared.enums import WindowCategory
 
 from .connectivity import OrchestratorConnectivity
 
 logger = _logger.bind(window=WindowCategory.EXECUTION)
+
+TERMINAL_RUN_STATES = {
+    "completed",
+    "failed",
+    "cancelled",
+    "canceled",
+    "stopped",
+    "finished",
+    "error",
+}
 
 
 def _process_name_from_protocol_key(key: str) -> str | None:
@@ -17,11 +31,188 @@ def _process_name_from_protocol_key(key: str) -> str | None:
     return process_name
 
 
+def _first_mapping_value(data: dict[str, Any], keys: set[str]) -> Any:
+    for key in keys:
+        if key in data:
+            return data[key]
+    for value in data.values():
+        if isinstance(value, dict):
+            nested = _first_mapping_value(value, keys)
+            if nested is not None:
+                return nested
+    return None
+
+
+def _run_state_from_payload(payload: Any) -> str | None:
+    if not isinstance(payload, dict):
+        return None
+
+    value = _first_mapping_value(
+        payload,
+        {"state", "status", "phase", "run_state", "conclusion"},
+    )
+    if value is None and payload.get("is_running") is False:
+        return "finished"
+    return str(value).strip().lower() if value is not None else None
+
+
+def _is_terminal_run_payload(payload: Any) -> bool:
+    state = _run_state_from_payload(payload)
+    return state in TERMINAL_RUN_STATES if state is not None else False
+
+
+def _payload_has_content(payload: Any) -> bool:
+    if payload is None:
+        return False
+    if isinstance(payload, (list, tuple, set, dict)):
+        return bool(payload)
+    return bool(str(payload).strip())
+
+
+def _extract_run_id(payload: Any) -> str | None:
+    if isinstance(payload, dict):
+        value = _first_mapping_value(payload, {"run_id", "id"})
+        return str(value) if value else None
+    return None
+
+
+def _extract_log_filename(payload: Any) -> str | None:
+    if isinstance(payload, str):
+        return payload
+    if isinstance(payload, dict):
+        value = _first_mapping_value(payload, {"filename", "name", "file", "path"})
+        return Path(str(value)).name if value else None
+    return None
+
+
+def _latest_log_filename(payload: Any) -> str | None:
+    if isinstance(payload, list):
+        for item in payload:
+            filename = _extract_log_filename(item)
+            if filename:
+                return filename
+    return _extract_log_filename(payload)
+
+
+def _extract_log_text(payload: Any) -> str:
+    if payload is None:
+        return ""
+    if isinstance(payload, str):
+        return payload
+    if isinstance(payload, dict):
+        value = _first_mapping_value(payload, {"content", "text", "log", "message"})
+        if value is not None:
+            return str(value)
+    return str(payload)
+
+
+def _incremental_text(previous: str, current: str) -> str:
+    if not current or current == previous:
+        return ""
+    if current.startswith(previous):
+        return current[len(previous) :]
+
+    max_overlap = min(len(previous), len(current))
+    for size in range(max_overlap, 0, -1):
+        if previous[-size:] == current[:size]:
+            return current[size:]
+    return current
+
+
+class RunPollingThread(QThread):
+    status_received = pyqtSignal(object)
+    pool_drained = pyqtSignal(object)
+    logs_received = pyqtSignal(str)
+    run_finished = pyqtSignal(str)
+
+    def __init__(
+        self,
+        client: ApiClient,
+        run_id: str,
+        *,
+        interval_ms: int = 1000,
+        log_tail: int = 200,
+        parent=None,
+    ) -> None:
+        super().__init__(parent)
+        self.client = client
+        self.run_id = run_id
+        self.interval_ms = interval_ms
+        self.log_tail = log_tail
+        self._stop_requested = False
+        self._last_log_filename: str | None = None
+        self._last_log_text = ""
+
+    def stop(self) -> None:
+        self._stop_requested = True
+
+    def run(self) -> None:
+        finish_state = "stopped"
+        while not self._stop_requested:
+            try:
+                status_payload = self.client.get(
+                    f"run/{quote(self.run_id)}/status",
+                    timeout=5,
+                )
+                if _payload_has_content(status_payload):
+                    print(f"[run status] {status_payload}")
+                    logger.info("Run {} status: {}", self.run_id, status_payload)
+                    self.status_received.emit(status_payload)
+                    if _is_terminal_run_payload(status_payload):
+                        finish_state = _run_state_from_payload(status_payload) or "finished"
+                        self._poll_pool()
+                        self._poll_logs()
+                        self.run_finished.emit(finish_state)
+                        return
+
+                self._poll_pool()
+                self._poll_logs()
+            except Exception as exc:
+                logger.warning("Run polling failed for {}: {}", self.run_id, exc)
+
+            self.msleep(self.interval_ms)
+
+        self.run_finished.emit(finish_state)
+
+    def _poll_pool(self) -> None:
+        pool_payload = self.client.get("run/pool", timeout=5)
+        if not _payload_has_content(pool_payload):
+            return
+        print(f"[run pool] {pool_payload}")
+        logger.info("Run pool drained: {}", pool_payload)
+        self.pool_drained.emit(pool_payload)
+
+    def _poll_logs(self) -> None:
+        logs_payload = self.client.get("logs/", timeout=5)
+        filename = _latest_log_filename(logs_payload)
+        if not filename:
+            return
+
+        if filename != self._last_log_filename:
+            self._last_log_filename = filename
+            self._last_log_text = ""
+
+        log_payload = self.client.get(
+            f"logs/{quote(filename)}",
+            params={"tail": self.log_tail},
+            timeout=5,
+        )
+        text = _extract_log_text(log_payload)
+        new_text = _incremental_text(self._last_log_text, text).strip("\n")
+        self._last_log_text = text
+        if new_text:
+            self.logs_received.emit(new_text)
+
+
 class OrchestratorExecution(OrchestratorConnectivity):
+    protocol_execution_started = pyqtSignal(str)
+    protocol_execution_finished = pyqtSignal(str)
 
     def __init__(self, parent):
         super().__init__(parent)
         self.project_protocol_script_dir: Path | None = None
+        self.active_run_id: str | None = None
+        self._run_polling_thread: RunPollingThread | None = None
 
     def set_project_protocol_script_dir(self, dir: Path) -> None:
         self.project_protocol_script_dir = dir
@@ -43,37 +234,107 @@ class OrchestratorExecution(OrchestratorConnectivity):
 
     def execute(self) -> bool:
         """
-        Start or stop the execution of the protocol.
-        Return True if the execution was started or keeping to run.
-        Return False if the execution was stopped or failed to start.
+        Start execution of the selected protocol through the workflow run API.
+        Return True only when a run is started successfully.
         """
         if self.parent_ref.status_widget.text() == "Offline":
-            logger.warning("No API running — connect first.")
+            logger.warning("No API running - connect first.")
             return False
         api_process = self.parent_ref.api_process
         if api_process is None:
-            logger.warning("No API running — connect first.")
+            logger.warning("No API running - connect first.")
+            return False
+        if getattr(self, "active_run_id", None) is not None:
+            logger.warning("Protocol execution is already running.")
+            return False
+        if self.project_protocol_script_dir is None:
+            logger.error("No protocol history file selected.")
             return False
 
-        status = api_process.client.get("status")
-        if status.get("is_running"):
-            # It is running, so the user want to stop the current execution.
-            if not api_process.client.post("stop"):
-                logger.error("Failed to stop the current execution.")
-                return True  # Return True because the execution is still running.
-            logger.info("Successfully stopped the current execution.")
-            return False  # Return False because the execution was stopped.
-
-        # It is not running, so the user want to start the current execution.
-
-        event_source = api_process.client.get(
-            endpoint="execute/stream",
-            params={
-                "protocol_hystoric_name": str(self.project_protocol_script_dir),
-            },
+        snapshot_name = self.project_protocol_script_dir.name
+        response = api_process.client.post(
+            "run/",
+            data={"snapshot": snapshot_name, "dry_run": False},
         )
-        if event_source is None:
-            logger.error("Failed to start the current execution.")
-            return False  # Return False because the execution was not started.
+        run_id = _extract_run_id(response)
+        if run_id is None:
+            logger.error("Failed to start protocol execution: {}", response)
+            return False
 
+        self.active_run_id = run_id
+        logger.info("Protocol execution started with run_id={}", run_id)
+        self._emit_signal("protocol_execution_started", run_id)
+        self._start_run_polling(api_process.client, run_id)
         return True
+
+    def stop_execution(self) -> bool:
+        """Cancel the active workflow run through DELETE /run/{run_id}."""
+        api_process = self.parent_ref.api_process
+        if api_process is None:
+            logger.warning("No API running - cannot stop protocol execution.")
+            return False
+
+        run_id = getattr(self, "active_run_id", None)
+        if run_id is None:
+            active_payload = api_process.client.get("run/active")
+            run_id = _extract_run_id(active_payload)
+            if run_id is None:
+                logger.warning("There is nothing running to be stopped.")
+                return False
+            self.active_run_id = run_id
+
+        response = api_process.client.delete(f"run/{quote(run_id)}")
+        if response is None:
+            logger.error("Failed to cancel protocol execution run_id={}", run_id)
+            return False
+        if isinstance(response, dict) and response.get("status_code") == 404:
+            logger.info("Protocol execution run_id={} was already gone.", run_id)
+            self._finish_run("cancelled")
+            return True
+
+        logger.info("Protocol execution cancellation requested for run_id={}", run_id)
+        self._finish_run("cancelled")
+        return True
+
+    def _start_run_polling(self, client: ApiClient, run_id: str) -> None:
+        self._stop_run_polling()
+        thread = RunPollingThread(client, run_id, parent=self)
+        thread.logs_received.connect(self._append_execution_log_text)  # type: ignore[attr-defined]
+        thread.run_finished.connect(self._on_run_polling_finished)  # type: ignore[attr-defined]
+        self._run_polling_thread = thread
+        thread.start()
+
+    def _stop_run_polling(self) -> None:
+        thread = getattr(self, "_run_polling_thread", None)
+        if thread is None:
+            return
+        thread.stop()
+        if thread.isRunning():
+            thread.wait(1500)
+        self._run_polling_thread = None
+
+    def _on_run_polling_finished(self, state: str) -> None:
+        if self.active_run_id is None:
+            return
+        self._finish_run(state)
+
+    def _finish_run(self, state: str) -> None:
+        self.active_run_id = None
+        self._stop_run_polling()
+        logger.info("Protocol execution finished with state={}", state)
+        self._emit_signal("protocol_execution_finished", state)
+
+    def _append_execution_log_text(self, text: str) -> None:
+        frame = getattr(self.parent_ref, "FrameLoggings", None)
+        browser = getattr(frame, "detail_loggins", None)
+        if browser is not None and text.strip():
+            browser.append(text.rstrip())
+
+    def _emit_signal(self, name: str, value: str) -> None:
+        try:
+            signal = getattr(self, name, None)
+            emit = getattr(signal, "emit", None)
+            if emit is not None:
+                emit(value)
+        except RuntimeError:
+            pass

@@ -1,8 +1,6 @@
 from typing import TYPE_CHECKING
 
-from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QAbstractItemView
-from qfluentwidgets import PushButton
 
 from chemunited.qt.pre_run.process_list import ActiveProcessList, AvailableProcessList
 from chemunited.qt.shared.icon import OrchestratorIcon
@@ -29,30 +27,47 @@ class MonitorProcessesWidget(ProcessWidget):
         self.active_list._list_widget.setSelectionMode(QAbstractItemView.NoSelection)
 
         self.main_layout.insertWidget(1, self.active_list, 1)
-        self.execute_btn = PushButton(OrchestratorIcon.PLAY, "Execute", self)
-        self.execute_btn.setToolTip("Execute selected process")
-        self.execute_btn.clicked.connect(self._execute_protocol)  # type: ignore[attr-defined]
-
-        self.main_layout.addWidget(
-            self.execute_btn,
-            0,
-            Qt.AlignHCenter | Qt.AlignBottom,  # type: ignore[attr-defined]
+        self.execute_btn = self.add_bottom_button(
+            "Execute",
+            OrchestratorIcon.PLAY,
+            "Execute selected process",
+            self._execute_protocol,
+        )
+        self.stop_btn = self.add_bottom_button(
+            "Stop",
+            OrchestratorIcon.STOP,
+            "Stop protocol execution",
+            self._stop_protocol,
         )
         self._connect_signals()
 
     def _execute_protocol(self) -> None:
         if self._parent.orchestrator.execute():
-            self.execute_btn.setIcon(OrchestratorIcon.STOP)
-            self.execute_btn.setText("Stop")
-            self.execute_btn.setToolTip("Stop execution")
+            self._set_execution_running(True)
+
+    def _stop_protocol(self) -> None:
+        if self._parent.orchestrator.stop_execution():
+            self._set_execution_running(False)
+
+    def _set_execution_running(self, running: bool) -> None:
+        self.execute_btn.setEnabled(not running)
+        self.stop_btn.setEnabled(True)
+        if running:
+            self.execute_btn.setToolTip("Protocol execution is already running")
+            self.stop_btn.setToolTip("Stop protocol execution")
         else:
-            self.execute_btn.setIcon(OrchestratorIcon.PLAY)
-            self.execute_btn.setText("Execute")
             self.execute_btn.setToolTip("Execute selected process")
+            self.stop_btn.setToolTip("Check for a running protocol and stop it")
 
     def _connect_signals(self) -> None:
         orch = self.parent_ref.orchestrator
         self._list.selection_changed.connect(orch.select_process)  # type: ignore[attr-defined]
+        orch.protocol_execution_started.connect(  # type: ignore[attr-defined]
+            lambda _run_id: self._set_execution_running(True)
+        )
+        orch.protocol_execution_finished.connect(  # type: ignore[attr-defined]
+            lambda _state: self._set_execution_running(False)
+        )
 
     def activate_process(self, process_name: str) -> None:
         item = self.active_list._create_and_add_item(process_name)

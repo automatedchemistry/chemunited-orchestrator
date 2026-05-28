@@ -5,6 +5,8 @@ from types import SimpleNamespace
 
 from chemunited.qt.orchestrator.execution import (
     OrchestratorExecution,
+    RunPollingThread,
+    _incremental_text,
     _process_name_from_protocol_key,
 )
 
@@ -52,3 +54,161 @@ def test_set_project_protocol_script_dir_activates_saved_process_names(
 
     assert protocols_widget.activated == ["clean", "ReactProcess", "my_process"]
     assert selected == ["clean"]
+
+
+class FakeClient:
+    def __init__(self, post_response=None, delete_response=None, get_response=None):
+        self.post_response = post_response
+        self.delete_response = delete_response
+        self.get_response = get_response
+        self.gets: list[str] = []
+        self.posts: list[tuple[str, dict | None]] = []
+        self.deletes: list[str] = []
+
+    def get(self, endpoint: str, params: dict | None = None, timeout: int = 10):
+        self.gets.append(endpoint)
+        return self.get_response
+
+    def post(self, endpoint: str, data: dict | None = None, timeout: int = 10):
+        self.posts.append((endpoint, data))
+        return self.post_response
+
+    def delete(self, endpoint: str, timeout: int = 10):
+        self.deletes.append(endpoint)
+        return self.delete_response
+
+
+def _execution_with_parent(client: FakeClient, *, online: bool = True):
+    execution = OrchestratorExecution.__new__(OrchestratorExecution)
+    execution.parent_ref = SimpleNamespace(
+        status_widget=SimpleNamespace(text=lambda: "Online" if online else "Offline"),
+        api_process=SimpleNamespace(client=client),
+    )
+    execution.active_run_id = None
+    execution._run_polling_thread = None
+    execution._start_run_polling = lambda _client, _run_id: None
+    return execution
+
+
+def test_execute_returns_false_when_offline(tmp_path) -> None:
+    client = FakeClient(post_response={"run_id": "RUN-1"})
+    execution = _execution_with_parent(client, online=False)
+    execution.project_protocol_script_dir = tmp_path / "protocol.json"
+
+    assert execution.execute() is False
+    assert client.posts == []
+
+
+def test_execute_returns_false_without_api(tmp_path) -> None:
+    execution = OrchestratorExecution.__new__(OrchestratorExecution)
+    execution.parent_ref = SimpleNamespace(
+        status_widget=SimpleNamespace(text=lambda: "Online"),
+        api_process=None,
+    )
+    execution.active_run_id = None
+    execution.project_protocol_script_dir = tmp_path / "protocol.json"
+
+    assert execution.execute() is False
+
+
+def test_execute_returns_false_without_protocol_history() -> None:
+    client = FakeClient(post_response={"run_id": "RUN-1"})
+    execution = _execution_with_parent(client)
+    execution.project_protocol_script_dir = None
+
+    assert execution.execute() is False
+    assert client.posts == []
+
+
+def test_execute_starts_run_with_protocol_history_file_name(tmp_path) -> None:
+    client = FakeClient(post_response={"run_id": "RUN-1"})
+    execution = _execution_with_parent(client)
+    execution.project_protocol_script_dir = tmp_path / "protocol.json"
+
+    assert execution.execute() is True
+    assert execution.active_run_id == "RUN-1"
+    assert client.posts == [
+        ("run/", {"snapshot": "protocol.json", "dry_run": False}),
+    ]
+
+
+def test_stop_execution_returns_false_without_active_run() -> None:
+    client = FakeClient(delete_response={"status": "cancelled"}, get_response={"run_id": None})
+    execution = _execution_with_parent(client)
+
+    assert execution.stop_execution() is False
+    assert client.gets == ["run/active"]
+    assert client.deletes == []
+
+
+def test_stop_execution_discovers_active_api_run() -> None:
+    client = FakeClient(
+        delete_response={"status": "cancelled"},
+        get_response={"run_id": "RUN-1"},
+    )
+    execution = _execution_with_parent(client)
+    execution._stop_run_polling = lambda: None
+
+    assert execution.stop_execution() is True
+    assert execution.active_run_id is None
+    assert client.gets == ["run/active"]
+    assert client.deletes == ["run/RUN-1"]
+
+
+def test_stop_execution_cancels_active_run() -> None:
+    client = FakeClient(delete_response={"status": "cancelled"})
+    execution = _execution_with_parent(client)
+    execution.active_run_id = "RUN-1"
+    execution._stop_run_polling = lambda: None
+
+    assert execution.stop_execution() is True
+    assert execution.active_run_id is None
+    assert client.deletes == ["run/RUN-1"]
+
+
+def test_stop_execution_clears_state_when_run_is_already_gone() -> None:
+    client = FakeClient(delete_response={"status_code": 404, "error": "not found"})
+    execution = _execution_with_parent(client)
+    execution.active_run_id = "RUN-1"
+    execution._stop_run_polling = lambda: None
+
+    assert execution.stop_execution() is True
+    assert execution.active_run_id is None
+    assert client.deletes == ["run/RUN-1"]
+
+
+def test_incremental_text_avoids_duplicate_tail_lines() -> None:
+    assert _incremental_text("alpha\n", "alpha\nbeta\n") == "beta\n"
+    assert _incremental_text("alpha\nbeta\n", "beta\ngamma\n") == "gamma\n"
+    assert _incremental_text("same", "same") == ""
+
+
+def test_run_polling_thread_emits_status_pool_logs_and_finished(qtbot) -> None:
+    class PollingClient:
+        def get(self, endpoint: str, params=None, timeout: int = 10):
+            if endpoint == "run/RUN-1/status":
+                return {"state": "completed"}
+            if endpoint == "run/pool":
+                return {"commands": [{"device": "pump"}]}
+            if endpoint == "logs/":
+                return ["run.log"]
+            if endpoint == "logs/run.log":
+                return {"content": "line 1\nline 2\n"}
+            return None
+
+    thread = RunPollingThread(PollingClient(), "RUN-1", interval_ms=1)
+    statuses = []
+    pools = []
+    logs = []
+    thread.status_received.connect(statuses.append)  # type: ignore[attr-defined]
+    thread.pool_drained.connect(pools.append)  # type: ignore[attr-defined]
+    thread.logs_received.connect(logs.append)  # type: ignore[attr-defined]
+
+    with qtbot.waitSignal(thread.run_finished, timeout=2000) as blocker:
+        thread.start()
+    thread.wait(1000)
+
+    assert blocker.args == ["completed"]
+    assert statuses == [{"state": "completed"}]
+    assert pools == [{"commands": [{"device": "pump"}]}]
+    assert logs == ["line 1\nline 2"]

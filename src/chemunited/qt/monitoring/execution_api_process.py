@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 import requests
+from loguru import logger
 from pydantic import (
     AnyHttpUrl,
     BaseModel,
@@ -29,20 +30,52 @@ class ApiClient:
         self.url = url
         self.session = requests.Session()
 
+    def _request(
+        self,
+        method: str,
+        endpoint: str,
+        *,
+        params: dict | None = None,
+        data: dict | None = None,
+        timeout: int = 10,
+    ) -> Any:
+        url = _api_url(self.url, endpoint)
+        try:
+            response = self.session.request(
+                method,
+                url,
+                params=params,
+                json=data,
+                timeout=timeout,
+            )
+            if response.status_code == 204:
+                return {"status": "ok"}
+            response.raise_for_status()
+            if not response.content:
+                return {"status": "ok"}
+            return response.json()
+        except requests.HTTPError as exc:
+            response = exc.response
+            status_code = response.status_code if response is not None else None
+            logger.warning("{} {} failed: {}", method.upper(), url, exc)
+            return {"error": str(exc), "status_code": status_code}
+        except requests.RequestException as exc:
+            logger.warning("{} {} failed: {}", method.upper(), url, exc)
+        except ValueError as exc:
+            logger.warning("{} {} returned invalid JSON: {}", method.upper(), url, exc)
+        return None
+
     def get(self, endpoint: str, params: dict | None = None, timeout: int = 10) -> Any:
-        return self.session.get(
-            _api_url(self.url, endpoint), params=params, timeout=timeout
-        ).json()
+        return self._request("GET", endpoint, params=params, timeout=timeout)
 
     def put(self, endpoint: str, params: dict | None = None, timeout: int = 10) -> Any:
-        return self.session.put(
-            _api_url(self.url, endpoint), params=params, timeout=timeout
-        ).json()
+        return self._request("PUT", endpoint, params=params, timeout=timeout)
 
     def post(self, endpoint: str, data: dict | None = None, timeout: int = 10) -> Any:
-        return self.session.post(
-            _api_url(self.url, endpoint), json=data, timeout=timeout
-        ).json()
+        return self._request("POST", endpoint, data=data, timeout=timeout)
+
+    def delete(self, endpoint: str, timeout: int = 10) -> Any:
+        return self._request("DELETE", endpoint, timeout=timeout)
 
 
 class APIAddress(BaseModel):
