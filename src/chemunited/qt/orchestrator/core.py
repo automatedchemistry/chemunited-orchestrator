@@ -1,3 +1,4 @@
+from asyncio import base_futures
 from typing import TYPE_CHECKING, Any
 
 from PyQt5.QtCore import QObject, Qt
@@ -9,8 +10,8 @@ from chemunited.qt.shared.enums import SetupStepMode, WindowCategory
 from chemunited.qt.shared.logger_queue import LOG_QUEUE
 
 if TYPE_CHECKING:
-    from chemunited.qt.setup import SetupWindow
     from chemunited.qt.monitor import MonitorWindow
+    from chemunited.qt.setup import SetupWindow
 
 
 class OrchestratorCore(QObject):

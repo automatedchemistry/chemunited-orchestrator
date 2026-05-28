@@ -4,7 +4,6 @@ from pydantic import BaseModel
 from PyQt5.QtWidgets import QVBoxLayout
 from qfluentwidgets import BodyLabel
 from qframelesswindow import FramelessDialog
-from typing import Self
 
 from .editor_widget import BaseModeEditorWidget
 

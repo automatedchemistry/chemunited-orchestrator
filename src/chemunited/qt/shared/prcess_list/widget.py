@@ -42,7 +42,7 @@ class ProcessWidget(QFrame):
     def add_bottom_button(self, name: str, icon, tip: str, callable) -> PushButton:
         btn = PushButton(icon, name, self)
         btn.setToolTip(tip)
-        btn.clicked.connect(callable) # type: ignore[attr-defined]
+        btn.clicked.connect(callable)  # type: ignore[attr-defined]
         count = self._btn_layout.count()
         self._btn_layout.insertWidget(count - 1, btn, alignment=Qt.AlignCenter)  # type: ignore[attr-defined]
         return btn
@@ -97,7 +97,7 @@ if __name__ == "__main__":
         ),
     )
 
-    widget.selection_changed.connect(lambda name: print(f"Selected: {name!r}")) # type: ignore[attr-defined]
+    widget.selection_changed.connect(lambda name: print(f"Selected: {name!r}"))  # type: ignore[attr-defined]
     widget.process_renamed.connect(  # type: ignore[attr-defined]
         lambda old, new: print(f"Renamed: {old!r} -> {new!r}")
     )

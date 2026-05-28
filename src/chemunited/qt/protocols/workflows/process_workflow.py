@@ -4,11 +4,11 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Iterator
 
+from chemunited_workflow import WorkflowNodeSpec
 from networkx import DiGraph
 from pydantic import ConfigDict
 
 from chemunited.qt.shared.enums.protocols_enum import ProtocolBlock
-from chemunited.workflow.models import WorkflowNodeSpec
 
 from .exceptions import WorkflowRuleViolation
 from .workflow_rules import default_terminal_block_specs
@@ -108,16 +108,16 @@ class ConnectionData:
         spec_kwargs = f"\n{indent}        condition={self.condition!r},"
         if self.label:
             spec_kwargs += f"\n{indent}        label={self.label!r},"
+        edge_kwargs = ""
         if self.inflection_points:
-            spec_kwargs += (
-                f"\n{indent}        inflection_points={self.inflection_points!r},"
-            )
+            edge_kwargs = f"{indent}    inflection_points={self.inflection_points!r},\n"
         return (
             f"{indent}graph.add_edge(\n"
             f'{indent}    "{start}",\n'
             f'{indent}    "{end}",\n'
             f"{indent}    **WorkflowEdgeSpec({spec_kwargs}\n"
             f"{indent}    ).model_dump(exclude_none=True),\n"
+            f"{edge_kwargs}"
             f"{indent})"
         )
 

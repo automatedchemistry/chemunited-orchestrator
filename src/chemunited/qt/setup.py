@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import override
+from typing import Any, override
 
 from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtGui import QKeySequence
@@ -315,7 +315,8 @@ class SetupWindow(MainWindowBase):
     def save(self) -> None:
         current_widget = self.SegmentWindow.stackedWidget.currentWidget()
         classification = getattr(current_widget, "classification", SetupStepMode.DESIGN)
-        comment = self._SAVE_COMMENTS.get(classification, "Save: project updated")
+        step = self._setup_step_mode(classification)
+        comment = self._SAVE_COMMENTS.get(step, "Save: project updated")
         self.orchestrator.save(comment)
         self.update_project_actions()
 
@@ -409,5 +410,14 @@ class SetupWindow(MainWindowBase):
     def _on_current_widget_changed(self, _route_key: str) -> None:
         current_widget = self.SegmentWindow.stackedWidget.currentWidget()
         classification = getattr(current_widget, "classification", None)
+        step = self._setup_step_mode(classification)
+        if step is not None:
+            self.orchestrator.switch_to_step(step)
+
+    @staticmethod
+    def _setup_step_mode(classification: Any) -> SetupStepMode | None:
         if isinstance(classification, SetupStepMode):
-            self.orchestrator.switch_to_step(classification)
+            return classification
+        if isinstance(classification, str):
+            return SetupStepMode.__members__.get(classification)
+        return None

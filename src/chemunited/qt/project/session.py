@@ -24,7 +24,6 @@ from .storage import (
     save_process,
     sync_process,
     unpack,
-    write_api_script,
 )
 
 if TYPE_CHECKING:
@@ -65,7 +64,6 @@ class ProjectSession:
             description=description,
         )
         self.manifest.save(self.working_dir)
-        write_api_script(self.working_dir)
         if init_git:
             self.git = GitManager.init(self.working_dir)
 

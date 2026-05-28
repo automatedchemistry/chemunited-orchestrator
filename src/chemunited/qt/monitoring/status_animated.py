@@ -10,7 +10,6 @@ from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication, QVBoxLayout, QWidget
 from qfluentwidgets import BodyLabel, ToolButton
 
-
 ONLINE_FRAMES = (
     "onlineA.svg",
     "onlineB.svg",
@@ -66,7 +65,9 @@ class AnimatedOnlineIcon(QObject):
         if QFile.exists(resource_path):
             return resource_path
 
-        icons_dir = Path(__file__).resolve().parents[1] / "shared" / "resources" / "icons"
+        icons_dir = (
+            Path(__file__).resolve().parents[1] / "shared" / "resources" / "icons"
+        )
         file_path = icons_dir / file_name
         if not file_path.exists():
             raise FileNotFoundError(file_path)

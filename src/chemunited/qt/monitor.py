@@ -1,6 +1,6 @@
+from loguru import logger as _logger
 from PyQt5.QtCore import QUrl
 from PyQt5.QtGui import QDesktopServices
-from loguru import logger as _logger
 from qfluentwidgets import NavigationItemPosition
 
 from .monitoring.execution_api_process import ApiProcess
@@ -91,7 +91,7 @@ class MonitorWindow(MainWindowBase):
             text="API link",
             onClick=self._open_api_link,
             tooltip="Show API link",
-            position=NavigationItemPosition.BOTTOM
+            position=NavigationItemPosition.BOTTOM,
         )
 
         self.addSubInterface(
@@ -117,7 +117,9 @@ class MonitorWindow(MainWindowBase):
             if working_dir is None:
                 logger.error("No project loaded — cannot start API.")
                 return
-            self.api_process = ApiProcess(working_dir, self.FrameLoggings.detail_loggins, self)
+            self.api_process = ApiProcess(
+                working_dir, self.FrameLoggings.detail_loggins, self
+            )
             self.api_process.api_alive.connect(self._on_api_ping)
             if not self.api_process.start_api():
                 self.api_process = None

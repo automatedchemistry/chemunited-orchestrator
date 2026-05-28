@@ -4,20 +4,14 @@
 from __future__ import annotations
 
 import networkx as nx
-from pydantic import BaseModel, ConfigDict, Field
-from typing import TYPE_CHECKING, Annotated
+from pydantic import BaseModel, ConfigDict
 
-from chemunited.core.utils import ChemQuantityValidator, ChemUnitQuantity
-
-from chemunited.workflow import (
+from chemunited_workflow import (
     NodeExecutionContext,
     Process,
     WorkflowEdgeSpec,
     WorkflowNodeSpec,
 )
-
-if TYPE_CHECKING:
-    from .main_parameters import MainParameter
 
 
 # ── Process configuration ──────────────────────────────────────────────────────

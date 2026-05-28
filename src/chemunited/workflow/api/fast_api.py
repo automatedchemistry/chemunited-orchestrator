@@ -12,14 +12,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
-
-class _NoPingFilter(logging.Filter):
-    def filter(self, record: logging.LogRecord) -> bool:
-        return "/ping" not in record.getMessage()
-
-
-logging.getLogger("uvicorn.access").addFilter(_NoPingFilter())
-
 from fastapi import APIRouter, HTTPException  # type: ignore[import-not-found]
 from loguru import logger
 from pydantic import BaseModel, ValidationError
@@ -33,6 +25,14 @@ from chemunited.workflow.process import Process
 # --- API WorkflowObserver ---
 
 PORT = 3162
+
+
+class _NoPingFilter(logging.Filter):
+    def filter(self, record: logging.LogRecord) -> bool:
+        return "/ping" not in record.getMessage()
+
+
+logging.getLogger("uvicorn.access").addFilter(_NoPingFilter())
 
 # ── Shared helpers ─────────────────────────────────────────────────────────────
 
@@ -583,9 +583,7 @@ class RunController:
         *(The sequence loop exits cleanly when `POST /stop` is called between processes.)*
         """
         protocol_hystoric_file = (
-            self._protocol_hystoric_file_from_body(body)
-            if body is not None
-            else None
+            self._protocol_hystoric_file_from_body(body) if body is not None else None
         )
         logger.info(
             "POST /execute sequence_length={} protocol_hystoric_file={}",
@@ -837,9 +835,7 @@ class RunController:
         protocol_hystoric_file: str | None,
     ) -> Path:
         raw_stem = (
-            Path(protocol_hystoric_file).stem
-            if protocol_hystoric_file
-            else "execution"
+            Path(protocol_hystoric_file).stem if protocol_hystoric_file else "execution"
         )
         protocol_stem = re.sub(r"[^A-Za-z0-9_-]+", "_", raw_stem).strip("_-")
         if not protocol_stem:

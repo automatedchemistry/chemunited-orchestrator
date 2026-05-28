@@ -17,7 +17,6 @@ my_experiment/                       ← working directory (source of truth)
 ├── pyproject.toml                   ← makes the project pip-installable
 ├── __init__.py                      ← top-level package marker
 ├── main.py                          ← entry point: run the configured sequence
-├── api.py                           ← FastAPI server: configure and inspect before running
 │
 ├── .git/                            ← version history (never packed)
 ├── .gitignore                       ← excludes __pycache__, connectivity, etc.
@@ -88,23 +87,23 @@ if __name__ == "__main__":
 ```
 
 The user edits `MAIN_PARAMETER` fields and `PROCESSES_INSTANCES` directly,
-or uses the API server (`api.py`) to configure them before running.
+or starts the installed API server for the project before running.
 
 ---
 
-### `api.py`
+### FastAPI server
 
-A FastAPI server that exposes HTTP endpoints for configuring and inspecting
-the protocol before execution. Generated once at project creation and
-portable — it can be run from any location:
+The FastAPI server exposes HTTP endpoints for configuring and inspecting
+the protocol before execution. It is provided by `chemunited-workflow`;
+projects no longer contain a generated `api.py` file.
 
 ```bash
-python path/to/my_experiment/api.py
+.venv\Scripts\chemunited-workflow.exe path/to/my_experiment --fastapi --port 3116
 ```
 
-Opening `http://localhost:3162` redirects to the interactive Swagger docs.
+Opening `http://localhost:3116` redirects to the interactive Swagger docs.
 
-The server is built on three reusable controllers from `chemunited.workflow.api`:
+The server provides reusable workflow API endpoints:
 
 | Controller | Prefix | Purpose |
 |---|---|---|
@@ -328,7 +327,6 @@ my_experiment.chemunited  (ZIP)
 ├── pyproject.toml
 ├── __init__.py
 ├── main.py
-├── api.py
 ├── draw/setup.py
 ├── draw/platform.svg
 ├── protocols/__init__.py
@@ -364,7 +362,6 @@ Provide project name and working directory
 Create working directory
 Write manifest.json, pyproject.toml, __init__.py
 Write main.py  (from template)
-Write api.py   (from template, imports chemunited.workflow.api controllers)
 Write protocols/__init__.py  (empty PROCESSES and CONFIGS dicts)
 Write protocols/main_parameters.py  (from template)
 Create protocols_hystoric/  (JSON protocol script snapshots)

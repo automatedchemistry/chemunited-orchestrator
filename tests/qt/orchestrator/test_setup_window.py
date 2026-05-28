@@ -19,6 +19,7 @@ from chemunited.qt.mcp import McpServiceResult
 from chemunited.qt.project.recent import RecentProjectsStore
 from chemunited.qt.project.session import ProjectSession
 from chemunited.qt.setup import SetupWindow
+from chemunited.qt.shared.enums import SetupStepMode
 
 
 class TestAddComponent:
@@ -153,6 +154,13 @@ class TestAddComponent:
         assert not window.mcp_project_action.isEnabled()
         assert window.save_project_action.shortcut() == QKeySequence.Save
 
+    def test_setup_step_mode_accepts_enum_and_name_strings(self):
+        assert (
+            SetupWindow._setup_step_mode(SetupStepMode.DESIGN) == SetupStepMode.DESIGN
+        )
+        assert SetupWindow._setup_step_mode("PROTOCOLS") == SetupStepMode.PROTOCOLS
+        assert SetupWindow._setup_step_mode("not-a-step") is None
+
     def test_mcp_project_action_is_disabled_without_project(self, window: SetupWindow):
         window.update_project_actions()
 
@@ -278,9 +286,7 @@ class TestAddComponent:
         assert "PumpB" in window.orchestrator.components
         assert window.orchestrator._session.source_file == source_file
 
-    def test_failed_refresh_keeps_current_project(
-        self, window: SetupWindow, tmp_path
-    ):
+    def test_failed_refresh_keeps_current_project(self, window: SetupWindow, tmp_path):
         session = ProjectSession()
         session.new(name="demo", location=tmp_path, init_git=False)
         session.save_draw(
@@ -511,7 +517,7 @@ from __future__ import annotations
 import networkx as nx
 from pydantic import BaseModel, ConfigDict
 
-from chemunited.workflow import (
+from chemunited_workflow import (
     NodeExecutionContext,
     Process,
     WorkflowEdgeSpec,

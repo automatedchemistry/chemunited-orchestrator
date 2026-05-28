@@ -8,7 +8,7 @@ import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-from chemunited.qt.project.writer import render_python_script, write_python_script
+from chemunited.qt.project.writer import render_python_script
 from chemunited.qt.protocols.workflows import ProcessWorkflow
 from chemunited.qt.protocols.workflows.naming import (
     process_class_name,
@@ -56,17 +56,6 @@ def ensure_log_dir(working_dir: Path) -> Path:
 
 
 # ── API script ────────────────────────────────────────────────────────────────
-
-
-def write_api_script(working_dir: Path, port: int = 3116) -> None:
-    write_python_script(
-        working_dir / "api.py",
-        script="api",
-        overwrite={
-            "---PROJECT_NAME---": working_dir.name,
-            "---PORT---": str(port),
-        },
-    )
 
 
 # ── Draw (unchanged) ───────────────────────────────────────────────────────────

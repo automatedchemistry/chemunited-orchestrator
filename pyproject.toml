@@ -20,6 +20,7 @@ classifiers = [
     "License :: OSI Approved :: MIT License"
 ]
 dependencies = [
+    "chemunited-workflow @ git+https://github.com/automatedchemistry/chemunited-workflow.git",
     "appdirs",
     "PyQt-Fluent-Widgets",
     "networkx",
@@ -106,7 +107,11 @@ module = [
     "PyQt5",
     "PyQt5.*",
     "black",
+    "chemunited_workflow",
+    "chemunited_workflow.*",
     "git",
+    "mcp",
+    "mcp.*",
     "qfluentwidgets",
     "qframelesswindow",
     "networkx",
@@ -121,6 +126,8 @@ module = [
     "rich",
     "rich.*",
     "rich_click",
+    "uvicorn",
+    "uvicorn.*",
     "zeroconf",
     "pydantic_pint",
 ]

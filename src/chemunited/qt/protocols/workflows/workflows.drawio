@@ -70,7 +70,7 @@
         <mxCell id="43" value="project_file.py&#xa;_workflow_from_process_class()&#xa;Loads process classes, calls build_workflow(), and rebuilds ProcessWorkflow" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;fontSize=13;" vertex="1" parent="1">
           <mxGeometry x="800" y="650" width="300" height="110" as="geometry" />
         </mxCell>
-        <mxCell id="44" value="chemunited.workflow (outside this module)&#xa;compiler.py + executor.py + process.py&#xa;Consumes the authored graph at runtime" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eeeeee;strokeColor=#666666;fontSize=13;" vertex="1" parent="1">
+        <mxCell id="44" value="chemunited_workflow (outside this module)&#xa;compiler.py + executor.py + process.py&#xa;Consumes the authored graph at runtime" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#eeeeee;strokeColor=#666666;fontSize=13;" vertex="1" parent="1">
           <mxGeometry x="1150" y="650" width="370" height="110" as="geometry" />
         </mxCell>
         <mxCell id="45" value="Current caveat&#xa;CommandList drag/drop creates COMMAND blocks, but command and component payload is currently emitted as a signal hook rather than stored in BlockData itself." style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;fontSize=13;" vertex="1" parent="1">

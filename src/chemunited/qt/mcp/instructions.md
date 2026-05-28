@@ -176,12 +176,9 @@ A process consists of:
 from __future__ import annotations
 import networkx as nx
 from pydantic import BaseModel, ConfigDict
-from typing import TYPE_CHECKING
-from chemunited.workflow import (
+from chemunited_workflow import (
     NodeExecutionContext, Process, WorkflowEdgeSpec, WorkflowNodeSpec,
 )
-if TYPE_CHECKING:
-    from .main_parameters import MainParameter
 
 class ProcessConfig(BaseModel):
     model_config = ConfigDict(frozen=True)

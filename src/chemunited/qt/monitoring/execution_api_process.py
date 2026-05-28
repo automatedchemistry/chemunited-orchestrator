@@ -1,44 +1,49 @@
 import json
 import sys
-import requests
-
 from pathlib import Path
 from typing import Any
+
+import requests
 from pydantic import (
+    AnyHttpUrl,
     BaseModel,
     Field,
-    AnyHttpUrl,
-    field_validator,
     ValidationInfo,
+    field_validator,
 )
-
 from PyQt5.QtCore import QObject, QProcess, QTimer, QUrl, pyqtSignal
 from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkRequest
-
 from qfluentwidgets import TextBrowser
 
 from chemunited.qt.shared.widgets.base_mode_editor.dialog import BaseModeDialog
 from chemunited.qt.utils.flowchem_listener import access_url
-from chemunited.workflow.api import PORT
 
-BASE_URL = f"http://localhost:{PORT}"
+DEFAULT_API_PORT = 3116
+BASE_URL = f"http://localhost:{DEFAULT_API_PORT}"
 
 
 class ApiClient:
     """Basic client for the execution API."""
+
     def __init__(self, url: AnyHttpUrl):
         self.url = url
         self.session = requests.Session()
-    
+
     def get(self, endpoint: str, params: dict | None = None, timeout: int = 10) -> Any:
-        return self.session.get(f"{self.url}/{endpoint}", params=params, timeout=timeout).json()
+        return self.session.get(
+            _api_url(self.url, endpoint), params=params, timeout=timeout
+        ).json()
 
     def put(self, endpoint: str, params: dict | None = None, timeout: int = 10) -> Any:
-        return self.session.put(f"{self.url}/{endpoint}", params=params, timeout=timeout).json()
+        return self.session.put(
+            _api_url(self.url, endpoint), params=params, timeout=timeout
+        ).json()
 
     def post(self, endpoint: str, data: dict | None = None, timeout: int = 10) -> Any:
-        return self.session.post(f"{self.url}/{endpoint}", json=data, timeout=timeout).json()
-        
+        return self.session.post(
+            _api_url(self.url, endpoint), json=data, timeout=timeout
+        ).json()
+
 
 class APIAddress(BaseModel):
     already_running: bool = Field(
@@ -79,11 +84,12 @@ class ApiProcess(QObject):
 
     def __init__(self, working_dir: Path, log_browser: TextBrowser, parent=None):
         super().__init__(parent)
+        self._working_dir = working_dir
         self._parent_widget = parent
         self._log_browser = log_browser
         self._process = QProcess(self)
         self._nam = QNetworkAccessManager(self)
-        self.client = ApiClient(AnyHttpUrl(BASE_URL)) # default value
+        self.client = ApiClient(AnyHttpUrl(BASE_URL))  # default value
 
         self._ping_timer = QTimer(self)
         self._ping_timer.setInterval(5000)
@@ -95,7 +101,7 @@ class ApiProcess(QObject):
         self._process.started.connect(self._on_started)
 
     @property
-    def url(self) -> str:       
+    def url(self) -> str:
         return str(self.client.url)
 
     def start_api(self) -> bool:
@@ -106,12 +112,15 @@ class ApiProcess(QObject):
             self.client.url = getattr(result, "address")
         else:
             return False
-            
+
         if getattr(result, "already_running"):
             self._ping_timer.start()
-            QTimer.singleShot(2000, self._fetch_log_address)
+            QTimer.singleShot(2000, self._fetch_logs)
         else:
-            self._process.start(sys.executable, ["api.py"])
+            self._process.start(
+                _workflow_cli_executable(),
+                [str(self._working_dir), "--fastapi", "--port", str(DEFAULT_API_PORT)],
+            )
         return True
 
     def stop_api(self):
@@ -133,11 +142,11 @@ class ApiProcess(QObject):
         self._log_browser.append(text.rstrip())
 
     def _on_started(self):
-        QTimer.singleShot(2000, self._fetch_log_address)
+        QTimer.singleShot(2000, self._fetch_logs)
         self._ping_timer.start()
 
     def _ping(self):
-        req = QNetworkRequest(QUrl(f"{self.client.url}/ping"))
+        req = QNetworkRequest(QUrl(_api_url(self.client.url, "processes")))
         reply = self._nam.get(req)
         if reply is not None:
             reply.finished.connect(lambda: self._on_ping_reply(reply))
@@ -146,24 +155,34 @@ class ApiProcess(QObject):
         alive = reply.error() == reply.NetworkError.NoError  # type: ignore[attr-defined]
         self.api_alive.emit(alive)
 
-    def _fetch_log_address(self):
-        req = QNetworkRequest(QUrl(f"{self.client.url}/log_address"))
+    def _fetch_logs(self):
+        req = QNetworkRequest(QUrl(_api_url(self.client.url, "logs/")))
         reply = self._nam.get(req)
         if reply is not None:
-            reply.finished.connect(lambda: self._on_log_address_reply(reply))
+            reply.finished.connect(lambda: self._on_logs_reply(reply))
 
-    def _on_log_address_reply(self, reply):
+    def _on_logs_reply(self, reply):
         raw = reply.readAll().data().decode(errors="replace")
         try:
-            path = Path(json.loads(raw))
-            self._read_log_file(path)
+            logs = json.loads(raw)
+            if logs:
+                self._append(f"Available API logs: {logs}")
         except Exception as e:
-            self._append(f"[log_address error] {e}: {raw}")
+            self._append(f"[logs error] {e}: {raw}")
 
-    def _read_log_file(self, path: Path):
-        if path.exists():
-            self._append(f"\n--- Log file: {path} ---\n")
-            self._append(path.read_text(errors="replace"))
-        else:
-            self._append(f"[log file not found] {path}")
 
+def _workflow_cli_executable() -> str:
+    executable = Path(sys.executable)
+    name = (
+        "chemunited-workflow.exe"
+        if sys.platform.startswith("win")
+        else "chemunited-workflow"
+    )
+    candidate = executable.parent / name
+    if candidate.exists():
+        return str(candidate)
+    return name
+
+
+def _api_url(base_url: AnyHttpUrl, endpoint: str) -> str:
+    return f"{str(base_url).rstrip('/')}/{endpoint.lstrip('/')}"

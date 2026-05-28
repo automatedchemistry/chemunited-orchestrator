@@ -232,7 +232,9 @@ class OrchestratorProjectFile(OrchestratorExecution):
     def _run_refresh_current_project(self) -> None:
         if self.refresh_current_project():
             QTimer.singleShot(0, self._sync_project_views_after_refresh)
-        update_project_actions = getattr(self.parent_ref, "update_project_actions", None)
+        update_project_actions = getattr(
+            self.parent_ref, "update_project_actions", None
+        )
         if callable(update_project_actions):
             update_project_actions()
 
@@ -458,6 +460,8 @@ class OrchestratorProjectFile(OrchestratorExecution):
     @staticmethod
     def _same_path(left: Path | None, right: object) -> bool:
         if left is None or right is None:
+            return False
+        if not isinstance(right, (str, Path)):
             return False
         try:
             right_path = Path(right)

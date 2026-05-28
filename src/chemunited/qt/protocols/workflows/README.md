@@ -27,7 +27,7 @@ This module does not do:
 - scheduling runtime iterations
 - hardware interaction
 
-Those runtime concerns live in the separate `chemunited.workflow` package. The workflows editor only produces and restores the authored graph that runtime code consumes later.
+Those runtime concerns live in the separate `chemunited_workflow` package. The workflows editor only produces and restores the authored graph that runtime code consumes later.
 
 ## Core Mental Model
 
@@ -439,10 +439,10 @@ The output of this editor is a Python `build_workflow()` method that returns an 
 
 That graph is later consumed by the runtime package:
 
-- `chemunited.workflow.models`
-- `chemunited.workflow.compiler`
-- `chemunited.workflow.executor`
-- `chemunited.workflow.process`
+- `chemunited_workflow.models`
+- `chemunited_workflow.compiler`
+- `chemunited_workflow.executor`
+- `chemunited_workflow.process`
 
 So the editor is upstream of compilation and execution, but it is not the executor itself.
 

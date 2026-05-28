@@ -1,3 +1,5 @@
+from typing import TYPE_CHECKING
+
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QAbstractItemView
 from qfluentwidgets import PushButton
@@ -5,8 +7,6 @@ from qfluentwidgets import PushButton
 from chemunited.qt.pre_run.process_list import ActiveProcessList, AvailableProcessList
 from chemunited.qt.shared.icon import OrchestratorIcon
 from chemunited.qt.shared.prcess_list import ProcessWidget
-from typing import TYPE_CHECKING
-
 
 if TYPE_CHECKING:
     from chemunited.qt.monitor import MonitorWindow

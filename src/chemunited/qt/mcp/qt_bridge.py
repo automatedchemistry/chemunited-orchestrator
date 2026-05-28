@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import threading
 from collections.abc import Callable
-from typing import Any
+from typing import Any, cast
 
 from PyQt5.QtCore import QObject, Qt, QThread, pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import QApplication
@@ -34,7 +34,10 @@ class QtMainThreadBridge(QObject):
 
     @pyqtSlot(object)
     def _run_call(self, payload: object) -> None:
-        func, done, state = payload
+        func, done, state = cast(
+            tuple[Callable[[], Any], threading.Event, dict[str, Any]],
+            payload,
+        )
         try:
             state["result"] = func()
         except BaseException as exc:

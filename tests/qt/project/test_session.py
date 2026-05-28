@@ -76,12 +76,14 @@ def test_protocols_hystoric_directory_is_created_and_exported(tmp_path):
     history_file = history_dir / "react.json"
 
     assert history_dir.is_dir()
+    assert not (working_dir / "api.py").exists()
 
     history_file.write_text('{"process": "react"}\n', encoding="utf-8")
     archive_path = session.export_chemunited(tmp_path / "demo")
 
     with zipfile.ZipFile(archive_path, "r") as zf:
         assert "protocols_hystoric/react.json" in zf.namelist()
+        assert "api.py" not in zf.namelist()
 
 
 def test_log_directory_is_created_ignored_and_not_exported(tmp_path):
@@ -107,13 +109,14 @@ def test_process_load_parameters_uses_process_file_stem(tmp_path):
     protocols_dir.mkdir(parents=True)
     process_path = protocols_dir / "react.py"
     process_path.write_text(
-        dedent("""
+        dedent(
+            """
             from __future__ import annotations
 
             import networkx as nx
             from pydantic import BaseModel, ConfigDict
 
-            from chemunited.workflow import Process
+            from chemunited_workflow import Process
 
 
             class ProcessConfig(BaseModel):
@@ -125,7 +128,9 @@ def test_process_load_parameters_uses_process_file_stem(tmp_path):
             class CustomProcess(Process[ProcessConfig]):
                 def build_workflow(self) -> nx.DiGraph:
                     return nx.DiGraph()
-            """).strip() + "\n",
+            """
+        ).strip()
+        + "\n",
         encoding="utf-8",
     )
     history_dir = working_dir / "protocols_hystoric"
@@ -148,7 +153,7 @@ def test_process_load_parameters_uses_process_file_stem(tmp_path):
     )
     legacy_process = process_cls(config_cls())
 
-    assert legacy_process.load_parameters(hystoric_file="legacy.json") is False
+    assert legacy_process.load_parameters(historic_file="legacy.json") is False
     assert legacy_process.config.amount == 0
 
 
@@ -168,6 +173,8 @@ def test_sync_process_creates_new_process_file(tmp_path):
 
     content = (tmp_path / "demo" / "protocols" / "React.py").read_text(encoding="utf-8")
     assert synced is True
+    assert "from chemunited_workflow import (" in content
+    assert "from chemunited.workflow import" not in content
     assert "class ProcessConfig(BaseModel):" in content
     assert "class CustomProcess(Process[ProcessConfig]):" in content
     assert "# Process name:" not in content
@@ -193,13 +200,14 @@ def test_sync_process_updates_existing_file_in_place(tmp_path):
     process_path = working_dir / "protocols" / "React.py"
     process_path.parent.mkdir(parents=True, exist_ok=True)
     process_path.write_text(
-        dedent("""
+        dedent(
+            """
             from __future__ import annotations
 
             import networkx as nx
             from pydantic import BaseModel, ConfigDict
 
-            from chemunited.workflow import (
+            from chemunited_workflow import (
                 NodeExecutionContext,
                 Process,
                 WorkflowEdgeSpec,
@@ -299,7 +307,9 @@ def test_sync_process_updates_existing_file_in_place(tmp_path):
                 def finish(self, ctx: NodeExecutionContext) -> bool:
                     ctx.runtime.status_message = "Custom finish"
                     return True
-            """).strip() + "\n",
+            """
+        ).strip()
+        + "\n",
         encoding="utf-8",
     )
 
@@ -430,13 +440,14 @@ def test_restore_workflow_infers_legacy_block_types_when_not_explicitly_saved(tm
     session.new(name="demo", location=tmp_path, init_git=False)
     session.save_process(
         "React",
-        dedent("""
+        dedent(
+            """
             from __future__ import annotations
 
             import networkx as nx
             from pydantic import BaseModel, ConfigDict
 
-            from chemunited.workflow import (
+            from chemunited_workflow import (
                 NodeExecutionContext,
                 Process,
                 WorkflowEdgeSpec,
@@ -552,7 +563,9 @@ def test_restore_workflow_infers_legacy_block_types_when_not_explicitly_saved(tm
 
                 def finish(self, ctx: NodeExecutionContext) -> bool:
                     return True
-            """).strip() + "\n",
+            """
+        ).strip()
+        + "\n",
     )
 
     restored_classes = session.load_process_classes()

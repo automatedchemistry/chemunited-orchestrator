@@ -20,7 +20,9 @@ DEFAULT_PORT = 8765
 MAX_PORT = 8799
 MCP_PATH = "/mcp"
 
-_MCP_INSTRUCTIONS = (Path(__file__).parent / "instructions.md").read_text(encoding="utf-8")
+_MCP_INSTRUCTIONS = (Path(__file__).parent / "instructions.md").read_text(
+    encoding="utf-8"
+)
 
 
 @dataclass(slots=True)
