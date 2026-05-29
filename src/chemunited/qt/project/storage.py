@@ -4,9 +4,13 @@ import ast
 import importlib
 import importlib.util
 import json
+import sys
+import types
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
+
+from loguru import logger
 
 from chemunited.qt.project.writer import render_python_script
 from chemunited.qt.protocols.workflows import ProcessWorkflow
@@ -14,6 +18,7 @@ from chemunited.qt.protocols.workflows.naming import (
     process_class_name,
     process_config_class_name,
 )
+from chemunited.qt.shared.enums import WindowCategory
 from chemunited.qt.utils.files import load_attribute
 
 _PACK_EXCLUDE = {".git", ".gitignore", ".chemunited_session", "__pycache__", "log"}
@@ -263,39 +268,56 @@ def list_processes(working_dir: Path) -> list[str]:
 
 def load_process_classes(working_dir: Path) -> dict:
     """
-    Dynamically import protocols/__init__.py and return the PROCESSES dict.
-    Returns {} if the package cannot be loaded.
-    """
-    import sys
+    Dynamically import process files and return the loadable process classes.
 
-    init_path = working_dir / "protocols" / "__init__.py"
-    if not init_path.exists():
+    Invalid process files are skipped so one broken protocol does not hide every
+    other protocol in the project.
+    """
+    protocols_dir = working_dir / "protocols"
+    if not protocols_dir.exists():
         return {}
 
     pkg_name = f"_chemunited_protocols_{abs(hash(working_dir.resolve()))}"
     importlib.invalidate_caches()
     _clear_imported_protocol_modules(pkg_name)
+    package = types.ModuleType(pkg_name)
+    package.__path__ = [str(protocols_dir)]  # type: ignore[attr-defined]
+    sys.modules[pkg_name] = package
+    processes = {}
     try:
-        spec = importlib.util.spec_from_file_location(
-            pkg_name,
-            init_path,
-            submodule_search_locations=[str(working_dir / "protocols")],
-        )
-        if spec is None or spec.loader is None:
-            return {}
-        module = importlib.util.module_from_spec(spec)
-        sys.modules[pkg_name] = module
-        spec.loader.exec_module(module)
-        return getattr(module, "PROCESSES", {})
-    except Exception:
-        return {}
+        for path in sorted(protocols_dir.glob("*.py")):
+            if path.stem in _PROTOCOLS_SKIP:
+                continue
+            process_cls = _load_process_class(pkg_name, path)
+            if process_cls is not None:
+                processes[path.stem] = process_cls
+        return processes
     finally:
         _clear_imported_protocol_modules(pkg_name)
 
 
-def _clear_imported_protocol_modules(package_name: str) -> None:
-    import sys
+def _load_process_class(package_name: str, path: Path):
+    module_name = f"{package_name}.{path.stem}"
+    try:
+        spec = importlib.util.spec_from_file_location(module_name, path)
+        if spec is None or spec.loader is None:
+            raise ImportError(f"Could not load module spec for {path}")
+        module = importlib.util.module_from_spec(spec)
+        sys.modules[module_name] = module
+        spec.loader.exec_module(module)
+        return getattr(module, process_class_name(path.stem))
+    except Exception as exc:
+        sys.modules.pop(module_name, None)
+        logger.bind(window=WindowCategory.SETUP).warning(
+            "Could not load protocol {!r} from {}: {}",
+            path.stem,
+            path.name,
+            exc,
+        )
+        return None
 
+
+def _clear_imported_protocol_modules(package_name: str) -> None:
     prefix = f"{package_name}."
     for module_name in list(sys.modules):
         if module_name == package_name or module_name.startswith(prefix):

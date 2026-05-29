@@ -2,11 +2,14 @@ from __future__ import annotations
 
 from textwrap import dedent
 
+from loguru import logger
+
 from chemunited.qt.project.storage import load_draw, load_process_classes, save_draw
 from chemunited.qt.protocols.workflows.naming import (
     process_class_name,
     process_config_class_name,
 )
+from chemunited.qt.shared.enums import WindowCategory
 
 
 def test_save_draw_writes_python_setup(tmp_path):
@@ -113,8 +116,7 @@ def test_load_process_classes_reloads_external_process_file_changes(tmp_path):
     protocols_dir = tmp_path / "protocols"
     protocols_dir.mkdir()
     (protocols_dir / "__init__.py").write_text(
-        dedent(
-            """
+        dedent("""
             from .React import (
                 CustomProcess as ReactProcess,
                 ProcessConfig as ReactConfig,
@@ -127,9 +129,7 @@ def test_load_process_classes_reloads_external_process_file_changes(tmp_path):
             CONFIGS = {
                 "React": ReactConfig,
             }
-            """
-        ).strip()
-        + "\n",
+            """).strip() + "\n",
         encoding="utf-8",
     )
     process_path = protocols_dir / "React.py"
@@ -151,10 +151,35 @@ def test_load_process_classes_reloads_external_process_file_changes(tmp_path):
     assert "first_node" not in second_graph.nodes
 
 
+def test_load_process_classes_skips_invalid_process_file(tmp_path):
+    records = []
+    sink_id = logger.add(
+        lambda message: records.append(message.record), level="WARNING"
+    )
+    protocols_dir = tmp_path / "protocols"
+    protocols_dir.mkdir()
+    (protocols_dir / "Good.py").write_text(
+        _process_content("good_node"), encoding="utf-8"
+    )
+    (protocols_dir / "Broken.py").write_text(
+        "class CustomProcess(\n",
+        encoding="utf-8",
+    )
+
+    try:
+        classes = load_process_classes(tmp_path)
+    finally:
+        logger.remove(sink_id)
+
+    assert list(classes) == ["Good"]
+    assert len(records) == 1
+    assert records[0]["extra"]["window"] == WindowCategory.SETUP
+    assert "Could not load protocol 'Broken'" in records[0]["message"]
+    assert "Broken.py" in records[0]["message"]
+
+
 def _process_content(node_id: str) -> str:
-    return (
-        dedent(
-            f"""
+    return dedent(f"""
             from __future__ import annotations
 
             import networkx as nx
@@ -172,7 +197,4 @@ def _process_content(node_id: str) -> str:
                     graph = nx.DiGraph()
                     graph.add_node({node_id!r})
                     return graph
-            """
-        ).strip()
-        + "\n"
-    )
+            """).strip() + "\n"
