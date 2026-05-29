@@ -1,8 +1,12 @@
 from __future__ import annotations
 
+import re
 from pathlib import Path
 
 import git  # type: ignore[import-not-found]  # gitpython
+from loguru import logger
+
+from chemunited.qt.shared.enums import WindowCategory
 
 _GITIGNORE = """\
 # Python
@@ -113,10 +117,14 @@ class GitManager:
 
     def snapshot(self, message: str) -> bool:
         """Stage everything and commit. Returns False if nothing to commit."""
-        if not self._repo.is_dirty(untracked_files=True):
+        try:
+            if not self._repo.is_dirty(untracked_files=True):
+                return False
+            self._repo.git.add(A=True)
+            self._repo.index.commit(message)
+        except git.GitCommandError as exc:
+            self._warn_commit_skipped("manual snapshot", exc)
             return False
-        self._repo.git.add(A=True)
-        self._repo.index.commit(message)
         return True
 
     # ── Status (for GUI display) ───────────────────────────────────────────────
@@ -166,11 +174,52 @@ class GitManager:
 
     def _auto_commit(self, paths: list[str], message: str) -> None:
         """Stage specific paths and commit only if they changed."""
-        root = Path(self._repo.working_dir)
-        tracked = set(self._repo.git.ls_files("--", *paths).splitlines())
-        stageable = [p for p in paths if (root / p).exists() or p in tracked]
-        if not stageable:
-            return
-        self._repo.git.add("--", *stageable)
-        if self._repo.is_dirty(index=True):
-            self._repo.index.commit(message)
+        try:
+            root = Path(self._repo.working_dir)
+            tracked = set(self._repo.git.ls_files("--", *paths).splitlines())
+            stageable = [p for p in paths if (root / p).exists() or p in tracked]
+            if not stageable:
+                return
+            self._repo.git.add("--", *stageable)
+            if self._repo.is_dirty(index=True):
+                self._repo.index.commit(message)
+        except git.GitCommandError as exc:
+            self._warn_commit_skipped(message, exc)
+
+    def _warn_commit_skipped(self, action: str, exc: git.GitCommandError) -> None:
+        logger.bind(window=WindowCategory.SETUP).warning(
+            "Git commit skipped for {!r}: {}",
+            action,
+            self._git_error_reason(exc),
+        )
+
+    @staticmethod
+    def _git_error_reason(exc: git.GitCommandError) -> str:
+        output = "\n".join(
+            part.strip()
+            for part in (getattr(exc, "stderr", ""), getattr(exc, "stdout", ""))
+            if part and part.strip()
+        ).replace("\r\n", "\n")
+
+        if not output:
+            output = str(exc).strip()
+
+        if "detected dubious ownership" in output:
+            safe_directory_hint = re.search(
+                r"git config --global --add safe\.directory\s+(.+)",
+                output,
+            )
+            reason = (
+                "Git does not trust this repository because it is owned by another "
+                "user or group."
+            )
+            if safe_directory_hint is not None:
+                return (
+                    f"{reason} To trust it, run: "
+                    f"git config --global --add safe.directory "
+                    f"{safe_directory_hint.group(1).strip()}"
+                )
+            return reason
+
+        lines = [line.strip() for line in output.splitlines() if line.strip()]
+        return " ".join(lines[:4]) if lines else "Unknown Git error."
