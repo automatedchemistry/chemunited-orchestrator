@@ -4,6 +4,7 @@ from pathlib import Path
 from typing import Any
 
 import requests
+from chemunited_workflow.api.schemas import RunRequest
 from loguru import logger
 from pydantic import (
     AnyHttpUrl,
@@ -120,6 +121,17 @@ class APIDialog(BaseModeDialog):
 
     def _on_already_running_changed(self, checked: bool):
         self.editor_widget._cards["address"].setEnabled(checked)
+
+
+class RunRequestDialog(BaseModeDialog):
+    def __init__(self, snapshot: str, parent=None):
+        super().__init__(
+            model_class=RunRequest,
+            instance=RunRequest(snapshot=snapshot),
+            field_overrides={"snapshot": {"editable": False}},
+            parent=parent,
+            title="Run Configuration",
+        )
 
 
 class ApiProcess(QObject):

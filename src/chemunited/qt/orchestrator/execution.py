@@ -3,13 +3,13 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
-from chemunited_workflow.api.schemas import LogMeta, RunRequest, RunStatus
+from chemunited_workflow.api.schemas import LogMeta, RunStatus
 from chemunited_workflow.enums import NodeState
 from loguru import logger as _logger
 from pydantic import BaseModel, ConfigDict, TypeAdapter, ValidationError
 from PyQt5.QtCore import QThread, pyqtSignal
 
-from chemunited.qt.monitoring.execution_api_process import ApiClient
+from chemunited.qt.monitoring.execution_api_process import ApiClient, RunRequestDialog
 from chemunited.qt.shared.enums import WindowCategory
 
 from .connectivity import OrchestratorConnectivity
@@ -493,10 +493,15 @@ class OrchestratorExecution(OrchestratorConnectivity):
             return False
 
         snapshot_name = self.project_protocol_script_dir.name
-        request = RunRequest(snapshot=snapshot_name, dry_run=False)
+        dialog = RunRequestDialog(snapshot=snapshot_name, parent=self.parent_ref)
+        if dialog.exec() != dialog.Accepted:
+            return False
+        run_request = dialog.get_result_instance()
+        if run_request is None:
+            return False
         response = api_process.client.post(
             "run/",
-            data=request.model_dump(),
+            data=run_request.model_dump(),
         )
         started = _validate_model(RunStartedResponse, response, "POST run/")
         if started is None:
@@ -604,10 +609,51 @@ class OrchestratorExecution(OrchestratorConnectivity):
         self._finish_run(state)
 
     def _finish_run(self, state: str) -> None:
+        run_id = self.active_run_id
         self.active_run_id = None
         self._stop_run_polling()
         logger.info("Protocol execution finished with state={}", state)
+        if run_id is not None:
+            self._apply_run_report(run_id)
         self._emit_signal("protocol_execution_finished", state)
+
+    def _apply_run_report(self, run_id: str) -> None:
+        api_process = getattr(self.parent_ref, "api_process", None)
+        if api_process is None:
+            return
+        payload = api_process.client.get(f"run/{quote(run_id)}/report", timeout=10)
+        if not isinstance(payload, dict):
+            return
+        results = payload.get("results")
+        if not isinstance(results, list):
+            return
+        logger.info(
+            "Applying run report for run_id={}: {} process result(s)",
+            run_id,
+            len(results),
+        )
+        for i, result in enumerate(results):
+            if i >= len(self._active_process_order):
+                break
+            active_name = self._active_process_order[i]
+            node_states: dict[str, str] = result.get("node_state", {})
+            for node_name, state_str in node_states.items():
+                try:
+                    node_state = NodeState(state_str)
+                except ValueError:
+                    try:
+                        node_state = NodeState[state_str]
+                    except KeyError:
+                        logger.debug(
+                            "Unknown node state in report for {}: {}", node_name, state_str
+                        )
+                        continue
+                self._emit_node_status(active_name, node_name, node_state)
+            states = list(node_states.values())
+            process_status = (
+                NodeState.FAILED if any(s == "FAILED" for s in states) else NodeState.COMPLETED
+            )
+            self._emit_process_status(active_name, process_status)
 
     def _append_execution_log_text(self, text: str) -> None:
         frame = getattr(self.parent_ref, "FrameLoggings", None)
