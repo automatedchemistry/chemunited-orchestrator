@@ -1,6 +1,7 @@
 from pathlib import Path
 from types import SimpleNamespace
 
+from chemunited_workflow.enums import NodeState
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QWidget
 from pytestqt.qtbot import QtBot
@@ -42,6 +43,53 @@ def _make_graph(
     qtbot.addWidget(host)
     qtbot.addWidget(graph)
     return graph
+
+
+def test_workflow_graph_sets_node_status_and_clears_progress(
+    tmp_path: Path,
+    qtbot: QtBot,
+) -> None:
+    workflow = ProcessWorkflow("React")
+    workflow.add_block(
+        node_id="script_1",
+        method="script_1",
+        position=(100.0, 100.0),
+    )
+    graph = _make_graph(working_dir=tmp_path, workflow=workflow, qtbot=qtbot)
+    node = graph._nodes["script_1"]
+
+    graph.set_node_status("script_1", NodeState.RUNNING)
+
+    assert node.progress_proxy is not None
+    assert node.progress_bar is not None
+    assert node.progress_proxy.isVisible()
+    assert node.progress_bar._state == NodeState.RUNNING
+    assert node.progress_bar.is_running()
+
+    graph.set_node_status("script_1", NodeState.COMPLETED)
+    assert node.progress_proxy.isVisible()
+    assert node.progress_bar._state == NodeState.COMPLETED
+    assert node.progress_bar.value() == 100
+    assert not node.progress_bar.is_running()
+
+    graph.set_node_status("script_1", NodeState.FAILED)
+    assert node.progress_proxy.isVisible()
+    assert node.progress_bar._state == NodeState.FAILED
+    assert node.progress_bar.value() == 100
+
+    graph.set_node_status("missing", NodeState.RUNNING)
+
+    graph.set_node_status("script_1", NodeState.NOT_VISITED)
+    assert not node.progress_proxy.isVisible()
+    assert node.progress_bar._state == NodeState.NOT_VISITED
+
+    graph.set_node_status("script_1", NodeState.RUNNING)
+    assert node.progress_proxy.isVisible()
+    assert node.progress_bar._state == NodeState.RUNNING
+
+    graph.clear_progress()
+    assert not node.progress_proxy.isVisible()
+    assert node.progress_bar._state == NodeState.NOT_VISITED
 
 
 def test_double_click_opens_script_editor_for_valid_process_file(

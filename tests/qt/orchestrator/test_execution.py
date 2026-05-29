@@ -4,12 +4,16 @@ import json
 from types import SimpleNamespace
 
 from chemunited_workflow.api.schemas import RunStatus
+from chemunited_workflow.enums import NodeState
 from loguru import logger
 
 from chemunited.qt.orchestrator.execution import (
     OrchestratorExecution,
+    RunEventStreamThread,
     RunPollingThread,
+    StreamProcessStatusTracker,
     _incremental_text,
+    _parse_sse_data_line,
     _process_name_from_protocol_key,
     _validate_model,
 )
@@ -58,6 +62,16 @@ def test_set_project_protocol_script_dir_activates_saved_process_names(
     execution.set_project_protocol_script_dir(path)
 
     assert protocols_widget.activated == ["clean", "ReactProcess", "my_process"]
+    assert execution._active_process_order == [
+        "clean_0",
+        "ReactProcess_1",
+        "my_process_2",
+    ]
+    assert execution._active_process_names == {
+        "clean_0": "clean",
+        "ReactProcess_1": "ReactProcess",
+        "my_process_2": "my_process",
+    }
     assert selected == ["clean"]
 
 
@@ -197,11 +211,13 @@ def test_incremental_text_avoids_duplicate_tail_lines() -> None:
     assert _incremental_text("same", "same") == ""
 
 
-def test_run_polling_thread_emits_status_pool_logs_and_finished(qtbot) -> None:
+def test_run_polling_thread_keeps_pool_and_logs_without_status_endpoint(qtbot) -> None:
     class PollingClient:
+        def __init__(self) -> None:
+            self.endpoints: list[str] = []
+
         def get(self, endpoint: str, params=None, timeout: int = 10):
-            if endpoint == "run/RUN-1/status":
-                return {"run_id": "RUN-1", "state": "finished", "events": []}
+            self.endpoints.append(endpoint)
             if endpoint == "run/pool":
                 return [{"device": "pump"}]
             if endpoint == "logs/":
@@ -216,22 +232,218 @@ def test_run_polling_thread_emits_status_pool_logs_and_finished(qtbot) -> None:
                 return {"content": "line 1\nline 2\n"}
             return None
 
-    thread = RunPollingThread(PollingClient(), "RUN-1", interval_ms=1)
-    statuses = []
+    client = PollingClient()
+    thread = RunPollingThread(client, "RUN-1", interval_ms=1)
     pools = []
     logs = []
-    thread.status_received.connect(statuses.append)  # type: ignore[attr-defined]
     thread.pool_drained.connect(pools.append)  # type: ignore[attr-defined]
     thread.logs_received.connect(logs.append)  # type: ignore[attr-defined]
+
+    try:
+        thread.start()
+        qtbot.waitUntil(lambda: bool(pools and logs), timeout=2000)
+    finally:
+        thread.stop()
+        thread.wait(1000)
+
+    assert "run/RUN-1/status" not in client.endpoints
+    assert pools[0] == [{"device": "pump"}]
+    assert logs == ["line 1\nline 2"]
+
+
+def test_parse_sse_data_line_accepts_frames_and_ignores_bad_input() -> None:
+    assert _parse_sse_data_line("") is None
+    assert _parse_sse_data_line("event: ping") is None
+    assert _parse_sse_data_line('data: {"state": "failed"}') == {"state": "failed"}
+    assert _parse_sse_data_line(b'data: {"event_type": "EXECUTION_STARTED"}') == {
+        "event_type": "EXECUTION_STARTED"
+    }
+    assert _parse_sse_data_line("data: {bad json}") is None
+
+
+def test_stream_status_tracker_maps_order_and_terminal_states() -> None:
+    tracker = StreamProcessStatusTracker(["Mixing_0", "SystemClean_1"])
+
+    assert tracker.apply({"event_type": "EXECUTION_STARTED"}) == (
+        [("Mixing_0", NodeState.RUNNING)],
+        None,
+    )
+    assert tracker.apply({"event_type": "EXECUTION_FINISHED"}) == (
+        [("Mixing_0", NodeState.COMPLETED)],
+        None,
+    )
+    assert tracker.apply({"event_type": "EXECUTION_STARTED"}) == (
+        [("SystemClean_1", NodeState.RUNNING)],
+        None,
+    )
+    assert tracker.apply({"state": "FAILED", "node_key": "script_1"}) == (
+        [("SystemClean_1", NodeState.FAILED)],
+        None,
+    )
+    assert tracker.apply({"event_type": "EXECUTION_FINISHED"}) == (
+        [("SystemClean_1", NodeState.FAILED)],
+        None,
+    )
+    assert tracker.apply({"state": "failed"}) == (
+        [("SystemClean_1", NodeState.FAILED)],
+        "failed",
+    )
+
+
+def test_stream_status_tracker_maps_cancelled_running_process_to_inactive() -> None:
+    tracker = StreamProcessStatusTracker(["Mixing_0"])
+
+    tracker.apply({"event_type": "EXECUTION_STARTED"})
+
+    assert tracker.apply({"state": "cancelled"}) == (
+        [("Mixing_0", NodeState.INACTIVE)],
+        "cancelled",
+    )
+
+
+def test_run_event_stream_thread_emits_statuses_from_sse(qtbot) -> None:
+    class Response:
+        def __init__(self, lines) -> None:
+            self.lines = lines
+            self.closed = False
+
+        def iter_lines(self, chunk_size: int = 512, decode_unicode: bool = False):
+            assert chunk_size == 1
+            yield from self.lines
+
+        def close(self) -> None:
+            self.closed = True
+
+    class StreamClient:
+        def __init__(self) -> None:
+            self.response = Response(
+                [
+                    'data: {"event_type": "EXECUTION_STARTED"}',
+                    "",
+                    'data: {"event_type": "EXECUTION_FINISHED"}',
+                    'data: {"event_type": "EXECUTION_STARTED"}',
+                    'data: {"event_type": "NODE_RUNNING", "node_key": ["script_1", 0], "state": "RUNNING"}',
+                    'data: {"event_type": "NODE_FAILED", "node_key": ["script_1", 0], "state": "FAILED"}',
+                    'data: {"event_type": "EXECUTION_FINISHED"}',
+                    'data: {"state": "failed"}',
+                ]
+            )
+            self.streams: list[str] = []
+
+        def stream(self, endpoint: str, timeout=10):
+            self.streams.append(endpoint)
+            return self.response
+
+    client = StreamClient()
+    statuses = []
+    node_statuses = []
+    thread = RunEventStreamThread(
+        client,
+        "RUN-1",
+        ["Mixing_0", "SystemClean_1"],
+    )
+    thread.process_status_received.connect(  # type: ignore[attr-defined]
+        lambda active_name, status: statuses.append((active_name, status))
+    )
+    thread.node_status_received.connect(  # type: ignore[attr-defined]
+        lambda active_name, node_key, status: node_statuses.append(
+            (active_name, node_key, status)
+        )
+    )
 
     with qtbot.waitSignal(thread.run_finished, timeout=2000) as blocker:
         thread.start()
     thread.wait(1000)
 
-    assert blocker.args == ["finished"]
-    assert statuses == [{"run_id": "RUN-1", "state": "finished", "events": []}]
-    assert pools == [[{"device": "pump"}]]
-    assert logs == ["line 1\nline 2"]
+    assert blocker.args == ["failed"]
+    assert client.streams == ["run/RUN-1/stream"]
+    assert statuses == [
+        ("Mixing_0", NodeState.RUNNING),
+        ("Mixing_0", NodeState.COMPLETED),
+        ("SystemClean_1", NodeState.RUNNING),
+        ("SystemClean_1", NodeState.FAILED),
+        ("SystemClean_1", NodeState.FAILED),
+        ("SystemClean_1", NodeState.FAILED),
+    ]
+    assert node_statuses == [
+        ("SystemClean_1", "script_1", NodeState.RUNNING),
+        ("SystemClean_1", "script_1", NodeState.FAILED),
+    ]
+
+
+def test_run_event_stream_thread_ignores_invalid_node_status_frames(qtbot) -> None:
+    class Response:
+        def iter_lines(self, chunk_size: int = 512, decode_unicode: bool = False):
+            assert chunk_size == 1
+            yield 'data: {"event_type": "EXECUTION_STARTED"}'
+            yield 'data: {"event_type": "NODE_RUNNING", "state": "RUNNING"}'
+            yield 'data: {"event_type": "NODE_RUNNING", "node_key": "script_1", "state": "UNKNOWN"}'
+            yield 'data: {"event_type": "NODE_RUNNING", "node_key": ["script_2", 0], "state": "WAITING"}'
+            yield 'data: {"state": "finished"}'
+
+        def close(self) -> None:
+            pass
+
+    class StreamClient:
+        def stream(self, endpoint: str, timeout=10):
+            return Response()
+
+    node_statuses = []
+    thread = RunEventStreamThread(StreamClient(), "RUN-1", ["Mixing_0"])
+    thread.node_status_received.connect(  # type: ignore[attr-defined]
+        lambda active_name, node_key, status: node_statuses.append(
+            (active_name, node_key, status)
+        )
+    )
+
+    with qtbot.waitSignal(thread.run_finished, timeout=2000):
+        thread.start()
+    thread.wait(1000)
+
+    assert node_statuses == [("Mixing_0", "script_2", NodeState.WAITING)]
+
+
+def test_orchestrator_execution_updates_workflow_node_status_by_active_key() -> None:
+    class Workflow:
+        def __init__(self) -> None:
+            self.cleared = False
+
+        def clear_progress(self) -> None:
+            self.cleared = True
+
+    class WorkflowsWidget:
+        def __init__(self) -> None:
+            self.workflow = Workflow()
+            self.selected: list[str] = []
+            self.updates: list[tuple[str, str, NodeState]] = []
+
+        def __getitem__(self, process_name: str):
+            if process_name == "Mixing":
+                return self.workflow
+            return None
+
+        def set_node_status(
+            self,
+            process_name: str,
+            node_name: str,
+            status: NodeState,
+        ) -> None:
+            self.updates.append((process_name, node_name, status))
+
+        def select_process(self, process_name: str) -> None:
+            self.selected.append(process_name)
+
+    workflows_widget = WorkflowsWidget()
+    execution = OrchestratorExecution.__new__(OrchestratorExecution)
+    execution.parent_ref = SimpleNamespace(workflows_protocol=workflows_widget)
+    execution._active_process_names = {"Mixing_0": "Mixing"}
+
+    execution._on_process_status_received("Mixing_0", NodeState.RUNNING)
+    execution._on_node_status_received("Mixing_0", "script_1", NodeState.COMPLETED)
+
+    assert workflows_widget.selected == ["Mixing"]
+    assert workflows_widget.workflow.cleared is True
+    assert workflows_widget.updates == [("Mixing", "script_1", NodeState.COMPLETED)]
 
 
 def test_schema_validation_logs_unexpected_api_payload() -> None:

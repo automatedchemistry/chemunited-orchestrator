@@ -68,6 +68,16 @@ class ApiClient:
     def get(self, endpoint: str, params: dict | None = None, timeout: int = 10) -> Any:
         return self._request("GET", endpoint, params=params, timeout=timeout)
 
+    def stream(self, endpoint: str, timeout: int | tuple[float, float | None] = 10):
+        url = _api_url(self.url, endpoint)
+        try:
+            response = self.session.get(url, stream=True, timeout=timeout)
+            response.raise_for_status()
+            return response
+        except requests.RequestException as exc:
+            logger.warning("GET {} stream failed: {}", url, exc)
+            raise
+
     def put(self, endpoint: str, params: dict | None = None, timeout: int = 10) -> Any:
         return self._request("PUT", endpoint, params=params, timeout=timeout)
 

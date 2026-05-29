@@ -11,12 +11,13 @@ from PyQt5.QtWidgets import (
     QGraphicsProxyWidget,
     QGraphicsTextItem,
 )
-from qfluentwidgets import IndeterminateProgressBar, isDarkTheme
+from qfluentwidgets import isDarkTheme
 
 from chemunited.qt.shared.enums.protocols_enum import ProtocolBlock
 from chemunited.qt.shared.icon import OrchestratorIcon
 
 from .access_point import WorkflowAccessPoints
+from .status_bar import WorkflowStatusBar
 from .style import WorkflowColorStyle
 
 
@@ -81,7 +82,7 @@ class WorkflowNode(QGraphicsItemGroup):
         self.title_item = QGraphicsTextItem()
         self.subtitle_item = QGraphicsTextItem()
         self.progress_proxy: QGraphicsProxyWidget | None = None
-        self.progress_bar: IndeterminateProgressBar | None = None
+        self.progress_bar: WorkflowStatusBar | None = None
         self.input_ports: WorkflowAccessPoints | None = None
         self.output_ports: WorkflowAccessPoints | None = None
         self.top_ports: WorkflowAccessPoints | None = None
@@ -157,12 +158,10 @@ class WorkflowNode(QGraphicsItemGroup):
     def _build_progress_bar(self, width: int):
         if self.is_terminal:
             return
-        self.progress_bar = IndeterminateProgressBar()
-        self.progress_bar.setFixedWidth(max(64, width - 28))
-        self.progress_bar.setFixedHeight(6)
-        self.progress_bar.stop()
+        self.progress_bar = WorkflowStatusBar(max(64, width - 28))
         self.progress_proxy = QGraphicsProxyWidget(self)
         self.progress_proxy.setWidget(self.progress_bar)
+        self.progress_proxy.setZValue(20)
         self.progress_proxy.setVisible(False)
 
     def _build(self):
@@ -311,17 +310,22 @@ class WorkflowNode(QGraphicsItemGroup):
     def is_protected(self) -> bool:
         return self.protected
 
-    def start_progress(self):
+    def set_status(self, status) -> None:
         if self.progress_bar is None or self.progress_proxy is None:
             return
-        self.progress_proxy.setVisible(True)
-        self.progress_bar.start()
+        visible = self.progress_bar.set_status(status)
+        self.progress_bar.setVisible(visible)
+        self.progress_proxy.setVisible(visible)
+        self.progress_bar.update()
+        self.progress_proxy.update()
+        self.update()
 
-    def stop_progress(self):
-        if self.progress_bar is None or self.progress_proxy is None:
+        scene = self.scene()
+        if scene is None:
             return
-        self.progress_bar.stop()
-        self.progress_proxy.setVisible(False)
+        scene.update(self.sceneBoundingRect())
+        for view in scene.views():
+            view.viewport().update()
 
     def itemChange(self, change, value):
         if change == QGraphicsItem.GraphicsItemChange.ItemSelectedHasChanged:

@@ -6,7 +6,9 @@ from functools import partial
 from pathlib import Path
 from typing import override
 
+from chemunited_workflow.enums import NodeState
 from loguru import logger
+from PyQt5 import sip
 from PyQt5.QtCore import QPointF, QRectF, Qt
 from PyQt5.QtGui import QColor, QPainter, QPen
 from PyQt5.QtWidgets import QFrame, QGraphicsItem, QGraphicsView
@@ -368,6 +370,11 @@ class WorkflowGraph(GraphCore):
         self._bind_controller()
         self.build_from_model()
 
+    @override
+    def closeEvent(self, event):
+        self._close_auxiliary_windows()
+        super().closeEvent(event)
+
     @property
     def model(self):
         return self.controller.model
@@ -482,8 +489,7 @@ class WorkflowGraph(GraphCore):
             self._script_editor is None
             or self._script_editor.editor.path != script_path
         ):
-            if self._script_editor is not None:
-                self._script_editor.close()
+            self._dispose_auxiliary_window("_script_editor")
             self._script_editor = ProcessScriptEditorWindow(
                 path=script_path,
                 class_name=class_name,
@@ -496,6 +502,25 @@ class WorkflowGraph(GraphCore):
         self._script_editor.show()
         self._script_editor.raise_()
         self._script_editor.activateWindow()
+
+    def _close_auxiliary_windows(self) -> None:
+        self._dispose_auxiliary_window("_script_editor")
+        self._dispose_auxiliary_window("_parameters_editor")
+        self._parameters_editor_target = None
+
+    def _dispose_auxiliary_window(self, attr_name: str) -> None:
+        window = getattr(self, attr_name, None)
+        if window is None:
+            return
+
+        setattr(self, attr_name, None)
+        try:
+            if sip.isdeleted(window):
+                return
+            window.close()
+            window.deleteLater()
+        except RuntimeError:
+            return
 
     def _resolve_command_signature_class(
         self,
@@ -1008,21 +1033,20 @@ class WorkflowGraph(GraphCore):
         except WorkflowRuleViolation:
             return
 
-    def start_progress(self, node_name: str):
+    def set_node_status(self, node_name: str, status) -> None:
         node = self._nodes.get(node_name)
         if node is None:
             return
-        node.start_progress()
-
-    def stop_progress(self, node_name: str):
-        node = self._nodes.get(node_name)
-        if node is None:
-            return
-        node.stop_progress()
+        node.set_status(status)
 
     def clear_progress(self):
         for node in self._nodes.values():
-            node.stop_progress()
+            node.set_status(NodeState.NOT_VISITED)
+
+    def finalize_running_nodes(self, state: NodeState) -> None:
+        for node in self._nodes.values():
+            if node.progress_bar is not None and node.progress_bar.is_running():
+                node.set_status(state)
 
     def clear_workflow(self):
         self._clear_selected_port()
@@ -1136,8 +1160,7 @@ class WorkflowGraph(GraphCore):
             script_path,
             class_name,
         ):
-            self._parameters_editor.close()
-            self._parameters_editor = None
+            self._dispose_auxiliary_window("_parameters_editor")
             self._parameters_editor_target = None
 
         if self._parameters_editor is None:
@@ -1148,15 +1171,8 @@ class WorkflowGraph(GraphCore):
             )
             self._parameters_editor_target = (script_path, class_name)
 
-        if self._script_editor is not None:
-            self._script_editor.close()
+        self._dispose_auxiliary_window("_script_editor")
 
         self._parameters_editor.show()
         self._parameters_editor.raise_()
         self._parameters_editor.activateWindow()
-
-    def __del__(self):
-        if self._script_editor is not None:
-            self._script_editor.close()
-        if self._parameters_editor is not None:
-            self._parameters_editor.close()

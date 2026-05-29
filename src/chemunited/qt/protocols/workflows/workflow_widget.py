@@ -141,6 +141,18 @@ class WorkflowsWidget(QWidget):
         for workflow in self.workflows.values():
             workflow.clear_progress()
 
+    def set_node_status(self, process_name: str, node_name: str, status) -> None:
+        workflow = self.workflows.get(process_name)
+        if workflow is None:
+            return
+        workflow.set_node_status(node_name, status)
+
+    def finalize_running_nodes(self, process_name: str, state) -> None:
+        workflow = self.workflows.get(process_name)
+        if workflow is None:
+            return
+        workflow.finalize_running_nodes(state)
+
 
 if __name__ == "__main__":
     """Example"""

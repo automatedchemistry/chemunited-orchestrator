@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
+from chemunited_workflow.enums import NodeState
 from loguru import logger
 from pydantic import BaseModel, ValidationError
 from PyQt5.QtCore import Qt, pyqtSignal
@@ -105,8 +106,40 @@ class ActiveProcessList(ProcessList):
                     self._remove_row(i)
                     break
 
-        for name in data_keys - list_names:
+        for name in self._data:
+            if name in list_names:
+                continue
             self._create_and_add_item(name)
+
+    def set_processes(self, processes: list[tuple[str, str]]) -> None:
+        self._data.clear()
+        self._data.update(processes)
+        while self._list_widget.count():
+            self._remove_row(0)
+        self.sync()
+
+    def process_item(self, active_name: str) -> ProcessItem | None:
+        for i in range(self._list_widget.count()):
+            list_item = self._list_widget.item(i)
+            if list_item and list_item.data(Qt.UserRole) == active_name:  # type: ignore[attr-defined]
+                widget = self._list_widget.itemWidget(list_item)
+                if isinstance(widget, ProcessItem):
+                    return widget
+        return None
+
+    def set_process_status(self, active_name: str, status) -> bool:
+        item = self.process_item(active_name)
+        if item is None:
+            return False
+        item.set_status(status)
+        return True
+
+    def reset_statuses(self, status=NodeState.NOT_VISITED) -> None:
+        for i in range(self._list_widget.count()):
+            list_item = self._list_widget.item(i)
+            widget = self._list_widget.itemWidget(list_item)
+            if isinstance(widget, ProcessItem):
+                widget.set_status(status)
 
     def _create_and_add_item(self, name: str) -> ProcessItem:
         process_name = self._data.get(name, name)

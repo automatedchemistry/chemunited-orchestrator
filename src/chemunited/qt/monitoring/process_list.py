@@ -1,5 +1,6 @@
 from typing import TYPE_CHECKING
 
+from chemunited_workflow.enums import NodeState
 from PyQt5.QtWidgets import QAbstractItemView
 
 from chemunited.qt.pre_run.process_list import ActiveProcessList, AvailableProcessList
@@ -34,7 +35,7 @@ class MonitorProcessesWidget(ProcessWidget):
             self._execute_protocol,
         )
         self.stop_btn = self.add_bottom_button(
-            "Stop",
+            "Stop Protocol",
             OrchestratorIcon.STOP,
             "Stop protocol execution",
             self._stop_protocol,
@@ -68,8 +69,33 @@ class MonitorProcessesWidget(ProcessWidget):
         orch.protocol_execution_finished.connect(  # type: ignore[attr-defined]
             lambda _state: self._set_execution_running(False)
         )
+        if hasattr(orch, "process_status_changed"):
+            orch.process_status_changed.connect(self._on_process_status_changed)  # type: ignore[attr-defined]
 
-    def activate_process(self, process_name: str) -> None:
-        item = self.active_list._create_and_add_item(process_name)
+    def set_active_processes(self, processes: list[tuple[str, str]]) -> None:
+        self.active_list.set_processes(processes)
+        self.active_list.reset_statuses()
+        for i in range(self.active_list._list_widget.count()):
+            list_item = self.active_list._list_widget.item(i)
+            item = self.active_list._list_widget.itemWidget(list_item)
+            if hasattr(item, "_menu_button"):
+                item._menu_button.hide()  # type: ignore[attr-defined]
+
+    def activate_process(
+        self, active_name: str, process_name: str | None = None
+    ) -> None:
+        self.active_list._data[active_name] = process_name or active_name
+        item = self.active_list.process_item(active_name)
+        if item is None:
+            item = self.active_list._create_and_add_item(active_name)
+        else:
+            item.set_name(process_name or active_name)
         if hasattr(item, "_menu_button"):
-            item._menu_button.hide()  # type: ignore
+            item._menu_button.hide()  # type: ignore[attr-defined]
+        item.set_status(NodeState.NOT_VISITED)
+
+    def reset_process_statuses(self) -> None:
+        self.active_list.reset_statuses()
+
+    def _on_process_status_changed(self, active_name: str, status) -> None:
+        self.active_list.set_process_status(active_name, status)
