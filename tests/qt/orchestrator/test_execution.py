@@ -3,12 +3,17 @@ from __future__ import annotations
 import json
 from types import SimpleNamespace
 
+from chemunited_workflow.api.schemas import RunStatus
+from loguru import logger
+
 from chemunited.qt.orchestrator.execution import (
     OrchestratorExecution,
     RunPollingThread,
     _incremental_text,
     _process_name_from_protocol_key,
+    _validate_model,
 )
+from chemunited.qt.shared.enums import WindowCategory
 
 
 def test_process_name_from_protocol_key_uses_file_stem() -> None:
@@ -128,12 +133,21 @@ def test_execute_starts_run_with_protocol_history_file_name(tmp_path) -> None:
     assert execution.execute() is True
     assert execution.active_run_id == "RUN-1"
     assert client.posts == [
-        ("run/", {"snapshot": "protocol.json", "dry_run": False}),
+        (
+            "run/",
+            {
+                "snapshot": "protocol.json",
+                "dry_run": False,
+                "timeout_commands": "10 s",
+            },
+        ),
     ]
 
 
 def test_stop_execution_returns_false_without_active_run() -> None:
-    client = FakeClient(delete_response={"status": "cancelled"}, get_response={"run_id": None})
+    client = FakeClient(
+        delete_response={"status": "cancelled"}, get_response={"run_id": None}
+    )
     execution = _execution_with_parent(client)
 
     assert execution.stop_execution() is False
@@ -187,11 +201,17 @@ def test_run_polling_thread_emits_status_pool_logs_and_finished(qtbot) -> None:
     class PollingClient:
         def get(self, endpoint: str, params=None, timeout: int = 10):
             if endpoint == "run/RUN-1/status":
-                return {"state": "completed"}
+                return {"run_id": "RUN-1", "state": "finished", "events": []}
             if endpoint == "run/pool":
-                return {"commands": [{"device": "pump"}]}
+                return [{"device": "pump"}]
             if endpoint == "logs/":
-                return ["run.log"]
+                return [
+                    {
+                        "filename": "run.log",
+                        "modified": "2026-05-29T08:00:00",
+                        "size_bytes": 14,
+                    }
+                ]
             if endpoint == "logs/run.log":
                 return {"content": "line 1\nline 2\n"}
             return None
@@ -208,7 +228,29 @@ def test_run_polling_thread_emits_status_pool_logs_and_finished(qtbot) -> None:
         thread.start()
     thread.wait(1000)
 
-    assert blocker.args == ["completed"]
-    assert statuses == [{"state": "completed"}]
-    assert pools == [{"commands": [{"device": "pump"}]}]
+    assert blocker.args == ["finished"]
+    assert statuses == [{"run_id": "RUN-1", "state": "finished", "events": []}]
+    assert pools == [[{"device": "pump"}]]
     assert logs == ["line 1\nline 2"]
+
+
+def test_schema_validation_logs_unexpected_api_payload() -> None:
+    records = []
+    sink_id = logger.add(
+        lambda message: records.append(message.record), level="WARNING"
+    )
+
+    try:
+        parsed = _validate_model(
+            RunStatus,
+            {"state": "finished"},
+            "GET run/RUN-1/status",
+        )
+    finally:
+        logger.remove(sink_id)
+
+    assert parsed is None
+    assert len(records) == 1
+    assert records[0]["extra"]["window"] == WindowCategory.EXECUTION
+    assert "Unexpected API response for GET run/RUN-1/status" in records[0]["message"]
+    assert "run_id" in records[0]["message"]

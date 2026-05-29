@@ -3,7 +3,9 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
+from chemunited_workflow.api.schemas import LogMeta, RunRequest, RunStatus
 from loguru import logger as _logger
+from pydantic import BaseModel, ConfigDict, TypeAdapter, ValidationError
 from PyQt5.QtCore import QThread, pyqtSignal
 
 from chemunited.qt.monitoring.execution_api_process import ApiClient
@@ -24,6 +26,28 @@ TERMINAL_RUN_STATES = {
 }
 
 
+class RunStartedResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    run_id: str
+
+
+class ActiveRunResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    run_id: str | None
+
+
+class LogContentResponse(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    content: str
+
+
+LOG_LIST_RESPONSE = TypeAdapter(list[LogMeta])
+POOL_RESPONSE = TypeAdapter(list[dict[str, Any]])
+
+
 def _process_name_from_protocol_key(key: str) -> str | None:
     process_name, separator, process_index = key.rpartition("_")
     if not separator or not process_name or not process_index.isdecimal():
@@ -31,79 +55,65 @@ def _process_name_from_protocol_key(key: str) -> str | None:
     return process_name
 
 
-def _first_mapping_value(data: dict[str, Any], keys: set[str]) -> Any:
-    for key in keys:
-        if key in data:
-            return data[key]
-    for value in data.values():
-        if isinstance(value, dict):
-            nested = _first_mapping_value(value, keys)
-            if nested is not None:
-                return nested
-    return None
-
-
-def _run_state_from_payload(payload: Any) -> str | None:
-    if not isinstance(payload, dict):
+def _validate_model(model: type[BaseModel], payload: Any, endpoint: str):
+    if payload is None:
+        return None
+    try:
+        return model.model_validate(payload)
+    except ValidationError as exc:
+        logger.warning(
+            "Unexpected API response for {}: {}. Payload: {}",
+            endpoint,
+            _validation_error_summary(exc),
+            payload,
+        )
         return None
 
-    value = _first_mapping_value(
-        payload,
-        {"state", "status", "phase", "run_state", "conclusion"},
-    )
-    if value is None and payload.get("is_running") is False:
-        return "finished"
-    return str(value).strip().lower() if value is not None else None
 
-
-def _is_terminal_run_payload(payload: Any) -> bool:
-    state = _run_state_from_payload(payload)
-    return state in TERMINAL_RUN_STATES if state is not None else False
-
-
-def _payload_has_content(payload: Any) -> bool:
+def _validate_adapter(adapter: TypeAdapter, payload: Any, endpoint: str):
     if payload is None:
-        return False
-    if isinstance(payload, (list, tuple, set, dict)):
-        return bool(payload)
-    return bool(str(payload).strip())
+        return None
+    try:
+        return adapter.validate_python(payload)
+    except ValidationError as exc:
+        logger.warning(
+            "Unexpected API response for {}: {}. Payload: {}",
+            endpoint,
+            _validation_error_summary(exc),
+            payload,
+        )
+        return None
 
 
-def _extract_run_id(payload: Any) -> str | None:
-    if isinstance(payload, dict):
-        value = _first_mapping_value(payload, {"run_id", "id"})
-        return str(value) if value else None
+def _validation_error_summary(exc: ValidationError) -> str:
+    parts = []
+    for error in exc.errors()[:3]:
+        location = ".".join(str(part) for part in error.get("loc", ())) or "<root>"
+        parts.append(f"{location}: {error.get('msg', 'invalid value')}")
+    if len(exc.errors()) > 3:
+        parts.append(f"{len(exc.errors()) - 3} more error(s)")
+    return "; ".join(parts)
+
+
+def _run_state(status: RunStatus) -> str:
+    return status.state.strip().lower()
+
+
+def _is_terminal_run_status(status: RunStatus) -> bool:
+    return _run_state(status) in TERMINAL_RUN_STATES
+
+
+def _latest_log_filename(logs: list[LogMeta]) -> str | None:
+    if not logs:
+        return None
+    return Path(logs[0].filename).name
+
+
+def _log_text(payload: Any) -> str | None:
+    content = _validate_model(LogContentResponse, payload, "GET logs/{filename}")
+    if content is not None:
+        return content.content
     return None
-
-
-def _extract_log_filename(payload: Any) -> str | None:
-    if isinstance(payload, str):
-        return payload
-    if isinstance(payload, dict):
-        value = _first_mapping_value(payload, {"filename", "name", "file", "path"})
-        return Path(str(value)).name if value else None
-    return None
-
-
-def _latest_log_filename(payload: Any) -> str | None:
-    if isinstance(payload, list):
-        for item in payload:
-            filename = _extract_log_filename(item)
-            if filename:
-                return filename
-    return _extract_log_filename(payload)
-
-
-def _extract_log_text(payload: Any) -> str:
-    if payload is None:
-        return ""
-    if isinstance(payload, str):
-        return payload
-    if isinstance(payload, dict):
-        value = _first_mapping_value(payload, {"content", "text", "log", "message"})
-        if value is not None:
-            return str(value)
-    return str(payload)
 
 
 def _incremental_text(previous: str, current: str) -> str:
@@ -154,12 +164,21 @@ class RunPollingThread(QThread):
                     f"run/{quote(self.run_id)}/status",
                     timeout=5,
                 )
-                if _payload_has_content(status_payload):
-                    print(f"[run status] {status_payload}")
-                    logger.info("Run {} status: {}", self.run_id, status_payload)
-                    self.status_received.emit(status_payload)
-                    if _is_terminal_run_payload(status_payload):
-                        finish_state = _run_state_from_payload(status_payload) or "finished"
+                status = _validate_model(
+                    RunStatus,
+                    status_payload,
+                    f"GET run/{self.run_id}/status",
+                )
+                if status is not None:
+                    logger.info(
+                        "Run {} status={} events={}",
+                        status.run_id,
+                        status.state,
+                        len(status.events),
+                    )
+                    self.status_received.emit(status.model_dump())
+                    if _is_terminal_run_status(status):
+                        finish_state = _run_state(status)
                         self._poll_pool()
                         self._poll_logs()
                         self.run_finished.emit(finish_state)
@@ -176,15 +195,18 @@ class RunPollingThread(QThread):
 
     def _poll_pool(self) -> None:
         pool_payload = self.client.get("run/pool", timeout=5)
-        if not _payload_has_content(pool_payload):
+        pool = _validate_adapter(POOL_RESPONSE, pool_payload, "GET run/pool")
+        if not pool:
             return
-        print(f"[run pool] {pool_payload}")
-        logger.info("Run pool drained: {}", pool_payload)
-        self.pool_drained.emit(pool_payload)
+        logger.info("Run pool drained: {} command(s)", len(pool))
+        self.pool_drained.emit(pool)
 
     def _poll_logs(self) -> None:
         logs_payload = self.client.get("logs/", timeout=5)
-        filename = _latest_log_filename(logs_payload)
+        logs = _validate_adapter(LOG_LIST_RESPONSE, logs_payload, "GET logs/")
+        if logs is None:
+            return
+        filename = _latest_log_filename(logs)
         if not filename:
             return
 
@@ -197,7 +219,9 @@ class RunPollingThread(QThread):
             params={"tail": self.log_tail},
             timeout=5,
         )
-        text = _extract_log_text(log_payload)
+        text = _log_text(log_payload)
+        if text is None:
+            return
         new_text = _incremental_text(self._last_log_text, text).strip("\n")
         self._last_log_text = text
         if new_text:
@@ -252,15 +276,17 @@ class OrchestratorExecution(OrchestratorConnectivity):
             return False
 
         snapshot_name = self.project_protocol_script_dir.name
+        request = RunRequest(snapshot=snapshot_name, dry_run=False)
         response = api_process.client.post(
             "run/",
-            data={"snapshot": snapshot_name, "dry_run": False},
+            data=request.model_dump(),
         )
-        run_id = _extract_run_id(response)
-        if run_id is None:
+        started = _validate_model(RunStartedResponse, response, "POST run/")
+        if started is None:
             logger.error("Failed to start protocol execution: {}", response)
             return False
 
+        run_id = started.run_id
         self.active_run_id = run_id
         logger.info("Protocol execution started with run_id={}", run_id)
         self._emit_signal("protocol_execution_started", run_id)
@@ -277,7 +303,15 @@ class OrchestratorExecution(OrchestratorConnectivity):
         run_id = getattr(self, "active_run_id", None)
         if run_id is None:
             active_payload = api_process.client.get("run/active")
-            run_id = _extract_run_id(active_payload)
+            active = _validate_model(
+                ActiveRunResponse,
+                active_payload,
+                "GET run/active",
+            )
+            if active is None:
+                logger.warning("Could not read active run from API.")
+                return False
+            run_id = active.run_id
             if run_id is None:
                 logger.warning("There is nothing running to be stopped.")
                 return False
