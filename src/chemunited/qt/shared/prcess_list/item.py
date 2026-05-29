@@ -1,6 +1,7 @@
 from __future__ import annotations
 
-from PyQt5.QtCore import Qt, pyqtSignal
+from chemunited_workflow.enums import NodeState
+from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QColor, QPainter
 from PyQt5.QtWidgets import QHBoxLayout, QSizePolicy, QStackedWidget, QWidget
 from qfluentwidgets import (
@@ -15,18 +16,71 @@ from qfluentwidgets import (
 QT_KEY_ESCAPE = getattr(Qt, "Key_Escape")
 QT_NO_PEN = getattr(Qt, "NoPen")
 
+_STATUS_DEFAULT_COLOR = QColor(120, 120, 120)
+_STATUS_RUNNING_COLOR = QColor(38, 166, 91)
+_STATUS_RUNNING_DIM_COLOR = QColor(38, 166, 91, 80)
+_STATUS_COMPLETED_COLOR = QColor(38, 166, 91)
+_STATUS_FAILED_COLOR = QColor(220, 53, 69)
+_STATIC_STATES = {
+    NodeState.NOT_VISITED,
+    NodeState.WAITING,
+    NodeState.INACTIVE,
+}
+
 
 class _StatusCircle(QWidget):
-    """Circle placeholder — replace with real status widget later."""
+    """Small state indicator for a workflow process row."""
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setFixedSize(12, 12)
+        self._state = NodeState.NOT_VISITED
+        self._color = QColor(_STATUS_DEFAULT_COLOR)
+        self._blink_on = True
+        self._blink_timer = QTimer(self)
+        self._blink_timer.setInterval(500)
+        self._blink_timer.timeout.connect(self._toggle_running_blink)  # type: ignore[attr-defined]
+
+    def set_status(self, status) -> None:
+        state = _coerce_node_state(status)
+        if state is None:
+            state = NodeState.NOT_VISITED
+
+        self._state = state
+        self.setToolTip(state.value)
+        if state == NodeState.RUNNING:
+            self._blink_on = True
+            self._set_color(_STATUS_RUNNING_COLOR)
+            if not self._blink_timer.isActive():
+                self._blink_timer.start()
+            return
+
+        if self._blink_timer.isActive():
+            self._blink_timer.stop()
+
+        if state in _STATIC_STATES:
+            self._set_color(_STATUS_DEFAULT_COLOR)
+        elif state == NodeState.COMPLETED:
+            self._set_color(_STATUS_COMPLETED_COLOR)
+        elif state == NodeState.FAILED:
+            self._set_color(_STATUS_FAILED_COLOR)
+        else:
+            self._set_color(_STATUS_DEFAULT_COLOR)
+
+    def _toggle_running_blink(self) -> None:
+        self._blink_on = not self._blink_on
+        self._set_color(
+            _STATUS_RUNNING_COLOR if self._blink_on else _STATUS_RUNNING_DIM_COLOR
+        )
+
+    def _set_color(self, color: QColor) -> None:
+        self._color = QColor(color)
+        self.update()
 
     def paintEvent(self, event) -> None:
         painter = QPainter(self)
         painter.setRenderHint(QPainter.Antialiasing)
-        painter.setBrush(QColor(120, 120, 120))
+        painter.setBrush(self._color)
         painter.setPen(QT_NO_PEN)
         painter.drawEllipse(1, 1, 10, 10)
 
@@ -39,13 +93,13 @@ class _EditLineEdit(LineEdit):
 
     def keyPressEvent(self, event) -> None:
         if event.key() == QT_KEY_ESCAPE:
-            self.escape_pressed.emit()
+            self.escape_pressed.emit()  # type: ignore[attr-defined]
         else:
             super().keyPressEvent(event)
 
     def focusOutEvent(self, event) -> None:
         super().focusOutEvent(event)
-        self.focus_lost.emit()
+        self.focus_lost.emit()  # type: ignore[attr-defined]
 
 
 class ProcessItem(QWidget):
@@ -154,7 +208,7 @@ class ProcessItem(QWidget):
         self._name_label.setText(name)
 
     def set_status(self, status) -> None:
-        pass  # placeholder — ready for a future enum
+        self._status.set_status(status)
 
     # ------------------------------------------------------------------
     # Private
@@ -164,7 +218,7 @@ class ProcessItem(QWidget):
         if self._editing:
             return
         self._editing = True
-        self.edit_started.emit(self._name)
+        self.edit_started.emit(self._name)  # type: ignore[attr-defined]
         self._edit.setText(self._name)
         self._edit.selectAll()
         self._stack.setCurrentIndex(1)
@@ -178,9 +232,30 @@ class ProcessItem(QWidget):
         if confirm:
             text = self._edit.text().strip()
             if text and text != self._name:
-                self.rename_requested.emit(self._name, text)
+                self.rename_requested.emit(self._name, text)  # type: ignore[attr-defined]
 
     def _show_menu(self) -> None:
         if self._menu is not None:
             pos = self._menu_button.mapToGlobal(self._menu_button.rect().bottomLeft())
             self._menu.exec(pos)
+
+
+def _coerce_node_state(status) -> NodeState | None:
+    if isinstance(status, NodeState):
+        return status
+    if status is None:
+        return None
+
+    text = str(status).strip()
+    if not text:
+        return None
+    if "." in text:
+        text = text.rsplit(".", 1)[-1]
+    text = text.upper()
+    try:
+        return NodeState(text)
+    except ValueError:
+        try:
+            return NodeState[text]
+        except KeyError:
+            return None
