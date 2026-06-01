@@ -30,6 +30,10 @@ class ApiClient:
     def __init__(self, url: AnyHttpUrl):
         self.url = url
         self.session = requests.Session()
+        # Disable system proxy for loopback requests — on some machines a corporate
+        # or OS-level proxy intercepts http://localhost traffic and returns 403.
+        self.session.trust_env = False
+        self.session.proxies.update({"http": "", "https": ""})
 
     def _request(
         self,

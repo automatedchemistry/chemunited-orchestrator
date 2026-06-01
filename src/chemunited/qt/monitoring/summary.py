@@ -145,6 +145,7 @@ class ReportFrame(QWidget):
         super().__init__(parent=parent)
         self._process_keys = process_keys or []
         self._run_id: str | None = None
+        self._current_process_key: str | None = None
         self._event_count = 0
         self._error_count = 0
         self._init_ui()
@@ -210,11 +211,14 @@ class ReportFrame(QWidget):
         meta_row.setSpacing(16)
         self.run_id_label = CaptionLabel("No active run", card)
         self.run_id_label.setObjectName("run_id_label")
+        self.current_process_label = CaptionLabel("Process: --", card)
+        self.current_process_label.setObjectName("current_process_label")
         self.event_count_label = CaptionLabel("Events: 0", card)
         self.event_count_label.setObjectName("event_count_label")
         self.error_count_label = CaptionLabel("Errors: 0", card)
         self.error_count_label.setObjectName("error_count_label")
         meta_row.addWidget(self.run_id_label, 1)
+        meta_row.addWidget(self.current_process_label)
         meta_row.addWidget(self.event_count_label)
         meta_row.addWidget(self.error_count_label)
         layout.addLayout(meta_row)
@@ -270,9 +274,11 @@ class ReportFrame(QWidget):
 
     def start_run(self, run_id: str) -> None:
         self._run_id = run_id
+        self._current_process_key = None
         self._event_count = 0
         self._error_count = 0
         self.run_id_label.setText(f"Run: {run_id}")
+        self.current_process_label.setText("Process: --")
         self._update_counts()
         self._set_state("RUNNING")
         self.progress.setVisible(True)
@@ -285,6 +291,9 @@ class ReportFrame(QWidget):
 
     def append_stream_event(self, run_id: str, payload: dict[str, Any]) -> None:
         if run_id != self._run_id:
+            return
+        self._update_current_process(payload)
+        if self._should_hide_stream_event(payload):
             return
         self._event_count += 1
         if self._is_error_payload(payload):
@@ -311,7 +320,9 @@ class ReportFrame(QWidget):
 
         if report is None:
             self._add_report_placeholder("No final report was returned by the API.")
-            self.raw_report_browser.setPlainText("No final report was returned by the API.")
+            self.raw_report_browser.setPlainText(
+                "No final report was returned by the API."
+            )
             self.pages.switchTo(self.report_page)
             return
 
@@ -328,6 +339,13 @@ class ReportFrame(QWidget):
         text = state.strip().upper() or "UNKNOWN"
         self.state_badge.setText(text)
         _set_badge_style(self.state_badge, text)
+
+    def _update_current_process(self, payload: dict[str, Any]) -> None:
+        process_key = _compact_value(payload.get("process"))
+        if not process_key:
+            return
+        self._current_process_key = process_key
+        self.current_process_label.setText(f"Process: {process_key}")
 
     def _update_counts(self) -> None:
         self.event_count_label.setText(f"Events: {self._event_count}")
@@ -379,6 +397,9 @@ class ReportFrame(QWidget):
 
         timestamp = _format_timestamp(payload.get("timestamp"))
         time_label = CaptionLabel(timestamp or "--:--:--", card)
+        process_label = CaptionLabel(_compact_value(payload.get("process")), card)
+        process_label.setObjectName("event_process_label")
+        process_label.setMinimumWidth(90)
         node_label = CaptionLabel(_format_node_key(payload.get("node_key")), card)
         node_label.setObjectName("event_node_label")
         node_label.setMinimumWidth(80)
@@ -388,6 +409,7 @@ class ReportFrame(QWidget):
 
         header.addWidget(badge)
         header.addWidget(time_label)
+        header.addWidget(process_label)
         header.addWidget(node_label)
         header.addStretch(1)
         header.addWidget(raw_button)
@@ -447,6 +469,12 @@ class ReportFrame(QWidget):
         )
 
     @staticmethod
+    def _should_hide_stream_event(payload: dict[str, Any]) -> bool:
+        event_type = _event_label(payload).upper()
+        state = _compact_value(payload.get("state")).upper()
+        return event_type == "NODE_WAITING" or state == "WAITING"
+
+    @staticmethod
     def _count_report_errors(report: dict[str, Any]) -> int:
         results = report.get("results")
         if not isinstance(results, list):
@@ -488,13 +516,19 @@ class ReportFrame(QWidget):
         layout.setContentsMargins(16, 12, 16, 12)
         layout.setSpacing(10)
 
-        process_name = self._process_label(index)
+        process_key = _compact_value(result.get("process"))
+        process_name = self._process_label(index, process_key)
         state_map = result.get("node_state", {})
         states = list(state_map.values()) if isinstance(state_map, dict) else []
-        process_state = "FAILED" if any(str(s).upper() == "FAILED" for s in states) else "COMPLETED"
+        process_state = (
+            "FAILED" if any(str(s).upper() == "FAILED" for s in states) else "COMPLETED"
+        )
 
         title_row = QHBoxLayout()
-        title = StrongBodyLabel(f"Process {index + 1}: {process_name}", card)
+        title_text = f"Process {index + 1}: {process_name}"
+        if process_key and process_key != process_name:
+            title_text = f"{title_text} ({process_key})"
+        title = StrongBodyLabel(title_text, card)
         badge = QLabel(process_state, card)
         badge.setAlignment(Qt.AlignCenter)  # type: ignore[attr-defined]
         _set_badge_style(badge, process_state)
@@ -578,7 +612,9 @@ class ReportFrame(QWidget):
         table.setMinimumHeight(min(420, 92 + max(1, len(state_map)) * 36))
         return table
 
-    def _process_label(self, index: int) -> str:
+    def _process_label(self, index: int, process_key: str = "") -> str:
+        if process_key:
+            return _display_process_name(process_key)
         if 0 <= index < len(self._process_keys):
             return _display_process_name(self._process_keys[index])
         return f"Process {index + 1}"

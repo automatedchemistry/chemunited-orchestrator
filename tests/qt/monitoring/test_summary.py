@@ -19,8 +19,19 @@ def test_report_frame_start_run_and_stream_events(qtbot: QtBot) -> None:
     frame.append_stream_event(
         "RUN-1",
         {
+            "event_type": "NODE_WAITING",
+            "message": "Waiting hidden",
+            "process": "Mixing_0",
+            "node_key": ["script_1", 0],
+            "state": "WAITING",
+        },
+    )
+    frame.append_stream_event(
+        "RUN-1",
+        {
             "event_type": "NODE_FAILED",
             "message": "Pump failed",
+            "process": "Mixing_0",
             "node_key": ["script_1", 0],
             "state": "FAILED",
             "timestamp": 1780308444.717622,
@@ -34,11 +45,15 @@ def test_report_frame_start_run_and_stream_events(qtbot: QtBot) -> None:
     texts = _label_texts(frame)
     assert frame.state_badge.text() == "RUNNING"
     assert frame.run_id_label.text() == "Run: RUN-1"
+    assert frame.current_process_label.text() == "Process: Mixing_0"
     assert frame.event_count_label.text() == "Events: 1"
     assert frame.error_count_label.text() == "Errors: 1"
     assert "NODE_FAILED" in texts
+    assert "Mixing_0" in texts
     assert "script_1:0" in texts
     assert "Pump failed" in texts
+    assert "NODE_WAITING" not in texts
+    assert "Waiting hidden" not in texts
     assert "Should be ignored" not in texts
 
 
@@ -48,6 +63,7 @@ def test_report_frame_renders_final_report_and_raw_json(qtbot: QtBot) -> None:
         "state": "finished",
         "results": [
             {
+                "process": "Mixing_0",
                 "node_state": {
                     "start:0": "COMPLETED",
                     "script_1:0": "FAILED",
@@ -91,7 +107,7 @@ def test_report_frame_renders_final_report_and_raw_json(qtbot: QtBot) -> None:
 
     assert frame.state_badge.text() == "FINISHED"
     assert frame.error_count_label.text() == "Errors: 1"
-    assert "Process 1: Mixing" in texts
+    assert "Process 1: Mixing (Mixing_0)" in texts
     assert "FAILED" in texts
     assert "Errors" in texts
     assert "script_1:0: timeout" in texts

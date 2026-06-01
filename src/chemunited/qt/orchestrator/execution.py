@@ -206,12 +206,21 @@ def _node_name_from_stream_payload(payload: dict[str, Any]) -> str | None:
     return node_name or None
 
 
+def _process_key_from_stream_payload(payload: dict[str, Any]) -> str | None:
+    process_key = payload.get("process")
+    if process_key is None:
+        return None
+    process_key = str(process_key).strip()
+    return process_key or None
+
+
 class StreamProcessStatusTracker:
     """Infers active process status from stream events and protocol order."""
 
     def __init__(self, active_process_order: list[str]) -> None:
         self.active_process_order = list(active_process_order)
         self._current_index = -1
+        self._current_process_key: str | None = None
         self._current_failed = False
 
     def apply(
@@ -224,10 +233,14 @@ class StreamProcessStatusTracker:
 
         event_type = _normalize_event_label(payload.get("event_type"))
         state = _normalize_event_label(payload.get("state"))
+        process_key = _process_key_from_stream_payload(payload)
+        if process_key is not None:
+            self._set_current_process(process_key)
         updates: list[tuple[str, NodeState]] = []
 
         if event_type == "EXECUTION_STARTED":
-            active_name = self._advance_to_next_process()
+            self._current_failed = False
+            active_name = process_key or self._advance_to_next_process()
             if active_name is not None:
                 updates.append((active_name, NodeState.RUNNING))
             return updates, None
@@ -252,9 +265,18 @@ class StreamProcessStatusTracker:
 
     @property
     def current_process_name(self) -> str | None:
+        if self._current_process_key is not None:
+            return self._current_process_key
         if 0 <= self._current_index < len(self.active_process_order):
             return self.active_process_order[self._current_index]
         return None
+
+    def _set_current_process(self, process_key: str) -> None:
+        self._current_process_key = process_key
+        try:
+            self._current_index = self.active_process_order.index(process_key)
+        except ValueError:
+            pass
 
     def _advance_to_next_process(self) -> str | None:
         next_index = self._current_index + 1
@@ -265,6 +287,7 @@ class StreamProcessStatusTracker:
             )
             return None
         self._current_index = next_index
+        self._current_process_key = self.active_process_order[self._current_index]
         self._current_failed = False
         return self.current_process_name
 
@@ -330,7 +353,10 @@ class RunEventStreamThread(QThread):
                 for active_name, status in updates:
                     self.process_status_received.emit(active_name, status)
                 node_state = _node_state_from_stream_payload(payload)
-                active_name = self._tracker.current_process_name
+                active_name = (
+                    _process_key_from_stream_payload(payload)
+                    or self._tracker.current_process_name
+                )
                 node_name = _node_name_from_stream_payload(payload)
                 if node_state is not None and active_name is not None and node_name:
                     self.node_status_received.emit(
@@ -646,9 +672,15 @@ class OrchestratorExecution(OrchestratorConnectivity):
             len(results),
         )
         for i, result in enumerate(results):
-            if i >= len(self._active_process_order):
+            if not isinstance(result, dict):
+                continue
+            active_name = result.get("process")
+            if isinstance(active_name, str) and active_name.strip():
+                active_name = active_name.strip()
+            elif i < len(self._active_process_order):
+                active_name = self._active_process_order[i]
+            else:
                 break
-            active_name = self._active_process_order[i]
             node_states: dict[str, str] = result.get("node_state", {})
             for node_name, state_str in node_states.items():
                 try:

@@ -321,6 +321,24 @@ def test_stream_status_tracker_maps_cancelled_running_process_to_inactive() -> N
     )
 
 
+def test_stream_status_tracker_prefers_payload_process_key() -> None:
+    tracker = StreamProcessStatusTracker(["Mixing_0", "SystemClean_1"])
+
+    assert tracker.apply(
+        {"event_type": "EXECUTION_STARTED", "process": "SystemClean_1"}
+    ) == (
+        [("SystemClean_1", NodeState.RUNNING)],
+        None,
+    )
+    assert tracker.current_process_name == "SystemClean_1"
+    assert tracker.apply(
+        {"event_type": "NODE_FAILED", "process": "SystemClean_1", "state": "FAILED"}
+    ) == (
+        [("SystemClean_1", NodeState.FAILED)],
+        None,
+    )
+
+
 def test_run_event_stream_thread_emits_statuses_from_sse(qtbot) -> None:
     class Response:
         def __init__(self, lines) -> None:
@@ -342,8 +360,8 @@ def test_run_event_stream_thread_emits_statuses_from_sse(qtbot) -> None:
                     "",
                     'data: {"event_type": "EXECUTION_FINISHED"}',
                     'data: {"event_type": "EXECUTION_STARTED"}',
-                    'data: {"event_type": "NODE_RUNNING", "node_key": ["script_1", 0], "state": "RUNNING"}',
-                    'data: {"event_type": "NODE_FAILED", "node_key": ["script_1", 0], "state": "FAILED"}',
+                    'data: {"event_type": "NODE_RUNNING", "process": "SystemClean_1", "node_key": ["script_1", 0], "state": "RUNNING"}',
+                    'data: {"event_type": "NODE_FAILED", "process": "SystemClean_1", "node_key": ["script_1", 0], "state": "FAILED"}',
                     'data: {"event_type": "EXECUTION_FINISHED"}',
                     'data: {"state": "failed"}',
                 ]
@@ -389,6 +407,7 @@ def test_run_event_stream_thread_emits_statuses_from_sse(qtbot) -> None:
             "RUN-1",
             {
                 "event_type": "NODE_RUNNING",
+                "process": "SystemClean_1",
                 "node_key": ["script_1", 0],
                 "state": "RUNNING",
             },
@@ -397,6 +416,7 @@ def test_run_event_stream_thread_emits_statuses_from_sse(qtbot) -> None:
             "RUN-1",
             {
                 "event_type": "NODE_FAILED",
+                "process": "SystemClean_1",
                 "node_key": ["script_1", 0],
                 "state": "FAILED",
             },
@@ -522,6 +542,40 @@ def test_orchestrator_execution_updates_workflow_node_status_by_active_key() -> 
     assert workflows_widget.selected == ["Mixing"]
     assert workflows_widget.workflow.cleared is True
     assert workflows_widget.updates == [("Mixing", "script_1", NodeState.COMPLETED)]
+
+
+def test_apply_run_report_prefers_report_process_key() -> None:
+    emitted_nodes = []
+    emitted_processes = []
+    execution = OrchestratorExecution.__new__(OrchestratorExecution)
+    execution._active_process_order = ["Wrong_0"]
+    execution._emit_node_status = lambda active_name, node_name, status: emitted_nodes.append(
+        (active_name, node_name, status)
+    )
+    execution._emit_process_status = lambda active_name, status: emitted_processes.append(
+        (active_name, status)
+    )
+
+    execution._apply_run_report(
+        "RUN-1",
+        {
+            "results": [
+                {
+                    "process": "Mixing_0",
+                    "node_state": {
+                        "start:0": "COMPLETED",
+                        "script_1:0": "FAILED",
+                    },
+                }
+            ]
+        },
+    )
+
+    assert emitted_nodes == [
+        ("Mixing_0", "start:0", NodeState.COMPLETED),
+        ("Mixing_0", "script_1:0", NodeState.FAILED),
+    ]
+    assert emitted_processes == [("Mixing_0", NodeState.FAILED)]
 
 
 def test_schema_validation_logs_unexpected_api_payload() -> None:

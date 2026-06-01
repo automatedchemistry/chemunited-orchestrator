@@ -147,6 +147,10 @@ class MonitorWindow(MainWindowBase):
             self.status_widget.setToolTip("API unreachable — reconnect?")
 
     def closeEvent(self, event):
+        if self.summary_window is not None:
+            self.summary_window.close()
+            self.summary_window = None
+            self.summary_window_file = None
         if self.api_process is not None:
             self.api_process.stop_api()
         super().closeEvent(event)
