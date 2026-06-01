@@ -168,19 +168,19 @@ class ReportFrame(QWidget):
             self.stream_page,
             "stream_page",
             "Stream",
-            FluentIcon.CHAT,
+            FluentIcon.CHAT.icon(),
         )
         self.pages.addSubInterface(
             self.report_page,
             "report_page",
             "Report",
-            FluentIcon.VIEW,
+            FluentIcon.VIEW.icon(),
         )
         self.pages.addSubInterface(
             self.raw_report_browser,
             "raw_report_page",
             "Raw JSON",
-            FluentIcon.CODE,
+            FluentIcon.CODE.icon(),
         )
         root.addWidget(self.pages, 1)
         self._set_state("IDLE")
@@ -344,7 +344,7 @@ class ReportFrame(QWidget):
     def _clear_layout(layout: QVBoxLayout) -> None:
         while layout.count():
             item = layout.takeAt(0)
-            widget = item.widget()
+            widget = item.widget() # type: ignore[attr-defined]
             if widget is not None:
                 widget.deleteLater()
 
@@ -358,8 +358,8 @@ class ReportFrame(QWidget):
         row = self._build_event_row(payload)
         insert_at = max(0, self.stream_layout.count() - 1)
         self.stream_layout.insertWidget(insert_at, row)
-        self.stream_scroll.verticalScrollBar().setValue(
-            self.stream_scroll.verticalScrollBar().maximum()
+        self.stream_scroll.verticalScrollBar().setValue( # type: ignore[attr-defined]
+            self.stream_scroll.verticalScrollBar().maximum() # type: ignore[attr-defined]
         )
 
     def _build_event_row(self, payload: dict[str, Any]) -> QWidget:
@@ -553,7 +553,7 @@ class ReportFrame(QWidget):
         table.setRowCount(len(state_map))
         table.setAlternatingRowColors(True)
         table.setWordWrap(True)
-        table.verticalHeader().setVisible(False)
+        table.verticalHeader().setVisible(False)  # type: ignore[attr-defined]
         table.setEditTriggers(TableWidget.NoEditTriggers)  # type: ignore[attr-defined]
         table.setSelectionBehavior(TableWidget.SelectRows)  # type: ignore[attr-defined]
         table.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.MinimumExpanding)
