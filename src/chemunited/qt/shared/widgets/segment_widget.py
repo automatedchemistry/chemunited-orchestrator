@@ -1,6 +1,7 @@
 from typing import Any
 
 from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QStackedWidget, QVBoxLayout, QWidget
 from qfluentwidgets import SegmentedWidget
 
@@ -23,7 +24,7 @@ class SegmentWindow(QWidget):
         self.stackedWidget.currentChanged.connect(self._emit_current_widget_name)  # type: ignore[attr-defined]
 
     def addSubInterface(
-        self, widget: QWidget, objectName: str, text, icon: str, onClick: Any = None
+        self, widget: QWidget, objectName: str, text: str, icon: str | QIcon | None = None, onClick: Any = None
     ):
         widget.setObjectName(objectName)
         self.stackedWidget.addWidget(widget)

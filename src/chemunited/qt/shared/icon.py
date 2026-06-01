@@ -55,6 +55,7 @@ class OrchestratorIcon(FluentIconBase, Enum):
     SIMULATION = "simulation"
     SLOW = "slow"
     SPEED = "speed"
+    STATUS = "status"
     STOP = "stop"
     STRING = "string"
     TRASH = "trash"

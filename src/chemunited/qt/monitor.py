@@ -7,8 +7,8 @@ from .monitoring.execution_api_process import ApiProcess
 from .monitoring.graph import ExecutionGraph
 from .monitoring.process_list import MonitorProcessesWidget
 from .monitoring.status_animated import AnimatedOnlineIcon
+from .monitoring.summary import SummaryExecutionWindow
 from .orchestrator import Orchestrator
-from .pre_run.summary_window import SummaryWindow
 from .protocols.workflows.workflow_widget import WorkflowsWidget
 from .shared.enums import SetupStepMode, WindowCategory
 from .shared.graph import SceneCore
@@ -45,7 +45,9 @@ class MonitorWindow(MainWindowBase):
         self.protocols_widget = MonitorProcessesWidget(self)
 
         self.summary_window = None
+        self.summary_window_file = None
         self.api_process: ApiProcess | None = None
+        self._connect_execution_inspector_signals()
 
         self.buildUi()
 
@@ -154,9 +156,59 @@ class MonitorWindow(MainWindowBase):
         self.workflows_protocol.recenter_view()
 
     def show_summary(self):
-        if file := self.orchestrator.project_protocol_script_dir:
-            if self.summary_window is None:
-                self.summary_window = SummaryWindow.inspect_file(file_path=file)
-            self.summary_window.show()  # type: ignore[attr-defined]
-        else:
+        window = self._ensure_summary_window()
+        if window is None:
+            return
+        self._show_summary_window(window)
+
+    def _connect_execution_inspector_signals(self) -> None:
+        self.orchestrator.protocol_execution_started.connect(  # type: ignore[attr-defined]
+            self._on_protocol_execution_started
+        )
+        self.orchestrator.protocol_execution_finished.connect(  # type: ignore[attr-defined]
+            self._on_protocol_execution_finished
+        )
+        self.orchestrator.run_stream_event_received.connect(  # type: ignore[attr-defined]
+            self._on_run_stream_event_received
+        )
+        self.orchestrator.run_report_received.connect(  # type: ignore[attr-defined]
+            self._on_run_report_received
+        )
+
+    def _ensure_summary_window(self):
+        file = self.orchestrator.project_protocol_script_dir
+        if file is None:
             logger.error("No project protocol script directory found.")
+            return None
+
+        if self.summary_window is None or self.summary_window_file != file:
+            self.summary_window = SummaryExecutionWindow.inspect_file(file)
+            self.summary_window_file = file if self.summary_window is not None else None
+        return self.summary_window
+
+    def _show_summary_window(self, window) -> None:
+        window.show()
+        window.raise_()
+        window.activateWindow()
+
+    def _on_protocol_execution_started(self, run_id: str) -> None:
+        window = self._ensure_summary_window()
+        if window is None:
+            return
+        window.start_run(run_id)
+        self._show_summary_window(window)
+
+    def _on_protocol_execution_finished(self, state: str) -> None:
+        if self.summary_window is not None:
+            self.summary_window.finish_run(state)
+
+    def _on_run_stream_event_received(self, run_id: str, payload) -> None:
+        if self.summary_window is not None and isinstance(payload, dict):
+            self.summary_window.append_stream_event(run_id, payload)
+
+    def _on_run_report_received(self, run_id: str, report) -> None:
+        if self.summary_window is not None:
+            self.summary_window.set_report(
+                run_id,
+                report if isinstance(report, dict) else None,
+            )

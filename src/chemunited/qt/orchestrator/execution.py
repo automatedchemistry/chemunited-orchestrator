@@ -283,6 +283,7 @@ class StreamProcessStatusTracker:
 
 
 class RunEventStreamThread(QThread):
+    stream_event_received = pyqtSignal(str, object)
     process_status_received = pyqtSignal(str, object)
     node_status_received = pyqtSignal(str, str, object)
     run_finished = pyqtSignal(str)
@@ -324,6 +325,7 @@ class RunEventStreamThread(QThread):
                 payload = _parse_sse_data_line(line)
                 if payload is None:
                     continue
+                self.stream_event_received.emit(self.run_id, payload)
                 updates, final_state = self._tracker.apply(payload)
                 for active_name, status in updates:
                     self.process_status_received.emit(active_name, status)
@@ -426,6 +428,8 @@ class OrchestratorExecution(OrchestratorConnectivity):
     protocol_execution_finished = pyqtSignal(str)
     process_status_changed = pyqtSignal(str, object)
     node_status_changed = pyqtSignal(str, str, object)
+    run_stream_event_received = pyqtSignal(str, object)
+    run_report_received = pyqtSignal(str, object)
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -561,6 +565,9 @@ class OrchestratorExecution(OrchestratorConnectivity):
             list(getattr(self, "_active_process_order", [])),
             parent=self,
         )
+        stream_thread.stream_event_received.connect(  # type: ignore[attr-defined]
+            self._emit_run_stream_event
+        )
         stream_thread.process_status_received.connect(  # type: ignore[attr-defined]
             self._on_process_status_received
         )
@@ -614,16 +621,22 @@ class OrchestratorExecution(OrchestratorConnectivity):
         self._stop_run_polling()
         logger.info("Protocol execution finished with state={}", state)
         if run_id is not None:
-            self._apply_run_report(run_id)
+            report = self._fetch_run_report(run_id)
+            self._emit_run_report(run_id, report)
+            if report is not None:
+                self._apply_run_report(run_id, report)
         self._emit_signal("protocol_execution_finished", state)
 
-    def _apply_run_report(self, run_id: str) -> None:
+    def _fetch_run_report(self, run_id: str) -> dict[str, Any] | None:
         api_process = getattr(self.parent_ref, "api_process", None)
         if api_process is None:
-            return
+            return None
         payload = api_process.client.get(f"run/{quote(run_id)}/report", timeout=10)
         if not isinstance(payload, dict):
-            return
+            return None
+        return payload
+
+    def _apply_run_report(self, run_id: str, payload: dict[str, Any]) -> None:
         results = payload.get("results")
         if not isinstance(results, list):
             return
@@ -690,6 +703,18 @@ class OrchestratorExecution(OrchestratorConnectivity):
         except RuntimeError:
             pass
         self._update_workflow_node_status(active_name, node_name, status)
+
+    def _emit_run_stream_event(self, run_id: str, payload: dict[str, Any]) -> None:
+        try:
+            self.run_stream_event_received.emit(run_id, payload)  # type: ignore[attr-defined]
+        except RuntimeError:
+            pass
+
+    def _emit_run_report(self, run_id: str, payload: dict[str, Any] | None) -> None:
+        try:
+            self.run_report_received.emit(run_id, payload)  # type: ignore[attr-defined]
+        except RuntimeError:
+            pass
 
     def _reset_workflow_node_statuses(self) -> None:
         workflows_widget = getattr(self.parent_ref, "workflows_protocol", None)

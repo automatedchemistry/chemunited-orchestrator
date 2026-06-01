@@ -20,7 +20,7 @@ from chemunited.qt.project.storage import ensure_protocols_hystoric_dir
 from chemunited.qt.shared.icon import OrchestratorIcon
 from chemunited.qt.shared.widgets.logo_window import show_waiting
 
-from .summary_window import SummaryWindow
+from .summary_window import SummaryParametersWindow
 
 if TYPE_CHECKING:
     from chemunited.qt.setup import SetupWindow
@@ -35,7 +35,7 @@ class FileCard(GroupHeaderCardWidget):
 
         # keep reference to each file card group
         self.files: dict[str, dict] = {}  # {stem: {"file": Path, "widget": QWidget}}
-        self.summary_window: dict[str, SummaryWindow] = {}
+        self.summary_window: dict[str, SummaryParametersWindow] = {}
 
     def add_card(self, file: Path, ignore_warning: bool = True):
         if file.stem in self.files:
@@ -85,7 +85,7 @@ class FileCard(GroupHeaderCardWidget):
             widget=widget,
         )
 
-        window = SummaryWindow.inspect_file(file_path=file)
+        window = SummaryParametersWindow.inspect_file(file_path=file)
         if window:
             self.summary_window[file.stem] = window
         else:

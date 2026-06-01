@@ -7,6 +7,7 @@ from chemunited_workflow.api.schemas import RunStatus
 from chemunited_workflow.enums import NodeState
 from loguru import logger
 
+import chemunited.qt.orchestrator.execution as execution_module
 from chemunited.qt.orchestrator.execution import (
     OrchestratorExecution,
     RunEventStreamThread,
@@ -139,7 +140,26 @@ def test_execute_returns_false_without_protocol_history() -> None:
     assert client.posts == []
 
 
-def test_execute_starts_run_with_protocol_history_file_name(tmp_path) -> None:
+def test_execute_starts_run_with_protocol_history_file_name(tmp_path, monkeypatch) -> None:
+    class Dialog:
+        Accepted = 1
+
+        def __init__(self, snapshot: str, parent=None) -> None:
+            self.snapshot = snapshot
+
+        def exec(self) -> int:
+            return self.Accepted
+
+        def get_result_instance(self):
+            return SimpleNamespace(
+                model_dump=lambda: {
+                    "snapshot": self.snapshot,
+                    "dry_run": False,
+                    "timeout_commands": "10 s",
+                }
+            )
+
+    monkeypatch.setattr(execution_module, "RunRequestDialog", Dialog)
     client = FakeClient(post_response={"run_id": "RUN-1"})
     execution = _execution_with_parent(client)
     execution.project_protocol_script_dir = tmp_path / "protocol.json"
@@ -179,7 +199,7 @@ def test_stop_execution_discovers_active_api_run() -> None:
 
     assert execution.stop_execution() is True
     assert execution.active_run_id is None
-    assert client.gets == ["run/active"]
+    assert client.gets == ["run/active", "run/RUN-1/report"]
     assert client.deletes == ["run/RUN-1"]
 
 
@@ -335,12 +355,16 @@ def test_run_event_stream_thread_emits_statuses_from_sse(qtbot) -> None:
             return self.response
 
     client = StreamClient()
+    stream_events = []
     statuses = []
     node_statuses = []
     thread = RunEventStreamThread(
         client,
         "RUN-1",
         ["Mixing_0", "SystemClean_1"],
+    )
+    thread.stream_event_received.connect(  # type: ignore[attr-defined]
+        lambda run_id, payload: stream_events.append((run_id, payload))
     )
     thread.process_status_received.connect(  # type: ignore[attr-defined]
         lambda active_name, status: statuses.append((active_name, status))
@@ -357,6 +381,29 @@ def test_run_event_stream_thread_emits_statuses_from_sse(qtbot) -> None:
 
     assert blocker.args == ["failed"]
     assert client.streams == ["run/RUN-1/stream"]
+    assert stream_events == [
+        ("RUN-1", {"event_type": "EXECUTION_STARTED"}),
+        ("RUN-1", {"event_type": "EXECUTION_FINISHED"}),
+        ("RUN-1", {"event_type": "EXECUTION_STARTED"}),
+        (
+            "RUN-1",
+            {
+                "event_type": "NODE_RUNNING",
+                "node_key": ["script_1", 0],
+                "state": "RUNNING",
+            },
+        ),
+        (
+            "RUN-1",
+            {
+                "event_type": "NODE_FAILED",
+                "node_key": ["script_1", 0],
+                "state": "FAILED",
+            },
+        ),
+        ("RUN-1", {"event_type": "EXECUTION_FINISHED"}),
+        ("RUN-1", {"state": "failed"}),
+    ]
     assert statuses == [
         ("Mixing_0", NodeState.RUNNING),
         ("Mixing_0", NodeState.COMPLETED),
@@ -401,6 +448,37 @@ def test_run_event_stream_thread_ignores_invalid_node_status_frames(qtbot) -> No
     thread.wait(1000)
 
     assert node_statuses == [("Mixing_0", "script_2", NodeState.WAITING)]
+
+
+def test_finish_run_fetches_emits_and_applies_report_once() -> None:
+    report = {
+        "run_id": "RUN-1",
+        "state": "finished",
+        "results": [{"node_state": {"start:0": "COMPLETED"}}],
+    }
+    client = FakeClient(get_response=report)
+    execution = OrchestratorExecution.__new__(OrchestratorExecution)
+    execution.parent_ref = SimpleNamespace(api_process=SimpleNamespace(client=client))
+    execution.active_run_id = "RUN-1"
+    execution._stop_run_polling = lambda: None
+    finished = []
+    emitted_reports = []
+    applied_reports = []
+    execution._emit_signal = lambda name, value: finished.append((name, value))
+    execution._emit_run_report = lambda run_id, payload: emitted_reports.append(
+        (run_id, payload)
+    )
+    execution._apply_run_report = lambda run_id, payload: applied_reports.append(
+        (run_id, payload)
+    )
+
+    execution._finish_run("finished")
+
+    assert execution.active_run_id is None
+    assert client.gets == ["run/RUN-1/report"]
+    assert emitted_reports == [("RUN-1", report)]
+    assert applied_reports == [("RUN-1", report)]
+    assert finished == [("protocol_execution_finished", "finished")]
 
 
 def test_orchestrator_execution_updates_workflow_node_status_by_active_key() -> None:

@@ -19,32 +19,20 @@ from PyQt5.QtWidgets import (
 from qfluentwidgets import BodyLabel, CaptionLabel, StrongBodyLabel, TitleLabel
 
 
-class SummaryWindow(QMainWindow):
+class SummaryParametersFrame(QFrame):
     """Read-only summary for a saved pre-run JSON protocol script."""
 
     def __init__(self, file_path: Path, data: dict[str, Any], parent=None):
         super().__init__(parent=parent)
         self._file_path = file_path
         self._data = data
-
-        self.setWindowTitle(f"Protocol summary - {file_path.name}")
-        self.resize(760, 620)
         self._init_ui()
 
-    @classmethod
-    def inspect_file(cls, file_path: Path) -> "SummaryWindow | None":
-        try:
-            data = json.loads(file_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            return None
-
-        if not isinstance(data, dict):
-            return None
-        if any(not isinstance(value, dict) for value in data.values()):
-            return None
-        return cls(file_path, data)
-
     def _init_ui(self) -> None:
+        frame_layout = QVBoxLayout(self)
+        frame_layout.setContentsMargins(0, 0, 0, 0)
+        frame_layout.setSpacing(0)
+
         scroll = QScrollArea(self)
         scroll.setWidgetResizable(True)
         scroll.setFrameShape(QFrame.NoFrame)
@@ -66,7 +54,7 @@ class SummaryWindow(QMainWindow):
 
         layout.addStretch(1)
         scroll.setWidget(content)
-        self.setCentralWidget(scroll)
+        frame_layout.addWidget(scroll)
 
     def _build_header(self, parent: QWidget) -> QWidget:
         header = QWidget(parent)
@@ -223,3 +211,25 @@ class SummaryWindow(QMainWindow):
         if isinstance(value, (bool, int, float)):
             return str(value)
         return json.dumps(value, ensure_ascii=False)
+
+
+class SummaryParametersWindow(QMainWindow):
+    def __init__(self, file_path: Path, data: dict[str, Any], parent=None):
+        super().__init__(parent=parent)
+        self.main_frame = SummaryParametersFrame(file_path, data, parent)
+        self.setCentralWidget(self.main_frame)
+        self.setWindowTitle(f"Protocol summary - {file_path.name}")
+        self.resize(760, 620)
+
+    @classmethod
+    def inspect_file(cls, file_path: Path) -> "SummaryParametersWindow | None":
+        try:
+            data = json.loads(file_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            return None
+
+        if not isinstance(data, dict):
+            return None
+        if any(not isinstance(value, dict) for value in data.values()):
+            return None
+        return cls(file_path, data)
