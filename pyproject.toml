@@ -49,7 +49,7 @@ dev = [
     "black>=25.1.0",
     "mypy>=1.19.1",
     "pre-commit>=4.0.0",
-    "ruff>=0.15.7",
+    "ruff>=0.11.2",
     "pytest>=8.0",
     "pytest-qt>=4.4",
 ]
