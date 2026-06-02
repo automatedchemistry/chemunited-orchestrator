@@ -5,10 +5,10 @@ from PyQt5.QtCore import QPointF, QRectF, Qt
 from PyQt5.QtGui import QPainterPath, QPen
 from PyQt5.QtWidgets import QGraphicsObject, QGraphicsPathItem
 
-from chemunited.core.components.glossary.rotary_valve import (
+from chemunited_core.components.valve import (
     ValveComponentData,
 )
-from chemunited.core.figure_registry.rotary_valve import (
+from chemunited_core.figure_registry import (
     FourPortDistributionValveData,
     FourPortDistributionValveMode,
     FourPortFivePositionValveData,

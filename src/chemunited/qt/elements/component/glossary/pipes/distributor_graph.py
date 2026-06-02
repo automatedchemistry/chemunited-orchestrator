@@ -3,7 +3,7 @@ from typing import ClassVar
 from PyQt5.QtCore import QPointF, Qt
 from PyQt5.QtGui import QPen
 
-from chemunited.core.components import JunctionData, JunctionMode
+from chemunited_core.components import JunctionData, JunctionMode
 from chemunited.qt.elements.component.component_parts import SceneItem
 from chemunited.qt.elements.component.graph_item import GraphComponent
 

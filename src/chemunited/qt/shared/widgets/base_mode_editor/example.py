@@ -23,7 +23,7 @@ from typing import Annotated
 from pydantic import BaseModel, Field
 from PyQt5.QtWidgets import QApplication
 
-from chemunited.core.utils import ChemQuantityValidator, ChemUnitQuantity
+from chemunited_core.utils import ChemQuantityValidator, ChemUnitQuantity
 from chemunited.qt.shared.widgets.base_mode_editor import BaseModeEditorWidget
 
 # ---------------------------------------------------------------------------

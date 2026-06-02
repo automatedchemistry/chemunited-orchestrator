@@ -2,7 +2,7 @@ from typing import Annotated, Literal
 
 from pydantic import Field
 
-from chemunited.core.utils.internal_quantity import (
+from chemunited_core.utils.internal_quantity import (
     ChemQuantityValidator,
     ChemUnitQuantity,
 )

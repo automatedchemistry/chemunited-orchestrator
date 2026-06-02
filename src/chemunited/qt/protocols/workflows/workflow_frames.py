@@ -250,7 +250,7 @@ def _replace_method_body(
 def _parse_command_call(
     source: str, method_name: str, class_name: str
 ) -> tuple[str, str, dict[str, object]] | None:
-    from chemunited.core.utils.internal_quantity import ChemUnitQuantity
+    from chemunited_core.utils.internal_quantity import ChemUnitQuantity
 
     line = _extract_method_first_expr(source, method_name, class_name)
     if not line:

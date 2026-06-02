@@ -1,6 +1,6 @@
 from typing import ClassVar
 
-from chemunited.core.figure_registry.pipes import SourceData, SourceMode
+from chemunited_core.figure_registry.pipes import SourceData, SourceMode
 from chemunited.qt.elements.component.graph_item import GraphComponent
 
 

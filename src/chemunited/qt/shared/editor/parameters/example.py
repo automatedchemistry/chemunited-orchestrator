@@ -4,7 +4,7 @@ from typing import Annotated
 
 from pydantic import BaseModel, Field, field_validator
 
-from chemunited.core.utils import ChemQuantityValidator, ChemUnitQuantity
+from chemunited_core.utils import ChemQuantityValidator, ChemUnitQuantity
 
 
 def some_method(): ...

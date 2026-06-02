@@ -1,6 +1,6 @@
 from typing import ClassVar
 
-from chemunited.core.components import (
+from chemunited_core.components import (
     BackPressureRegulatorData,
     BackPressureRegulatorMode,
 )

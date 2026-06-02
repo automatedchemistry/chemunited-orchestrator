@@ -14,7 +14,7 @@ from PyQt5.QtGui import QKeySequence
 from pytestqt.qtbot import QtBot
 from qfluentwidgets import NavigationTreeWidget
 
-from chemunited.core.common.enums import ConnectionType
+from chemunited_core.common.enums import ConnectionType
 from chemunited.qt.mcp import McpServiceResult
 from chemunited.qt.project.recent import RecentProjectsStore
 from chemunited.qt.project.session import ProjectSession

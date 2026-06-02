@@ -3,7 +3,7 @@ from typing import ClassVar
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QBrush, QColor, QPen
 
-from chemunited.core.figure_registry.technical import MultiChannelData, MultiChannelMode
+from chemunited_core.figure_registry.technical import MultiChannelData, MultiChannelMode
 from chemunited.qt.elements.component.component_parts import SceneItem
 from chemunited.qt.elements.component.graph_item import GraphComponent
 

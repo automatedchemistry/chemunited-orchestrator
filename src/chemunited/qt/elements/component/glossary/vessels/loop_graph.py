@@ -3,8 +3,8 @@ from typing import ClassVar
 from PyQt5.QtCore import QPointF
 from PyQt5.QtGui import QColor, QPainterPath, QPolygonF
 
-from chemunited.core.common.constant import PATTERN_DIMENSION
-from chemunited.core.components import PlugFlowComponentData, PlugFlowMode
+from chemunited_core.common.constant import PATTERN_DIMENSION
+from chemunited_core.components import PlugFlowComponentData, PlugFlowMode
 from chemunited.qt.elements.component.graph_item import GraphComponent
 from chemunited.qt.shared.graph_objects.custom_path import PathElementItem
 from chemunited.qt.utils.math_functions import spring

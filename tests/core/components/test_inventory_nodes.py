@@ -1,9 +1,9 @@
-from chemunited.core.components import ComponentData, VesselComponentData, VesselMode
-from chemunited.core.components.internals import (
+from chemunited_core.components import ComponentData, VesselComponentData, VesselMode
+from chemunited_core.components.internals import (
     DEFAULT_INVENTORY_KEY,
     InventoryNode,
 )
-from chemunited.core.utils import ChemUnitQuantity
+from chemunited_core.utils import ChemUnitQuantity
 
 
 def qty(value: str) -> ChemUnitQuantity:

@@ -1,6 +1,6 @@
 from typing import ClassVar
 
-from chemunited.core.figure_registry.thermal import (
+from chemunited_core.figure_registry.thermal import (
     PeltierCoolerTemperatureControlData,
     PeltierCoolerTemperatureControlMode,
 )

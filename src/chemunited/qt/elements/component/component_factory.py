@@ -4,7 +4,7 @@ from loguru import logger
 from pydantic import AnyHttpUrl
 
 import chemunited.qt.elements.component.protocols as protocol_module
-from chemunited.core.components import ComponentData
+from chemunited_core.components import ComponentData
 from chemunited.qt.elements.component.connectivity import ComponentConnnectivity
 
 from . import glossary

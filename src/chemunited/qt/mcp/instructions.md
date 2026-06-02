@@ -132,7 +132,7 @@ across **all** protocols in this project. The UI renders these as an editable fo
 **Mandatory structure:**
 ```python
 from pydantic import BaseModel, Field, ConfigDict
-from chemunited.core.utils import ChemQuantityValidator, ChemUnitQuantity
+from chemunited_core.utils import ChemQuantityValidator, ChemUnitQuantity
 # optional: from typing import Annotated
 
 class MainParameter(BaseModel):

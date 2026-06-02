@@ -1,9 +1,9 @@
 from typing import ClassVar
 
-from chemunited.core.common.constant import PATTERN_DIMENSION
-from chemunited.core.common.enums import ConnectionType
-from chemunited.core.components import VesselComponentData, VesselMode
-from chemunited.core.components.enums import PortAccess
+from chemunited_core.common.constant import PATTERN_DIMENSION
+from chemunited_core.common.enums import ConnectionType
+from chemunited_core.components import VesselComponentData, VesselMode
+from chemunited_core.components.enums import PortAccess
 from chemunited.qt.elements.component.component_parts import SvgLayer
 from chemunited.qt.elements.component.graph_item import GraphComponent
 

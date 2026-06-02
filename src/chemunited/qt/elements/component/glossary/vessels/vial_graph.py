@@ -3,7 +3,7 @@ from typing import ClassVar
 from PyQt5.QtCore import QPointF, QRectF, Qt
 from PyQt5.QtGui import QColor, QFont, QPen
 
-from chemunited.core.figure_registry.vessels import VialData, VialMode
+from chemunited_core.figure_registry.vessels import VialData, VialMode
 from chemunited.qt.elements.component.component_parts import SceneItem, SvgLayer
 from chemunited.qt.elements.component.graph_item import GraphComponent
 from chemunited.qt.utils.math_functions import position_to_letter

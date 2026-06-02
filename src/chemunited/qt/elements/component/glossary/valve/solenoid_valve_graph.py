@@ -1,6 +1,6 @@
 from typing import ClassVar
 
-from chemunited.core.figure_registry.solenoid_valve import (
+from chemunited_core.figure_registry.solenoid_valve import (
     SolenoidValve2WayData,
     SolenoidValveData,
     SolenoidValveMode,

@@ -16,7 +16,7 @@ from PyQt5.QtWidgets import (
 )
 from qfluentwidgets import TreeWidget
 
-from chemunited.core.components.enums import ComponentType
+from chemunited_core.components.enums import ComponentType
 from chemunited.qt.elements.component import list_components
 from chemunited.qt.shared.icon import OrchestratorIcon
 

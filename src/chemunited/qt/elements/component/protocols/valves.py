@@ -6,7 +6,7 @@ from loguru import logger
 from pydantic import Field, create_model, field_validator
 from pydantic.config import JsonDict
 
-from chemunited.core.components.glossary.rotary_valve import possibles_connections_pairs
+from chemunited_core.components.valve import possibles_connections_pairs
 from chemunited.qt.utils.files import load_class
 
 from .models import CommandSignature, ComponentProtocol
@@ -74,7 +74,7 @@ class ValvesProtocols(ComponentProtocol):
 
     @classmethod
     def _load_port_topology(cls) -> tuple[list[tuple], list[tuple]]:
-        import chemunited.core.components.glossary.rotary_valve as rv_module
+        import chemunited_core.components.valve as rv_module
 
         try:
             data = load_class(

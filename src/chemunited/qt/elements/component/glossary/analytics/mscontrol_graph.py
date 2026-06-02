@@ -2,7 +2,7 @@ from typing import ClassVar
 
 from PyQt5.QtCore import QPointF, Qt
 
-from chemunited.core.components import ComponentData, ComponentMode
+from chemunited_core.components import ComponentData, ComponentMode
 from chemunited.qt.elements.component.graph_item import GraphComponent
 
 from .spectrum import Spectrum

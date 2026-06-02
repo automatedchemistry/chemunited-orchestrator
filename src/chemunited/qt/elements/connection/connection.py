@@ -5,7 +5,7 @@ from PyQt5.QtCore import QPointF, Qt
 from PyQt5.QtGui import QColor, QPainterPath, QPen
 from PyQt5.QtWidgets import QGraphicsItem
 
-from chemunited.core.connections import ConnectionType, EdgeData, EdgeMode
+from chemunited_core.connections import ConnectionType, EdgeData, EdgeMode
 from chemunited.qt.elements.component.component_parts.connection_point import (
     ConnectionPoint,
 )

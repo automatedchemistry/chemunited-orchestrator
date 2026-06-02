@@ -35,9 +35,9 @@ from PyQt5.QtWidgets import (
     QStyleOptionGraphicsItem,
 )
 
-from chemunited.core.common.constant import PATTERN_DIMENSION
-from chemunited.core.common.enums import ConnectionType as CoreConnectionType
-from chemunited.core.components import ComponentData, ComponentMode
+from chemunited_core.common.constant import PATTERN_DIMENSION
+from chemunited_core.common.enums import ConnectionType as CoreConnectionType
+from chemunited_core.components import ComponentData, ComponentMode
 from chemunited.qt.elements.component.component_parts import (
     ConnectionPoint,
     ConnectivityBadge,

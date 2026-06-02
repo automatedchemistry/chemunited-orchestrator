@@ -2,8 +2,8 @@ from typing import ClassVar
 
 from PyQt5.QtCore import QFile
 
-from chemunited.core.common.constant import PATTERN_DIMENSION
-from chemunited.core.components import FlowSourceData, FlowSourceMode
+from chemunited_core.common.constant import PATTERN_DIMENSION
+from chemunited_core.components import FlowSourceData, FlowSourceMode
 from chemunited.qt.elements.component.component_parts.svg_layer import SvgLayer
 from chemunited.qt.elements.component.graph_item import GraphComponent
 

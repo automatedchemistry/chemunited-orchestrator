@@ -1,6 +1,6 @@
 from typing import ClassVar
 
-from chemunited.core.components import Gantry3DData, Gantry3DMode
+from chemunited_core.figure_registry import Gantry3DData, Gantry3DMode
 from chemunited.qt.elements.component.graph_item import GraphComponent
 
 

@@ -498,7 +498,7 @@ if __name__ == "__main__":
 
     from PyQt5.QtWidgets import QApplication, QDialog
 
-    from chemunited.core.utils.internal_quantity import ChemUnitQuantity
+    from chemunited_core.utils.internal_quantity import ChemUnitQuantity
     from chemunited.qt.elements.component.protocols.pumps import WithdrawParameter
 
     app = QApplication(sys.argv)

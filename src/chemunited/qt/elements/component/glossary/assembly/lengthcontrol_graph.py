@@ -1,6 +1,6 @@
 from typing import ClassVar
 
-from chemunited.core.components import ComponentMode, NeutralComponentData
+from chemunited_core.components import ComponentMode, NeutralComponentData
 from chemunited.qt.elements.component.graph_item import GraphComponent
 
 

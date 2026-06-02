@@ -1,9 +1,9 @@
 from typing import ClassVar
 
-from chemunited.core.common.constant import PATTERN_DIMENSION
-from chemunited.core.common.enums import ConnectionType
-from chemunited.core.components.enums import PortAccess
-from chemunited.core.figure_registry.vessels import GlassBottleData, GlassBottleMode
+from chemunited_core.common.constant import PATTERN_DIMENSION
+from chemunited_core.common.enums import ConnectionType
+from chemunited_core.components.enums import PortAccess
+from chemunited_core.figure_registry.vessels import GlassBottleData, GlassBottleMode
 from chemunited.qt.elements.component.component_parts import SvgLayer
 from chemunited.qt.elements.component.graph_item import GraphComponent
 

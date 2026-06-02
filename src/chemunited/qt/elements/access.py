@@ -1,6 +1,6 @@
 from typing import Union
 
-from chemunited.core.connections import ConnectionType
+from chemunited_core.connections import ConnectionType
 
 from .component.component_factory import ElectronicManager, UtensilManager
 from .connection.connection import BaseConnectionItem
