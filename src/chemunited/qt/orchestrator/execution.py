@@ -690,13 +690,17 @@ class OrchestratorExecution(OrchestratorConnectivity):
                         node_state = NodeState[state_str]
                     except KeyError:
                         logger.debug(
-                            "Unknown node state in report for {}: {}", node_name, state_str
+                            "Unknown node state in report for {}: {}",
+                            node_name,
+                            state_str,
                         )
                         continue
                 self._emit_node_status(active_name, node_name, node_state)
             states = list(node_states.values())
             process_status = (
-                NodeState.FAILED if any(s == "FAILED" for s in states) else NodeState.COMPLETED
+                NodeState.FAILED
+                if any(s == "FAILED" for s in states)
+                else NodeState.COMPLETED
             )
             self._emit_process_status(active_name, process_status)
 
@@ -766,7 +770,9 @@ class OrchestratorExecution(OrchestratorConnectivity):
         if workflow is not None and hasattr(workflow, "clear_progress"):
             workflow.clear_progress()
 
-    def _finalize_workflow_process_nodes(self, active_name: str, status: NodeState) -> None:
+    def _finalize_workflow_process_nodes(
+        self, active_name: str, status: NodeState
+    ) -> None:
         process_name = self._process_name_for_active_key(active_name)
         workflows_widget = getattr(self.parent_ref, "workflows_protocol", None)
         if process_name is None or workflows_widget is None:

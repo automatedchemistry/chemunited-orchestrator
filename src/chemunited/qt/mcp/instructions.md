@@ -89,6 +89,8 @@ def build_draw(platform):
   `associations.json` and when accessed in protocols via `self.platform["<name>"]`.
 - Do **not** rename a component without updating `associations.json` and all protocols.
 - Call `refresh_project()` after writing this file so the app reloads the canvas.
+- Call `export_platform_svg()` after refreshing if you want to regenerate
+  `draw/platform.svg` from the live canvas.
 
 ---
 
@@ -271,4 +273,6 @@ def <method_name>(self, ctx: NodeExecutionContext) -> bool:
 3. Use `write_project_file(path, content)` to create or overwrite a file.
 4. When adding or removing a protocol, also update `manifest.json` `processes_order`.
 5. Always call `refresh_project()` after writing any file so the app reloads.
-6. Use `delete_project_file(path)` only for `protocols/*.py` (not `main_parameters.py`).
+6. Use `export_platform_svg()` when you want to refresh the generated
+   `draw/platform.svg` companion file from the live canvas.
+7. Use `delete_project_file(path)` only for `protocols/*.py` (not `main_parameters.py`).

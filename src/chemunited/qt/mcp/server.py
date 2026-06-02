@@ -10,6 +10,10 @@ from loguru import logger
 
 from chemunited.qt.mcp.project_files import ProjectFileAccess
 from chemunited.qt.mcp.qt_bridge import QtMainThreadBridge
+from chemunited.qt.project.platform_svg import (
+    PLATFORM_SVG_RELATIVE_PATH,
+    export_platform_svg,
+)
 from chemunited.qt.shared.enums import WindowCategory
 
 if TYPE_CHECKING:
@@ -141,6 +145,30 @@ class ProjectMcpService:
             )
             return {"ok": False, "blocked": False, "message": str(exc)}
 
+    def export_platform_svg_from_mcp(self, *, scale: float = 2.0) -> dict[str, Any]:
+        def export() -> dict[str, Any]:
+            working_dir = self._current_working_dir()
+            if working_dir is None:
+                raise RuntimeError("No project is currently open.")
+
+            path = working_dir / PLATFORM_SVG_RELATIVE_PATH
+            export_platform_svg(self._window.scene_attribute, path, scale=scale)
+            return {
+                "path": PLATFORM_SVG_RELATIVE_PATH.as_posix(),
+                "bytes": path.stat().st_size,
+                "scale": scale,
+                "message": "Platform SVG exported.",
+            }
+
+        try:
+            payload = self._bridge.call(export, timeout=60)
+        except Exception as exc:
+            logger.bind(window=WindowCategory.SETUP).opt(exception=exc).error(
+                f"Project MCP platform SVG export failed: {exc}"
+            )
+            return {"ok": False, "message": str(exc)}
+        return {"ok": True, **payload}
+
     def _register_tools(self, mcp: Any) -> None:
         @mcp.tool()
         def list_project_files() -> dict[str, Any]:
@@ -168,6 +196,11 @@ class ProjectMcpService:
         def refresh_project() -> dict[str, Any]:
             """Reload the live Setup window from the current project files."""
             return self.refresh_project_from_mcp()
+
+        @mcp.tool()
+        def export_platform_svg(scale: float = 2.0) -> dict[str, Any]:
+            """Export the live platform canvas to draw/platform.svg."""
+            return self.export_platform_svg_from_mcp(scale=scale)
 
     def _handle_file_call(self, call) -> dict[str, Any]:
         try:

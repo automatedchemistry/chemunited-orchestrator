@@ -373,6 +373,30 @@ class TestAddComponent:
         assert "PumpA" not in window.orchestrator.components
         assert "PumpB" in window.orchestrator.components
 
+    def test_mcp_exports_platform_svg(self, window: SetupWindow, tmp_path):
+        working_dir = tmp_path / "demo"
+        session = ProjectSession()
+        session.new(name="demo", location=tmp_path, init_git=False)
+        window.orchestrator.working_dir = working_dir
+        window.orchestrator._session = session
+        window.orchestrator.add_component(
+            name="PumpA",
+            figure="HPLCPump",
+            position=(0.0, 0.0),
+        )
+
+        result = window.mcp_service.export_platform_svg_from_mcp(scale=3.0)
+
+        svg_path = working_dir / "draw" / "platform.svg"
+        assert result == {
+            "ok": True,
+            "path": "draw/platform.svg",
+            "bytes": svg_path.stat().st_size,
+            "scale": 3.0,
+            "message": "Platform SVG exported.",
+        }
+        assert "<svg" in svg_path.read_text(encoding="utf-8")
+
     def test_recent_projects_menu_lists_saved_paths(
         self, window: SetupWindow, tmp_path
     ):
@@ -586,7 +610,8 @@ class CustomProcess(Process[ProcessConfig]):
 
     def _prepare_stock(self) -> str:
         return "helper"
-""".strip() + "\n",
+""".strip()
+            + "\n",
             encoding="utf-8",
         )
         window.orchestrator.working_dir = working_dir

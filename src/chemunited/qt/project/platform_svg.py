@@ -13,11 +13,18 @@ PLATFORM_SVG_RELATIVE_PATH = Path("draw") / "platform.svg"
 _BACKGROUND = QColor("#ffffff")
 _EMPTY_SCENE_RECT = QRectF(0, 0, 640, 360)
 _MARGIN = 24.0
+_EXPORT_SCALE = 2.0
 
 
-def export_platform_svg(scene: QGraphicsScene, path: Path) -> None:
+def export_platform_svg(
+    scene: QGraphicsScene,
+    path: Path,
+    *,
+    scale: float = _EXPORT_SCALE,
+) -> None:
     """Export the current platform scene as an SVG project companion file."""
     path.parent.mkdir(parents=True, exist_ok=True)
+    scale = max(scale, 0.1)
 
     selected_items = tuple(scene.selectedItems())
     hidden_items = _visible_edit_handles(scene)
@@ -31,8 +38,8 @@ def export_platform_svg(scene: QGraphicsScene, path: Path) -> None:
 
         source_rect = _export_rect(scene)
         size = QSize(
-            max(1, ceil(source_rect.width())),
-            max(1, ceil(source_rect.height())),
+            max(1, ceil(source_rect.width() * scale)),
+            max(1, ceil(source_rect.height() * scale)),
         )
 
         generator = QSvgGenerator()
@@ -55,7 +62,7 @@ def export_platform_svg(scene: QGraphicsScene, path: Path) -> None:
                 painter,
                 QRectF(0, 0, float(size.width()), float(size.height())),
                 source_rect,
-                Qt.IgnoreAspectRatio,
+                Qt.IgnoreAspectRatio,  # type: ignore[attr-defined]
             )
         finally:
             painter.end()

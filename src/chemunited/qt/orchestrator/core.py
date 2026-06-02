@@ -1,4 +1,3 @@
-from asyncio import base_futures
 from typing import TYPE_CHECKING, Any
 
 from PyQt5.QtCore import QObject, Qt

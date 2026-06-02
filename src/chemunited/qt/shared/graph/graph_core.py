@@ -171,6 +171,6 @@ class GraphCore(QGraphicsView):
     def recenter_view(self):
         """Centralize the view according to the items currently present in the scene."""
         if self.scene():
-            items_rect = self.scene().itemsBoundingRect()
-            self.scene().setSceneRect(items_rect)
-            self.fitInView(items_rect, Qt.KeepAspectRatio)
+            items_rect = self.scene().itemsBoundingRect()  # type: ignore[attr-defined]
+            self.scene().setSceneRect(items_rect)  # type: ignore[attr-defined]
+            self.fitInView(items_rect, Qt.KeepAspectRatio)  # type: ignore[arg-type]

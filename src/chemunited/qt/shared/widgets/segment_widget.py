@@ -24,7 +24,12 @@ class SegmentWindow(QWidget):
         self.stackedWidget.currentChanged.connect(self._emit_current_widget_name)  # type: ignore[attr-defined]
 
     def addSubInterface(
-        self, widget: QWidget, objectName: str, text: str, icon: str | QIcon | None = None, onClick: Any = None
+        self,
+        widget: QWidget,
+        objectName: str,
+        text: str,
+        icon: str | QIcon | None = None,
+        onClick: Any = None,
     ):
         widget.setObjectName(objectName)
         self.stackedWidget.addWidget(widget)

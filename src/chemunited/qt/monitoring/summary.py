@@ -362,7 +362,7 @@ class ReportFrame(QWidget):
     def _clear_layout(layout: QVBoxLayout) -> None:
         while layout.count():
             item = layout.takeAt(0)
-            widget = item.widget() # type: ignore[attr-defined]
+            widget = item.widget()  # type: ignore[attr-defined]
             if widget is not None:
                 widget.deleteLater()
 
@@ -376,8 +376,8 @@ class ReportFrame(QWidget):
         row = self._build_event_row(payload)
         insert_at = max(0, self.stream_layout.count() - 1)
         self.stream_layout.insertWidget(insert_at, row)
-        self.stream_scroll.verticalScrollBar().setValue( # type: ignore[attr-defined]
-            self.stream_scroll.verticalScrollBar().maximum() # type: ignore[attr-defined]
+        self.stream_scroll.verticalScrollBar().setValue(  # type: ignore[attr-defined]
+            self.stream_scroll.verticalScrollBar().maximum()  # type: ignore[attr-defined]
         )
 
     def _build_event_row(self, payload: dict[str, Any]) -> QWidget:
@@ -415,7 +415,9 @@ class ReportFrame(QWidget):
         header.addWidget(raw_button)
         layout.addLayout(header)
 
-        message = BodyLabel(_compact_value(payload.get("message")) or "Run state update", card)
+        message = BodyLabel(
+            _compact_value(payload.get("message")) or "Run state update", card
+        )
         message.setObjectName("event_message_label")
         message.setWordWrap(True)
         layout.addWidget(message)
@@ -507,7 +509,9 @@ class ReportFrame(QWidget):
 
         for index, result in enumerate(results):
             if isinstance(result, dict):
-                self.report_layout.addWidget(self._build_process_report_card(index, result))
+                self.report_layout.addWidget(
+                    self._build_process_report_card(index, result)
+                )
         self.report_layout.addStretch(1)
 
     def _build_process_report_card(self, index: int, result: dict[str, Any]) -> QWidget:
@@ -567,7 +571,9 @@ class ReportFrame(QWidget):
             layout.addWidget(label)
         return frame
 
-    def _build_nodes_table(self, result: dict[str, Any], parent: QWidget) -> TableWidget:
+    def _build_nodes_table(
+        self, result: dict[str, Any], parent: QWidget
+    ) -> TableWidget:
         state_map = result.get("node_state", {})
         result_map = result.get("node_result", {})
         runtime_map = result.get("node_runtime", {})

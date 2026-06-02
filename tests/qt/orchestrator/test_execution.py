@@ -140,7 +140,9 @@ def test_execute_returns_false_without_protocol_history() -> None:
     assert client.posts == []
 
 
-def test_execute_starts_run_with_protocol_history_file_name(tmp_path, monkeypatch) -> None:
+def test_execute_starts_run_with_protocol_history_file_name(
+    tmp_path, monkeypatch
+) -> None:
     class Dialog:
         Accepted = 1
 
@@ -549,11 +551,13 @@ def test_apply_run_report_prefers_report_process_key() -> None:
     emitted_processes = []
     execution = OrchestratorExecution.__new__(OrchestratorExecution)
     execution._active_process_order = ["Wrong_0"]
-    execution._emit_node_status = lambda active_name, node_name, status: emitted_nodes.append(
-        (active_name, node_name, status)
+    execution._emit_node_status = (
+        lambda active_name, node_name, status: emitted_nodes.append(
+            (active_name, node_name, status)
+        )
     )
-    execution._emit_process_status = lambda active_name, status: emitted_processes.append(
-        (active_name, status)
+    execution._emit_process_status = (
+        lambda active_name, status: emitted_processes.append((active_name, status))
     )
 
     execution._apply_run_report(
