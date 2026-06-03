@@ -168,7 +168,7 @@ class ApiProcess(QObject):
         if _is_port_in_use(DEFAULT_API_PORT):
             ok, _ = access_url(f"{BASE_URL}/project/", timeout=2)
             if ok:
-                logger.info(
+                logger.success(
                     "Execution API already running on port {}. Connecting to existing instance.",
                     DEFAULT_API_PORT,
                 )
