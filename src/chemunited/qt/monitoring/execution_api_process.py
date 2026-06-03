@@ -1,4 +1,5 @@
 import json
+import socket
 import sys
 from pathlib import Path
 from typing import Any
@@ -83,8 +84,8 @@ class ApiClient:
             logger.warning("GET {} stream failed: {}", url, exc)
             raise
 
-    def put(self, endpoint: str, params: dict | None = None, timeout: int = 10) -> Any:
-        return self._request("PUT", endpoint, params=params, timeout=timeout)
+    def put(self, endpoint: str, data: dict | None = None, params: dict | None = None, timeout: int = 10) -> Any:
+        return self._request("PUT", endpoint, params=params, data=data, timeout=timeout)
 
     def post(self, endpoint: str, data: dict | None = None, timeout: int = 10) -> Any:
         return self._request("POST", endpoint, data=data, timeout=timeout)
@@ -164,17 +165,22 @@ class ApiProcess(QObject):
         return str(self.client.url)
 
     def start_api(self) -> bool:
-        dialog = APIDialog(parent=self._parent_widget)
-        if dialog.exec() != dialog.Accepted:
-            return False
-        if result := dialog.get_result_instance():
-            self.client.url = getattr(result, "address")
-        else:
-            return False
-
-        if getattr(result, "already_running"):
-            self._ping_timer.start()
-            QTimer.singleShot(2000, self._fetch_logs)
+        if _is_port_in_use(DEFAULT_API_PORT):
+            ok, _ = access_url(f"{BASE_URL}/project/", timeout=2)
+            if ok:
+                logger.info(
+                    "Execution API already running on port {}. Connecting to existing instance.",
+                    DEFAULT_API_PORT,
+                )
+                self._ping_timer.start()
+                QTimer.singleShot(2000, self._fetch_logs)
+                self._load_project()
+            else:
+                logger.warning(
+                    "Port {} is occupied by an unrecognized process. Cannot start execution API.",
+                    DEFAULT_API_PORT,
+                )
+                return False
         else:
             self._process.start(
                 _workflow_cli_executable(),
@@ -229,6 +235,13 @@ class ApiProcess(QObject):
         except Exception as e:
             self._append(f"[logs error] {e}: {raw}")
 
+    def _load_project(self):
+        result = self.client.put("project/", data={"project_dir": str(self._working_dir)})
+        if result is None or "error" in (result or {}):
+            logger.warning("Failed to load project into existing API: {}", result)
+        else:
+            logger.info("Project '{}' loaded into running API.", self._working_dir)
+
 
 def _workflow_cli_executable() -> str:
     executable = Path(sys.executable)
@@ -245,3 +258,9 @@ def _workflow_cli_executable() -> str:
 
 def _api_url(base_url: AnyHttpUrl, endpoint: str) -> str:
     return f"{str(base_url).rstrip('/')}/{endpoint.lstrip('/')}"
+
+
+def _is_port_in_use(port: int) -> bool:
+    with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
+        s.settimeout(1)
+        return s.connect_ex(("localhost", port)) == 0
