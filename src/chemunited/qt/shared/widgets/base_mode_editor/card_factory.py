@@ -45,6 +45,8 @@ class CardFactory:
 
         # Apply visibility / editability from json_schema_extra
         extras = extras_override or _field_extras(field_info)
+        if isinstance(card, BoolFieldCard):
+            card.apply_text_options(dict(extras))
         card.setVisible(bool(extras.get("visible", True)))
         card.setEnabled(bool(extras.get("editable", True)))
 

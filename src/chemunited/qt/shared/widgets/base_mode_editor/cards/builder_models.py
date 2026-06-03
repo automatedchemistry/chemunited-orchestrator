@@ -117,6 +117,20 @@ class BoolVariableBuildMode(BasicVariableBuildMode):
         json_schema_extra={"group": "General"},
     )
 
+    on_text: str = Field(
+        default="On",
+        title="On Text",
+        description="Caption shown when the switch is enabled.",
+        json_schema_extra={"group": "Display"},
+    )
+
+    off_text: str = Field(
+        default="Off",
+        title="Off Text",
+        description="Caption shown when the switch is disabled.",
+        json_schema_extra={"group": "Display"},
+    )
+
 
 class ListVariableBuildMode(BasicVariableBuildMode):
     default: list = Field(

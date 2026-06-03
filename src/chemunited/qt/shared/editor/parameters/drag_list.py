@@ -74,6 +74,14 @@ class _DragListWidget(ListWidget):
         mime.setText(param_line)
         drag = QDrag(self)
         drag.setMimeData(mime)
+
+        item_rect = self.visualItemRect(item)
+        viewport = self.viewport()
+        pixmap = viewport.grab(item_rect) if viewport is not None else None
+        if pixmap is not None and not pixmap.isNull():
+            drag.setPixmap(pixmap)
+            drag.setHotSpot(item_rect.topLeft())
+
         drag.exec_(Qt.CopyAction)  # type: ignore[attr-defined]
 
 

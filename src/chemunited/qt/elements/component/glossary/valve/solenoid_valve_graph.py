@@ -1,6 +1,7 @@
 from typing import ClassVar
 
 from chemunited_core.figure_registry.solenoid_valve import (
+    Solenoid2WayValveMode,
     SolenoidValve2WayData,
     SolenoidValveData,
     SolenoidValveMode,
@@ -16,5 +17,5 @@ class SolenoidValve(GraphComponent[SolenoidValveData]):
 
 class SolenoidValve2Way(GraphComponent[SolenoidValve2WayData]):
     METADATA: ClassVar[type[SolenoidValve2WayData]] = SolenoidValve2WayData
-    BASEMODE: ClassVar[type[SolenoidValveMode]] = SolenoidValveMode
+    BASEMODE: ClassVar[type[Solenoid2WayValveMode]] = Solenoid2WayValveMode
     SVG_SCALE: ClassVar[float] = 1.0

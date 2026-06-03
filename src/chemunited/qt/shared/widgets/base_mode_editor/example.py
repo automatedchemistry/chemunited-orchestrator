@@ -58,6 +58,17 @@ class ProcessParameters(BaseModel):
         ),
     ]
 
+    valve_position: bool = Field(
+            default=True,
+            title="Position 1/2",
+            description="The actual valve position.",
+            json_schema_extra={
+                "group": "Identification",
+                "on_text": "Position 1",
+                "off_text": "Position 2",
+            },
+        )
+
     # ── Reactor settings ────────────────────────────────────────────────────
 
     reactor_volume: Annotated[

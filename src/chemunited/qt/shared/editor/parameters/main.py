@@ -180,6 +180,8 @@ def field_info_to_build_mode(
             editable=editable,
             visible=visible,
             default=bool(_field_default(field_info, False)),
+            on_text=str(extra.get("on_text", "On")),
+            off_text=str(extra.get("off_text", "Off")),
         )
 
     if annotation is list or get_origin(annotation) is list:

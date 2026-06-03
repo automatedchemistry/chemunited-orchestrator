@@ -186,6 +186,13 @@ def generate_field_code(mode: BasicVariableBuildMode) -> str:
         options = v.get("Options", [])
         if options:
             extra["Options"] = options
+    if isinstance(mode, BoolVariableBuildMode):
+        on_text = v.get("on_text", "On")
+        off_text = v.get("off_text", "Off")
+        if on_text != "On":
+            extra["on_text"] = on_text
+        if off_text != "Off":
+            extra["off_text"] = off_text
     extra_repr = repr(extra)
 
     # ── assemble ────────────────────────────────────────────────────────

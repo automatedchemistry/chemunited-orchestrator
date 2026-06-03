@@ -40,6 +40,7 @@ dependencies = [
     "mcp>=1.23",
     "uvicorn[standard]>=0.34",
     "sse-starlette>=2.1",
+    "black"
 ]
 
 [project.scripts]
@@ -66,6 +67,9 @@ package-dir = {"" = "src"}
 where = ["src"]
 include = ["chemunited*"]
 namespaces = true
+
+[tool.setuptools.package-data]
+"chemunited.qt.mcp" = ["*.md"]
 
 [tool.black]
 line-length = 88

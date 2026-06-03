@@ -205,7 +205,7 @@ class CommandList(TreeWidget):
         self.setDragDropMode(QAbstractItemView.DragOnly)
         self.setDefaultDropAction(QT_COPY_ACTION)
         self.setExpandsOnDoubleClick(True)
-        self.itemDoubleClicked.connect(self._on_item_double_clicked)
+        self.itemDoubleClicked.connect(self._on_item_double_clicked)  # type: ignore[attr-defined]
 
         self.sync_protocols()
 
@@ -352,7 +352,7 @@ class CommandList(TreeWidget):
         )
         if command_item is None:
             return None
-
+        
         line_script = command_item.data(0, self.ROLE_LINE_SCRIPT)
         if not isinstance(line_script, str):
             return None

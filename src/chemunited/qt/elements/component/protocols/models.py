@@ -1,6 +1,7 @@
 import uuid
 from typing import Any, Literal, Self, Type
 
+from chemunited_core.utils.internal_quantity import ChemUnitQuantity  # type: ignore[import-not-found]
 from pydantic import BaseModel, Field
 
 
@@ -32,11 +33,22 @@ class CommandSignature(BaseModel):
             if name not in base_fields
         }
 
+    _SCRIPT_EXCLUDED = frozenset({"id", "component", "command", "method"})
+
     @property
     def line_script(self) -> str:
         method = "put" if self.method == "PUT" else "get"
+        base_fields = set(CommandSignature.model_fields)
+        all_fields = type(self).model_fields
+        params = {n: getattr(self, n) for n in all_fields if n not in base_fields}
+        base_kwargs = {
+            n: getattr(self, n)
+            for n in all_fields
+            if n in base_fields and n not in self._SCRIPT_EXCLUDED
+        }
         parameters = ", ".join(
-            f"{name}={value!r}" for name, value in self.parameters.items()
+            f'{name}="{value}"' if isinstance(value, ChemUnitQuantity) else f"{name}={value!r}"
+            for name, value in {**params, **base_kwargs}.items()
         )
         if parameters:
             return (

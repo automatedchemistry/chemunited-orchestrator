@@ -1,9 +1,12 @@
+import ast
+import textwrap
 from pathlib import Path
 from typing import TYPE_CHECKING
 
 import black  # type: ignore[import-not-found]
 from loguru import logger
-from PyQt5.QtCore import Qt
+from PyQt5.Qsci import QsciScintilla
+from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QDropEvent, QIcon
 from PyQt5.QtWidgets import QDockWidget, QHBoxLayout, QMainWindow, QWidget
 from qfluentwidgets import FluentIcon, NavigationInterface, NavigationItemPosition
@@ -23,7 +26,129 @@ def _process_parameter_class_name(class_name: str | None) -> str:
     return f"{class_name}Config" if class_name else "MainParameter"
 
 
+def _drop_position_to_line_index(
+    editor: EditorBase,
+    event: QDropEvent,
+) -> tuple[int, int]:
+    pos = editor.SendScintilla(
+        QsciScintilla.SCI_POSITIONFROMPOINT,
+        event.pos().x(),
+        event.pos().y(),
+    )
+    if pos < 0:
+        return editor.getCursorPosition()
+
+    line = editor.SendScintilla(QsciScintilla.SCI_LINEFROMPOSITION, pos)
+    line_start = editor.SendScintilla(QsciScintilla.SCI_POSITIONFROMLINE, line)
+    return int(line), int(pos - line_start)
+
+
+def _drop_text_from_mime(mime_data) -> str | None:
+    for mime_type in (CommandList.MIME, ParameterDragableList.MIME):
+        if mime_data.hasFormat(mime_type):
+            text = bytes(mime_data.data(mime_type)).decode("utf-8").strip()
+            return text or None
+
+    text = mime_data.text().strip() if mime_data.hasText() else ""
+    return text or None
+
+
+def _find_function_for_line(
+    tree: ast.AST,
+    line_1based: int,
+) -> ast.FunctionDef | ast.AsyncFunctionDef | None:
+    matches = [
+        node
+        for node in ast.walk(tree)
+        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+        and node.lineno <= line_1based <= (node.end_lineno or node.lineno)
+    ]
+    if not matches:
+        return None
+    return max(matches, key=lambda node: (node.lineno, node.col_offset))
+
+
+def _statement_for_line(
+    function_node: ast.FunctionDef | ast.AsyncFunctionDef,
+    line_1based: int,
+) -> ast.stmt | None:
+    statements = [
+        node
+        for node in ast.walk(function_node)
+        if isinstance(node, ast.stmt)
+        and node is not function_node
+        and not isinstance(
+            node,
+            (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef),
+        )
+        and node.lineno <= line_1based <= (node.end_lineno or node.lineno)
+    ]
+    if not statements:
+        return None
+
+    return min(
+        statements,
+        key=lambda node: (
+            (node.end_lineno or node.lineno) - node.lineno,
+            node.col_offset,
+        ),
+    )
+
+
+def _line_indent(lines: list[str], line: int, fallback_col: int) -> str:
+    if 0 <= line < len(lines):
+        text = lines[line]
+        return text[: len(text) - len(text.lstrip(" \t"))]
+    return " " * fallback_col
+
+
+def _insertion_for_statement_drop(
+    source: str,
+    drop_line: int,
+) -> tuple[int, str] | None:
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return None
+
+    function_node = _find_function_for_line(tree, drop_line + 1)
+    if function_node is None or not function_node.body:
+        return None
+
+    lines = source.splitlines()
+    first_body = function_node.body[0]
+    first_body_line = first_body.lineno - 1
+    first_body_indent = _line_indent(lines, first_body_line, first_body.col_offset)
+
+    if drop_line + 1 < first_body.lineno:
+        return first_body_line, first_body_indent
+
+    if drop_line + 1 > (function_node.end_lineno or function_node.lineno):
+        return None
+
+    statement = _statement_for_line(function_node, drop_line + 1)
+    if statement is None:
+        return drop_line, first_body_indent
+
+    statement_line = statement.lineno - 1
+    indent = _line_indent(lines, statement_line, statement.col_offset)
+    if isinstance(statement, ast.Return):
+        return statement_line, indent
+    return statement.end_lineno or statement.lineno, indent
+
+
+def _build_statement_insert_text(snippet: str, indent: str, newline: str) -> str:
+    normalized = textwrap.dedent(snippet.strip()).strip("\r\n")
+    lines = normalized.splitlines() or [normalized]
+    return (
+        newline.join(f"{indent}{line}" if line.strip() else "" for line in lines)
+        + newline
+    )
+
+
 class ScriptEditor(EditorBase):
+    drop_accepted = pyqtSignal()
+
     def __init__(self, path: Path, parent=None):
         super().__init__(parent, path=path)
 
@@ -36,11 +161,35 @@ class ScriptEditor(EditorBase):
                 bytes(mime_data.data(ParameterDragableList.PATH_MIME)).decode("utf-8")
             ).resolve()
             current_path = self.path.resolve()
-            if source_path != current_path and source_path.name != "main_parameters.py":
+            if (
+                source_path != current_path
+                and source_path.name != "main_parameters.py"
+            ):
                 event.ignore()
                 return
 
-        super().dropEvent(event)
+        snippet = _drop_text_from_mime(mime_data)
+        if snippet is None:
+            event.ignore()
+            return
+
+        line, _index = _drop_position_to_line_index(self, event)
+        source = self.text()
+        insertion = _insertion_for_statement_drop(source, line)
+        if insertion is None:
+            event.ignore()
+            return
+
+        insert_line, indent = insertion
+        newline = "\r\n" if "\r\n" in source else "\n"
+        self.insertAt(
+            _build_statement_insert_text(snippet, indent, newline),
+            insert_line,
+            0,
+        )
+        event.acceptProposedAction()
+        if mime_data.hasFormat(CommandList.MIME):
+            self.drop_accepted.emit()  # type: ignore[attr-defined]
 
 
 class ScriptEditorWindow(QMainWindow):
@@ -60,6 +209,7 @@ class ScriptEditorWindow(QMainWindow):
         self.setMinimumSize(600, 600)
 
         self.editor = self._make_editor(path)
+        self.editor.drop_accepted.connect(self.format_with_black)  # type: ignore[attr-defined]
 
         self.navigationInterface = NavigationInterface(self, showMenuButton=True)
 
@@ -111,7 +261,7 @@ class ScriptEditorWindow(QMainWindow):
             self.main_parameter_editor = None
             self.main_parameter_dock = None
 
-    def _make_editor(self, path: Path) -> EditorBase:
+    def _make_editor(self, path: Path) -> ScriptEditor:
         return ScriptEditor(path=path, parent=self)
 
     def initlayout(self):

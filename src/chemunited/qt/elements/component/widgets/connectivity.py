@@ -11,7 +11,7 @@ if TYPE_CHECKING:
 
 
 class ConnectivityWidget(BaseModeEditorWidget):
-    def __init__(self, component: ElectronicManager, parent: QWidget | None = None):
+    def __init__(self, component: "ElectronicManager", parent: QWidget | None = None):
         self._component = component
         super().__init__(
             model_class=ComponentConnnectivity,

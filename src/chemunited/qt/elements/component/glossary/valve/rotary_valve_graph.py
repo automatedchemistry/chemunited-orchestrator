@@ -8,6 +8,7 @@ from PyQt5.QtWidgets import QGraphicsObject, QGraphicsPathItem
 from chemunited_core.components.valve import (
     ValveComponentData,
 )
+from chemunited_core.components import ComponentMode
 from chemunited_core.figure_registry import (
     FourPortDistributionValveData,
     FourPortDistributionValveMode,

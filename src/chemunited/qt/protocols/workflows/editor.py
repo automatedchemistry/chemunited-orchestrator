@@ -9,11 +9,13 @@ from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QColor, QDropEvent, QKeyEvent
 from PyQt5.QtWidgets import QWidget
 
-from chemunited.qt.shared.editor.base import EditorBase
-from chemunited.qt.shared.editor.protocols.script import ScriptEditorWindow
+from chemunited.qt.shared.editor.protocols.script import (
+    ScriptEditor,
+    ScriptEditorWindow,
+)
 
 
-class ProtectedZoneEditor(EditorBase):
+class ProtectedZoneEditor(ScriptEditor):
     """EditorBase subclass with per-range read-only protection and visual dimming."""
 
     _DIM_INDICATOR: int = 8  # INDIC_CONTAINER — first app-reserved Scintilla slot
