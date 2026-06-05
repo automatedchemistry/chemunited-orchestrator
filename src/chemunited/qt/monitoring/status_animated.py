@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import sys
 from collections.abc import Sequence
-from pathlib import Path
 from typing import Any
 
 from PyQt5.QtCore import QFile, QObject, QTimer
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication, QVBoxLayout, QWidget
 from qfluentwidgets import BodyLabel, ToolButton
+
+from chemunited.qt.shared.icon import OrchestratorIcon
 
 ONLINE_FRAMES = (
     "onlineA.svg",
@@ -62,17 +63,12 @@ class AnimatedOnlineIcon(QObject):
     @staticmethod
     def _resolve_icon_path(file_name: str) -> str:
         resource_path = f":/icons/icons/{file_name}"
-        if QFile.exists(resource_path):
-            return resource_path
-
-        icons_dir = (
-            Path(__file__).resolve().parents[1] / "shared" / "resources" / "icons"
-        )
-        file_path = icons_dir / file_name
-        if not file_path.exists():
-            raise FileNotFoundError(file_path)
-
-        return str(file_path)
+        if not QFile.exists(resource_path):
+            fallback_path = OrchestratorIcon.ONLINE.path()
+            if QFile.exists(fallback_path):
+                return fallback_path
+            raise FileNotFoundError(resource_path)
+        return resource_path
 
 
 if __name__ == "__main__":
