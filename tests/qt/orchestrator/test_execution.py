@@ -3,11 +3,10 @@ from __future__ import annotations
 import json
 from types import SimpleNamespace
 
-from chemunited_workflow.api.schemas import RunStatus
+from chemunited_workflow.api.schemas import RunRequest, RunStatus
 from chemunited_workflow.enums import NodeState
 from loguru import logger
 
-import chemunited.qt.orchestrator.execution as execution_module
 from chemunited.qt.orchestrator.execution import (
     OrchestratorExecution,
     RunEventStreamThread,
@@ -140,31 +139,11 @@ def test_execute_returns_false_without_protocol_history() -> None:
     assert client.posts == []
 
 
-def test_execute_starts_run_with_protocol_history_file_name(
-    tmp_path, monkeypatch
-) -> None:
-    class Dialog:
-        Accepted = 1
-
-        def __init__(self, snapshot: str, parent=None) -> None:
-            self.snapshot = snapshot
-
-        def exec(self) -> int:
-            return self.Accepted
-
-        def get_result_instance(self):
-            return SimpleNamespace(
-                model_dump=lambda: {
-                    "snapshot": self.snapshot,
-                    "dry_run": False,
-                    "timeout_commands": "10 s",
-                }
-            )
-
-    monkeypatch.setattr(execution_module, "RunRequestDialog", Dialog)
+def test_execute_starts_run_with_protocol_history_file_name(tmp_path) -> None:
     client = FakeClient(post_response={"run_id": "RUN-1"})
     execution = _execution_with_parent(client)
     execution.project_protocol_script_dir = tmp_path / "protocol.json"
+    execution._run_execution_settings = RunRequest(timeout_commands="10 s")
 
     assert execution.execute() is True
     assert execution.active_run_id == "RUN-1"
@@ -175,6 +154,7 @@ def test_execute_starts_run_with_protocol_history_file_name(
                 "snapshot": "protocol.json",
                 "dry_run": False,
                 "timeout_commands": "10 s",
+                "error_resilient": False,
             },
         ),
     ]

@@ -140,10 +140,10 @@ class APIDialog(BaseModeDialog):
 
 
 class RunRequestDialog(BaseModeDialog):
-    def __init__(self, snapshot: str, parent=None):
+    def __init__(self, snapshot: str, instance: RunRequest = None, parent=None):
         super().__init__(
             model_class=RunRequest,
-            instance=RunRequest(snapshot=snapshot),
+            instance=instance or RunRequest(snapshot=snapshot),
             field_overrides={"snapshot": {"editable": False}},
             parent=parent,
             title="Run Configuration",

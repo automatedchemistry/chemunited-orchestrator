@@ -1,7 +1,7 @@
 from loguru import logger as _logger
 from PyQt5.QtCore import QUrl
 from PyQt5.QtGui import QDesktopServices
-from qfluentwidgets import NavigationItemPosition
+from qfluentwidgets import FluentIcon, NavigationItemPosition
 
 from .monitoring.execution_api_process import ApiProcess
 from .monitoring.graph import ExecutionGraph
@@ -89,6 +89,14 @@ class MonitorWindow(MainWindowBase):
         )
 
         self.executionFrame.addNavigationAction(
+            icon=FluentIcon.SETTING,
+            text="Settings",
+            onClick=self._open_settings,
+            tooltip="Open execution settings",
+            position=NavigationItemPosition.BOTTOM,
+        )
+
+        self.executionFrame.addNavigationAction(
             icon=OrchestratorIcon.LINK,
             text="API link",
             onClick=self._open_api_link,
@@ -158,6 +166,9 @@ class MonitorWindow(MainWindowBase):
     def recenter_views(self):
         self.executionGraph.recenter_view()
         self.workflows_protocol.recenter_view()
+
+    def _open_settings(self):
+        self.orchestrator.dialog_execution_settings()
 
     def show_summary(self):
         window = self._ensure_summary_window()

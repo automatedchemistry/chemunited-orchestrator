@@ -3,7 +3,7 @@ from pathlib import Path
 from typing import Any
 from urllib.parse import quote
 
-from chemunited_workflow.api.schemas import LogMeta, RunStatus
+from chemunited_workflow.api.schemas import LogMeta, RunRequest, RunStatus
 from chemunited_workflow.enums import NodeState
 from loguru import logger as _logger
 from pydantic import BaseModel, ConfigDict, TypeAdapter, ValidationError
@@ -465,6 +465,23 @@ class OrchestratorExecution(OrchestratorConnectivity):
         self._run_stream_thread: RunEventStreamThread | None = None
         self._active_process_order: list[str] = []
         self._active_process_names: dict[str, str] = {}
+        self._run_execution_settings: RunRequest = RunRequest()
+
+    def dialog_execution_settings(self):
+        snapshot = (
+            self.project_protocol_script_dir.name
+            if self.project_protocol_script_dir is not None
+            else ""
+        )
+        dialog = RunRequestDialog(
+            snapshot=snapshot,
+            instance=self._run_execution_settings,
+            parent=self.parent_ref,
+        )
+        if dialog.exec_():
+            result = dialog.get_result_instance()
+            if result is not None:
+                self._run_execution_settings = result
 
     def set_project_protocol_script_dir(self, dir: Path) -> None:
         self.project_protocol_script_dir = dir
@@ -522,16 +539,12 @@ class OrchestratorExecution(OrchestratorConnectivity):
             logger.error("No protocol history file selected.")
             return False
 
-        snapshot_name = self.project_protocol_script_dir.name
-        dialog = RunRequestDialog(snapshot=snapshot_name, parent=self.parent_ref)
-        if dialog.exec() != dialog.Accepted:
-            return False
-        run_request = dialog.get_result_instance()
-        if run_request is None:
-            return False
+        run_settings = getattr(self, "_run_execution_settings", RunRequest())
+        run_settings.snapshot = self.project_protocol_script_dir.name
+        self._run_execution_settings = run_settings
         response = api_process.client.post(
             "run/",
-            data=run_request.model_dump(),
+            data=run_settings.model_dump(),
         )
         started = _validate_model(RunStartedResponse, response, "POST run/")
         if started is None:
