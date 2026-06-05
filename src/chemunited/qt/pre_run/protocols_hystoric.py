@@ -222,6 +222,7 @@ class ProtocolsManageList(ScrollArea):
         )
         monitor.orchestrator.open_project(chemunited_file)
         monitor.orchestrator.set_project_protocol_script_dir(file)
+        monitor.switch_components_connection()
         wait_window.close()
 
         # If everything worked, show monitor window

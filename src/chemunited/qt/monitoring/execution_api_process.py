@@ -1,6 +1,7 @@
 import json
 import socket
 import sys
+import time
 from pathlib import Path
 from typing import Any
 
@@ -23,6 +24,10 @@ from chemunited.qt.utils.flowchem_listener import access_url
 
 DEFAULT_API_PORT = 3116
 BASE_URL = f"http://localhost:{DEFAULT_API_PORT}"
+API_READY_INITIAL_DELAY_SECONDS = 2.0
+API_READY_TIMEOUT_SECONDS = 20.0
+API_READY_POLL_SECONDS = 1.0
+API_READY_REQUEST_TIMEOUT_SECONDS = 2.0
 
 
 class ApiClient:
@@ -31,7 +36,7 @@ class ApiClient:
     def __init__(self, url: AnyHttpUrl):
         self.url = url
         self.session = requests.Session()
-        # Disable system proxy for loopback requests — on some machines a corporate
+        # Disable system proxy for loopback requests - on some machines a corporate
         # or OS-level proxy intercepts http://localhost traffic and returns 403.
         self.session.trust_env = False
         self.session.proxies.update({"http": "", "https": ""})
@@ -84,7 +89,13 @@ class ApiClient:
             logger.warning("GET {} stream failed: {}", url, exc)
             raise
 
-    def put(self, endpoint: str, data: dict | None = None, params: dict | None = None, timeout: int = 10) -> Any:
+    def put(
+        self,
+        endpoint: str,
+        data: dict | None = None,
+        params: dict | None = None,
+        timeout: int = 10,
+    ) -> Any:
         return self._request("PUT", endpoint, params=params, data=data, timeout=timeout)
 
     def post(self, endpoint: str, data: dict | None = None, timeout: int = 10) -> Any:
@@ -175,17 +186,34 @@ class ApiProcess(QObject):
                 self._ping_timer.start()
                 QTimer.singleShot(2000, self._fetch_logs)
                 self._load_project()
-            else:
-                logger.warning(
-                    "Port {} is occupied by an unrecognized process. Cannot start execution API.",
-                    DEFAULT_API_PORT,
-                )
-                return False
-        else:
-            self._process.start(
-                _workflow_cli_executable(),
-                [str(self._working_dir), "--fastapi", "--port", str(DEFAULT_API_PORT)],
+                return True
+            logger.warning(
+                "Port {} is occupied by an unrecognized process. Cannot start execution API.",
+                DEFAULT_API_PORT,
             )
+            return False
+
+        executable = _workflow_tray_executable()
+        arguments = ["--silent", "--port", str(DEFAULT_API_PORT)]
+        self._process.start(executable, arguments)
+        if not self._process.waitForStarted(3000):
+            logger.warning(
+                "Failed to launch execution API tray process with '{}' and arguments {}.",
+                executable,
+                arguments,
+            )
+            return False
+
+        if not _wait_for_api_ready(BASE_URL):
+            logger.warning(
+                "Execution API tray was launched, but '{}' was not reachable.",
+                BASE_URL,
+            )
+            return False
+
+        self._ping_timer.start()
+        QTimer.singleShot(2000, self._fetch_logs)
+        self._load_project()
         return True
 
     def stop_api(self):
@@ -236,19 +264,22 @@ class ApiProcess(QObject):
             self._append(f"[logs error] {e}: {raw}")
 
     def _load_project(self):
-        result = self.client.put("project/", data={"project_dir": str(self._working_dir)})
+        result = self.client.put(
+            "project/",
+            data={"project_dir": str(self._working_dir)},
+        )
         if result is None or "error" in (result or {}):
             logger.warning("Failed to load project into existing API: {}", result)
         else:
             logger.info("Project '{}' loaded into running API.", self._working_dir)
 
 
-def _workflow_cli_executable() -> str:
+def _workflow_tray_executable() -> str:
     executable = Path(sys.executable)
     name = (
-        "chemunited-workflow.exe"
+        "chemunited-workflow-tray.exe"
         if sys.platform.startswith("win")
-        else "chemunited-workflow"
+        else "chemunited-workflow-tray"
     )
     candidate = executable.parent / name
     if candidate.exists():
@@ -264,3 +295,29 @@ def _is_port_in_use(port: int) -> bool:
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
         s.settimeout(1)
         return s.connect_ex(("localhost", port)) == 0
+
+
+def _wait_for_api_ready(
+    base_url: str,
+    *,
+    timeout: float = API_READY_TIMEOUT_SECONDS,
+    interval: float = API_READY_POLL_SECONDS,
+    initial_delay: float = API_READY_INITIAL_DELAY_SECONDS,
+) -> bool:
+    if initial_delay > 0:
+        time.sleep(initial_delay)
+
+    session = requests.Session()
+    session.trust_env = False
+    session.proxies.update({"http": "", "https": ""})
+    url = f"{base_url.rstrip('/')}/project/"
+    deadline = time.monotonic() + timeout
+    while time.monotonic() <= deadline:
+        try:
+            response = session.get(url, timeout=API_READY_REQUEST_TIMEOUT_SECONDS)
+            if response.status_code == 200:
+                return True
+        except requests.RequestException:
+            pass
+        time.sleep(interval)
+    return False
