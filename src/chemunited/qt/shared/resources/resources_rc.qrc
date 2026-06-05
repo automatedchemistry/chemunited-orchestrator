@@ -54,6 +54,9 @@
         <file>icons/module.svg</file>
         <file>icons/move_black.svg</file>
         <file>icons/move_white.svg</file>
+        <file>icons/onlineA.svg</file>
+        <file>icons/onlineB.svg</file>
+        <file>icons/onlineC.svg</file>
         <file>icons/online.svg</file>
         <file>icons/offline.svg</file>
         <file>icons/orchestrator_black.svg</file>
