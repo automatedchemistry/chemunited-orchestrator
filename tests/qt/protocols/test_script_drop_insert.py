@@ -6,7 +6,7 @@ from chemunited.qt.shared.editor.protocols.command_list import CommandList
 from chemunited.qt.shared.editor.protocols.script import (
     _build_statement_insert_text,
     _drop_text_from_mime,
-    _insertion_for_statement_drop,
+    _insertion_for_method_end_drop,
 )
 
 SOURCE = """\
@@ -35,7 +35,7 @@ def _line_index(text: str, needle: str) -> int:
 
 
 def _insert(source: str, drop_line: int) -> str:
-    insertion = _insertion_for_statement_drop(source, drop_line)
+    insertion = _insertion_for_method_end_drop(source, drop_line)
     assert insertion is not None
     insert_line, indent = insertion
     lines = source.splitlines(keepends=True)
@@ -43,17 +43,14 @@ def _insert(source: str, drop_line: int) -> str:
     return "".join(lines)
 
 
-def test_drop_on_method_header_inserts_first_body_line() -> None:
+def test_drop_on_method_header_inserts_before_final_return() -> None:
     result = _insert(SOURCE, _line_index(SOURCE, "def script_1"))
 
-    assert (
-        "    def script_1(self, ctx: NodeExecutionContext) -> bool:\n"
-        "        self.platform"
-    ) in result
-    assert result.index(SNIPPET) < result.index("ctx.runtime.status_message")
+    assert result.index("disconnect='',\n        )") < result.index(SNIPPET)
+    assert result.index(SNIPPET) < result.index("return True")
 
 
-def test_drop_inside_method_signature_inserts_first_body_line() -> None:
+def test_drop_inside_method_signature_inserts_before_final_return() -> None:
     source = """\
 class CustomProcess:
     def script_1(
@@ -66,10 +63,11 @@ class CustomProcess:
 
     result = _insert(source, _line_index(source, "ctx: NodeExecutionContext"))
 
-    assert result.index(SNIPPET) < result.index("ctx.runtime.status_message")
+    assert result.index("ctx.runtime.status_message") < result.index(SNIPPET)
+    assert result.index(SNIPPET) < result.index("return True")
 
 
-def test_drop_inside_call_inserts_after_complete_statement() -> None:
+def test_drop_inside_call_inserts_before_final_return() -> None:
     result = _insert(SOURCE, _line_index(SOURCE, "connect='[[1, 2]]'"))
 
     assert result.index("disconnect='',\n        )") < result.index(SNIPPET)
@@ -82,15 +80,23 @@ def test_drop_on_return_inserts_above_return() -> None:
     assert result.index(SNIPPET) < result.index("return True")
 
 
-def test_drop_inside_multiline_statement_inserts_after_statement() -> None:
-    result = _insert(SOURCE, _line_index(SOURCE, "'position'"))
+def test_method_without_final_return_inserts_after_last_body_statement() -> None:
+    source = """\
+class CustomProcess:
+    def script_1(self, ctx: NodeExecutionContext) -> bool:
+        ctx.runtime.status_message = "Script 1 ran."
+        self.platform['AS injection'].put('position')
+"""
 
-    assert result.index("disconnect='',\n        )") < result.index(SNIPPET)
-    assert result.index(SNIPPET) < result.index("return True")
+    result = _insert(source, _line_index(source, "ctx.runtime.status_message"))
+
+    assert result.index("self.platform['AS injection'].put('position')") < result.index(
+        SNIPPET
+    )
 
 
 def test_drop_outside_method_has_no_insertion_target() -> None:
-    insertion = _insertion_for_statement_drop(
+    insertion = _insertion_for_method_end_drop(
         SOURCE,
         _line_index(SOURCE, "class CustomProcess"),
     )

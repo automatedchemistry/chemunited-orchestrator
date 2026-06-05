@@ -68,33 +68,6 @@ def _find_function_for_line(
     return max(matches, key=lambda node: (node.lineno, node.col_offset))
 
 
-def _statement_for_line(
-    function_node: ast.FunctionDef | ast.AsyncFunctionDef,
-    line_1based: int,
-) -> ast.stmt | None:
-    statements = [
-        node
-        for node in ast.walk(function_node)
-        if isinstance(node, ast.stmt)
-        and node is not function_node
-        and not isinstance(
-            node,
-            (ast.FunctionDef, ast.AsyncFunctionDef, ast.ClassDef),
-        )
-        and node.lineno <= line_1based <= (node.end_lineno or node.lineno)
-    ]
-    if not statements:
-        return None
-
-    return min(
-        statements,
-        key=lambda node: (
-            (node.end_lineno or node.lineno) - node.lineno,
-            node.col_offset,
-        ),
-    )
-
-
 def _line_indent(lines: list[str], line: int, fallback_col: int) -> str:
     if 0 <= line < len(lines):
         text = lines[line]
@@ -102,7 +75,7 @@ def _line_indent(lines: list[str], line: int, fallback_col: int) -> str:
     return " " * fallback_col
 
 
-def _insertion_for_statement_drop(
+def _insertion_for_method_end_drop(
     source: str,
     drop_line: int,
 ) -> tuple[int, str] | None:
@@ -120,21 +93,15 @@ def _insertion_for_statement_drop(
     first_body_line = first_body.lineno - 1
     first_body_indent = _line_indent(lines, first_body_line, first_body.col_offset)
 
-    if drop_line + 1 < first_body.lineno:
-        return first_body_line, first_body_indent
-
-    if drop_line + 1 > (function_node.end_lineno or function_node.lineno):
+    if not function_node.lineno <= drop_line + 1 <= (
+        function_node.end_lineno or function_node.lineno
+    ):
         return None
 
-    statement = _statement_for_line(function_node, drop_line + 1)
-    if statement is None:
-        return drop_line, first_body_indent
-
-    statement_line = statement.lineno - 1
-    indent = _line_indent(lines, statement_line, statement.col_offset)
-    if isinstance(statement, ast.Return):
-        return statement_line, indent
-    return statement.end_lineno or statement.lineno, indent
+    last_statement = function_node.body[-1]
+    if isinstance(last_statement, ast.Return):
+        return last_statement.lineno - 1, first_body_indent
+    return last_statement.end_lineno or last_statement.lineno, first_body_indent
 
 
 def _build_statement_insert_text(snippet: str, indent: str, newline: str) -> str:
@@ -175,7 +142,7 @@ class ScriptEditor(EditorBase):
 
         line, _index = _drop_position_to_line_index(self, event)
         source = self.text()
-        insertion = _insertion_for_statement_drop(source, line)
+        insertion = _insertion_for_method_end_drop(source, line)
         if insertion is None:
             event.ignore()
             return
