@@ -20,27 +20,17 @@ classifiers = [
     "License :: OSI Approved :: MIT License"
 ]
 dependencies = [
-    "chemunited-core @ git+https://github.com/automatedchemistry/chemunited-core.git",
+    # sub-packages (provide the entire runtime engine)
+    "chemunited-sim @ git+https://github.com/automatedchemistry/chemunited-sim.git",
     "chemunited-workflow @ git+https://github.com/automatedchemistry/chemunited-workflow.git",
-    "appdirs",
-    "PyQt-Fluent-Widgets",
-    "networkx",
-    "numpy",
-    "scipy",
-    "pint",
-    "pydantic_pint",
-    "loguru",
-    "gitpython",
-    "rich",
-    "requests",
-    "rich-click",
-    "zeroconf",
-    "QScintilla",
-    "fastapi>=0.115",
-    "mcp>=1.23",
-    "uvicorn[standard]>=0.34",
-    "sse-starlette>=2.1",
-    "black"
+    "PyQt-Fluent-Widgets>=1.7.0,<2.0",  # Qt UI
+    "QScintilla>=2.14.0",
+    "platformdirs>=4.0",
+    "gitpython>=3.1.41",
+    "zeroconf>=0.131.0",
+    "rich-click>=1.7",
+    "black>=25.1.0,<27.0", # used programmatically to format user protocol
+    "loguru>=0.7",  # explicitly re-declared
 ]
 
 [project.scripts]
@@ -108,7 +98,6 @@ explicit_package_bases = true
 
 [[tool.mypy.overrides]]
 module = [
-    "appdirs",
     "PyQt5",
     "PyQt5.*",
     "black",

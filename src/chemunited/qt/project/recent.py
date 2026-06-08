@@ -1,16 +1,10 @@
 from __future__ import annotations
 
 import json
-import tempfile
 from pathlib import Path
 from typing import TypeAlias
 
-try:
-    from appdirs import user_data_dir
-except ImportError:  # pragma: no cover - fallback for editable dev envs
-
-    def user_data_dir(appname: str, appauthor: str | None = None) -> str:
-        return str(Path(tempfile.gettempdir()) / appname)
+from platformdirs import user_data_dir
 
 
 APP_NAME = "ChemUnited Orchestrator"
