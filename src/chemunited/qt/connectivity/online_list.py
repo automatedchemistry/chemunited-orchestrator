@@ -1,10 +1,12 @@
 from typing import TYPE_CHECKING, Optional
+from urllib.parse import urlsplit, urlunsplit
 
+from loguru import logger
 from PyQt5.QtCore import QFile, QMimeData, Qt
 from PyQt5.QtGui import QColor, QDrag, QFont, QIcon, QPainter, QPixmap
 from PyQt5.QtWidgets import QHBoxLayout, QLabel, QListWidgetItem, QVBoxLayout, QWidget
 from qfluentwidgets import (
-    ComboBox,
+    EditableComboBox,
     FluentIcon,
     ListWidget,
     PushButton,
@@ -14,7 +16,11 @@ from qfluentwidgets import (
 )
 
 from chemunited.qt.shared.icon import OrchestratorIcon
-from chemunited.qt.utils.flowchem_listener import FLOWCHEM_SERVERS, access_url
+from chemunited.qt.utils.flowchem_listener import (
+    FLOWCHEM_SERVERS,
+    access_url,
+    paths_to_device_components,
+)
 
 if TYPE_CHECKING:
     from chemunited.qt.setup import SetupWindow
@@ -89,9 +95,11 @@ class OnlineComponent(QWidget):
         self._parent: Optional["SetupWindow"] = parent
         layout = QVBoxLayout(self)
 
-        self.api = ComboBox(self)
+        self.api = EditableComboBox(self)
         self.api.setPlaceholderText("-")
         self.api.currentTextChanged.connect(self.select_api)
+        self.api.textEdited.connect(self._on_manual_api_edited)
+        self.api.returnPressed.connect(self.submit_manual_api)
         layout.addWidget(StrongBodyLabel("Available Flowchem servers", parent=self))
         layout.addWidget(self.api)
 
@@ -112,27 +120,134 @@ class OnlineComponent(QWidget):
         layout.addWidget(StrongBodyLabel("Lock Online Components", parent=self))
         layout.addWidget(self.LockList)
 
-        update_button = PushButton(OrchestratorIcon.UPDATE, "Update List", self)
-        update_button.clicked.connect(self.update_list)
-        layout.addWidget(update_button)
+        self.update_button = PushButton(OrchestratorIcon.UPDATE, "Update List", self)
+        self.update_button.clicked.connect(self.update_list)
+        layout.addWidget(self.update_button)
 
     def update_list(self):
+        self.update_button.setEnabled(True)
         self.api.clear()
+        self.api.setText("")
         FLOWCHEM_SERVERS.update()
         for item in FLOWCHEM_SERVERS.servers:
             self.api.addItem(item)
 
+    def _on_manual_api_edited(self, _text: str):
+        self.update_button.setEnabled(False)
+
+    def submit_manual_api(self):
+        raw_url = self.api.text()
+        normalized_url = self._normalize_api_url(raw_url)
+        if not normalized_url:
+            self._reject_manual_api(
+                raw_url,
+                normalized_url,
+                "Flowchem API address is empty or invalid.",
+            )
+            return
+
+        ok, data = access_url(f"{normalized_url}/openapi.json", timeout=1)
+        if not ok:
+            self._reject_manual_api(
+                raw_url,
+                normalized_url,
+                "Flowchem API is not reachable at {}.",
+                normalized_url,
+            )
+            return
+
+        if not isinstance(data, dict) or not isinstance(data.get("paths"), dict):
+            self._reject_manual_api(
+                raw_url,
+                normalized_url,
+                "Flowchem API at {} does not expose a valid openapi paths object.",
+                normalized_url,
+            )
+            return
+
+        if "/startup_config" not in data["paths"]:
+            self._reject_manual_api(
+                raw_url,
+                normalized_url,
+                "Flowchem API at {} does not expose startup_config. "
+                "Update Flowchem for smooth connection with chemunited.",
+                normalized_url,
+            )
+            return
+
+        FLOWCHEM_SERVERS.servers[normalized_url] = paths_to_device_components(
+            data["paths"]
+        )
+        self._select_registered_api(raw_url=raw_url, normalized_url=normalized_url)
+        self.update_button.setEnabled(True)
+
+    @staticmethod
+    def _normalize_api_url(raw_url: str) -> str:
+        url = raw_url.strip().rstrip("/")
+        if not url:
+            return ""
+
+        if "://" not in url:
+            url = f"http://{url}"
+
+        parsed = urlsplit(url)
+        if parsed.scheme not in {"http", "https"} or not parsed.netloc:
+            return ""
+
+        path = parsed.path.rstrip("/")
+        return urlunsplit((parsed.scheme, parsed.netloc, path, "", ""))
+
+    def _select_registered_api(self, raw_url: str, normalized_url: str):
+        signals_blocked = self.api.blockSignals(True)
+        try:
+            if raw_url != normalized_url:
+                raw_index = self.api.findText(raw_url)
+                if raw_index >= 0:
+                    self.api.removeItem(raw_index)
+
+            index = self.api.findText(normalized_url)
+            if index < 0:
+                self.api.addItem(normalized_url)
+                index = self.api.findText(normalized_url)
+
+            self.api.setCurrentIndex(index)
+            self.api.setText(normalized_url)
+        finally:
+            self.api.blockSignals(signals_blocked)
+
+        self.select_api(normalized_url)
+
+    def _reject_manual_api(
+        self, raw_url: str, normalized_url: str, message: str, *args
+    ):
+        self.OnlineList.clear()
+        self._remove_unregistered_api_items(raw_url, normalized_url)
+        self.api.setText(raw_url)
+        self.update_button.setEnabled(True)
+        logger.warning(message, *args)
+
+    def _remove_unregistered_api_items(self, *urls: str):
+        for url in dict.fromkeys(urls):
+            if not url or url in FLOWCHEM_SERVERS.servers:
+                continue
+
+            index = self.api.findText(url)
+            if index >= 0:
+                self.api.removeItem(index)
+
     def select_api(self, item):
         # Determine current theme
         _theme = "DARK" if isDarkTheme() else "LIGHT"
-        url = self.api.text()
+        url = item.rstrip("/")
         self.OnlineList.clear()
 
-        if item in FLOWCHEM_SERVERS.servers:
+        if url in FLOWCHEM_SERVERS.servers:
             for device in FLOWCHEM_SERVERS.servers[url]:
                 for component in FLOWCHEM_SERVERS.servers[url][device]:
                     urlc = f"{url}/{device}/{component}"
                     status, info = access_url(url=urlc)
+                    if not isinstance(info, dict):
+                        info = {}
 
                     # Default icon (fallback)
                     figure = OrchestratorIcon.COMPONENT_ICON.path()
