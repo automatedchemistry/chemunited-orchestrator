@@ -24,7 +24,7 @@ from qfluentwidgets import (
 )
 from qframelesswindow import FramelessDialog
 
-from chemunited.qt.elements.component.protocols.models import CommandSignature
+from chemunited_core.protocols import CommandSignature
 from chemunited.qt.shared.editor.base import EditorBase
 from chemunited.qt.shared.widgets.base_mode_editor import BaseModeEditorWidget
 
@@ -499,7 +499,7 @@ if __name__ == "__main__":
     from chemunited_core.utils.internal_quantity import ChemUnitQuantity
     from PyQt5.QtWidgets import QApplication, QDialog
 
-    from chemunited.qt.elements.component.protocols.pumps import WithdrawParameter
+    from chemunited_core.protocols.pumps import WithdrawParameter
 
     app = QApplication(sys.argv)
 

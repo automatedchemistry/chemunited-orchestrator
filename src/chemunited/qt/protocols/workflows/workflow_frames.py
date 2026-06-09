@@ -14,7 +14,7 @@ from PyQt5.QtGui import QColor, QPainter, QPen
 from PyQt5.QtWidgets import QFrame, QGraphicsItem, QGraphicsView
 from qfluentwidgets import Action, RoundMenu, isDarkTheme
 
-from chemunited.qt.elements.component.protocols import CommandSignature
+from chemunited_core.protocols import CommandSignature
 from chemunited.qt.protocols.workflows.naming import (
     process_class_name,
     process_config_class_name,

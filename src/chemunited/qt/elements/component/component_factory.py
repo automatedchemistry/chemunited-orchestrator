@@ -5,12 +5,12 @@ from chemunited_core.figure_registry import COMPONENTS
 from loguru import logger
 from pydantic import AnyHttpUrl
 
-import chemunited.qt.elements.component.protocols as protocol_module
+import chemunited_core.protocols as protocol_module
 from chemunited.qt.elements.component.connectivity import ComponentConnnectivity
 
 from . import glossary
 from .graph_item import GraphComponent
-from .protocols import ComponentProtocol
+from chemunited_core.protocols import ComponentProtocol
 from .widgets import ComponentWidget
 
 

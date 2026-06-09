@@ -17,8 +17,8 @@ from PyQt5.QtWidgets import (
 )
 from qfluentwidgets import TreeWidget, isDarkTheme
 
-import chemunited.qt.elements.component.protocols as protocol_module
-from chemunited.qt.elements.component.protocols.models import (
+import chemunited_core.protocols as protocol_module
+from chemunited_core.protocols import (
     CommandSignature,
     ComponentProtocol,
 )
