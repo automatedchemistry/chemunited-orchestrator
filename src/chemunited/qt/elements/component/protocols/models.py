@@ -1,7 +1,9 @@
 import uuid
 from typing import Any, Literal, Self, Type
 
-from chemunited_core.utils.internal_quantity import ChemUnitQuantity  # type: ignore[import-not-found]
+from chemunited_core.utils.internal_quantity import (
+    ChemUnitQuantity,  # type: ignore[import-not-found]
+)
 from pydantic import BaseModel, Field
 
 
@@ -47,7 +49,11 @@ class CommandSignature(BaseModel):
             if n in base_fields and n not in self._SCRIPT_EXCLUDED
         }
         parameters = ", ".join(
-            f'{name}="{value}"' if isinstance(value, ChemUnitQuantity) else f"{name}={value!r}"
+            (
+                f'{name}="{value}"'
+                if isinstance(value, ChemUnitQuantity)
+                else f"{name}={value!r}"
+            )
             for name, value in {**params, **base_kwargs}.items()
         )
         if parameters:

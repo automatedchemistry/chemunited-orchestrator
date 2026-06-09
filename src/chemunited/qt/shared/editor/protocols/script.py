@@ -93,8 +93,10 @@ def _insertion_for_method_end_drop(
     first_body_line = first_body.lineno - 1
     first_body_indent = _line_indent(lines, first_body_line, first_body.col_offset)
 
-    if not function_node.lineno <= drop_line + 1 <= (
-        function_node.end_lineno or function_node.lineno
+    if (
+        not function_node.lineno
+        <= drop_line + 1
+        <= (function_node.end_lineno or function_node.lineno)
     ):
         return None
 
@@ -128,10 +130,7 @@ class ScriptEditor(EditorBase):
                 bytes(mime_data.data(ParameterDragableList.PATH_MIME)).decode("utf-8")
             ).resolve()
             current_path = self.path.resolve()
-            if (
-                source_path != current_path
-                and source_path.name != "main_parameters.py"
-            ):
+            if source_path != current_path and source_path.name != "main_parameters.py":
                 event.ignore()
                 return
 

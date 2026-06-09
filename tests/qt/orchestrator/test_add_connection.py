@@ -12,9 +12,9 @@ What is tested:
 """
 
 import pytest
+from chemunited_core.common.enums import ConnectionType
 from pytestqt.qtbot import QtBot
 
-from chemunited_core.common.enums import ConnectionType
 from chemunited.qt.setup import SetupWindow
 
 CONNECTION_NAME = "PumpA_2_PumpB_1"

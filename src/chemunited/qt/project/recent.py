@@ -6,7 +6,6 @@ from typing import TypeAlias
 
 from platformdirs import user_data_dir
 
-
 APP_NAME = "ChemUnited Orchestrator"
 APP_AUTHOR = "ChemUnited"
 RECENT_PROJECTS_FILENAME = "recent_projects.json"

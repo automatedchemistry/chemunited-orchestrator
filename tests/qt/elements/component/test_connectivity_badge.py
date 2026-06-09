@@ -1,6 +1,6 @@
+from chemunited_core.common.constant import PATTERN_DIMENSION
 from pytest import approx
 
-from chemunited_core.common.constant import PATTERN_DIMENSION
 from chemunited.qt.elements.component.component_parts.scene_item import (
     ConnectivityBadge,
 )

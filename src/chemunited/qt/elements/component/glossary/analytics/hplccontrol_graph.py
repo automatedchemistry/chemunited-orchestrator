@@ -1,22 +1,18 @@
 from typing import ClassVar
 
+from chemunited_core.components import ComponentData
 from PyQt5.QtCore import QPointF, Qt
 
-from chemunited_core.components import ComponentData, ComponentMode
 from chemunited.qt.elements.component.graph_item import GraphComponent
 
 from .spectrum import Spectrum
 
 
 class HPLCControl(GraphComponent[ComponentData]):
-    METADATA: ClassVar[type[ComponentData]] = ComponentData
-    BASEMODE: ClassVar[type[ComponentMode]] = ComponentMode
-    SVG_SCALE: ClassVar[float] = 4.0
+    FIGURE: ClassVar[str] = "HPLCControl"
 
-    def build(self, svg_path: str | None = None) -> None:
-        self._data.ports_by_number[1].relative_position = (-55, 80)
-        self._data.ports_by_number[2].relative_position = (55, 80)
-        super().build(svg_path=":/components_icons/components/HPLC.svg")
+    def build(self) -> None:
+        super().build()
 
         self.spectrum = Spectrum(
             width=80, height=20, color=Qt.blue, parent=self  # type: ignore

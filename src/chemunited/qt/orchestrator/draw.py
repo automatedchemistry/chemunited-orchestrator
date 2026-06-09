@@ -1,13 +1,13 @@
 import re
 
+from chemunited_core.common.enums import ConnectionType
+from chemunited_core.connections import EdgeData, EdgeMode
+from chemunited_core.utils.internal_quantity import ChemUnitQuantity
 from loguru import logger
 from pydantic import BaseModel
 from PyQt5.QtCore import pyqtSlot
 from PyQt5.QtWidgets import QGraphicsItem
 
-from chemunited_core.common.enums import ConnectionType
-from chemunited_core.connections import EdgeData, EdgeMode
-from chemunited_core.utils.internal_quantity import ChemUnitQuantity
 from chemunited.qt.elements.component import create_component, list_components
 from chemunited.qt.elements.component.component_parts.connection_point import (
     ConnectionPoint,

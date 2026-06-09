@@ -1,10 +1,11 @@
 from typing import Union
 
+from chemunited_core.components import ComponentData
+from chemunited_core.figure_registry import COMPONENTS
 from loguru import logger
 from pydantic import AnyHttpUrl
 
 import chemunited.qt.elements.component.protocols as protocol_module
-from chemunited_core.components import ComponentData
 from chemunited.qt.elements.component.connectivity import ComponentConnnectivity
 
 from . import glossary
@@ -60,37 +61,70 @@ class ElectronicManager(UtensilManager):
         return self.connectivity.url_component
 
 
+# Cache for dynamically-created classes so __init_subclass__ only runs once per figure.
+_dynamic_class_cache: dict[str, type[GraphComponent]] = {}
+
+
+def _build_explicit_map() -> dict[str, type[GraphComponent]]:
+    """Return {figure_key: cls} for every explicit GraphComponent subclass in the glossary."""
+    result: dict[str, type[GraphComponent]] = {}
+    for name in getattr(glossary, "__all__", []):
+        cls = getattr(glossary, name, None)
+        if isinstance(cls, type) and issubclass(cls, GraphComponent) and cls.FIGURE:
+            result[cls.FIGURE] = cls
+    return result
+
+
+def _get_base_for(figure: str) -> type[GraphComponent]:
+    """Return the appropriate GraphComponent base for a given figure.
+
+    Rotary-valve figures must extend RotaryValveGraph so they inherit its
+    stator/rotor rendering logic. All other figures use GraphComponent directly.
+    Rotary valves are identified by figure_base == "RotaryValve" in the registry.
+    """
+    from chemunited.qt.elements.component.glossary.valve.rotary_valve_graph import (
+        RotaryValveGraph,
+    )
+
+    defn = COMPONENTS[figure]
+    if (defn.figure_base or figure) == "RotaryValve":
+        return RotaryValveGraph  # type: ignore[return-value]
+    return GraphComponent
+
+
+def _get_component_class(
+    figure: str, explicit: dict[str, type[GraphComponent]]
+) -> type[GraphComponent]:
+    if figure in explicit:
+        return explicit[figure]
+    if figure not in _dynamic_class_cache:
+        base = _get_base_for(figure)
+        _dynamic_class_cache[figure] = type(figure, (base,), {"FIGURE": figure})
+    return _dynamic_class_cache[figure]
+
+
 def list_components() -> tuple[dict[str, list[str]], dict[str, type[GraphComponent]]]:
     """
-    the category is the name of the folder in the glossary
-    the component name is the name of object in __all__ of the glossary module
-    dict[category, [ComponentName, ComponentName2, ...]], dict[ComponentName, ComponentObject]
+    Returns (categories, components) where:
+      categories: dict[category_name, sorted list of figure names]
+      components: dict[figure_name, GraphComponent subclass]
+
+    The component list is driven by core's COMPONENTS registry. Explicit orchestrator
+    subclasses (those in glossary/__all__ with a FIGURE declaration) are used when
+    available; everything else gets a dynamically-created subclass wired via
+    __init_subclass__.
     """
+    explicit = _build_explicit_map()
     categories: dict[str, list[str]] = {}
     components: dict[str, type[GraphComponent]] = {}
 
-    glossary_prefix = f"{glossary.__name__}."
+    for figure_name, defn in COMPONENTS.items():
+        cls = _get_component_class(figure_name, explicit)
+        components[figure_name] = cls
+        category = defn.category or "other"
+        categories.setdefault(category, []).append(figure_name)
 
-    for component_name in getattr(glossary, "__all__", []):
-        component = getattr(glossary, component_name, None)
-        if not isinstance(component, type) or not issubclass(component, GraphComponent):
-            continue
-
-        module_name = component.__module__
-        if module_name.startswith(glossary_prefix):
-            category = module_name.removeprefix(glossary_prefix).split(".", 1)[0]
-        else:
-            category = "uncategorized"
-
-        categories.setdefault(category, []).append(component_name)
-        components[component_name] = component
-
-    ordered_categories = {
-        category: sorted(component_names)
-        for category, component_names in sorted(categories.items())
-    }
-
-    return ordered_categories, components
+    return {k: sorted(v) for k, v in sorted(categories.items())}, components
 
 
 def create_component(figure: str, **kwargs) -> Union[UtensilManager, ElectronicManager]:

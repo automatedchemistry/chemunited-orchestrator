@@ -22,9 +22,13 @@ from math import ceil
 from pathlib import Path
 from typing import ClassVar, Generic, TypeVar
 
+from chemunited_core.common.constant import PATTERN_DIMENSION
+from chemunited_core.common.enums import ConnectionType as CoreConnectionType
+from chemunited_core.components import ComponentData, ComponentMode
+from chemunited_core.figure_registry import COMPONENTS, get_figure_path
 from loguru import logger
 from pydantic import BaseModel
-from PyQt5.QtCore import QFile, QRectF, QSize, Qt
+from PyQt5.QtCore import QRectF, QSize, Qt
 from PyQt5.QtGui import QColor, QPainter, QPen, QTransform
 from PyQt5.QtSvg import QSvgGenerator
 from PyQt5.QtWidgets import (
@@ -35,9 +39,6 @@ from PyQt5.QtWidgets import (
     QStyleOptionGraphicsItem,
 )
 
-from chemunited_core.common.constant import PATTERN_DIMENSION
-from chemunited_core.common.enums import ConnectionType as CoreConnectionType
-from chemunited_core.components import ComponentData, ComponentMode
 from chemunited.qt.elements.component.component_parts import (
     ConnectionPoint,
     ConnectivityBadge,
@@ -110,11 +111,27 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
             SVG_SCALE: ClassVar[float] = 2.0
     """
 
+    FIGURE: ClassVar[str] = ""
+    FIGURE_BASE: ClassVar[str] = ""
     METADATA: ClassVar[type[ComponentData]] = ComponentData
-    BASEMODE: ClassVar[type[ComponentMode]] = (
-        ComponentMode  # used by the property widget
-    )
+    BASEMODE: ClassVar[type[ComponentMode]] = ComponentMode
     SVG_SCALE: ClassVar[float] = 2.0
+    SVG_ROTATION: ClassVar[float] = 0.0
+
+    def __init_subclass__(cls, **kwargs: object) -> None:
+        super().__init_subclass__(**kwargs)
+        figure = cls.__dict__.get("FIGURE")
+        if figure:
+            if figure not in COMPONENTS:
+                raise KeyError(
+                    f"{cls.__name__}: FIGURE={figure!r} is not registered in COMPONENTS"
+                )
+            defn = COMPONENTS[figure]
+            cls.METADATA = defn.data_class  # type: ignore[assignment]
+            cls.BASEMODE = defn.mode_class  # type: ignore[assignment]
+            cls.FIGURE_BASE = defn.figure_base or figure
+            cls.SVG_SCALE = defn.svg_scale  # type: ignore[assignment]
+            cls.SVG_ROTATION = defn.svg_rotation  # type: ignore[assignment]
 
     def __init__(self, data: DataT) -> None:
         super().__init__()
@@ -182,25 +199,40 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
 
     # ── construction ───────────────────────────────────────────────
 
-    def build(self, svg_path: str | None = None) -> None:
+    def build(self) -> None:
         """Assemble all child items from ComponentData.
 
         Called once from __init__. Subclasses may override to implement
         a custom layout — call super().build() or fully replace it.
         """
-        # SVG figure, or fallback rect when no SVG asset is available.
-        if svg_path is None:
-            svg_path = f":/components_icons/components/{self._data.figure}.svg"
-        if QFile.exists(svg_path):
-            self._svg = SvgLayer(
-                svg_path,
+        if (figure := type(self).FIGURE) and (defn := COMPONENTS.get(figure)):
+            for num, pos in defn.port_positions.items():
+                if num in self._data.ports_by_number:
+                    self._data.ports_by_number[num].relative_position = pos
+        self._build_svg()
+        if type(self).SVG_ROTATION and isinstance(self._svg, SvgLayer):
+            self._svg.setRotation(type(self).SVG_ROTATION)
+        self.build_connections_points()
+        self.build_labels_and_flags()
+
+    def _build_svg(self, figure_name: str | None = None) -> None:
+        """Load the primary SVG layer and add it to the group.
+
+        figure_name: SVG asset name (without .svg). When omitted the value is
+            resolved from FIGURE_BASE → data.figure in that order.
+        Composite subclasses call this directly with an explicit name to load
+        additional SVG layers alongside the primary one.
+        """
+        base = figure_name or type(self).FIGURE_BASE or self._data.figure
+        try:
+            svg_bytes = get_figure_path(base).read_bytes()
+            self._svg = SvgLayer.from_bytes(
+                svg_bytes,
                 scale=PATTERN_DIMENSION * self.SVG_SCALE,
                 parent=self,
             )
-        else:
-            logger.warning(
-                f"Device doesn't have an SVG icon: {self._data.figure} - Not found in {svg_path}"
-            )
+        except (FileNotFoundError, OSError):
+            logger.warning(f"SVG not found in core package resources: {base}")
             self._svg = QGraphicsRectItem(
                 -PATTERN_DIMENSION / 2,
                 -PATTERN_DIMENSION / 2,
@@ -209,10 +241,6 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
                 parent=self,
             )
         self.addToGroup(self._svg)
-
-        self.build_connections_points()
-
-        self.build_labels_and_flags()
 
     def build_connections_points(self) -> None:
         # Connection points — one per port.

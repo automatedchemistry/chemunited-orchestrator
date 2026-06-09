@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import fnmatch
-import tomllib
 from pathlib import Path
+
+import tomllib
 
 
 def test_qt_shared_resources_are_packaged() -> None:

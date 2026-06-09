@@ -1,11 +1,10 @@
 from typing import ClassVar
 
+from chemunited_core.common.constant import PATTERN_DIMENSION
 from PyQt5.QtCore import QPointF, QRectF, Qt, QTimer
 from PyQt5.QtGui import QBrush, QColor, QFont, QFontMetricsF, QPainterPath, QPen
 from PyQt5.QtWidgets import QGraphicsObject
 from qfluentwidgets import isDarkTheme
-
-from chemunited_core.common.constant import PATTERN_DIMENSION
 
 from .svg_layer import SvgLayer
 

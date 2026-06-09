@@ -1,21 +1,18 @@
 from typing import ClassVar
 
+from chemunited_core.components import ComponentData
 from PyQt5.QtCore import QPointF
 
-from chemunited_core.components import ComponentData, ComponentMode
 from chemunited.qt.elements.component.graph_item import GraphComponent
 
 from .spectrum import Spectrum
 
 
 class IRControl(GraphComponent[ComponentData]):
-    METADATA: ClassVar[type[ComponentData]] = ComponentData
-    BASEMODE: ClassVar[type[ComponentMode]] = ComponentMode
+    FIGURE: ClassVar[str] = "IRControl"
 
-    def build(self, svg_path: str | None = None) -> None:
-        self._data.ports_by_number[1].relative_position = (-10, -2)
-        self._data.ports_by_number[2].relative_position = (10, -2)
-        super().build(svg_path=":/components_icons/components/IRControl.svg")
+    def build(self) -> None:
+        super().build()
 
         self.spectrum = Spectrum(width=50, height=20, parent=self)
 

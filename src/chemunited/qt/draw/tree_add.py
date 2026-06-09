@@ -2,6 +2,7 @@ from __future__ import annotations
 
 from pathlib import Path
 
+from chemunited_core.components.enums import ComponentType
 from PyQt5.QtCore import QFile, QMimeData, QSize, Qt
 from PyQt5.QtGui import QDrag, QIcon
 from PyQt5.QtWidgets import (
@@ -16,7 +17,6 @@ from PyQt5.QtWidgets import (
 )
 from qfluentwidgets import TreeWidget
 
-from chemunited_core.components.enums import ComponentType
 from chemunited.qt.elements.component import list_components
 from chemunited.qt.shared.icon import OrchestratorIcon
 

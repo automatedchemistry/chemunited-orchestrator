@@ -29,9 +29,7 @@ SNIPPET = (
 
 
 def _line_index(text: str, needle: str) -> int:
-    return next(
-        index for index, line in enumerate(text.splitlines()) if needle in line
-    )
+    return next(index for index, line in enumerate(text.splitlines()) if needle in line)
 
 
 def _insert(source: str, drop_line: int) -> str:

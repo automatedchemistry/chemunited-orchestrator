@@ -1,9 +1,10 @@
 from typing import ClassVar
 
+from chemunited_core.figure_registry import get_figure_path
+from chemunited_core.figure_registry.vessels import VialData
 from PyQt5.QtCore import QPointF, QRectF, Qt
 from PyQt5.QtGui import QColor, QFont, QPen
 
-from chemunited_core.figure_registry.vessels import VialData, VialMode
 from chemunited.qt.elements.component.component_parts import SceneItem, SvgLayer
 from chemunited.qt.elements.component.graph_item import GraphComponent
 from chemunited.qt.utils.math_functions import position_to_letter
@@ -129,25 +130,19 @@ class FramePanel(SceneItem):
 
 
 class Vial(GraphComponent[VialData]):
-    METADATA: ClassVar[type[VialData]] = VialData
-    BASEMODE: ClassVar[type[VialMode]] = VialMode
+    FIGURE: ClassVar[str] = "Vial"
 
-    def build(self, svg_path: str | None = None) -> None:
+    def build(self) -> None:
         if not self._data.is_array:
-            if 1 in self._data.ports_by_number:
-                self._data.ports_by_number[1].relative_position = (0, -11)
-            if 2 in self._data.ports_by_number:
-                self._data.ports_by_number[2].relative_position = (0, 10)
-            super().build(svg_path)
+            super().build()
             return
 
         self._svg = FramePanel(self._data, self)
         self.addToGroup(self._svg)
         for row_index in range(self._data.row):
             for column_index in range(self._data.column):
-                vial_svg_path = ":/components_icons/components/Vial.svg"
-                vial_graph = SvgLayer(
-                    svg_path=vial_svg_path,
+                vial_graph = SvgLayer.from_bytes(
+                    get_figure_path("Vial").read_bytes(),
                     scale=VIAL_ICON_SCALE * CELL_SIZE,
                     parent=self,
                 )

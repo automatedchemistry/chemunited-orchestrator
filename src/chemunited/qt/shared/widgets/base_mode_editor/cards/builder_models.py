@@ -1,6 +1,5 @@
-from pydantic import BaseModel, Field, field_validator
-
 from chemunited_core.utils.internal_quantity import ChemUnitQuantity
+from pydantic import BaseModel, Field, field_validator
 
 
 class BasicVariableBuildMode(BaseModel):

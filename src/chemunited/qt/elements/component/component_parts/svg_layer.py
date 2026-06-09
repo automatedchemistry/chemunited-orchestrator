@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+from chemunited_core.common.constant import PATTERN_DIMENSION
+from PyQt5.QtCore import QByteArray
 from PyQt5.QtSvg import QGraphicsSvgItem, QSvgRenderer
 from PyQt5.QtWidgets import QGraphicsItem
-
-from chemunited_core.common.constant import PATTERN_DIMENSION
 
 
 class SvgLayer(QGraphicsSvgItem):
@@ -34,6 +34,21 @@ class SvgLayer(QGraphicsSvgItem):
 
         self._scale = scale
         self._apply_scale()
+
+    @classmethod
+    def from_bytes(
+        cls, svg_bytes: bytes, scale: float = PATTERN_DIMENSION, parent=None
+    ) -> "SvgLayer":
+        """Construct an SvgLayer from raw SVG bytes (e.g. from a package resource)."""
+        instance = cls.__new__(cls)
+        QGraphicsSvgItem.__init__(instance, parent=parent)
+        instance.setCacheMode(QGraphicsItem.NoCache)
+        instance.setFlag(QGraphicsItem.ItemIsSelectable, False)
+        instance.setFlag(QGraphicsItem.ItemIsMovable, False)
+        instance._scale = scale
+        instance.setSharedRenderer(QSvgRenderer(QByteArray(svg_bytes)))
+        instance._apply_scale()
+        return instance
 
     # ── public API ────────────────────────────────────────────────
 

@@ -1,10 +1,10 @@
 from typing import ClassVar
 
+from chemunited_core.common.constant import PATTERN_DIMENSION
+from chemunited_core.components import PlugFlowComponentData
 from PyQt5.QtCore import QPointF
 from PyQt5.QtGui import QColor, QPainterPath, QPolygonF
 
-from chemunited_core.common.constant import PATTERN_DIMENSION
-from chemunited_core.components import PlugFlowComponentData, PlugFlowMode
 from chemunited.qt.elements.component.graph_item import GraphComponent
 from chemunited.qt.shared.graph_objects.custom_path import PathElementItem
 from chemunited.qt.utils.math_functions import spring
@@ -44,13 +44,9 @@ class PathFluidSpring(PathSpring):
 
 
 class Loop(GraphComponent[PlugFlowComponentData]):
-    METADATA: ClassVar[type[PlugFlowComponentData]] = PlugFlowComponentData
-    BASEMODE: ClassVar[type[PlugFlowMode]] = PlugFlowMode
+    FIGURE: ClassVar[str] = "Loop"
 
-    def build(self, svg_path: str | None = None) -> None:
-        self._data.ports_by_number[1].relative_position = (-50, -5)
-        self._data.ports_by_number[2].relative_position = (50, -5)
-
+    def build(self) -> None:
         self.tubing = PathSpring(parent=self)
         self.tubing.rebuild_path()
         self.tubing.moveBy(-50, -55)
@@ -61,4 +57,4 @@ class Loop(GraphComponent[PlugFlowComponentData]):
         self.fluid_path.moveBy(-50, -55)
         self.addToGroup(self.fluid_path)
 
-        super().build(svg_path=":/components_icons/components/LoopBase.svg")
+        super().build()

@@ -2,10 +2,9 @@ from __future__ import annotations
 
 import math
 
+from chemunited_core.utils import ChemQuantityValidator, ChemUnitQuantity, ureg
 from PyQt5.QtWidgets import QHBoxLayout, QWidget
 from qfluentwidgets import ComboBox, DoubleSpinBox
-
-from chemunited_core.utils import ChemQuantityValidator, ChemUnitQuantity, ureg
 
 from .._utils import units_for_dimension
 from .base_card import BaseFieldCard

@@ -1,34 +1,11 @@
-from typing import ClassVar, Generic, TypeVar
+from typing import Generic, TypeVar
 
 import numpy as np
+from chemunited_core.components.valve import ValveComponentData
 from PyQt5.QtCore import QPointF, QRectF, Qt
 from PyQt5.QtGui import QPainterPath, QPen
 from PyQt5.QtWidgets import QGraphicsObject, QGraphicsPathItem
 
-from chemunited_core.components.valve import (
-    ValveComponentData,
-)
-from chemunited_core.components import ComponentMode
-from chemunited_core.figure_registry import (
-    FourPortDistributionValveData,
-    FourPortDistributionValveMode,
-    FourPortFivePositionValveData,
-    FourPortFivePositionValveMode,
-    SixPortDistributionValveData,
-    SixPortDistributionValveMode,
-    SixPortTwoPositionValveData,
-    SixPortTwoPositionValveMode,
-    SixteenPortDistributionValveData,
-    SixteenPortDistributionValveMode,
-    ThreePortFourPositionValveData,
-    ThreePortFourPositionValveMode,
-    ThreePortTwoPositionValveData,
-    ThreePortTwoPositionValveMode,
-    TwelvePortDistributionValveData,
-    TwelvePortDistributionValveMode,
-    TwoPortDistributionValveData,
-    TwoPortDistributionValveMode,
-)
 from chemunited.qt.elements.component.graph_item import GraphComponent
 
 ValveT = TypeVar("ValveT", bound=ValveComponentData)
@@ -79,14 +56,12 @@ class RotorChannel(QGraphicsObject):
 
 
 class RotaryValveGraph(GraphComponent[ValveT], Generic[ValveT]):
-    SVG_SCALE: ClassVar[float] = 4.0
-
     def __init__(self, data: ValveT) -> None:
         super().__init__(data)
         self._internal_channel: RotorChannel | None = None
 
-    def build(self, svg_path: str | None = None) -> None:
-        super().build(svg_path=":/components_icons/components/RotaryValve.svg")
+    def build(self) -> None:
+        super().build()
         self._build_internal_channels()
 
     def _build_internal_channels(self) -> None:
@@ -107,83 +82,3 @@ class RotaryValveGraph(GraphComponent[ValveT], Generic[ValveT]):
         # Rotor
         self._internal_channel = RotorChannel(self._data)
         self.addToGroup(self._internal_channel)
-
-
-class ThreePortTwoPositionValve(RotaryValveGraph[ThreePortTwoPositionValveData]):
-    METADATA: ClassVar[type[ThreePortTwoPositionValveData]] = (
-        ThreePortTwoPositionValveData
-    )
-    BASEMODE: ClassVar[type[ThreePortTwoPositionValveMode]] = (
-        ThreePortTwoPositionValveMode
-    )
-
-
-class ThreePortFourPositionValve(RotaryValveGraph[ThreePortFourPositionValveData]):
-    METADATA: ClassVar[type[ThreePortFourPositionValveData]] = (
-        ThreePortFourPositionValveData
-    )
-    BASEMODE: ClassVar[type[ThreePortFourPositionValveMode]] = (
-        ThreePortFourPositionValveMode
-    )
-
-
-class FourPortFivePositionValve(RotaryValveGraph[FourPortFivePositionValveData]):
-    METADATA: ClassVar[type[FourPortFivePositionValveData]] = (
-        FourPortFivePositionValveData
-    )
-    BASEMODE: ClassVar[type[FourPortFivePositionValveMode]] = (
-        FourPortFivePositionValveMode
-    )
-
-
-class SixPortTwoPositionValve(RotaryValveGraph[SixPortTwoPositionValveData]):
-    METADATA: ClassVar[type[SixPortTwoPositionValveData]] = SixPortTwoPositionValveData
-    BASEMODE: ClassVar[type[SixPortTwoPositionValveMode]] = SixPortTwoPositionValveMode
-
-
-# Distribution valve
-
-
-class TwoPortDistributionValve(RotaryValveGraph[TwoPortDistributionValveData]):
-    METADATA: ClassVar[type[TwoPortDistributionValveData]] = (
-        TwoPortDistributionValveData
-    )
-    BASEMODE: ClassVar[type[TwoPortDistributionValveMode]] = (
-        TwoPortDistributionValveMode
-    )
-
-
-class FourPortDistributionValve(RotaryValveGraph[FourPortDistributionValveData]):
-    METADATA: ClassVar[type[FourPortDistributionValveData]] = (
-        FourPortDistributionValveData
-    )
-    BASEMODE: ClassVar[type[FourPortDistributionValveMode]] = (
-        FourPortDistributionValveMode
-    )
-
-
-class SixPortDistributionValve(RotaryValveGraph[SixPortDistributionValveData]):
-    METADATA: ClassVar[type[SixPortDistributionValveData]] = (
-        SixPortDistributionValveData
-    )
-    BASEMODE: ClassVar[type[SixPortDistributionValveMode]] = (
-        SixPortDistributionValveMode
-    )
-
-
-class TwelvePortDistributionValve(RotaryValveGraph[TwelvePortDistributionValveData]):
-    METADATA: ClassVar[type[TwelvePortDistributionValveData]] = (
-        TwelvePortDistributionValveData
-    )
-    BASEMODE: ClassVar[type[TwelvePortDistributionValveMode]] = (
-        TwelvePortDistributionValveMode
-    )
-
-
-class SixteenPortDistributionValve(RotaryValveGraph[SixteenPortDistributionValveData]):
-    METADATA: ClassVar[type[SixteenPortDistributionValveData]] = (
-        SixteenPortDistributionValveData
-    )
-    BASEMODE: ClassVar[type[SixteenPortDistributionValveMode]] = (
-        SixteenPortDistributionValveMode
-    )

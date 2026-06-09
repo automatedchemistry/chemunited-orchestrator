@@ -8,6 +8,7 @@ from functools import partial
 from pathlib import Path
 from typing import Annotated, Any, get_args, get_origin
 
+from chemunited_core.utils import ChemQuantityValidator, ChemUnitQuantity
 from loguru import logger
 from pydantic.config import JsonDict
 from pydantic.fields import FieldInfo
@@ -22,7 +23,6 @@ from qfluentwidgets import (
     NavigationInterface,
 )
 
-from chemunited_core.utils import ChemQuantityValidator, ChemUnitQuantity
 from chemunited.qt.shared.editor.parameters.list import ParameterListWidget
 from chemunited.qt.shared.icon import OrchestratorIcon
 from chemunited.qt.shared.widgets.base_mode_editor.cards.builder_models import (

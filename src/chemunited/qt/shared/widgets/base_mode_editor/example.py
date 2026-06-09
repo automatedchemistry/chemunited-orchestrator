@@ -20,10 +20,10 @@ from __future__ import annotations
 import sys
 from typing import Annotated
 
+from chemunited_core.utils import ChemQuantityValidator, ChemUnitQuantity
 from pydantic import BaseModel, Field
 from PyQt5.QtWidgets import QApplication
 
-from chemunited_core.utils import ChemQuantityValidator, ChemUnitQuantity
 from chemunited.qt.shared.widgets.base_mode_editor import BaseModeEditorWidget
 
 # ---------------------------------------------------------------------------
@@ -59,15 +59,15 @@ class ProcessParameters(BaseModel):
     ]
 
     valve_position: bool = Field(
-            default=True,
-            title="Position 1/2",
-            description="The actual valve position.",
-            json_schema_extra={
-                "group": "Identification",
-                "on_text": "Position 1",
-                "off_text": "Position 2",
-            },
-        )
+        default=True,
+        title="Position 1/2",
+        description="The actual valve position.",
+        json_schema_extra={
+            "group": "Identification",
+            "on_text": "Position 1",
+            "off_text": "Position 2",
+        },
+    )
 
     # ── Reactor settings ────────────────────────────────────────────────────
 

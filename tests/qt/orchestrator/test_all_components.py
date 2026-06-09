@@ -17,7 +17,7 @@ What is tested:
 import pytest
 from pytestqt.qtbot import QtBot
 
-from chemunited.qt.draw.elements.component import list_components
+from chemunited.qt.elements.component.component_factory import list_components
 from chemunited.qt.setup import SetupWindow
 
 SPACING_X = 200

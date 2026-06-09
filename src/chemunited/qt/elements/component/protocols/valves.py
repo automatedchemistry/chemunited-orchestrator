@@ -2,11 +2,11 @@ from functools import cache
 from pathlib import Path
 from typing import ClassVar, Literal, cast
 
+from chemunited_core.components.valve import possibles_connections_pairs
 from loguru import logger
 from pydantic import Field, create_model, field_validator
 from pydantic.config import JsonDict
 
-from chemunited_core.components.valve import possibles_connections_pairs
 from chemunited.qt.utils.files import load_class
 
 from .models import CommandSignature, ComponentProtocol

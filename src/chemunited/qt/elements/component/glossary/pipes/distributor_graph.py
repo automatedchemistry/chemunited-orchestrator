@@ -1,9 +1,9 @@
 from typing import ClassVar
 
+from chemunited_core.components import JunctionData
 from PyQt5.QtCore import QPointF, Qt
 from PyQt5.QtGui import QPen
 
-from chemunited_core.components import JunctionData, JunctionMode
 from chemunited.qt.elements.component.component_parts import SceneItem
 from chemunited.qt.elements.component.graph_item import GraphComponent
 
@@ -37,12 +37,8 @@ class Body(SceneItem):
 
 
 class Distributor(GraphComponent[JunctionData]):
-    METADATA: ClassVar[type[JunctionData]] = JunctionData
-    BASEMODE: ClassVar[type[JunctionMode]] = JunctionMode
-    SVG_SCALE: ClassVar[float] = 0.1
+    FIGURE: ClassVar[str] = "Distributor"
 
-    def build(self, svg_path: str | None = None) -> None:
-
-        super().build(svg_path=":/components_icons/components/Distributor.svg")
-
+    def build(self) -> None:
+        super().build()
         self.addToGroup(Body(self._data, parent=self))

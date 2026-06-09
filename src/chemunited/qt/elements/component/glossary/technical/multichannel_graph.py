@@ -1,9 +1,9 @@
 from typing import ClassVar
 
+from chemunited_core.figure_registry.technical import MultiChannelData
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QBrush, QColor, QPen
 
-from chemunited_core.figure_registry.technical import MultiChannelData, MultiChannelMode
 from chemunited.qt.elements.component.component_parts import SceneItem
 from chemunited.qt.elements.component.graph_item import GraphComponent
 
@@ -27,36 +27,30 @@ class MultiChannelBory(SceneItem):
 
 
 class MultiChannelADC(GraphComponent[MultiChannelData]):
-    METADATA: ClassVar[type[MultiChannelData]] = MultiChannelData
-    BASEMODE: ClassVar[type[MultiChannelMode]] = MultiChannelMode
-    SVG_SCALE: ClassVar[float] = 0.8
+    FIGURE: ClassVar[str] = "MultiChannelADC"
 
-    def build(self, svg_path: str | None = None) -> None:
+    def build(self) -> None:
         self.bory = MultiChannelBory(self._data)
         self.addToGroup(self.bory)
-        super().build(svg_path=":/components_icons/components/ADC.svg")
+        super().build()
         self._svg.setPos(-20, self.bory.height / 2)
 
 
 class MultiChannelDAC(GraphComponent[MultiChannelData]):
-    METADATA: ClassVar[type[MultiChannelData]] = MultiChannelData
-    BASEMODE: ClassVar[type[MultiChannelMode]] = MultiChannelMode
-    SVG_SCALE: ClassVar[float] = 0.8
+    FIGURE: ClassVar[str] = "MultiChannelDAC"
 
-    def build(self, svg_path: str | None = None) -> None:
+    def build(self) -> None:
         self.bory = MultiChannelBory(self._data)
         self.addToGroup(self.bory)
-        super().build(svg_path=":/components_icons/components/DAC.svg")
+        super().build()
         self._svg.setPos(-20, self.bory.height / 2)
 
 
 class MultiChannelRelay(GraphComponent[MultiChannelData]):
-    METADATA: ClassVar[type[MultiChannelData]] = MultiChannelData
-    BASEMODE: ClassVar[type[MultiChannelMode]] = MultiChannelMode
-    SVG_SCALE: ClassVar[float] = 0.8
+    FIGURE: ClassVar[str] = "MultiChannelRelay"
 
-    def build(self, svg_path: str | None = None) -> None:
+    def build(self) -> None:
         self.bory = MultiChannelBory(self._data)
         self.addToGroup(self.bory)
-        super().build(svg_path=":/components_icons/components/Relay.svg")
+        super().build()
         self._svg.setPos(-20, self.bory.height / 2)

@@ -2,21 +2,21 @@ from typing import ClassVar
 
 from chemunited_core.common.constant import PATTERN_DIMENSION
 from chemunited_core.common.enums import ConnectionType
-from chemunited_core.components import VesselComponentData, VesselMode
+from chemunited_core.components import VesselComponentData
 from chemunited_core.components.enums import PortAccess
+from chemunited_core.figure_registry import get_figure_path
+
 from chemunited.qt.elements.component.component_parts import SvgLayer
 from chemunited.qt.elements.component.graph_item import GraphComponent
 
 
 class CustomFlask(GraphComponent[VesselComponentData]):
-    METADATA: ClassVar[type[VesselComponentData]] = VesselComponentData
-    BASEMODE: ClassVar[type[VesselMode]] = VesselMode
+    FIGURE: ClassVar[str] = "CustomFlask"
 
-    def build(self, svg_path: str | None = None) -> None:
+    def build(self) -> None:
         if self._data.heat_exchange:
-            jacket_svg_path = ":/components_icons/components/FlaskJacket.svg"
-            self._svg_jacket = SvgLayer(
-                jacket_svg_path,
+            self._svg_jacket = SvgLayer.from_bytes(
+                get_figure_path("FlaskJacket").read_bytes(),
                 scale=PATTERN_DIMENSION * self.SVG_SCALE,
                 parent=self,
             )
@@ -25,11 +25,8 @@ class CustomFlask(GraphComponent[VesselComponentData]):
 
         for i, port in self._data.ports_by_number.items():
             if i == 1 and self._data.pressure_access:
-                pressure_access_svg_path = (
-                    ":/components_icons/components/BottlePressureAccess.svg"
-                )
-                self._svg_pressure_access = SvgLayer(
-                    pressure_access_svg_path,
+                self._svg_pressure_access = SvgLayer.from_bytes(
+                    get_figure_path("BottlePressureAccess").read_bytes(),
                     scale=10 * self.SVG_SCALE,
                     parent=self,
                 )
@@ -40,9 +37,8 @@ class CustomFlask(GraphComponent[VesselComponentData]):
                 port.category == ConnectionType.HYDRAULIC
                 and port.access == PortAccess.TOP
             ):
-                access_svg_path = ":/components_icons/components/BottleAccess.svg"
-                _svg_access = SvgLayer(
-                    access_svg_path,
+                _svg_access = SvgLayer.from_bytes(
+                    get_figure_path("BottleAccess").read_bytes(),
                     scale=40 * self.SVG_SCALE,
                     parent=self,
                 )
@@ -51,4 +47,4 @@ class CustomFlask(GraphComponent[VesselComponentData]):
                 )
                 self.addToGroup(_svg_access)
 
-        super().build(svg_path=":/components_icons/components/CustomFlask.svg")
+        super().build()

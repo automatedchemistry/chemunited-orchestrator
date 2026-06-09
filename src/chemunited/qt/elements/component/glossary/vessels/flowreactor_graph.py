@@ -1,15 +1,13 @@
 from typing import ClassVar
 
+from chemunited_core.common.constant import PATTERN_DIMENSION
+from chemunited_core.figure_registry import get_figure_path
+from chemunited_core.figure_registry.vessels import (
+    FlowReactorData,
+)
 from PyQt5.QtCore import QPointF
 from PyQt5.QtGui import QColor, QPainterPath, QPolygonF
 
-from chemunited_core.common.constant import PATTERN_DIMENSION
-from chemunited_core.figure_registry.vessels import (
-    FlowReactorData,
-    FlowReactorMode,
-    PhotoReactorData,
-    PhotoReactorMode,
-)
 from chemunited.qt.elements.component.component_parts import SvgLayer
 from chemunited.qt.elements.component.graph_item import GraphComponent
 from chemunited.qt.shared.graph_objects.custom_path import PathElementItem
@@ -48,24 +46,19 @@ class PathFluid(PathTubing):
 
 
 class FlowReactor(GraphComponent[FlowReactorData]):
-    METADATA: ClassVar[type[FlowReactorData]] = FlowReactorData
-    BASEMODE: ClassVar[type[FlowReactorMode]] = FlowReactorMode
+    FIGURE: ClassVar[str] = "FlowReactor"
 
-    def build(self, svg_path: str | None = None) -> None:
-
+    def build(self) -> None:
         if self._data.heat_exchange:
-            jacket_svg_path = ":/components_icons/components/FlaskJacket.svg"
-            self._svg_jacket = SvgLayer(
-                jacket_svg_path,
+            self._svg_jacket = SvgLayer.from_bytes(
+                get_figure_path("FlaskJacket").read_bytes(),
                 scale=PATTERN_DIMENSION * self.SVG_SCALE,
                 parent=self,
             )
             self._svg_jacket.setRotation(90)
             self.addToGroup(self._svg_jacket)
 
-        self._data.ports_by_number[1].relative_position = (-45, -20)
-        self._data.ports_by_number[2].relative_position = (45, -20)
-        super().build(svg_path=":/components_icons/components/FlowReactorBase.svg")
+        super().build()
         self.tubing = PathTubing(parent=self)
         self.tubing.rebuild_path()
         self.tubing.moveBy(-42, -20)
@@ -78,13 +71,12 @@ class FlowReactor(GraphComponent[FlowReactorData]):
 
 
 class PhotoReactor(FlowReactor):
-    METADATA: ClassVar[type[PhotoReactorData]] = PhotoReactorData
-    BASEMODE: ClassVar[type[PhotoReactorMode]] = PhotoReactorMode
+    FIGURE: ClassVar[str] = "PhotoReactor"
 
-    def build(self, svg_path: str | None = None) -> None:
+    def build(self) -> None:
         super().build()
-        self.leds = SvgLayer(
-            ":/components_icons/components/PhotoLeds.svg",
+        self.leds = SvgLayer.from_bytes(
+            get_figure_path("PhotoLeds").read_bytes(),
             scale=int(PATTERN_DIMENSION * self.SVG_SCALE * 0.5),
             parent=self,
         )
