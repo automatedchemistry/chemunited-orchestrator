@@ -75,7 +75,7 @@ def save_draw(working_dir: Path, draw_data: dict) -> None:
 def load_draw(working_dir: Path) -> dict:
     path = working_dir / "draw" / "setup.py"
     if not path.exists():
-        return {"components": [], "connections": [], "canvas": {}}
+        return {"compounds": [], "components": [], "connections": [], "canvas": {}}
     build_draw = load_attribute(
         path,
         "build_draw",
@@ -96,8 +96,12 @@ def load_draw(working_dir: Path) -> dict:
 
 class _DrawRecorder:
     def __init__(self) -> None:
+        self.compounds: list[dict] = []
         self.components: list[dict] = []
         self.connections: list[dict] = []
+
+    def add_compound(self, **payload) -> None:
+        self.compounds.append(dict(payload))
 
     def add_component(self, **payload) -> None:
         self.components.append(dict(payload))
@@ -131,7 +135,11 @@ class _DrawRecorder:
         self.connections.append(connection)
 
     def data(self) -> dict:
-        return {"components": self.components, "connections": self.connections}
+        return {
+            "compounds": self.compounds,
+            "components": self.components,
+            "connections": self.connections,
+        }
 
 
 def _render_draw_script(working_dir: Path, draw_data: dict) -> str:
@@ -152,6 +160,9 @@ def _render_draw_script(working_dir: Path, draw_data: dict) -> str:
 
 def _render_draw_body(draw_data: dict) -> str:
     calls = []
+    for compound in draw_data.get("compounds", []):
+        calls.append(_render_call("platform.add_compound", compound, "compound"))
+
     for component in draw_data.get("components", []):
         calls.append(_render_call("platform.add_component", component, "component"))
 
@@ -180,6 +191,14 @@ def _ordered_payload(payload: dict, payload_type: str) -> dict:
             normalized["destiny_port"] = normalized.pop("destination_port")
 
     preferred = {
+        "compound": (
+            "name",
+            "molecular_weight",
+            "cp_liquid",
+            "cp_gas",
+            "density_liquid",
+            "color",
+        ),
         "component": ("name", "figure", "position", "angle"),
         "connection": ("origin", "destiny", "origin_port", "destiny_port"),
     }[payload_type]

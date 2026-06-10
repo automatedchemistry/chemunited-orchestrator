@@ -11,6 +11,7 @@ from types import SimpleNamespace
 
 import pytest
 from chemunited_core.common.enums import ConnectionType
+from chemunited_core.compounds import COMPOUNDS, ChemicalEntity
 from PyQt5.QtGui import QKeySequence
 from pytestqt.qtbot import QtBot
 from qfluentwidgets import NavigationTreeWidget
@@ -451,7 +452,11 @@ class TestAddComponent:
 
         window.orchestrator.save()
 
-        assert session.draw_data == {"components": [], "connections": []}
+        assert session.draw_data == {
+            "compounds": [],
+            "components": [],
+            "connections": [],
+        }
         assert session.export_destination == source_file
         assert store.list() == [source_file.resolve()]
 
@@ -743,6 +748,113 @@ class CustomProcess(Process[ProcessConfig]):
 
         assert saved_component["position"] == [123.5, 456.25]
         assert saved_component["angle"] == 90
+
+    def test_build_draw_data_persists_user_compounds_only(
+        self, window: SetupWindow
+    ):
+        COMPOUNDS.clear()
+        COMPOUNDS.register(
+            ChemicalEntity(
+                name="reagent_a",
+                molecular_weight=120.0,
+                cp_liquid=150.0,
+                cp_gas=None,
+                density_liquid=1050.0,
+                color="#F09D00",
+            )
+        )
+
+        try:
+            draw_data = window.orchestrator._build_draw_data()
+        finally:
+            COMPOUNDS.clear()
+
+        assert draw_data["compounds"] == [
+            {
+                "name": "reagent_a",
+                "molecular_weight": 120.0,
+                "cp_liquid": 150.0,
+                "cp_gas": None,
+                "density_liquid": 1050.0,
+                "color": "#F09D00",
+            }
+        ]
+
+    def test_open_project_restores_compounds(self, window: SetupWindow, tmp_path):
+        session = ProjectSession()
+        session.new(name="demo", location=tmp_path, init_git=False)
+        session.save_draw(
+            {
+                "compounds": [
+                    {
+                        "name": "reagent_a",
+                        "molecular_weight": 120.0,
+                        "cp_liquid": 150.0,
+                        "cp_gas": None,
+                        "density_liquid": 1050.0,
+                        "color": "#F09D00",
+                    }
+                ],
+                "components": [],
+                "connections": [],
+            }
+        )
+
+        window.orchestrator.open_project(tmp_path / "demo")
+
+        entity = COMPOUNDS["reagent_a"]
+        assert entity.molecular_weight == pytest.approx(120.0)
+        assert entity.cp_liquid == pytest.approx(150.0)
+        assert entity.cp_gas is None
+        assert entity.density_liquid == pytest.approx(1050.0)
+        assert entity.color == "#F09D00"
+        assert "reagent_a" in window.compound_list.visible_names()
+
+    def test_open_project_without_compounds_clears_stale_compounds(
+        self, window: SetupWindow, tmp_path
+    ):
+        COMPOUNDS.clear()
+        COMPOUNDS.register(ChemicalEntity(name="stale", molecular_weight=10.0))
+        session = ProjectSession()
+        session.new(name="demo", location=tmp_path, init_git=False)
+        session.save_draw({"components": [], "connections": []})
+
+        window.orchestrator.open_project(tmp_path / "demo")
+
+        assert COMPOUNDS.names == ["air"]
+        assert window.compound_list.visible_names() == ["air"]
+
+    def test_refresh_project_restores_compounds(
+        self, window: SetupWindow, tmp_path
+    ):
+        session = ProjectSession()
+        session.new(name="demo", location=tmp_path, init_git=False)
+        session.save_draw({"compounds": [], "components": [], "connections": []})
+        window.orchestrator.open_project(tmp_path / "demo")
+
+        session.save_draw(
+            {
+                "compounds": [
+                    {
+                        "name": "refreshed_reagent",
+                        "molecular_weight": 75.0,
+                        "cp_liquid": None,
+                        "cp_gas": 20.0,
+                        "density_liquid": None,
+                        "color": None,
+                    }
+                ],
+                "components": [],
+                "connections": [],
+            }
+        )
+
+        assert window.orchestrator.refresh_current_project() is True
+
+        entity = COMPOUNDS["refreshed_reagent"]
+        assert entity.molecular_weight == pytest.approx(75.0)
+        assert entity.cp_gas == pytest.approx(20.0)
+        assert "refreshed_reagent" in window.compound_list.visible_names()
 
     def test_segment_window_switching_updates_component_and_connection_modes(
         self, window: SetupWindow, qtbot: QtBot

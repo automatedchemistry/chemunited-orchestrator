@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import json
 import re
+from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
 
+from chemunited_core.compounds import COMPOUNDS, ChemicalEntity
 from loguru import logger
 from PyQt5.QtCore import QTimer, pyqtSlot
 from PyQt5.QtWidgets import QFileDialog, QInputDialog, QMessageBox
@@ -521,8 +523,19 @@ class OrchestratorProjectFile(OrchestratorExecution):
         self.connections.clear()
         self.components.clear()
         self.clear_protocols()
+        COMPOUNDS.clear()
+        self._sync_compound_list()
 
     def _restore_draw_data(self, draw_data: dict) -> None:
+        for compound in draw_data.get("compounds", []):
+            try:
+                COMPOUNDS.register(ChemicalEntity(**dict(compound)))
+            except Exception as exc:
+                name = dict(compound).get("name", "unknown")
+                logger.bind(window=WindowCategory.SETUP).opt(exception=exc).warning(
+                    f"Skipped compound '{name}': {exc}"
+                )
+
         for component in draw_data.get("components", []):
             try:
                 self.add_component(**self._validated_component_payload(dict(component)))
@@ -539,6 +552,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
                 logger.bind(window=WindowCategory.SETUP).opt(exception=exc).warning(
                     f"Skipped connection: {exc}"
                 )
+        self._sync_compound_list()
 
     def _restore_connectivity_data(self, connectivity_data: dict) -> None:
         server_url = connectivity_data.get("server_url", "").rstrip("/")
@@ -736,6 +750,11 @@ class OrchestratorProjectFile(OrchestratorExecution):
         return {"server_url": server_url, "associations": associations}
 
     def _build_draw_data(self) -> dict:
+        compounds = [
+            asdict(entity)
+            for entity in COMPOUNDS.entities
+            if entity.name not in {"air"}
+        ]
         components = [
             component.graph.base_mode_instance.model_dump(mode="json")
             for component in self.components.values()
@@ -744,7 +763,17 @@ class OrchestratorProjectFile(OrchestratorExecution):
             conn.base_mode_instance.model_dump(mode="json")
             for conn in self.connections.values()
         ]
-        return {"components": components, "connections": connections}
+        return {
+            "compounds": compounds,
+            "components": components,
+            "connections": connections,
+        }
+
+    def _sync_compound_list(self) -> None:
+        compound_list = getattr(self.parent_ref, "compound_list", None)
+        sync = getattr(compound_list, "sync", None)
+        if callable(sync):
+            sync()
 
     def save_protocols_hystoric(self) -> None:
         if self.working_dir is None:

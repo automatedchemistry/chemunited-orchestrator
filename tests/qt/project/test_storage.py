@@ -16,6 +16,16 @@ def test_save_draw_writes_python_setup(tmp_path):
     save_draw(
         tmp_path,
         {
+            "compounds": [
+                {
+                    "name": "reagent_a",
+                    "molecular_weight": 120.0,
+                    "cp_liquid": 150.0,
+                    "cp_gas": None,
+                    "density_liquid": 1050.0,
+                    "color": "#F09D00",
+                }
+            ],
             "components": [
                 {
                     "name": "PumpA",
@@ -42,12 +52,22 @@ def test_save_draw_writes_python_setup(tmp_path):
 
     assert setup_path.exists()
     assert "def build_draw(platform):" in content
+    assert "platform.add_compound(" in content
+    assert "name='reagent_a'" in content
+    assert "molecular_weight=120.0" in content
+    assert "cp_gas=None" in content
     assert "platform.add_component(" in content
     assert "position=(1.0, 2.0)" in content
     assert "platform.add_connection(" in content
     assert "destiny='ReactorA'" in content
     assert "destiny_port=1" in content
     assert "inflection_points=[[50.0, 25.0]]" in content
+    assert content.rindex("platform.add_compound(") < content.rindex(
+        "platform.add_component("
+    )
+    assert content.rindex("platform.add_component(") < content.rindex(
+        "platform.add_connection("
+    )
 
 
 def test_load_draw_executes_python_setup(tmp_path):
@@ -56,6 +76,15 @@ def test_load_draw_executes_python_setup(tmp_path):
     setup_path.write_text(
         """
 def build_draw(platform):
+    platform.add_compound(
+        name='reagent_a',
+        molecular_weight=120.0,
+        cp_liquid=150.0,
+        cp_gas=None,
+        density_liquid=1050.0,
+        color='#F09D00',
+    )
+
     for name, x in [('PumpA', 0.0), ('PumpB', 100.0)]:
         platform.add_component(
             name=name,
@@ -76,6 +105,16 @@ def build_draw(platform):
     )
 
     assert load_draw(tmp_path) == {
+        "compounds": [
+            {
+                "name": "reagent_a",
+                "molecular_weight": 120.0,
+                "cp_liquid": 150.0,
+                "cp_gas": None,
+                "density_liquid": 1050.0,
+                "color": "#F09D00",
+            }
+        ],
         "components": [
             {
                 "name": "PumpA",
@@ -103,7 +142,42 @@ def build_draw(platform):
 
 
 def test_load_draw_returns_empty_payload_when_setup_is_missing(tmp_path):
-    assert load_draw(tmp_path) == {"components": [], "connections": [], "canvas": {}}
+    assert load_draw(tmp_path) == {
+        "compounds": [],
+        "components": [],
+        "connections": [],
+        "canvas": {},
+    }
+
+
+def test_load_draw_returns_empty_compounds_for_legacy_setup(tmp_path):
+    setup_path = tmp_path / "draw" / "setup.py"
+    setup_path.parent.mkdir(parents=True)
+    setup_path.write_text(
+        """
+def build_draw(platform):
+    platform.add_component(
+        name='PumpA',
+        figure='HPLCPump',
+        position=(0.0, 0.0),
+        angle=0,
+    )
+""".lstrip(),
+        encoding="utf-8",
+    )
+
+    assert load_draw(tmp_path) == {
+        "compounds": [],
+        "components": [
+            {
+                "name": "PumpA",
+                "figure": "HPLCPump",
+                "position": (0.0, 0.0),
+                "angle": 0,
+            }
+        ],
+        "connections": [],
+    }
 
 
 def test_process_class_name_matches_generated_process_scripts():
