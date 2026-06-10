@@ -2,7 +2,6 @@ from __future__ import annotations
 
 import json
 import re
-from dataclasses import asdict
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -98,6 +97,10 @@ def _coerce_inflection_points(value: object) -> list[tuple[float, float]]:
             continue
         points.append((x, y))
     return points
+
+
+def _quantity_magnitude(value, unit: str) -> float:
+    return float(value.to(unit).magnitude)
 
 
 class OrchestratorProjectFile(OrchestratorExecution):
@@ -751,7 +754,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
 
     def _build_draw_data(self) -> dict:
         compounds = [
-            asdict(entity)
+            self._compound_payload(entity)
             for entity in COMPOUNDS.entities
             if entity.name not in {"air"}
         ]
@@ -774,6 +777,26 @@ class OrchestratorProjectFile(OrchestratorExecution):
         sync = getattr(compound_list, "sync", None)
         if callable(sync):
             sync()
+
+    @staticmethod
+    def _compound_payload(entity: ChemicalEntity) -> dict:
+        return {
+            "name": entity.name,
+            "molecular_weight": _quantity_magnitude(
+                entity.molecular_weight,
+                "g/mol",
+            ),
+            "cp_liquid": _quantity_magnitude(entity.cp_liquid, "J/(mol*K)"),
+            "cp_gas": _quantity_magnitude(entity.cp_gas, "J/(mol*K)"),
+            "density_liquid": _quantity_magnitude(
+                entity.density_liquid,
+                "kg/m^3",
+            ),
+            "color_red": entity.color_red,
+            "color_green": entity.color_green,
+            "color_blue": entity.color_blue,
+            "color_alpha": entity.color_alpha,
+        }
 
     def save_protocols_hystoric(self) -> None:
         if self.working_dir is None:

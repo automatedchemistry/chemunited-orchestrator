@@ -72,6 +72,15 @@ class CompoundList(QWidget):
         self.density_liquid_edit.setPlaceholderText("optional, kg/m^3")
         self.color_edit = LineEdit(self)
         self.color_edit.setPlaceholderText("optional, #RRGGBB")
+        self.color_preview = QWidget(self)
+        self.color_preview.setFixedSize(28, 20)
+        self._update_color_preview()
+
+        color_row = QHBoxLayout()
+        color_row.setContentsMargins(0, 0, 0, 0)
+        color_row.setSpacing(8)
+        color_row.addWidget(self.color_edit, stretch=1)
+        color_row.addWidget(self.color_preview)
 
         form = QFormLayout()
         form.setContentsMargins(0, 0, 0, 0)
@@ -81,7 +90,7 @@ class CompoundList(QWidget):
         form.addRow(BodyLabel("Cp liquid", self), self.cp_liquid_edit)
         form.addRow(BodyLabel("Cp gas", self), self.cp_gas_edit)
         form.addRow(BodyLabel("Liquid density", self), self.density_liquid_edit)
-        form.addRow(BodyLabel("Color", self), self.color_edit)
+        form.addRow(BodyLabel("Color", self), color_row)
         layout.addLayout(form)
 
         button_row = QHBoxLayout()
@@ -102,6 +111,9 @@ class CompoundList(QWidget):
         self.list_widget.currentItemChanged.connect(  # type: ignore[attr-defined]
             self._update_remove_button
         )
+        self.color_edit.textChanged.connect(  # type: ignore[attr-defined]
+            self._update_color_preview
+        )
 
     def showEvent(self, event) -> None:
         super().showEvent(event)
@@ -114,8 +126,8 @@ class CompoundList(QWidget):
         for entity in COMPOUNDS.entities:
             item = QListWidgetItem(entity.name)
             item.setToolTip(self._compound_tooltip(entity))
-            if entity.color:
-                item.setForeground(QColor(entity.color))
+            if entity.color_alpha > 0:
+                item.setForeground(QColor(entity.rgb_hex))
             self.list_widget.addItem(item)
 
         if selected is not None:
@@ -182,6 +194,7 @@ class CompoundList(QWidget):
             self.color_edit,
         ):
             edit.clear()
+        self._update_color_preview()
 
     def _entity_from_form(self) -> ChemicalEntity:
         name = self.name_edit.text().strip()
@@ -194,9 +207,12 @@ class CompoundList(QWidget):
         if name in COMPOUNDS:
             raise ValueError(f"A compound named {name!r} already exists.")
 
-        color = self.color_edit.text().strip() or None
-        if color is not None and _HEX_COLOR_RE.fullmatch(color) is None:
+        color_text = self.color_edit.text().strip()
+        if color_text and _HEX_COLOR_RE.fullmatch(color_text) is None:
             raise ValueError("Color must be blank or a hex value like #FF0000.")
+        color_red, color_green, color_blue, color_alpha = self._rgba_from_hex(
+            color_text
+        )
 
         return ChemicalEntity(
             name=name,
@@ -216,7 +232,10 @@ class CompoundList(QWidget):
                 self.density_liquid_edit.text(),
                 "Liquid density",
             ),
-            color=color,
+            color_red=color_red,
+            color_green=color_green,
+            color_blue=color_blue,
+            color_alpha=color_alpha,
         )
 
     @staticmethod
@@ -227,11 +246,11 @@ class CompoundList(QWidget):
         return CompoundList._positive_float(text, label)
 
     @staticmethod
-    def _optional_positive_float(value: str, label: str) -> float | None:
+    def _optional_positive_float(value: str, label: str) -> float:
         text = value.strip()
         if not text:
-            return None
-        return CompoundList._positive_float(text, label)
+            return 0.0
+        return CompoundList._nonnegative_float(text, label)
 
     @staticmethod
     def _positive_float(value: str, label: str) -> float:
@@ -244,16 +263,54 @@ class CompoundList(QWidget):
         return number
 
     @staticmethod
+    def _nonnegative_float(value: str, label: str) -> float:
+        try:
+            number = float(value)
+        except ValueError as exc:
+            raise ValueError(f"{label} must be a number.") from exc
+        if number < 0:
+            raise ValueError(f"{label} must be greater than or equal to 0.")
+        return number
+
+    @staticmethod
+    def _rgba_from_hex(value: str) -> tuple[int, int, int, int]:
+        if not value:
+            return (0, 0, 0, 0)
+        return (
+            int(value[1:3], 16),
+            int(value[3:5], 16),
+            int(value[5:7], 16),
+            255,
+        )
+
+    @staticmethod
     def _compound_tooltip(entity: ChemicalEntity) -> str:
         values = [
-            f"Molecular weight: {entity.molecular_weight:g} g/mol",
-            f"Cp liquid: {_format_optional(entity.cp_liquid)} J/(mol K)",
-            f"Cp gas: {_format_optional(entity.cp_gas)} J/(mol K)",
-            f"Liquid density: {_format_optional(entity.density_liquid)} kg/m^3",
+            "Molecular weight: "
+            f"{_format_quantity(entity.molecular_weight, 'g/mol')} g/mol",
+            "Cp liquid: "
+            f"{_format_quantity(entity.cp_liquid, 'J/(mol*K)')} J/(mol K)",
+            "Cp gas: "
+            f"{_format_quantity(entity.cp_gas, 'J/(mol*K)')} J/(mol K)",
+            "Liquid density: "
+            f"{_format_quantity(entity.density_liquid, 'kg/m^3')} kg/m^3",
         ]
-        if entity.color:
-            values.append(f"Color: {entity.color}")
+        if entity.color_alpha > 0:
+            values.append(f"Color: {entity.rgb_hex}")
         return "\n".join(values)
+
+    def _update_color_preview(self) -> None:
+        text = self.color_edit.text().strip()
+        if _HEX_COLOR_RE.fullmatch(text):
+            red, green, blue, alpha = self._rgba_from_hex(text)
+            background = f"rgba({red}, {green}, {blue}, {alpha})"
+        else:
+            background = "transparent"
+        self.color_preview.setStyleSheet(
+            "border: 1px solid palette(mid);"
+            "border-radius: 3px;"
+            f"background-color: {background};"
+        )
 
     def _select_name(self, name: str) -> None:
         matches = self.list_widget.findItems(  # type: ignore[arg-type]
@@ -291,5 +348,5 @@ class CompoundList(QWidget):
         )
 
 
-def _format_optional(value: float | None) -> str:
-    return "-" if value is None else f"{value:g}"
+def _format_quantity(value, unit: str) -> str:
+    return f"{float(value.to(unit).magnitude):g}"

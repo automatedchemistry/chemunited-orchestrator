@@ -23,6 +23,10 @@ from chemunited.qt.setup import SetupWindow
 from chemunited.qt.shared.enums import SetupStepMode
 
 
+def _magnitude(value, unit: str) -> float:
+    return float(value.to(unit).magnitude)
+
+
 class TestAddComponent:
     @pytest.fixture
     def window(self, qtbot: QtBot):
@@ -615,8 +619,7 @@ class CustomProcess(Process[ProcessConfig]):
 
     def _prepare_stock(self) -> str:
         return "helper"
-""".strip()
-            + "\n",
+""".strip() + "\n",
             encoding="utf-8",
         )
         window.orchestrator.working_dir = working_dir
@@ -749,18 +752,19 @@ class CustomProcess(Process[ProcessConfig]):
         assert saved_component["position"] == [123.5, 456.25]
         assert saved_component["angle"] == 90
 
-    def test_build_draw_data_persists_user_compounds_only(
-        self, window: SetupWindow
-    ):
+    def test_build_draw_data_persists_user_compounds_only(self, window: SetupWindow):
         COMPOUNDS.clear()
         COMPOUNDS.register(
             ChemicalEntity(
                 name="reagent_a",
                 molecular_weight=120.0,
                 cp_liquid=150.0,
-                cp_gas=None,
+                cp_gas=0.0,
                 density_liquid=1050.0,
-                color="#F09D00",
+                color_red=240,
+                color_green=157,
+                color_blue=0,
+                color_alpha=255,
             )
         )
 
@@ -774,9 +778,12 @@ class CustomProcess(Process[ProcessConfig]):
                 "name": "reagent_a",
                 "molecular_weight": 120.0,
                 "cp_liquid": 150.0,
-                "cp_gas": None,
+                "cp_gas": 0.0,
                 "density_liquid": 1050.0,
-                "color": "#F09D00",
+                "color_red": 240,
+                "color_green": 157,
+                "color_blue": 0,
+                "color_alpha": 255,
             }
         ]
 
@@ -790,9 +797,12 @@ class CustomProcess(Process[ProcessConfig]):
                         "name": "reagent_a",
                         "molecular_weight": 120.0,
                         "cp_liquid": 150.0,
-                        "cp_gas": None,
+                        "cp_gas": 0.0,
                         "density_liquid": 1050.0,
-                        "color": "#F09D00",
+                        "color_red": 240,
+                        "color_green": 157,
+                        "color_blue": 0,
+                        "color_alpha": 255,
                     }
                 ],
                 "components": [],
@@ -803,11 +813,12 @@ class CustomProcess(Process[ProcessConfig]):
         window.orchestrator.open_project(tmp_path / "demo")
 
         entity = COMPOUNDS["reagent_a"]
-        assert entity.molecular_weight == pytest.approx(120.0)
-        assert entity.cp_liquid == pytest.approx(150.0)
-        assert entity.cp_gas is None
-        assert entity.density_liquid == pytest.approx(1050.0)
-        assert entity.color == "#F09D00"
+        assert _magnitude(entity.molecular_weight, "g/mol") == pytest.approx(120.0)
+        assert _magnitude(entity.cp_liquid, "J/(mol*K)") == pytest.approx(150.0)
+        assert _magnitude(entity.cp_gas, "J/(mol*K)") == 0.0
+        assert _magnitude(entity.density_liquid, "kg/m^3") == pytest.approx(1050.0)
+        assert entity.rgb_hex == "#F09D00"
+        assert entity.color_alpha == 255
         assert "reagent_a" in window.compound_list.visible_names()
 
     def test_open_project_without_compounds_clears_stale_compounds(
@@ -824,9 +835,7 @@ class CustomProcess(Process[ProcessConfig]):
         assert COMPOUNDS.names == ["air"]
         assert window.compound_list.visible_names() == ["air"]
 
-    def test_refresh_project_restores_compounds(
-        self, window: SetupWindow, tmp_path
-    ):
+    def test_refresh_project_restores_compounds(self, window: SetupWindow, tmp_path):
         session = ProjectSession()
         session.new(name="demo", location=tmp_path, init_git=False)
         session.save_draw({"compounds": [], "components": [], "connections": []})
@@ -838,10 +847,13 @@ class CustomProcess(Process[ProcessConfig]):
                     {
                         "name": "refreshed_reagent",
                         "molecular_weight": 75.0,
-                        "cp_liquid": None,
+                        "cp_liquid": 0.0,
                         "cp_gas": 20.0,
-                        "density_liquid": None,
-                        "color": None,
+                        "density_liquid": 0.0,
+                        "color_red": 0,
+                        "color_green": 0,
+                        "color_blue": 0,
+                        "color_alpha": 0,
                     }
                 ],
                 "components": [],
@@ -852,8 +864,8 @@ class CustomProcess(Process[ProcessConfig]):
         assert window.orchestrator.refresh_current_project() is True
 
         entity = COMPOUNDS["refreshed_reagent"]
-        assert entity.molecular_weight == pytest.approx(75.0)
-        assert entity.cp_gas == pytest.approx(20.0)
+        assert _magnitude(entity.molecular_weight, "g/mol") == pytest.approx(75.0)
+        assert _magnitude(entity.cp_gas, "J/(mol*K)") == pytest.approx(20.0)
         assert "refreshed_reagent" in window.compound_list.visible_names()
 
     def test_segment_window_switching_updates_component_and_connection_modes(

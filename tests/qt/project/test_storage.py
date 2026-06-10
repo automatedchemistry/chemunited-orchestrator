@@ -21,9 +21,12 @@ def test_save_draw_writes_python_setup(tmp_path):
                     "name": "reagent_a",
                     "molecular_weight": 120.0,
                     "cp_liquid": 150.0,
-                    "cp_gas": None,
+                    "cp_gas": 0.0,
                     "density_liquid": 1050.0,
-                    "color": "#F09D00",
+                    "color_red": 240,
+                    "color_green": 157,
+                    "color_blue": 0,
+                    "color_alpha": 255,
                 }
             ],
             "components": [
@@ -55,7 +58,9 @@ def test_save_draw_writes_python_setup(tmp_path):
     assert "platform.add_compound(" in content
     assert "name='reagent_a'" in content
     assert "molecular_weight=120.0" in content
-    assert "cp_gas=None" in content
+    assert "cp_gas=0.0" in content
+    assert "color_red=240" in content
+    assert "color_alpha=255" in content
     assert "platform.add_component(" in content
     assert "position=(1.0, 2.0)" in content
     assert "platform.add_connection(" in content
@@ -80,9 +85,12 @@ def build_draw(platform):
         name='reagent_a',
         molecular_weight=120.0,
         cp_liquid=150.0,
-        cp_gas=None,
+        cp_gas=0.0,
         density_liquid=1050.0,
-        color='#F09D00',
+        color_red=240,
+        color_green=157,
+        color_blue=0,
+        color_alpha=255,
     )
 
     for name, x in [('PumpA', 0.0), ('PumpB', 100.0)]:
@@ -110,9 +118,12 @@ def build_draw(platform):
                 "name": "reagent_a",
                 "molecular_weight": 120.0,
                 "cp_liquid": 150.0,
-                "cp_gas": None,
+                "cp_gas": 0.0,
                 "density_liquid": 1050.0,
-                "color": "#F09D00",
+                "color_red": 240,
+                "color_green": 157,
+                "color_blue": 0,
+                "color_alpha": 255,
             }
         ],
         "components": [
@@ -190,8 +201,7 @@ def test_load_process_classes_reloads_external_process_file_changes(tmp_path):
     protocols_dir = tmp_path / "protocols"
     protocols_dir.mkdir()
     (protocols_dir / "__init__.py").write_text(
-        dedent(
-            """
+        dedent("""
             from .React import (
                 CustomProcess as ReactProcess,
                 ProcessConfig as ReactConfig,
@@ -204,9 +214,7 @@ def test_load_process_classes_reloads_external_process_file_changes(tmp_path):
             CONFIGS = {
                 "React": ReactConfig,
             }
-            """
-        ).strip()
-        + "\n",
+            """).strip() + "\n",
         encoding="utf-8",
     )
     process_path = protocols_dir / "React.py"
@@ -256,9 +264,7 @@ def test_load_process_classes_skips_invalid_process_file(tmp_path):
 
 
 def _process_content(node_id: str) -> str:
-    return (
-        dedent(
-            f"""
+    return dedent(f"""
             from __future__ import annotations
 
             import networkx as nx
@@ -276,7 +282,4 @@ def _process_content(node_id: str) -> str:
                     graph = nx.DiGraph()
                     graph.add_node({node_id!r})
                     return graph
-            """
-        ).strip()
-        + "\n"
-    )
+            """).strip() + "\n"

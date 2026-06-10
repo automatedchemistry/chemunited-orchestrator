@@ -9,6 +9,10 @@ from chemunited.qt.elements.compounds import CompoundList
 from chemunited.qt.setup import SetupWindow
 
 
+def _magnitude(value, unit: str) -> float:
+    return float(value.to(unit).magnitude)
+
+
 @pytest.fixture(autouse=True)
 def reset_compounds():
     COMPOUNDS.clear()
@@ -53,11 +57,15 @@ def test_valid_add_registers_compound_and_refreshes_list(
 
     entity = COMPOUNDS["water"]
     assert isinstance(entity, ChemicalEntity)
-    assert entity.molecular_weight == pytest.approx(18.015)
-    assert entity.cp_liquid == pytest.approx(75.3)
-    assert entity.cp_gas == pytest.approx(33.6)
-    assert entity.density_liquid == pytest.approx(997)
-    assert entity.color == "#3366FF"
+    assert _magnitude(entity.molecular_weight, "g/mol") == pytest.approx(18.015)
+    assert _magnitude(entity.cp_liquid, "J/(mol*K)") == pytest.approx(75.3)
+    assert _magnitude(entity.cp_gas, "J/(mol*K)") == pytest.approx(33.6)
+    assert _magnitude(entity.density_liquid, "kg/m^3") == pytest.approx(997)
+    assert entity.color_red == 0x33
+    assert entity.color_green == 0x66
+    assert entity.color_blue == 0xFF
+    assert entity.color_alpha == 255
+    assert entity.rgb_hex == "#3366FF"
     assert compound_list.visible_names() == ["air", "water"]
     assert compound_list.name_edit.text() == ""
 
@@ -103,6 +111,18 @@ def test_invalid_optional_float_does_not_mutate_compounds(
     assert compound_list.visible_names() == ["air"]
 
 
+def test_blank_optional_fields_are_saved_as_zero(compound_list: CompoundList, qtbot):
+    _fill_required_form(compound_list)
+
+    qtbot.mouseClick(compound_list.add_button, Qt.LeftButton)
+
+    entity = COMPOUNDS["water"]
+    assert _magnitude(entity.cp_liquid, "J/(mol*K)") == 0.0
+    assert _magnitude(entity.cp_gas, "J/(mol*K)") == 0.0
+    assert _magnitude(entity.density_liquid, "kg/m^3") == 0.0
+    assert entity.color_alpha == 0
+
+
 def test_duplicate_name_is_rejected(compound_list: CompoundList, qtbot: QtBot):
     COMPOUNDS.register(ChemicalEntity(name="water", molecular_weight=18.015))
     compound_list.sync()
@@ -110,7 +130,9 @@ def test_duplicate_name_is_rejected(compound_list: CompoundList, qtbot: QtBot):
 
     qtbot.mouseClick(compound_list.add_button, Qt.LeftButton)
 
-    assert COMPOUNDS["water"].molecular_weight == pytest.approx(18.015)
+    assert _magnitude(COMPOUNDS["water"].molecular_weight, "g/mol") == pytest.approx(
+        18.015
+    )
     assert compound_list.visible_names() == ["air", "water"]
 
 
