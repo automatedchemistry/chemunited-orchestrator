@@ -233,3 +233,4 @@ example/Dani/
 
 # Test Temporal files
 .flowchem-sim/
+.pre-commit-cache*

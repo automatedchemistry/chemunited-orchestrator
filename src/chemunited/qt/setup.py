@@ -10,6 +10,8 @@ from qfluentwidgets import (
     RoundMenu,
 )
 
+from .elements.compounds import CompoundList
+
 from .connectivity.graph import ConnectivityGraphicView
 from .connectivity.online_list import OnlineComponent
 from .draw.graph import DrawGraphicView
@@ -65,6 +67,9 @@ class SetupWindow(MainWindowBase):
         )
         self.connectivityGraph = ConnectivityGraphicView(self.scene_attribute, self)
         self.online_list = OnlineComponent(self)
+
+        # Compounds frame (not a main segment tab, but used in the protocols editor)
+        self.compound_list = CompoundList(self)
 
         # Main Orchestrator Object
         # It depends on drawGraph being available during construction.
@@ -303,6 +308,12 @@ class SetupWindow(MainWindowBase):
             self.SegmentWindow,
             OrchestratorIcon.CHEMUNITED,
             "Segment",
+        )
+
+        self.addSubInterface(
+            self.compound_list,
+            OrchestratorIcon.CHEMICAL,
+            "Compounds",
         )
         self.switchTo(self.SegmentWindow)
 
