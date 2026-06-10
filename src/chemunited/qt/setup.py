@@ -1,7 +1,7 @@
 from pathlib import Path
 from typing import Any, override
 
-from PyQt5.QtCore import pyqtSlot
+from PyQt5.QtCore import QTimer, pyqtSlot
 from PyQt5.QtGui import QKeySequence
 from qfluentwidgets import (
     Action,
@@ -306,6 +306,18 @@ class SetupWindow(MainWindowBase):
         )
         self.switchTo(self.SegmentWindow)
 
+        self._update_nav_item = self.navigationInterface.addItem(
+            routeKey="package_updates",
+            icon=FluentIcon.SYNC,
+            text="Updates",
+            onClick=self._on_update_clicked,
+            position=NavigationItemPosition.BOTTOM,
+            tooltip="Checking for updates…",
+            selectable=False,
+        )
+        self._update_nav_item.setEnabled(False)
+        self._pending_updates: list = []
+
     _SAVE_COMMENTS = {
         SetupStepMode.DESIGN: "Save: design updated",
         SetupStepMode.PROTOCOLS: "Save: protocols updated",
@@ -400,6 +412,31 @@ class SetupWindow(MainWindowBase):
         self.protocolGraph.recenter_view()
         self.connectivityGraph.recenter_view()
         self.workflows_protocol.recenter_view()
+
+    @override
+    def initWindow(self) -> None:
+        super().initWindow()
+        QTimer.singleShot(1000, self._start_version_check)
+
+    def _start_version_check(self) -> None:
+        from chemunited.qt.utils.version_check import VersionCheckThread
+
+        self._version_check_thread = VersionCheckThread(parent=self)
+        self._version_check_thread.updates_found.connect(self._on_updates_found)  # type: ignore[attr-defined]
+        self._version_check_thread.start()
+
+    def _on_updates_found(self, updates: list) -> None:
+        self._pending_updates = updates
+        lines = "\n".join(
+            f"• {u.package}  {u.installed} → {u.latest}" for u in updates
+        )
+        self._update_nav_item.setToolTip(f"Updates available:\n{lines}")
+        self._update_nav_item.setEnabled(True)
+
+    def _on_update_clicked(self) -> None:
+        from chemunited.qt.utils.update_dialog import UpdateDialog
+
+        UpdateDialog(self._pending_updates, parent=self).exec_()
 
     def closeEvent(self, event):
         if self.mcp_service.is_running:

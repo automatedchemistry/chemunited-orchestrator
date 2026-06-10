@@ -31,6 +31,7 @@ dependencies = [
     "rich-click>=1.7",
     "black>=25.1.0,<27.0", # used programmatically to format user protocol
     "loguru>=0.7",  # explicitly re-declared
+    "packaging>=23.0",
 ]
 
 [project.scripts]
