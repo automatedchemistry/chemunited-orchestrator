@@ -2,11 +2,14 @@ import sys
 from pathlib import Path
 
 import rich_click as click
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication
 
 from chemunited.qt.setup import SetupWindow
+
+_APP_ID = "org.chemunited.orchestrator"
+_ICON_PATH = ":/icons/icons/chemunited.ico"
 
 
 @click.command()
@@ -22,10 +25,7 @@ def main(project_file: str | None = None, overwrite: bool = False) -> None:
     if sys.platform == "win32":
         import ctypes
 
-        # Set AppUserModelID to group app instances and use custom icon
-        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(
-            "org.chemunited.app"
-        )
+        ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(_APP_ID)
 
     # Set high DPI settings for better display scaling
     QApplication.setHighDpiScaleFactorRoundingPolicy(
@@ -36,15 +36,14 @@ def main(project_file: str | None = None, overwrite: bool = False) -> None:
 
     app = QApplication(sys.argv)
 
-    # Set application icon for all windows (including taskbar)
-    app.setWindowIcon(QIcon(":/icons/icons/chemunited.svg"))
+    app.setWindowIcon(QIcon(_ICON_PATH))
 
     window = SetupWindow()
-    if project_file:
-        window.orchestrator.open_project(
-            Path(project_file).resolve(), overwrite=overwrite
-        )
     window.show()
+    if project_file:
+        _path = Path(project_file).resolve()
+        _overwrite = overwrite
+        QTimer.singleShot(0, lambda: window.orchestrator.open_project(_path, overwrite=_overwrite))
     sys.exit(app.exec_())
 
 

@@ -3,6 +3,9 @@ from typing import override
 from PyQt5.QtCore import QFile, Qt, QTextStream, QTimer
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication, QHBoxLayout, QStackedWidget, QWidget
+
+_ICON_PATH = ":/icons/icons/chemunited.ico"
+
 from qfluentwidgets import (
     FluentIcon,
     NavigationInterface,
@@ -13,7 +16,6 @@ from qfluentwidgets import (
 from qframelesswindow import FramelessWindow, StandardTitleBar
 
 from chemunited.qt.shared.enums import WindowCategory
-from chemunited.qt.shared.icon import OrchestratorIcon
 from chemunited.qt.shared.widgets.loggings_widget import FrameLoggings
 
 
@@ -65,9 +67,13 @@ class WindowBase(FramelessWindow):
 
     def initWindow(self):
         """Initialize the window"""
-        self.setWindowIcon(QIcon(OrchestratorIcon.CHEMUNITED.path()))
+        self.setWindowIcon(QIcon(_ICON_PATH))
         self.setWindowTitle(self.TITLE)
         self.titleBar.setAttribute(Qt.WA_StyledBackground)  # type: ignore[attr-defined]
+
+    def showEvent(self, event):
+        super().showEvent(event)
+        self.titleBar.iconLabel.setPixmap(QIcon(_ICON_PATH).pixmap(20, 20))
 
     def addSubInterface(
         self, interface, icon, text: str, position=NavigationItemPosition.TOP
