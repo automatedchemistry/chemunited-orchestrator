@@ -1,33 +1,14 @@
 from __future__ import annotations
 
-import re
-
 from chemunited_core.compounds import COMPOUNDS, ChemicalEntity
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import (
-    QFormLayout,
-    QHBoxLayout,
-    QListWidgetItem,
-    QVBoxLayout,
-    QWidget,
-)
-from qfluentwidgets import (
-    BodyLabel,
-    FluentIcon,
-    InfoBar,
-    InfoBarPosition,
-    LineEdit,
-    ListWidget,
-    PrimaryPushButton,
-    PushButton,
-    StrongBodyLabel,
-)
+from PyQt5.QtWidgets import QListWidgetItem, QVBoxLayout, QWidget
+from qfluentwidgets import FluentIcon, InfoBar, InfoBarPosition, ListWidget, PrimaryPushButton, PushButton, StrongBodyLabel
 
 from chemunited.qt.orchestrator.protocols import is_valid_name
 
 _BUILT_IN_COMPOUNDS = {"air"}
-_HEX_COLOR_RE = re.compile(r"#[0-9A-Fa-f]{6}")
 
 
 class CompoundList(QWidget):
@@ -57,62 +38,16 @@ class CompoundList(QWidget):
             alignment=Qt.AlignLeft,  # type: ignore[arg-type]
         )
 
-        layout.addSpacing(8)
-        layout.addWidget(StrongBodyLabel("Add compound", self))
-
-        self.name_edit = LineEdit(self)
-        self.name_edit.setPlaceholderText("compound_name")
-        self.molecular_weight_edit = LineEdit(self)
-        self.molecular_weight_edit.setPlaceholderText("g/mol")
-        self.cp_liquid_edit = LineEdit(self)
-        self.cp_liquid_edit.setPlaceholderText("optional, J/(mol K)")
-        self.cp_gas_edit = LineEdit(self)
-        self.cp_gas_edit.setPlaceholderText("optional, J/(mol K)")
-        self.density_liquid_edit = LineEdit(self)
-        self.density_liquid_edit.setPlaceholderText("optional, kg/m^3")
-        self.color_edit = LineEdit(self)
-        self.color_edit.setPlaceholderText("optional, #RRGGBB")
-        self.color_preview = QWidget(self)
-        self.color_preview.setFixedSize(28, 20)
-        self._update_color_preview()
-
-        color_row = QHBoxLayout()
-        color_row.setContentsMargins(0, 0, 0, 0)
-        color_row.setSpacing(8)
-        color_row.addWidget(self.color_edit, stretch=1)
-        color_row.addWidget(self.color_preview)
-
-        form = QFormLayout()
-        form.setContentsMargins(0, 0, 0, 0)
-        form.setSpacing(8)
-        form.addRow(BodyLabel("Name", self), self.name_edit)
-        form.addRow(BodyLabel("Molecular weight", self), self.molecular_weight_edit)
-        form.addRow(BodyLabel("Cp liquid", self), self.cp_liquid_edit)
-        form.addRow(BodyLabel("Cp gas", self), self.cp_gas_edit)
-        form.addRow(BodyLabel("Liquid density", self), self.density_liquid_edit)
-        form.addRow(BodyLabel("Color", self), color_row)
-        layout.addLayout(form)
-
-        button_row = QHBoxLayout()
-        button_row.setContentsMargins(0, 0, 0, 0)
-        self.add_button = PrimaryPushButton(FluentIcon.ADD, "Add compound", self)
-        self.clear_button = PushButton("Clear", self)
-        button_row.addWidget(self.add_button)
-        button_row.addWidget(self.clear_button)
-        button_row.addStretch()
-        layout.addLayout(button_row)
+        self._add_button = PrimaryPushButton(FluentIcon.ADD, "Add compound", self)
+        layout.addWidget(self._add_button, alignment=Qt.AlignLeft)  # type: ignore[arg-type]
 
     def _connect_signals(self) -> None:
-        self.add_button.clicked.connect(self.add_compound)  # type: ignore[attr-defined]
-        self.clear_button.clicked.connect(self.clear_form)  # type: ignore[attr-defined]
+        self._add_button.clicked.connect(self._open_add_dialog)  # type: ignore[attr-defined]
         self.remove_button.clicked.connect(  # type: ignore[attr-defined]
             self.remove_selected_compound
         )
         self.list_widget.currentItemChanged.connect(  # type: ignore[attr-defined]
             self._update_remove_button
-        )
-        self.color_edit.textChanged.connect(  # type: ignore[attr-defined]
-            self._update_color_preview
         )
 
     def showEvent(self, event) -> None:
@@ -149,15 +84,25 @@ class CompoundList(QWidget):
             self.list_widget.item(i).text() for i in range(self.list_widget.count())
         ]
 
-    def add_compound(self) -> None:
-        try:
-            entity = self._entity_from_form()
-        except ValueError as exc:
-            self._show_warning(str(exc))
-            return
+    def _open_add_dialog(self) -> None:
+        from chemunited.qt.shared.widgets.base_mode_editor import BaseModeDialog
 
+        dialog = BaseModeDialog(
+            ChemicalEntity,
+            instance=ChemicalEntity(),
+            title="Add Compound",
+            parent=self.window(),
+        )
+        if not dialog.exec_():
+            return
+        entity = dialog.get_result_instance()
+        if not is_valid_name(entity.name):
+            self._show_warning("Compound name may contain only letters, numbers, _ and -.")
+            return
+        if entity.name in COMPOUNDS:
+            self._show_warning(f"A compound named {entity.name!r} already exists.")
+            return
         COMPOUNDS.register(entity)
-        self.clear_form()
         self.sync()
         self._select_name(entity.name)
         self._show_success(f"Compound {entity.name!r} added.")
@@ -184,105 +129,6 @@ class CompoundList(QWidget):
         self.sync()
         self._show_success(f"Compound {name!r} removed.")
 
-    def clear_form(self) -> None:
-        for edit in (
-            self.name_edit,
-            self.molecular_weight_edit,
-            self.cp_liquid_edit,
-            self.cp_gas_edit,
-            self.density_liquid_edit,
-            self.color_edit,
-        ):
-            edit.clear()
-        self._update_color_preview()
-
-    def _entity_from_form(self) -> ChemicalEntity:
-        name = self.name_edit.text().strip()
-        if not name:
-            raise ValueError("Compound name is required.")
-        if not is_valid_name(name):
-            raise ValueError(
-                "Compound name may contain only letters, numbers, _ and -."
-            )
-        if name in COMPOUNDS:
-            raise ValueError(f"A compound named {name!r} already exists.")
-
-        color_text = self.color_edit.text().strip()
-        if color_text and _HEX_COLOR_RE.fullmatch(color_text) is None:
-            raise ValueError("Color must be blank or a hex value like #FF0000.")
-        color_red, color_green, color_blue, color_alpha = self._rgba_from_hex(
-            color_text
-        )
-
-        return ChemicalEntity(
-            name=name,
-            molecular_weight=self._required_positive_float(
-                self.molecular_weight_edit.text(),
-                "Molecular weight",
-            ),
-            cp_liquid=self._optional_positive_float(
-                self.cp_liquid_edit.text(),
-                "Cp liquid",
-            ),
-            cp_gas=self._optional_positive_float(
-                self.cp_gas_edit.text(),
-                "Cp gas",
-            ),
-            density_liquid=self._optional_positive_float(
-                self.density_liquid_edit.text(),
-                "Liquid density",
-            ),
-            color_red=color_red,
-            color_green=color_green,
-            color_blue=color_blue,
-            color_alpha=color_alpha,
-        )
-
-    @staticmethod
-    def _required_positive_float(value: str, label: str) -> float:
-        text = value.strip()
-        if not text:
-            raise ValueError(f"{label} is required.")
-        return CompoundList._positive_float(text, label)
-
-    @staticmethod
-    def _optional_positive_float(value: str, label: str) -> float:
-        text = value.strip()
-        if not text:
-            return 0.0
-        return CompoundList._nonnegative_float(text, label)
-
-    @staticmethod
-    def _positive_float(value: str, label: str) -> float:
-        try:
-            number = float(value)
-        except ValueError as exc:
-            raise ValueError(f"{label} must be a number.") from exc
-        if number <= 0:
-            raise ValueError(f"{label} must be positive.")
-        return number
-
-    @staticmethod
-    def _nonnegative_float(value: str, label: str) -> float:
-        try:
-            number = float(value)
-        except ValueError as exc:
-            raise ValueError(f"{label} must be a number.") from exc
-        if number < 0:
-            raise ValueError(f"{label} must be greater than or equal to 0.")
-        return number
-
-    @staticmethod
-    def _rgba_from_hex(value: str) -> tuple[int, int, int, int]:
-        if not value:
-            return (0, 0, 0, 0)
-        return (
-            int(value[1:3], 16),
-            int(value[3:5], 16),
-            int(value[5:7], 16),
-            255,
-        )
-
     @staticmethod
     def _compound_tooltip(entity: ChemicalEntity) -> str:
         values = [
@@ -298,19 +144,6 @@ class CompoundList(QWidget):
         if entity.color_alpha > 0:
             values.append(f"Color: {entity.rgb_hex}")
         return "\n".join(values)
-
-    def _update_color_preview(self) -> None:
-        text = self.color_edit.text().strip()
-        if _HEX_COLOR_RE.fullmatch(text):
-            red, green, blue, alpha = self._rgba_from_hex(text)
-            background = f"rgba({red}, {green}, {blue}, {alpha})"
-        else:
-            background = "transparent"
-        self.color_preview.setStyleSheet(
-            "border: 1px solid palette(mid);"
-            "border-radius: 3px;"
-            f"background-color: {background};"
-        )
 
     def _select_name(self, name: str) -> None:
         matches = self.list_widget.findItems(  # type: ignore[arg-type]
