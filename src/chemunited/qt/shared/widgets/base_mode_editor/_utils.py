@@ -25,6 +25,26 @@ _CURATED: list[tuple[frozenset, list[str]]] = [
     (frozenset({("[temperature]", 1)}), ["degC", "kelvin", "degF"]),
     # Mass:  [mass]^1
     (frozenset({("[mass]", 1)}), ["g", "mg", "kg", "ug"]),
+    # Molar mass: [mass] / [substance]
+    (frozenset({("[mass]", 1), ("[substance]", -1)}), ["g/mol", "kg/mol"]),
+    # Molar heat capacity: [energy] / ([substance] * [temperature])
+    (
+        frozenset(
+            {
+                ("[mass]", 1),
+                ("[length]", 2),
+                ("[time]", -2),
+                ("[substance]", -1),
+                ("[temperature]", -1),
+            }
+        ),
+        ["J/(mol*K)", "kJ/(mol*K)", "cal/(mol*K)"],
+    ),
+    # Density: [mass] / [length]^3
+    (
+        frozenset({("[mass]", 1), ("[length]", -3)}),
+        ["kg/m^3", "g/cm^3", "g/ml"],
+    ),
     # Concentration (amount/volume):  [substance] / [length]^3
     (
         frozenset({("[substance]", 1), ("[length]", -3)}),

@@ -49,6 +49,7 @@ class ChemUnitQuantityCard(BaseFieldCard):
             self._unit_combo.addItem(u)
 
         # Store the expected dimensions for validate()
+        self._validator = validator
         self._expected_dims = validator.dimensions if validator is not None else None
 
         layout.addWidget(self._magnitude_spin, stretch=1)
@@ -69,11 +70,13 @@ class ChemUnitQuantityCard(BaseFieldCard):
 
     def set_value(self, value) -> None:
         if isinstance(value, ChemUnitQuantity):
+            unit_str = self._display_unit_for(value)
+            if unit_str:
+                idx = self._unit_combo.findText(unit_str)
+                if idx >= 0:
+                    self._unit_combo.setCurrentIndex(idx)
+                    value = value.to(unit_str)
             self._magnitude_spin.setValue(float(value.magnitude))
-            unit_str = str(value.units)
-            idx = self._unit_combo.findText(unit_str)
-            if idx >= 0:
-                self._unit_combo.setCurrentIndex(idx)
         elif value is not None:
             # Try to parse from string
             try:
@@ -81,6 +84,38 @@ class ChemUnitQuantityCard(BaseFieldCard):
                 self.set_value(q)
             except Exception:
                 pass
+
+    def _display_unit_for(self, value: ChemUnitQuantity) -> str | None:
+        """Return the best combo unit for displaying *value*."""
+        if self._unit_combo.count() == 0:
+            return None
+
+        if self._validator is not None:
+            validator_unit = f"{self._validator.units:~}".replace(" ", "")
+            idx = self._find_unit_text(validator_unit)
+            if idx >= 0:
+                return self._unit_combo.itemText(idx)
+
+        value_unit = f"{value.units:~}".replace(" ", "")
+        idx = self._find_unit_text(value_unit)
+        if idx >= 0:
+            return self._unit_combo.itemText(idx)
+
+        for index in range(self._unit_combo.count()):
+            unit = self._unit_combo.itemText(index)
+            try:
+                if value.to(unit).dimensionality == self._expected_dims:
+                    return unit
+            except Exception:
+                continue
+        return self._unit_combo.currentText()
+
+    def _find_unit_text(self, compact_unit: str) -> int:
+        for index in range(self._unit_combo.count()):
+            unit = self._unit_combo.itemText(index)
+            if unit.replace(" ", "") == compact_unit:
+                return index
+        return -1
 
     def validate(self) -> bool:
         magnitude = self._magnitude_spin.value()

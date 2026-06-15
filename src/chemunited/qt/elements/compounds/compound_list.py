@@ -1,14 +1,33 @@
 from __future__ import annotations
 
 from chemunited_core.compounds import COMPOUNDS, ChemicalEntity
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import QSize, Qt
 from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import QListWidgetItem, QVBoxLayout, QWidget
-from qfluentwidgets import FluentIcon, InfoBar, InfoBarPosition, ListWidget, PrimaryPushButton, PushButton, StrongBodyLabel
+from PyQt5.QtWidgets import (
+    QFrame,
+    QHBoxLayout,
+    QLabel,
+    QListWidgetItem,
+    QVBoxLayout,
+    QWidget,
+)
+from qfluentwidgets import (
+    FluentIcon,
+    InfoBar,
+    InfoBarPosition,
+    ListWidget,
+    PrimaryPushButton,
+    PushButton,
+    StrongBodyLabel,
+)
 
 from chemunited.qt.orchestrator.protocols import is_valid_name
 
+from .compound_dialog import CompoundDialog
+
 _BUILT_IN_COMPOUNDS = {"air"}
+_ROW_HEIGHT = 34
+_SWATCH_SIZE = 14
 
 
 class CompoundList(QWidget):
@@ -61,9 +80,12 @@ class CompoundList(QWidget):
         for entity in COMPOUNDS.entities:
             item = QListWidgetItem(entity.name)
             item.setToolTip(self._compound_tooltip(entity))
-            if entity.color_alpha > 0:
-                item.setForeground(QColor(entity.rgb_hex))
+            item.setSizeHint(QSize(0, _ROW_HEIGHT))
+            item.setForeground(QColor(0, 0, 0, 0))
             self.list_widget.addItem(item)
+            self.list_widget.setItemWidget(
+                item, _CompoundRowWidget(entity, self.list_widget)
+            )
 
         if selected is not None:
             matches = self.list_widget.findItems(  # type: ignore[arg-type]
@@ -85,19 +107,16 @@ class CompoundList(QWidget):
         ]
 
     def _open_add_dialog(self) -> None:
-        from chemunited.qt.shared.widgets.base_mode_editor import BaseModeDialog
-
-        dialog = BaseModeDialog(
-            ChemicalEntity,
-            instance=ChemicalEntity(),
-            title="Add Compound",
-            parent=self.window(),
-        )
+        dialog = CompoundDialog(parent=self.window())
         if not dialog.exec_():
             return
         entity = dialog.get_result_instance()
+        if entity is None:
+            return
         if not is_valid_name(entity.name):
-            self._show_warning("Compound name may contain only letters, numbers, _ and -.")
+            self._show_warning(
+                "Compound name may contain only letters, numbers, _ and -."
+            )
             return
         if entity.name in COMPOUNDS:
             self._show_warning(f"A compound named {entity.name!r} already exists.")
@@ -183,3 +202,63 @@ class CompoundList(QWidget):
 
 def _format_quantity(value, unit: str) -> str:
     return f"{float(value.to(unit).magnitude):g}"
+
+
+class _CompoundRowWidget(QWidget):
+    def __init__(self, entity: ChemicalEntity, parent: QWidget | None = None) -> None:
+        super().__init__(parent)
+        self.setObjectName(f"compound-row-{entity.name}")
+        self.setFixedHeight(_ROW_HEIGHT)
+
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(8, 0, 8, 0)
+        layout.setSpacing(8)
+        layout.setAlignment(Qt.AlignVCenter)  # type: ignore[arg-type]
+
+        swatch = QFrame(self)
+        swatch.setObjectName("compound-color-swatch")
+        swatch.setFixedSize(_SWATCH_SIZE, _SWATCH_SIZE)
+        swatch.setToolTip(_swatch_tooltip(entity))
+        swatch.setStyleSheet(_swatch_stylesheet(entity))
+        layout.addWidget(swatch, alignment=Qt.AlignVCenter)  # type: ignore[arg-type]
+
+        label = QLabel(entity.name, self)
+        label.setObjectName("compound-name-label")
+        label.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)  # type: ignore[arg-type]
+        layout.addWidget(label, stretch=1, alignment=Qt.AlignVCenter)  # type: ignore[arg-type]
+
+
+def _swatch_stylesheet(entity: ChemicalEntity) -> str:
+    if not _has_swatch_color(entity):
+        return (
+            "QFrame#compound-color-swatch {"
+            "background: transparent;"
+            "border: 1px solid rgba(120, 120, 120, 120);"
+            "border-radius: 3px;"
+            "}"
+        )
+
+    alpha = entity.color_alpha if entity.color_alpha > 0 else 255
+    return (
+        "QFrame#compound-color-swatch {"
+        f"background-color: rgba({entity.color_red}, {entity.color_green}, "
+        f"{entity.color_blue}, {alpha});"
+        "border: 1px solid rgba(0, 0, 0, 60);"
+        "border-radius: 3px;"
+        "}"
+    )
+
+
+def _has_swatch_color(entity: ChemicalEntity) -> bool:
+    return entity.color_alpha > 0 or any(
+        channel > 0
+        for channel in (entity.color_red, entity.color_green, entity.color_blue)
+    )
+
+
+def _swatch_tooltip(entity: ChemicalEntity) -> str:
+    if not _has_swatch_color(entity):
+        return "No color"
+    if entity.color_alpha > 0:
+        return entity.rgba_hex
+    return f"{entity.rgb_hex} (opaque preview; alpha is 0)"
