@@ -6,12 +6,12 @@ from textwrap import dedent
 
 import pytest
 
-from chemunited.qt.orchestrator.project_file import OrchestratorProjectFile
-from chemunited.qt.project.manifest import ProjectManifest
-from chemunited.qt.project.session import ProjectSession
-from chemunited.qt.protocols.workflows import ProcessWorkflow
-from chemunited.qt.shared.enums.protocols_enum import ProtocolBlock
-from chemunited.qt.utils.files import load_class
+from chemunited.orchestrator.project_file import OrchestratorProjectFile
+from chemunited.project.manifest import ProjectManifest
+from chemunited.project.session import ProjectSession
+from chemunited.protocols.workflows import ProcessWorkflow
+from chemunited.shared.enums.protocols_enum import ProtocolBlock
+from chemunited.utils.files import load_class
 
 
 def _write_project(working_dir, draw_content: str) -> None:

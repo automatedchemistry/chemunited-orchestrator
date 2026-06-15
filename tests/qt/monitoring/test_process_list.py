@@ -5,7 +5,7 @@ from PyQt5.QtCore import QObject, pyqtSignal
 from PyQt5.QtWidgets import QWidget
 from pytestqt.qtbot import QtBot
 
-from chemunited.qt.monitoring.process_list import MonitorProcessesWidget
+from chemunited.monitoring.process_list import MonitorProcessesWidget
 
 
 class DummyOrchestrator(QObject):

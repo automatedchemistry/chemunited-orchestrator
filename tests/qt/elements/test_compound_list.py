@@ -6,9 +6,9 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QFrame
 from pytestqt.qtbot import QtBot
 
-from chemunited.qt.elements.compounds import CompoundDialog, CompoundList
-from chemunited.qt.elements.compounds.compound_list import _swatch_stylesheet
-from chemunited.qt.setup import SetupWindow
+from chemunited.elements.compounds import CompoundDialog, CompoundList
+from chemunited.elements.compounds.compound_list import _swatch_stylesheet
+from chemunited.setup import SetupWindow
 
 
 def _magnitude(value, unit: str) -> float:
@@ -49,7 +49,7 @@ def _patch_dialog(monkeypatch, *, accepted=True, entity=None) -> None:
         return _FakeDialog(parent=parent, accepted=accepted, entity=entity)
 
     monkeypatch.setattr(
-        "chemunited.qt.elements.compounds.compound_list.CompoundDialog",
+        "chemunited.elements.compounds.compound_list.CompoundDialog",
         factory,
     )
 

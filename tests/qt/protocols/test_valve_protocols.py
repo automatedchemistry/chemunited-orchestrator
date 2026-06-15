@@ -1,4 +1,4 @@
-from chemunited.qt.elements.component.protocols.valves import (
+from chemunited.elements.component.protocols.valves import (
     ThreePortTwoPositionValveProtocols,
 )
 

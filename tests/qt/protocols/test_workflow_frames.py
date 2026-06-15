@@ -6,16 +6,16 @@ from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QWidget
 from pytestqt.qtbot import QtBot
 
-from chemunited.qt.elements.component.protocols.valves import (
+from chemunited.elements.component.protocols.valves import (
     ThreePortTwoPositionValveProtocols,
 )
-from chemunited.qt.protocols.workflows.controller import WorkflowController
-from chemunited.qt.protocols.workflows.process_workflow import ProcessWorkflow
-from chemunited.qt.protocols.workflows.workflow_frames import (
+from chemunited.protocols.workflows.controller import WorkflowController
+from chemunited.protocols.workflows.process_workflow import ProcessWorkflow
+from chemunited.protocols.workflows.workflow_frames import (
     WorkflowGraph,
     _build_command_model,
 )
-from chemunited.qt.shared.enums import WindowCategory
+from chemunited.shared.enums import WindowCategory
 
 
 class _WorkflowHost(QWidget):

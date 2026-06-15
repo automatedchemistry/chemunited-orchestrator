@@ -1,8 +1,8 @@
 import pytest
 from pytestqt.qtbot import QtBot
 
-from chemunited.qt.connectivity import online_list
-from chemunited.qt.connectivity.online_list import OnlineComponent
+from chemunited.connectivity import online_list
+from chemunited.connectivity.online_list import OnlineComponent
 
 
 @pytest.fixture(autouse=True)

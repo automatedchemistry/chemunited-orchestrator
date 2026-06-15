@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from chemunited_workflow.enums import NodeState
 
-from chemunited.qt.shared.prcess_list.item import (
+from chemunited.shared.prcess_list.item import (
     _STATUS_COMPLETED_COLOR,
     _STATUS_DEFAULT_COLOR,
     _STATUS_FAILED_COLOR,

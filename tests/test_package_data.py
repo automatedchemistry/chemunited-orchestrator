@@ -6,12 +6,12 @@ from pathlib import Path
 import tomllib
 
 
-def test_qt_shared_resources_are_packaged() -> None:
+def test_shared_resources_are_packaged() -> None:
     project_root = Path(__file__).resolve().parents[1]
     pyproject = tomllib.loads((project_root / "pyproject.toml").read_text())
     package_data = pyproject["tool"]["setuptools"]["package-data"]
-    patterns = package_data["chemunited.qt.shared.resources"]
-    resources_dir = project_root / "src" / "chemunited" / "qt" / "shared" / "resources"
+    patterns = package_data["chemunited.shared.resources"]
+    resources_dir = project_root / "src" / "chemunited" / "shared" / "resources"
 
     resource_files = [
         path.relative_to(resources_dir).as_posix()

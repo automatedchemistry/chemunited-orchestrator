@@ -16,11 +16,11 @@ from PyQt5.QtGui import QKeySequence
 from pytestqt.qtbot import QtBot
 from qfluentwidgets import NavigationTreeWidget
 
-from chemunited.qt.mcp import McpServiceResult
-from chemunited.qt.project.recent import RecentProjectsStore
-from chemunited.qt.project.session import ProjectSession
-from chemunited.qt.setup import SetupWindow
-from chemunited.qt.shared.enums import SetupStepMode
+from chemunited.mcp import McpServiceResult
+from chemunited.project.recent import RecentProjectsStore
+from chemunited.project.session import ProjectSession
+from chemunited.setup import SetupWindow
+from chemunited.shared.enums import SetupStepMode
 
 
 def _magnitude(value, unit: str) -> float:

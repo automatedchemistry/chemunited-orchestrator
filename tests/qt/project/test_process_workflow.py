@@ -1,7 +1,7 @@
 from pathlib import Path
 from textwrap import dedent
 
-from chemunited.qt.protocols.workflows.process_workflow import BlockData
+from chemunited.protocols.workflows.process_workflow import BlockData
 
 
 def test_script_method_block_extracts_class_method_and_caches(tmp_path: Path):

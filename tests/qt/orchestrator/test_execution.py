@@ -7,7 +7,7 @@ from chemunited_workflow.api.schemas import RunRequest, RunStatus
 from chemunited_workflow.enums import NodeState
 from loguru import logger
 
-from chemunited.qt.orchestrator.execution import (
+from chemunited.orchestrator.execution import (
     OrchestratorExecution,
     RunEventStreamThread,
     RunPollingThread,
@@ -17,7 +17,7 @@ from chemunited.qt.orchestrator.execution import (
     _process_name_from_protocol_key,
     _validate_model,
 )
-from chemunited.qt.shared.enums import WindowCategory
+from chemunited.shared.enums import WindowCategory
 
 
 def test_process_name_from_protocol_key_uses_file_stem() -> None:

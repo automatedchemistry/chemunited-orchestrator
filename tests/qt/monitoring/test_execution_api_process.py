@@ -4,8 +4,8 @@ from pydantic import AnyHttpUrl
 from pytestqt.qtbot import QtBot
 from qfluentwidgets import TextBrowser
 
-from chemunited.qt.monitoring import execution_api_process
-from chemunited.qt.monitoring.execution_api_process import (
+from chemunited.monitoring import execution_api_process
+from chemunited.monitoring.execution_api_process import (
     DEFAULT_API_PORT,
     ApiProcess,
     _api_url,

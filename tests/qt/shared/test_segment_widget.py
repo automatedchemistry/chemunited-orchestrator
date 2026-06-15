@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import QWidget
 from pytestqt.qtbot import QtBot
 from qfluentwidgets import FluentIcon
 
-from chemunited.qt.shared.widgets.segment_widget import SegmentWindow
+from chemunited.shared.widgets.segment_widget import SegmentWindow
 
 
 def test_segment_window_emits_widget_name_when_switching(qtbot: QtBot):

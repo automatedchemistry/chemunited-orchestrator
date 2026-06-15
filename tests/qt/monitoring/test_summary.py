@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import QLabel
 from pytestqt.qtbot import QtBot
 from qfluentwidgets import TableWidget
 
-from chemunited.qt.monitoring.summary import ReportFrame
+from chemunited.monitoring.summary import ReportFrame
 
 
 def _label_texts(widget) -> list[str]:

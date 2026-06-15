@@ -1,7 +1,7 @@
 from PyQt5.QtGui import QColor
 from pytestqt.qtbot import QtBot
 
-from chemunited.qt.shared.graph import GraphCore, SceneCore
+from chemunited.shared.graph import GraphCore, SceneCore
 
 
 def test_grid_state_is_individual_for_each_graph_view(qtbot: QtBot):

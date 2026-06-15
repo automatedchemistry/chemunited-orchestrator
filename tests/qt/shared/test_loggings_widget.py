@@ -3,7 +3,7 @@ from types import SimpleNamespace
 
 from pytestqt.qtbot import QtBot
 
-from chemunited.qt.shared.widgets.loggings_widget import FrameLoggings
+from chemunited.shared.widgets.loggings_widget import FrameLoggings
 
 
 def test_detailed_loggings_render_formatted_traceback(qtbot: QtBot):

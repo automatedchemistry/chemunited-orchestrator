@@ -1,6 +1,6 @@
 from types import SimpleNamespace
 
-from chemunited.qt.orchestrator.core import OrchestratorCore
+from chemunited.orchestrator.core import OrchestratorCore
 
 
 def test_format_infor_flyout_content_without_exception():

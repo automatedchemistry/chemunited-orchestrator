@@ -15,7 +15,7 @@ import pytest
 from chemunited_core.common.enums import ConnectionType
 from pytestqt.qtbot import QtBot
 
-from chemunited.qt.setup import SetupWindow
+from chemunited.setup import SetupWindow
 
 CONNECTION_NAME = "PumpA_2_PumpB_1"
 

@@ -4,7 +4,7 @@ from pathlib import Path
 
 import pytest
 
-from chemunited.qt.mcp.project_files import ProjectFileAccess
+from chemunited.mcp.project_files import ProjectFileAccess
 
 
 def _make_project(tmp_path: Path) -> Path:

@@ -5,12 +5,12 @@ from chemunited_core.compounds import ChemicalEntity
 from chemunited_core.utils import ChemUnitQuantity, ureg
 from pytestqt.qtbot import QtBot
 
-from chemunited.qt.elements.compounds import CompoundDialog
-from chemunited.qt.elements.compounds.coolprop_lookup import (
+from chemunited.elements.compounds import CompoundDialog
+from chemunited.elements.compounds.coolprop_lookup import (
     CoolPropLookupResult,
     lookup_compound_properties,
 )
-from chemunited.qt.shared.widgets.base_mode_editor._utils import units_for_dimension
+from chemunited.shared.widgets.base_mode_editor._utils import units_for_dimension
 
 
 def _magnitude(value, unit: str) -> float:
@@ -76,7 +76,7 @@ def test_lookup_compound_properties_uses_ideal_gas_cp_fallback():
 
 
 def test_lookup_compound_properties_reports_missing_coolprop(monkeypatch):
-    from chemunited.qt.elements.compounds import coolprop_lookup
+    from chemunited.elements.compounds import coolprop_lookup
 
     def raise_missing():
         raise ImportError("missing CoolProp")
@@ -91,7 +91,7 @@ def test_compound_dialog_partial_lookup_does_not_overwrite_missing_fields(
     qtbot: QtBot,
     monkeypatch,
 ):
-    from chemunited.qt.elements.compounds import compound_dialog
+    from chemunited.elements.compounds import compound_dialog
 
     dialog = CompoundDialog()
     qtbot.addWidget(dialog)

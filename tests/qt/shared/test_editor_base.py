@@ -2,7 +2,7 @@ from pathlib import Path
 
 from pytestqt.qtbot import QtBot
 
-from chemunited.qt.shared.editor.base import EditorBase
+from chemunited.shared.editor.base import EditorBase
 
 
 def test_editor_base_enables_native_qscintilla_folding(

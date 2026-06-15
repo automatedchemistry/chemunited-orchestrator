@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import QLabel
 from pytestqt.qtbot import QtBot
 from qfluentwidgets import FluentIcon
 
-from chemunited.qt.shared.widgets.frame_base import FrameBase
+from chemunited.shared.widgets.frame_base import FrameBase
 
 
 def test_switch_to_reopens_collapsed_option_pane(qtbot: QtBot):

@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from chemunited_workflow.enums import NodeState
 
-from chemunited.qt.protocols.workflows.elements.status_bar import (
+from chemunited.protocols.workflows.elements.status_bar import (
     _STATUS_COMPLETED_COLOR,
     _STATUS_FAILED_COLOR,
     _STATUS_RUNNING_COLOR,

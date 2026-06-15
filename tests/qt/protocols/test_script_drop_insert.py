@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from PyQt5.QtCore import QMimeData
 
-from chemunited.qt.shared.editor.protocols.command_list import CommandList
-from chemunited.qt.shared.editor.protocols.script import (
+from chemunited.shared.editor.protocols.command_list import CommandList
+from chemunited.shared.editor.protocols.script import (
     _build_statement_insert_text,
     _drop_text_from_mime,
     _insertion_for_method_end_drop,

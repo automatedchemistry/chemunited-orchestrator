@@ -5,8 +5,8 @@ from pathlib import Path
 import pytest
 from pytestqt.qtbot import QtBot
 
-from chemunited.qt.shared.editor.parameters.main import MainParametersEditor
-from chemunited.qt.shared.widgets.base_mode_editor.cards.builder_models import (
+from chemunited.shared.editor.parameters.main import MainParametersEditor
+from chemunited.shared.widgets.base_mode_editor.cards.builder_models import (
     StringVariableBuildMode,
 )
 

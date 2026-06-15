@@ -5,7 +5,7 @@ from dataclasses import dataclass
 import git
 from loguru import logger
 
-from chemunited.qt.project.git_manager import GitManager
+from chemunited.project.git_manager import GitManager
 
 
 @dataclass

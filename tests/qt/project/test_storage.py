@@ -4,12 +4,12 @@ from textwrap import dedent
 
 from loguru import logger
 
-from chemunited.qt.project.storage import load_draw, load_process_classes, save_draw
-from chemunited.qt.protocols.workflows.naming import (
+from chemunited.project.storage import load_draw, load_process_classes, save_draw
+from chemunited.protocols.workflows.naming import (
     process_class_name,
     process_config_class_name,
 )
-from chemunited.qt.shared.enums import WindowCategory
+from chemunited.shared.enums import WindowCategory
 
 
 def test_save_draw_writes_python_setup(tmp_path):

@@ -1,4 +1,4 @@
-from chemunited.qt.project.recent import RecentProjectsStore
+from chemunited.project.recent import RecentProjectsStore
 
 
 def test_recent_projects_store_keeps_newest_unique_paths(tmp_path):

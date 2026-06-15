@@ -22,7 +22,6 @@ classifiers = [
 dependencies = [
     # sub-packages (provide the entire runtime engine)
     "chemunited-sim @ git+https://github.com/automatedchemistry/chemunited-sim.git",
-    "chemunited-workflow @ git+https://github.com/automatedchemistry/chemunited-workflow.git",
     "PyQt-Fluent-Widgets>=1.7.0,<2.0",  # Qt UI
     "QScintilla>=2.14.0",
     "platformdirs>=4.0",
@@ -35,7 +34,7 @@ dependencies = [
 ]
 
 [project.scripts]
-chemunited = "chemunited.qt.__main__:main"
+chemunited = "chemunited.__main__:main"
 
 [project.optional-dependencies]
 compound-lookup = [
@@ -63,7 +62,18 @@ include = ["chemunited*"]
 namespaces = true
 
 [tool.setuptools.package-data]
-"chemunited.qt.mcp" = ["*.md"]
+"chemunited.mcp" = ["*.md"]
+"chemunited.shared.resources" = [
+    "*.md",
+    "*.qrc",
+    "components/*.svg",
+    "icons/*.ico",
+    "icons/*.svg",
+    "lexer/*.json",
+    "qss/dark/*.qss",
+    "qss/light/*.qss",
+    "scripts/*.txt",
+]
 
 [tool.black]
 line-length = 88
@@ -72,7 +82,7 @@ extend-exclude = '''
 (
     ^/.venv
   | ^/build
-  | ^/src/chemunited/qt/shared/resources
+  | ^/src/chemunited/shared/resources
 )
 '''
 
@@ -82,7 +92,7 @@ target-version = "py310"
 extend-exclude = [
     ".venv",
     "build",
-    "src/chemunited/qt/shared/resources",
+    "src/chemunited/shared/resources",
 ]
 
 [tool.ruff.lint]
@@ -91,7 +101,7 @@ extend-select = ["I"]
 [tool.mypy]
 python_version = "3.13"
 files = ["src/chemunited"]
-exclude = '(^\.venv/|^build/|^src/chemunited/qt/shared/resources/)'
+exclude = '(^\.venv/|^build/|^src/chemunited/shared/resources/)'
 mypy_path = "src"
 namespace_packages = true
 pretty = true
@@ -132,5 +142,5 @@ module = [
 ignore_missing_imports = true
 
 [[tool.mypy.overrides]]
-module = ["chemunited.qt.shared.resources.resources_rc"]
+module = ["chemunited.shared.resources.resources_rc"]
 ignore_errors = true

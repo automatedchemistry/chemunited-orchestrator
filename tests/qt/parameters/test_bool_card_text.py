@@ -3,10 +3,10 @@ from __future__ import annotations
 from pydantic import BaseModel, Field
 from pytestqt.qtbot import QtBot
 
-from chemunited.qt.shared.editor.parameters.cards import generate_field_code
-from chemunited.qt.shared.editor.parameters.main import field_info_to_build_mode
-from chemunited.qt.shared.widgets.base_mode_editor.card_factory import CardFactory
-from chemunited.qt.shared.widgets.base_mode_editor.cards.builder_models import (
+from chemunited.shared.editor.parameters.cards import generate_field_code
+from chemunited.shared.editor.parameters.main import field_info_to_build_mode
+from chemunited.shared.widgets.base_mode_editor.card_factory import CardFactory
+from chemunited.shared.widgets.base_mode_editor.cards.builder_models import (
     BoolVariableBuildMode,
 )
 
