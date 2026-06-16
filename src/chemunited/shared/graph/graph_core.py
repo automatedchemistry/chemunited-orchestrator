@@ -35,6 +35,9 @@ class GraphCore(QGraphicsView):
         self._grid_background_color: QColor | None = None
         self._grid_line_color: QColor | None = None
 
+        # Menu Event Context (additional context menu options can be added here, and will be rendered in the context menu event handler)
+        self._add_context_menu_event = {}
+
     # === Mouse Events ===
     def mousePressEvent(self, event):
         super().mousePressEvent(event)
@@ -85,6 +88,17 @@ class GraphCore(QGraphicsView):
         dark_background_action.setChecked(scene.dark_background_enabled)
         dark_background_action.triggered.connect(scene.set_dark_background_enabled)
         menu.addAction(dark_background_action)
+
+        if self._add_context_menu_event:
+            menu.addSeparator()
+            for event_key, event_info in self._add_context_menu_event.items():
+                action = Action(event_info["icon"], event_info["text"], self)
+                if event_info.get("checkable", False):
+                    action.setCheckable(True)
+                    action.setChecked(event_info.get("checked", False))
+                if "triggered" in event_info:
+                    action.triggered.connect(event_info["triggered"])
+                menu.addAction(action)
 
         menu.exec_(event.globalPos())
         event.accept()

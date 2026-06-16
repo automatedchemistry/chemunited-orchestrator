@@ -83,6 +83,61 @@ class TestAddConnection:
         connection = two_pumps.orchestrator.connections[CONNECTION_NAME]
         assert connection in two_pumps.scene_attribute.items()
 
+    def test_draw_graph_layer_order_toggle_applies_to_existing_and_new_items(
+        self, two_pumps_connected: SetupWindow
+    ):
+        window = two_pumps_connected
+        graph = window.drawGraph
+        components = [
+            window.orchestrator.components["PumpA"].graph,
+            window.orchestrator.components["PumpB"].graph,
+        ]
+        connection = window.orchestrator.connections[CONNECTION_NAME]
+
+        assert graph._component_to_front is False
+        assert all(connection.zValue() > component.zValue() for component in components)
+
+        graph._bring_component_to_front_context_menu_event(True)
+
+        assert graph._component_to_front is True
+        assert graph._add_context_menu_event["bring_component_to_front"][
+            "checked"
+        ] is True
+        assert all(component.zValue() > connection.zValue() for component in components)
+
+        connection.addInflectionPoint()
+        graph.apply_layer_order()
+
+        handle = connection._handles[0]
+        assert handle.parentItem() is connection
+        assert handle.zValue() > 0
+
+        window.orchestrator.add_component(
+            name="PumpC", figure="HPLCPump", position=(400.0, 0.0)
+        )
+        window.orchestrator.add_connection(
+            origin="PumpB",
+            destiny="PumpC",
+            origin_port=2,
+            destiny_port=1,
+        )
+
+        new_component = window.orchestrator.components["PumpC"].graph
+        new_connection = window.orchestrator.connections["PumpB_2_PumpC_1"]
+        assert all(
+            component.zValue() > new_connection.zValue()
+            for component in [*components, new_component]
+        )
+
+        graph._bring_component_to_front_context_menu_event(False)
+
+        assert graph._component_to_front is False
+        assert graph._add_context_menu_event["bring_component_to_front"][
+            "checked"
+        ] is False
+        assert connection.zValue() > new_component.zValue()
+        assert new_connection.zValue() > components[0].zValue()
+
     def test_moved_inflection_point_is_saved_in_draw_data(
         self, two_pumps_connected: SetupWindow
     ):

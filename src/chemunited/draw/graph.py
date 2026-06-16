@@ -25,7 +25,10 @@ if TYPE_CHECKING:
     from ..setup import SetupWindow
 
 QT_STRONG_FOCUS = getattr(Qt, "StrongFocus")
+BACK_SCENE_Z_VALUE = 0
 FRONT_SCENE_Z_VALUE = 1_000
+HANDLE_LOCAL_Z_VALUE = 1
+BRING_COMPONENT_TO_FRONT_ACTION_KEY = "bring_component_to_front"
 
 
 class DrawGraphicView(GraphCore):
@@ -44,6 +47,17 @@ class DrawGraphicView(GraphCore):
         self._origin_port: ConnectionPoint | None = None
         self._temp_connection: TemporaryConnectionItem | None = None
         self._candidate: ConnectionPoint | None = None
+
+        self._component_to_front: bool = False
+        self._add_context_menu_event = {
+            BRING_COMPONENT_TO_FRONT_ACTION_KEY: {
+                "icon": FluentIcon.VIEW,
+                "text": "Components in Front",
+                "checkable": True,
+                "checked": self._component_to_front,
+                "triggered": self._bring_component_to_front_context_menu_event,
+            }
+        }
 
     def _scene(self) -> SceneCore:
         scene = self.scene()
@@ -64,13 +78,23 @@ class DrawGraphicView(GraphCore):
         if port is not None:
             port.setEvidence(True)
 
-    def _bring_points_to_front(self) -> None:
+    def apply_layer_order(self) -> None:
+        component_z = (
+            FRONT_SCENE_Z_VALUE if self._component_to_front else BACK_SCENE_Z_VALUE
+        )
+        connection_z = (
+            BACK_SCENE_Z_VALUE if self._component_to_front else FRONT_SCENE_Z_VALUE
+        )
+
         for item in self._scene().items():
-            if isinstance(item, (ConnectionPoint, DraggablePoint)):
-                item.setZValue(FRONT_SCENE_Z_VALUE)
-                parent = item.parentItem()
-                if parent is not None:
-                    parent.setZValue(FRONT_SCENE_Z_VALUE)
+            if isinstance(item, GraphComponent):
+                item.setZValue(component_z)
+            elif isinstance(item, BaseConnectionItem):
+                item.setZValue(connection_z)
+            elif isinstance(item, DraggablePoint):
+                item.setZValue(HANDLE_LOCAL_Z_VALUE)
+
+        self._scene().update()
 
     def _cleanup(self) -> None:
         if self._temp_connection is not None:
@@ -125,6 +149,13 @@ class DrawGraphicView(GraphCore):
             if name in orchestrator.components:
                 orchestrator.remove_component(name)
         self._scene().clearSelection()
+
+    def _bring_component_to_front_context_menu_event(self, checked: bool) -> None:
+        self._component_to_front = checked
+        self._add_context_menu_event[BRING_COMPONENT_TO_FRONT_ACTION_KEY][
+            "checked"
+        ] = checked
+        self.apply_layer_order()
 
     @override
     def mousePressEvent(self, event):
@@ -331,4 +362,4 @@ class DrawGraphicView(GraphCore):
     @override
     def reset_view(self):
         self.recenter_view()
-        self._bring_points_to_front()
+        self.apply_layer_order()

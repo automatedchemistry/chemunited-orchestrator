@@ -53,6 +53,12 @@ class OrchestratorDraw(OrchestratorCore):
                 self.request_add_connection
             )
 
+    def _apply_draw_layer_order(self) -> None:
+        draw_graph = getattr(self.parent_ref, "drawGraph", None)
+        apply_layer_order = getattr(draw_graph, "apply_layer_order", None)
+        if callable(apply_layer_order):
+            apply_layer_order()
+
     def _suggest_name(self, figure: str) -> str:
         base = re.sub(r"[^A-Za-z0-9]", "", figure) or "Component"
         existing = set(self.components.keys())
@@ -118,6 +124,7 @@ class OrchestratorDraw(OrchestratorCore):
         )
         self.components[name] = component
         self.parent_ref.scene_attribute.addItem(component.graph)
+        self._apply_draw_layer_order()
         logger.bind(window=self.parent_ref.WINDOW_TYPE).info(
             f"Component {component.inf.COMPONENT_TYPE.name} name '{name}' was successfully created."
         )
@@ -236,6 +243,7 @@ class OrchestratorDraw(OrchestratorCore):
 
         self.parent_ref.scene_attribute.addItem(connection)
         self.connections[data.name] = connection
+        self._apply_draw_layer_order()
 
     def _is_item_or_descendant(
         self, item: QGraphicsItem, candidate: QGraphicsItem | None
