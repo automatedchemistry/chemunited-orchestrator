@@ -61,6 +61,7 @@ class ComponentWidget(WindowBase):
     @pyqtSlot(BaseModel)
     def save(self, model: BaseModel):
         self.component.graph.sync(model)
+        self.close()
 
     def _connect_signals(self):
         self.properties_widget.saved.connect(self.save)
