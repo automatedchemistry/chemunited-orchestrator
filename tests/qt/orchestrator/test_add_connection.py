@@ -100,9 +100,9 @@ class TestAddConnection:
         graph._bring_component_to_front_context_menu_event(True)
 
         assert graph._component_to_front is True
-        assert graph._add_context_menu_event["bring_component_to_front"][
-            "checked"
-        ] is True
+        assert (
+            graph._add_context_menu_event["bring_component_to_front"]["checked"] is True
+        )
         assert all(component.zValue() > connection.zValue() for component in components)
 
         connection.addInflectionPoint()
@@ -132,9 +132,10 @@ class TestAddConnection:
         graph._bring_component_to_front_context_menu_event(False)
 
         assert graph._component_to_front is False
-        assert graph._add_context_menu_event["bring_component_to_front"][
-            "checked"
-        ] is False
+        assert (
+            graph._add_context_menu_event["bring_component_to_front"]["checked"]
+            is False
+        )
         assert connection.zValue() > new_component.zValue()
         assert new_connection.zValue() > components[0].zValue()
 

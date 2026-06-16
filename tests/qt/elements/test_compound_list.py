@@ -1,13 +1,20 @@
 from __future__ import annotations
 
+from types import SimpleNamespace
+
 import pytest
 from chemunited_core.compounds import COMPOUNDS, ChemicalEntity
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QFrame
 from pytestqt.qtbot import QtBot
 
-from chemunited.elements.compounds import CompoundDialog, CompoundList
+from chemunited.elements.component import create_component
+from chemunited.elements.compounds import CompoundDialog, CompoundList, CompoundsWidget
 from chemunited.elements.compounds.compound_list import _swatch_stylesheet
+from chemunited.elements.compounds.iventory_status import (
+    InventoryStatusDialog,
+    InventoryStatusWidget,
+)
 from chemunited.setup import SetupWindow
 
 
@@ -202,7 +209,224 @@ def test_setup_window_exposes_compounds_page(qtbot: QtBot):
     window.show()
     qtbot.waitExposed(window)
 
+    assert isinstance(window.compounds_widget, CompoundsWidget)
+    assert window.compound_list is window.compounds_widget
+    assert hasattr(window.compounds_widget, "edit_inventory_button")
+    assert not hasattr(window.compounds_widget, "inventory_status")
     assert window.stackWidget.indexOf(window.compound_list) >= 0
     assert (
         window.navigationInterface.widget(window.compound_list.objectName()) is not None
     )
+
+
+def test_inventory_status_lists_inventory_components_and_registered_compounds(
+    qtbot: QtBot,
+):
+    COMPOUNDS.register(ChemicalEntity(name="water", molecular_weight=18.015))
+    bottle = create_component(
+        figure="GlassBottle",
+        name="BottleA",
+        position=(0.0, 0.0),
+    )
+    pump = create_component(
+        figure="HPLCPump",
+        name="PumpA",
+        position=(0.0, 0.0),
+    )
+    widget = InventoryStatusWidget(
+        component_provider=lambda: [("BottleA", bottle), ("PumpA", pump)]
+    )
+    qtbot.addWidget(widget)
+    widget.show()
+    qtbot.waitExposed(widget)
+
+    assert widget.visible_inventory_names() == ["BottleA / Inventory"]
+    assert "air" in widget.species_names()
+    assert "water" in widget.species_names()
+    assert widget.capacity_label.text() == "Capacity: 1 ml"
+
+
+def test_inventory_status_dialog_cancel_preserves_inventory(qtbot: QtBot):
+    COMPOUNDS.register(ChemicalEntity(name="water", molecular_weight=18.015))
+    bottle = create_component(
+        figure="GlassBottle",
+        name="BottleA",
+        position=(0.0, 0.0),
+    )
+    dialog = InventoryStatusDialog(component_provider=lambda: [("BottleA", bottle)])
+    qtbot.addWidget(dialog)
+    dialog.show()
+    qtbot.waitExposed(dialog)
+
+    widget = dialog.inventory_widget
+    widget.volume_spin.setValue(2.5)
+    widget._amount_spins["water"].setValue(0.125)
+    dialog.reject()
+
+    inventory = bottle.inf.internal_inventory
+    assert inventory is not None
+    assert inventory.liq_content.volume == 0
+    assert inventory.liq_content.initial_species == {}
+
+
+def test_inventory_status_dialog_save_applies_mol_phase_content(qtbot: QtBot):
+    COMPOUNDS.register(ChemicalEntity(name="water", molecular_weight=18.015))
+    bottle = create_component(
+        figure="GlassBottle",
+        name="BottleA",
+        position=(0.0, 0.0),
+        capacity="10 ml",
+    )
+    dialog = InventoryStatusDialog(component_provider=lambda: [("BottleA", bottle)])
+    qtbot.addWidget(dialog)
+    dialog.show()
+    qtbot.waitExposed(dialog)
+
+    widget = dialog.inventory_widget
+    widget.volume_spin.setValue(2.5)
+    widget._amount_spins["water"].setValue(0.125)
+    widget.phase_combo.setCurrentIndex(1)
+    widget.volume_spin.setValue(7.5)
+    dialog._save()
+
+    inventory = bottle.inf.internal_inventory
+    assert inventory is not None
+    assert inventory.liq_content.volume == pytest.approx(2.5e-6)
+    assert inventory.liq_content.initial_species == {"water": 0.125}
+
+
+def test_inventory_status_dialog_converts_ml_amount_to_moles(qtbot: QtBot):
+    COMPOUNDS.register(
+        ChemicalEntity(
+            name="water",
+            molecular_weight=18.015,
+            density_liquid=997.0,
+        )
+    )
+    bottle = create_component(
+        figure="GlassBottle",
+        name="BottleA",
+        position=(0.0, 0.0),
+        capacity="10 ml",
+    )
+    dialog = InventoryStatusDialog(component_provider=lambda: [("BottleA", bottle)])
+    qtbot.addWidget(dialog)
+    dialog.show()
+    qtbot.waitExposed(dialog)
+
+    widget = dialog.inventory_widget
+    widget.amount_unit_combo.setCurrentIndex(1)
+    widget.volume_spin.setValue(2.5)
+    widget._amount_spins["water"].setValue(1.0)
+    widget.phase_combo.setCurrentIndex(1)
+    widget.volume_spin.setValue(7.5)
+    dialog._save()
+
+    inventory = bottle.inf.internal_inventory
+    assert inventory is not None
+    expected_moles = 1e-6 / COMPOUNDS["water"].molar_volume_liquid()
+    assert inventory.liq_content.initial_species == {
+        "water": pytest.approx(expected_moles)
+    }
+
+
+def test_inventory_status_amount_unit_switch_preserves_amount(qtbot: QtBot):
+    COMPOUNDS.register(
+        ChemicalEntity(
+            name="water",
+            molecular_weight=18.015,
+            density_liquid=997.0,
+        )
+    )
+    bottle = create_component(
+        figure="GlassBottle",
+        name="BottleA",
+        position=(0.0, 0.0),
+        capacity="10 ml",
+    )
+    dialog = InventoryStatusDialog(component_provider=lambda: [("BottleA", bottle)])
+    qtbot.addWidget(dialog)
+    dialog.show()
+    qtbot.waitExposed(dialog)
+
+    widget = dialog.inventory_widget
+    widget._amount_spins["water"].setValue(0.01)
+    widget.amount_unit_combo.setCurrentIndex(1)
+    ml_amount = widget._amount_spins["water"].value()
+    widget.amount_unit_combo.setCurrentIndex(0)
+
+    assert ml_amount == pytest.approx(
+        0.01 * COMPOUNDS["water"].molar_volume_liquid() * 1e6
+    )
+    assert widget._amount_spins["water"].value() == pytest.approx(0.01)
+
+
+def test_inventory_status_context_changes_do_not_duplicate_species_rows(
+    qtbot: QtBot,
+):
+    COMPOUNDS.register(
+        ChemicalEntity(
+            name="water",
+            molecular_weight=18.015,
+            density_liquid=997.0,
+        )
+    )
+    bottle = create_component(
+        figure="GlassBottle",
+        name="BottleA",
+        position=(0.0, 0.0),
+        capacity="10 ml",
+    )
+    dialog = InventoryStatusDialog(component_provider=lambda: [("BottleA", bottle)])
+    qtbot.addWidget(dialog)
+    dialog.show()
+    qtbot.waitExposed(dialog)
+
+    widget = dialog.inventory_widget
+    initial_count = widget.species_layout.count()
+    widget.phase_combo.setCurrentIndex(1)
+    widget.amount_unit_combo.setCurrentIndex(1)
+    widget.amount_unit_combo.setCurrentIndex(0)
+
+    assert widget.species_layout.count() == initial_count
+
+
+def test_inventory_status_capacity_text_is_compact():
+    assert (
+        InventoryStatusWidget._capacity_text(SimpleNamespace(capacity_value=10e-6))
+        == "Capacity: 10 ml"
+    )
+    assert (
+        InventoryStatusWidget._capacity_text(SimpleNamespace(capacity_value=1e-3))
+        == "Capacity: 1 L"
+    )
+    assert (
+        InventoryStatusWidget._capacity_text(SimpleNamespace(capacity_value=1e7))
+        == "Capacity: not limited"
+    )
+    assert (
+        InventoryStatusWidget._capacity_text(SimpleNamespace(capacity_value=0.0)) == ""
+    )
+
+
+def test_inventory_status_dialog_rejects_volume_over_capacity(qtbot: QtBot):
+    COMPOUNDS.register(ChemicalEntity(name="water", molecular_weight=18.015))
+    bottle = create_component(
+        figure="GlassBottle",
+        name="BottleA",
+        position=(0.0, 0.0),
+    )
+    dialog = InventoryStatusDialog(component_provider=lambda: [("BottleA", bottle)])
+    qtbot.addWidget(dialog)
+    dialog.show()
+    qtbot.waitExposed(dialog)
+
+    widget = dialog.inventory_widget
+    widget.volume_spin.setValue(2.0)
+    widget._amount_spins["water"].setValue(0.125)
+    dialog._save()
+
+    inventory = bottle.inf.internal_inventory
+    assert inventory is not None
+    assert inventory.liq_content.volume == 0
+    assert inventory.liq_content.initial_species == {}

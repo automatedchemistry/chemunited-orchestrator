@@ -6,6 +6,7 @@ What is tested:
 - duplicate name raises ValueError
 """
 
+import json
 import zipfile
 from types import SimpleNamespace
 
@@ -619,7 +620,8 @@ class CustomProcess(Process[ProcessConfig]):
 
     def _prepare_stock(self) -> str:
         return "helper"
-""".strip() + "\n",
+""".strip()
+            + "\n",
             encoding="utf-8",
         )
         window.orchestrator.working_dir = working_dir
@@ -787,6 +789,21 @@ class CustomProcess(Process[ProcessConfig]):
             }
         ]
 
+    def test_build_draw_data_excludes_inventory_status(self, window: SetupWindow):
+        window.orchestrator.add_component(
+            name="BottleA",
+            figure="GlassBottle",
+            position=(0.0, 0.0),
+        )
+        inventory = window.orchestrator.components["BottleA"].inf.internal_inventory
+        assert inventory is not None
+        inventory.liq_content.volume = 2.5e-6
+        inventory.liq_content.initial_species = {"water": 0.125}
+
+        draw_data = window.orchestrator._build_draw_data()
+
+        assert "inventory" not in draw_data["components"][0]
+
     def test_open_project_restores_compounds(self, window: SetupWindow, tmp_path):
         session = ProjectSession()
         session.new(name="demo", location=tmp_path, init_git=False)
@@ -820,6 +837,116 @@ class CustomProcess(Process[ProcessConfig]):
         assert entity.rgb_hex == "#F09D00"
         assert entity.color_alpha == 255
         assert "reagent_a" in window.compound_list.visible_names()
+
+    def test_open_project_ignores_legacy_inventory_content(
+        self, window: SetupWindow, tmp_path
+    ):
+        session = ProjectSession()
+        session.new(name="demo", location=tmp_path, init_git=False)
+        session.save_draw(
+            {
+                "compounds": [
+                    {
+                        "name": "water",
+                        "molecular_weight": 18.015,
+                        "cp_liquid": 75.3,
+                        "cp_gas": 33.6,
+                        "density_liquid": 997.0,
+                        "color_red": 0,
+                        "color_green": 0,
+                        "color_blue": 255,
+                        "color_alpha": 255,
+                    }
+                ],
+                "components": [
+                    {
+                        "name": "BottleA",
+                        "figure": "GlassBottle",
+                        "position": [0.0, 0.0],
+                        "inventory": {
+                            "Inventory": {
+                                "liquid": {
+                                    "volume": 2.5e-6,
+                                    "initial_species": {"water": 0.125},
+                                }
+                            }
+                        },
+                    }
+                ],
+                "connections": [],
+            }
+        )
+
+        window.orchestrator.open_project(tmp_path / "demo")
+
+        inventory = window.orchestrator.components["BottleA"].inf.internal_inventory
+        assert inventory is not None
+        assert inventory.liq_content.volume == 0
+        assert inventory.liq_content.initial_species == {}
+
+    def test_save_protocols_hystoric_includes_inventory_status(
+        self, window: SetupWindow, tmp_path, monkeypatch
+    ):
+        working_dir = tmp_path / "demo"
+        window.orchestrator.working_dir = working_dir
+        window.orchestrator.add_component(
+            name="BottleA",
+            figure="GlassBottle",
+            position=(0.0, 0.0),
+            capacity="10 ml",
+        )
+        inventory = window.orchestrator.components["BottleA"].inf.internal_inventory
+        assert inventory is not None
+        inventory.liq_content.volume = 2.5e-6
+        inventory.liq_content.initial_species = {"water": 0.125}
+        monkeypatch.setattr(
+            "chemunited.orchestrator.project_file.QInputDialog.getText",
+            lambda *_args, **_kwargs: ("react", True),
+        )
+        monkeypatch.setattr(
+            window.preRunFrame.protocols_list_widget,
+            "fill_cards",
+            lambda: None,
+        )
+
+        window.orchestrator.save_protocols_hystoric()
+
+        files = list((working_dir / "protocols_hystoric").glob("react_*.json"))
+        assert len(files) == 1
+        data = json.loads(files[0].read_text(encoding="utf-8"))
+        assert data["inventory"]["BottleA"]["Inventory"]["liquid"] == {
+            "volume": 2.5e-6,
+            "initial_species": {"water": 0.125},
+        }
+
+    def test_save_protocols_hystoric_includes_default_air_inventory(
+        self, window: SetupWindow, tmp_path, monkeypatch
+    ):
+        working_dir = tmp_path / "demo"
+        window.orchestrator.working_dir = working_dir
+        window.orchestrator.add_component(
+            name="BottleA",
+            figure="GlassBottle",
+            position=(0.0, 0.0),
+        )
+        monkeypatch.setattr(
+            "chemunited.orchestrator.project_file.QInputDialog.getText",
+            lambda *_args, **_kwargs: ("react", True),
+        )
+        monkeypatch.setattr(
+            window.preRunFrame.protocols_list_widget,
+            "fill_cards",
+            lambda: None,
+        )
+
+        window.orchestrator.save_protocols_hystoric()
+
+        files = list((working_dir / "protocols_hystoric").glob("react_*.json"))
+        assert len(files) == 1
+        data = json.loads(files[0].read_text(encoding="utf-8"))
+        gas = data["inventory"]["BottleA"]["Inventory"]["gas"]
+        assert gas["volume"] == pytest.approx(1e-6)
+        assert gas["initial_species"]["air"] > 0
 
     def test_open_project_without_compounds_clears_stale_compounds(
         self, window: SetupWindow, tmp_path

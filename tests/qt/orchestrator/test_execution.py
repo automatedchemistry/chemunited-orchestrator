@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 from types import SimpleNamespace
 
+import pytest
+from chemunited_core.components.internals import InventoryNode
 from chemunited_workflow.api.schemas import RunRequest, RunStatus
 from chemunited_workflow.enums import NodeState
 from loguru import logger
@@ -57,6 +59,7 @@ def test_set_project_protocol_script_dir_activates_saved_process_names(
     selected: list[str] = []
     execution = OrchestratorExecution.__new__(OrchestratorExecution)
     execution.parent_ref = SimpleNamespace(protocols_widget=protocols_widget)
+    execution.components = {}
     execution.select_process = selected.append
 
     execution.set_project_protocol_script_dir(path)
@@ -73,6 +76,43 @@ def test_set_project_protocol_script_dir_activates_saved_process_names(
         "my_process_2": "my_process",
     }
     assert selected == ["clean"]
+
+
+def test_set_project_protocol_script_dir_restores_inventory_status(tmp_path) -> None:
+    path = tmp_path / "protocol.json"
+    path.write_text(
+        json.dumps(
+            {
+                "inventory": {
+                    "BottleA": {
+                        "Inventory": {
+                            "liquid": {
+                                "volume": 2.5e-6,
+                                "initial_species": {"water": 0.125},
+                            }
+                        }
+                    }
+                },
+                "clean_0": {},
+            }
+        ),
+        encoding="utf-8",
+    )
+    inventory = InventoryNode()
+    component_data = SimpleNamespace(
+        name="BottleA",
+        internal_inventories={"Inventory": inventory},
+        apply_air_defaults=lambda: None,
+    )
+    execution = OrchestratorExecution.__new__(OrchestratorExecution)
+    execution.parent_ref = SimpleNamespace(protocols_widget=None)
+    execution.components = {"BottleA": SimpleNamespace(inf=component_data)}
+    execution.select_process = lambda _name: None
+
+    execution.set_project_protocol_script_dir(path)
+
+    assert inventory.liq_content.volume == pytest.approx(2.5e-6)
+    assert inventory.liq_content.initial_species == {"water": 0.125}
 
 
 class FakeClient:
@@ -531,13 +571,11 @@ def test_apply_run_report_prefers_report_process_key() -> None:
     emitted_processes = []
     execution = OrchestratorExecution.__new__(OrchestratorExecution)
     execution._active_process_order = ["Wrong_0"]
-    execution._emit_node_status = (
-        lambda active_name, node_name, status: emitted_nodes.append(
-            (active_name, node_name, status)
-        )
+    execution._emit_node_status = lambda active_name, node_name, status: (
+        emitted_nodes.append((active_name, node_name, status))
     )
-    execution._emit_process_status = (
-        lambda active_name, status: emitted_processes.append((active_name, status))
+    execution._emit_process_status = lambda active_name, status: (
+        emitted_processes.append((active_name, status))
     )
 
     execution._apply_run_report(

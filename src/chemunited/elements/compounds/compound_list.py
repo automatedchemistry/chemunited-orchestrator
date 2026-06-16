@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from chemunited_core.compounds import COMPOUNDS, ChemicalEntity
-from PyQt5.QtCore import QSize, Qt
+from PyQt5.QtCore import QSize, Qt, pyqtSignal
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import (
     QFrame,
@@ -32,6 +32,8 @@ _SWATCH_SIZE = 14
 
 class CompoundList(QWidget):
     """Runtime editor for the project-wide in-memory compound registry."""
+
+    compounds_changed = pyqtSignal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -124,6 +126,7 @@ class CompoundList(QWidget):
         COMPOUNDS.register(entity)
         self.sync()
         self._select_name(entity.name)
+        self.compounds_changed.emit()
         self._show_success(f"Compound {entity.name!r} added.")
 
     def remove_selected_compound(self) -> None:
@@ -146,6 +149,7 @@ class CompoundList(QWidget):
                 COMPOUNDS.register(entity)
 
         self.sync()
+        self.compounds_changed.emit()
         self._show_success(f"Compound {name!r} removed.")
 
     @staticmethod
@@ -155,8 +159,7 @@ class CompoundList(QWidget):
             f"{_format_quantity(entity.molecular_weight, 'g/mol')} g/mol",
             "Cp liquid: "
             f"{_format_quantity(entity.cp_liquid, 'J/(mol*K)')} J/(mol K)",
-            "Cp gas: "
-            f"{_format_quantity(entity.cp_gas, 'J/(mol*K)')} J/(mol K)",
+            "Cp gas: " f"{_format_quantity(entity.cp_gas, 'J/(mol*K)')} J/(mol K)",
             "Liquid density: "
             f"{_format_quantity(entity.density_liquid, 'kg/m^3')} kg/m^3",
         ]

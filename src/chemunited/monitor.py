@@ -3,6 +3,7 @@ from PyQt5.QtCore import QUrl
 from PyQt5.QtGui import QDesktopServices
 from qfluentwidgets import FluentIcon, NavigationItemPosition
 
+from .elements.compounds.iventory_status import InventoryStatusDialog
 from .monitoring.execution_api_process import ApiProcess
 from .monitoring.graph import ExecutionGraph
 from .monitoring.process_list import MonitorProcessesWidget
@@ -89,6 +90,13 @@ class MonitorWindow(MainWindowBase):
         )
 
         self.executionFrame.addNavigationAction(
+            icon=FluentIcon.EDIT,
+            text="Inventories",
+            onClick=self._open_inventory_dialog,
+            tooltip="Edit inventory content",
+        )
+
+        self.executionFrame.addNavigationAction(
             icon=FluentIcon.SETTING,
             text="Settings",
             onClick=self._open_settings,
@@ -169,6 +177,13 @@ class MonitorWindow(MainWindowBase):
 
     def _open_settings(self):
         self.orchestrator.dialog_execution_settings()
+
+    def _open_inventory_dialog(self):
+        dialog = InventoryStatusDialog(
+            component_provider=lambda: self.orchestrator.components.items(),
+            parent=self,
+        )
+        dialog.exec_()
 
     def show_summary(self):
         window = self._ensure_summary_window()

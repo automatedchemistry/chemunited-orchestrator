@@ -10,12 +10,11 @@ from qfluentwidgets import (
     RoundMenu,
 )
 
-from .elements.compounds import CompoundList
-
 from .connectivity.graph import ConnectivityGraphicView
 from .connectivity.online_list import OnlineComponent
 from .draw.graph import DrawGraphicView
 from .draw.tree_add import TreeAddItem
+from .elements.compounds import CompoundsWidget
 from .mcp import ProjectMcpService
 from .orchestrator import Orchestrator
 from .pre_run.pre_run_frame import PreRunFrame
@@ -69,7 +68,8 @@ class SetupWindow(MainWindowBase):
         self.online_list = OnlineComponent(self)
 
         # Compounds frame (not a main segment tab, but used in the protocols editor)
-        self.compound_list = CompoundList(self)
+        self.compounds_widget = CompoundsWidget(self)
+        self.compound_list = self.compounds_widget
 
         # Main Orchestrator Object
         # It depends on drawGraph being available during construction.
@@ -311,7 +311,7 @@ class SetupWindow(MainWindowBase):
         )
 
         self.addSubInterface(
-            self.compound_list,
+            self.compounds_widget,
             OrchestratorIcon.CHEMICAL,
             "Compounds",
         )
@@ -438,9 +438,7 @@ class SetupWindow(MainWindowBase):
 
     def _on_updates_found(self, updates: list) -> None:
         self._pending_updates = updates
-        lines = "\n".join(
-            f"• {u.package}  {u.installed} → {u.latest}" for u in updates
-        )
+        lines = "\n".join(f"• {u.package}  {u.installed} → {u.latest}" for u in updates)
         self._update_nav_item.setToolTip(f"Updates available:\n{lines}")
         self._update_nav_item.setEnabled(True)
 

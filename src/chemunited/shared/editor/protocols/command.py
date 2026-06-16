@@ -3,6 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Mapping
 
+from chemunited_core.protocols import CommandSignature
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import (
     QDialog,
@@ -24,7 +25,6 @@ from qfluentwidgets import (
 )
 from qframelesswindow import FramelessDialog
 
-from chemunited_core.protocols import CommandSignature
 from chemunited.shared.editor.base import EditorBase
 from chemunited.shared.widgets.base_mode_editor import BaseModeEditorWidget
 
@@ -496,10 +496,9 @@ class CommandEditorDialog(FramelessDialog):
 if __name__ == "__main__":
     import sys
 
+    from chemunited_core.protocols.pumps import WithdrawParameter
     from chemunited_core.utils.internal_quantity import ChemUnitQuantity
     from PyQt5.QtWidgets import QApplication, QDialog
-
-    from chemunited_core.protocols.pumps import WithdrawParameter
 
     app = QApplication(sys.argv)
 

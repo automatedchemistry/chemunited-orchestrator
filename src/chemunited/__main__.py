@@ -43,7 +43,9 @@ def main(project_file: str | None = None, overwrite: bool = False) -> None:
     if project_file:
         _path = Path(project_file).resolve()
         _overwrite = overwrite
-        QTimer.singleShot(0, lambda: window.orchestrator.open_project(_path, overwrite=_overwrite))
+        QTimer.singleShot(
+            0, lambda: window.orchestrator.open_project(_path, overwrite=_overwrite)
+        )
     sys.exit(app.exec_())
 
 

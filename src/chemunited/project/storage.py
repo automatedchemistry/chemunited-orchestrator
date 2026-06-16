@@ -184,6 +184,9 @@ def _render_call(function_name: str, payload: dict, payload_type: str) -> str:
 
 def _ordered_payload(payload: dict, payload_type: str) -> dict:
     normalized = dict(payload)
+    if payload_type == "component":
+        normalized.pop("inventory", None)
+
     if payload_type == "connection":
         if "destination" in normalized and "destiny" not in normalized:
             normalized["destiny"] = normalized.pop("destination")

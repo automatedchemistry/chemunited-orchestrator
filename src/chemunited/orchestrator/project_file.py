@@ -26,6 +26,7 @@ from chemunited.shared.enums.protocols_enum import ProtocolBlock
 
 from .draw import call_component_model
 from .execution import OrchestratorExecution
+from .inventory_state import build_inventory_status_payload
 from .protocols import is_valid_name
 
 
@@ -104,7 +105,6 @@ def _quantity_magnitude(value, unit: str) -> float:
 
 
 class OrchestratorProjectFile(OrchestratorExecution):
-
     def __init__(self, parent):
         super().__init__(parent)
         self.working_dir: Path | None = None
@@ -541,7 +541,8 @@ class OrchestratorProjectFile(OrchestratorExecution):
 
         for component in draw_data.get("components", []):
             try:
-                self.add_component(**self._validated_component_payload(dict(component)))
+                payload = self._validated_component_payload(dict(component))
+                self.add_component(**payload)
             except Exception as exc:
                 name = dict(component).get("name", "unknown")
                 logger.bind(window=WindowCategory.SETUP).opt(exception=exc).warning(
@@ -582,6 +583,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
 
     def _validated_component_payload(self, payload: dict) -> dict:
         payload.pop("type", None)
+        payload.pop("inventory", None)
         figure = payload.get("figure")
         if not isinstance(figure, str):
             raise ValueError("Project component is missing a valid figure.")
@@ -590,7 +592,8 @@ class OrchestratorProjectFile(OrchestratorExecution):
             mode_class = call_component_model(figure)
         except AttributeError:
             return payload
-        return dict(mode_class.model_validate(payload))
+        validated = dict(mode_class.model_validate(payload))
+        return validated
 
     def _restore_connection(self, payload: dict) -> None:
         destination = payload.pop("destination", payload.pop("destiny", None))
@@ -759,8 +762,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
             if entity.name not in {"air"}
         ]
         components = [
-            component.graph.base_mode_instance.model_dump(mode="json")
-            for component in self.components.values()
+            self._component_payload(component) for component in self.components.values()
         ]
         connections = [
             conn.base_mode_instance.model_dump(mode="json")
@@ -798,6 +800,10 @@ class OrchestratorProjectFile(OrchestratorExecution):
             "color_alpha": entity.color_alpha,
         }
 
+    @staticmethod
+    def _component_payload(component) -> dict:
+        return component.graph.base_mode_instance.model_dump(mode="json")
+
     def save_protocols_hystoric(self) -> None:
         if self.working_dir is None:
             self._warn_user("Load or create a project before saving protocol scripts.")
@@ -829,6 +835,10 @@ class OrchestratorProjectFile(OrchestratorExecution):
                     return
             key = f"{process_name}_{index}"
             data[key] = instance.model_dump(mode="json")
+
+        inventory = build_inventory_status_payload(self.components.values())
+        if inventory:
+            data["inventory"] = inventory
 
         if not data:  # Should not happen if pre_run_list._active_data is not empty
             return

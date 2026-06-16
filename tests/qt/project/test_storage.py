@@ -35,6 +35,14 @@ def test_save_draw_writes_python_setup(tmp_path):
                     "figure": "HPLCPump",
                     "position": [1.0, 2.0],
                     "angle": 0,
+                    "inventory": {
+                        "Inventory": {
+                            "liquid": {
+                                "volume": 2.5e-6,
+                                "initial_species": {"water": 0.125},
+                            }
+                        }
+                    },
                 }
             ],
             "connections": [
@@ -63,6 +71,8 @@ def test_save_draw_writes_python_setup(tmp_path):
     assert "color_alpha=255" in content
     assert "platform.add_component(" in content
     assert "position=(1.0, 2.0)" in content
+    assert "inventory=" not in content
+    assert "initial_species" not in content
     assert "platform.add_connection(" in content
     assert "destiny='ReactorA'" in content
     assert "destiny_port=1" in content
@@ -93,13 +103,27 @@ def build_draw(platform):
         color_alpha=255,
     )
 
-    for name, x in [('PumpA', 0.0), ('PumpB', 100.0)]:
-        platform.add_component(
-            name=name,
-            figure='HPLCPump',
-            position=(x, 0.0),
-            angle=0,
-        )
+    platform.add_component(
+        name='PumpA',
+        figure='HPLCPump',
+        position=(0.0, 0.0),
+        angle=0,
+        inventory={
+            'Inventory': {
+                'liquid': {
+                    'volume': 2.5e-6,
+                    'initial_species': {'water': 0.125},
+                },
+            },
+        },
+    )
+
+    platform.add_component(
+        name='PumpB',
+        figure='HPLCPump',
+        position=(100.0, 0.0),
+        angle=0,
+    )
 
     platform.add_connection(
         origin='PumpA',
@@ -132,6 +156,14 @@ def build_draw(platform):
                 "figure": "HPLCPump",
                 "position": (0.0, 0.0),
                 "angle": 0,
+                "inventory": {
+                    "Inventory": {
+                        "liquid": {
+                            "volume": 2.5e-6,
+                            "initial_species": {"water": 0.125},
+                        }
+                    }
+                },
             },
             {
                 "name": "PumpB",
@@ -201,7 +233,8 @@ def test_load_process_classes_reloads_external_process_file_changes(tmp_path):
     protocols_dir = tmp_path / "protocols"
     protocols_dir.mkdir()
     (protocols_dir / "__init__.py").write_text(
-        dedent("""
+        dedent(
+            """
             from .React import (
                 CustomProcess as ReactProcess,
                 ProcessConfig as ReactConfig,
@@ -214,7 +247,9 @@ def test_load_process_classes_reloads_external_process_file_changes(tmp_path):
             CONFIGS = {
                 "React": ReactConfig,
             }
-            """).strip() + "\n",
+            """
+        ).strip()
+        + "\n",
         encoding="utf-8",
     )
     process_path = protocols_dir / "React.py"
@@ -264,7 +299,9 @@ def test_load_process_classes_skips_invalid_process_file(tmp_path):
 
 
 def _process_content(node_id: str) -> str:
-    return dedent(f"""
+    return (
+        dedent(
+            f"""
             from __future__ import annotations
 
             import networkx as nx
@@ -282,4 +319,7 @@ def _process_content(node_id: str) -> str:
                     graph = nx.DiGraph()
                     graph.add_node({node_id!r})
                     return graph
-            """).strip() + "\n"
+            """
+        ).strip()
+        + "\n"
+    )

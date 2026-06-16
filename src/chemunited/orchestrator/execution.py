@@ -13,6 +13,7 @@ from chemunited.monitoring.execution_api_process import ApiClient, RunRequestDia
 from chemunited.shared.enums import WindowCategory
 
 from .connectivity import OrchestratorConnectivity
+from .inventory_state import apply_inventory_status_payload
 
 logger = _logger.bind(window=WindowCategory.EXECUTION)
 
@@ -487,6 +488,8 @@ class OrchestratorExecution(OrchestratorConnectivity):
         self.project_protocol_script_dir = dir
         with open(self.project_protocol_script_dir, "r", encoding="utf-8") as f:
             data = json.load(f)
+
+        apply_inventory_status_payload(self.components, data.get("inventory"))
 
         active_processes: list[tuple[str, str]] = []
         actual_process: str = ""

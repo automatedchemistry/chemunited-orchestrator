@@ -1,16 +1,16 @@
 from typing import Union
 
+import chemunited_core.protocols as protocol_module
 from chemunited_core.components import ComponentData
 from chemunited_core.figure_registry import COMPONENTS
+from chemunited_core.protocols import ComponentProtocol
 from loguru import logger
 from pydantic import AnyHttpUrl
 
-import chemunited_core.protocols as protocol_module
 from chemunited.elements.component.connectivity import ComponentConnnectivity
 
 from . import glossary
 from .graph_item import GraphComponent
-from chemunited_core.protocols import ComponentProtocol
 from .widgets import ComponentWidget
 
 

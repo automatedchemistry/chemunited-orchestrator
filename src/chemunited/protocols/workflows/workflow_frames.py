@@ -6,6 +6,7 @@ from functools import partial
 from pathlib import Path
 from typing import override
 
+from chemunited_core.protocols import CommandSignature
 from chemunited_workflow.enums import NodeState
 from loguru import logger
 from PyQt5 import sip
@@ -14,7 +15,6 @@ from PyQt5.QtGui import QColor, QPainter, QPen
 from PyQt5.QtWidgets import QFrame, QGraphicsItem, QGraphicsView
 from qfluentwidgets import Action, RoundMenu, isDarkTheme
 
-from chemunited_core.protocols import CommandSignature
 from chemunited.protocols.workflows.naming import (
     process_class_name,
     process_config_class_name,

@@ -80,4 +80,3 @@ class UpdateDialog(FramelessDialog):
                 "Please check the output above for details and try updating manually. "
             )
         self._close_btn.setEnabled(True)
-    
