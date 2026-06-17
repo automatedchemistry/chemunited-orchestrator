@@ -21,6 +21,7 @@ classifiers = [
 ]
 dependencies = [
     # sub-packages (provide the entire runtime engine)
+    "chemunited-core @ git+https://github.com/automatedchemistry/chemunited-core.git",
     "chemunited-sim @ git+https://github.com/automatedchemistry/chemunited-sim.git",
     "PyQt-Fluent-Widgets>=1.7.0,<2.0",  # Qt UI
     "QScintilla>=2.14.0",
