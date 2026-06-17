@@ -6,6 +6,7 @@ from functools import partial
 from pathlib import Path
 from typing import override
 
+import black  # type: ignore[import-not-found]
 from chemunited_core.protocols import CommandSignature
 from chemunited_workflow.enums import NodeState
 from loguru import logger
@@ -35,6 +36,16 @@ from .elements.work_node import WorkflowNode
 from .exceptions import WorkflowRuleViolation
 from .process_workflow import BlockData, ConnectionData
 from .workflow_rules import resolve_render_start_role
+
+
+def _format_python_source(source: str) -> str:
+    try:
+        return black.format_str(source, mode=black.Mode())
+    except black.NothingChanged:
+        return source
+    except Exception as exc:
+        logger.opt(exception=exc).error("Black formatting failed.")
+        return source
 
 
 def _add_method_stub(source: str, method_name: str, class_name: str) -> str:
@@ -470,16 +481,12 @@ class WorkflowGraph(GraphCore):
                 )
                 return
             editor = CommandEditorDialog(
-                file_path=script_path,
                 function_name=data.method or "",
                 command_model=command,
                 parent=self,
             )
             editor.saved.connect(
                 lambda sig: self._update_command_script(data.method, sig)
-            )
-            editor.convert_to_script.connect(
-                lambda _src: self._convert_command_to_script(data)
             )
             editor.exec_()
             return
@@ -1097,6 +1104,7 @@ class WorkflowGraph(GraphCore):
         class_name = process_class_name(process_name)
         source = script_path.read_text(encoding="utf-8")
         new_source = _add_content_to_method(source, method_name, class_name, content)
+        new_source = _format_python_source(new_source)
         if new_source == source:
             return False
 
@@ -1124,6 +1132,7 @@ class WorkflowGraph(GraphCore):
         new_source = _replace_method_body(
             source, method_name, class_name, sig.line_script
         )
+        new_source = _format_python_source(new_source)
         if new_source == source:
             return
         script_path.write_text(new_source, encoding="utf-8")
@@ -1134,15 +1143,6 @@ class WorkflowGraph(GraphCore):
         ):
             self._script_editor.editor.clear_protected_zone()
             self._script_editor.editor.setText(new_source)
-
-    def _convert_command_to_script(self, data: BlockData) -> None:
-        data.block_tag = ProtocolBlock.SCRIPT
-        self.controller.block_updated.emit(data.node_id)
-        if self._script_editor is not None:
-            self._script_editor.focus_method(data.method)
-            self._script_editor.show()
-            self._script_editor.raise_()
-            self._script_editor.activateWindow()
 
     def access_process_parameters(self) -> None:
         orchestrator = getattr(self.parent_ref, "orchestrator", None)
