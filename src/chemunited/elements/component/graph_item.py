@@ -346,8 +346,20 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
         self.setPos(self._data.position[0], self._data.position[1])
         self.setRotation(self._data.angle)
         self._apply_mirror(self._data.mirror)
+        self.sync_visuals()
         # Rotation changes the bounding rect, so re-position plain children.
         self.post_layout()
+
+    def sync_visuals(self) -> None:
+        """
+        Reconcile visuals to match the current ComponentData without changing geometry.
+        
+        This is useful when internal state changes (e.g. inventory levels) 
+        that affect the appearance but not the position/rotation.  
+        By default, this does nothing — This should be overridden by subclasses 
+        that need to update their visuals based on internal state changes.
+        """
+        pass
 
     def _restore_port_graph_visibility(self) -> None:
         """Apply each port's declared graph visibility to its point and label."""

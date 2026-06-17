@@ -57,6 +57,7 @@ _UNLIMITED_CAPACITY_ML = 1e9
 class _InventoryEntry:
     component_name: str
     inventory_key: str
+    manager: UtensilManager | ElectronicManager
     component_data: object
     live_inventory: object
     draft_inventory: object
@@ -185,6 +186,7 @@ class InventoryStatusWidget(QWidget):
                     _InventoryEntry(
                         component_name=component_name,
                         inventory_key=inventory_key,
+                        manager=manager,
                         component_data=component_data,
                         live_inventory=inventory,
                         draft_inventory=deepcopy(inventory),
@@ -226,6 +228,9 @@ class InventoryStatusWidget(QWidget):
                 entry.draft_inventory.gas_content,
             )
             ensure_air_defaults(entry.component_data)
+        managers = {id(entry.manager): entry.manager for entry in self._entries}
+        for manager in managers.values():
+            manager.graph.sync_visuals()
         return True
 
     def visible_inventory_names(self) -> list[str]:

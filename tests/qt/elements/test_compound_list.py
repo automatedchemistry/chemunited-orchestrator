@@ -269,7 +269,10 @@ def test_inventory_status_dialog_cancel_preserves_inventory(qtbot: QtBot):
     assert inventory.liq_content.initial_species == {}
 
 
-def test_inventory_status_dialog_save_applies_mol_phase_content(qtbot: QtBot):
+def test_inventory_status_dialog_save_applies_mol_phase_content(
+    qtbot: QtBot,
+    monkeypatch,
+):
     COMPOUNDS.register(ChemicalEntity(name="water", molecular_weight=18.015))
     bottle = create_component(
         figure="GlassBottle",
@@ -277,6 +280,14 @@ def test_inventory_status_dialog_save_applies_mol_phase_content(qtbot: QtBot):
         position=(0.0, 0.0),
         capacity="10 ml",
     )
+    sync_visuals_calls = 0
+
+    def sync_visuals() -> None:
+        nonlocal sync_visuals_calls
+        sync_visuals_calls += 1
+
+    monkeypatch.setattr(bottle.graph, "sync_visuals", sync_visuals)
+
     dialog = InventoryStatusDialog(component_provider=lambda: [("BottleA", bottle)])
     qtbot.addWidget(dialog)
     dialog.show()
@@ -293,6 +304,7 @@ def test_inventory_status_dialog_save_applies_mol_phase_content(qtbot: QtBot):
     assert inventory is not None
     assert inventory.liq_content.volume == pytest.approx(2.5e-6)
     assert inventory.liq_content.initial_species == {"water": 0.125}
+    assert sync_visuals_calls == 1
 
 
 def test_inventory_status_dialog_converts_ml_amount_to_moles(qtbot: QtBot):
@@ -409,13 +421,24 @@ def test_inventory_status_capacity_text_is_compact():
     )
 
 
-def test_inventory_status_dialog_rejects_volume_over_capacity(qtbot: QtBot):
+def test_inventory_status_dialog_rejects_volume_over_capacity(
+    qtbot: QtBot,
+    monkeypatch,
+):
     COMPOUNDS.register(ChemicalEntity(name="water", molecular_weight=18.015))
     bottle = create_component(
         figure="GlassBottle",
         name="BottleA",
         position=(0.0, 0.0),
     )
+    sync_visuals_calls = 0
+
+    def sync_visuals() -> None:
+        nonlocal sync_visuals_calls
+        sync_visuals_calls += 1
+
+    monkeypatch.setattr(bottle.graph, "sync_visuals", sync_visuals)
+
     dialog = InventoryStatusDialog(component_provider=lambda: [("BottleA", bottle)])
     qtbot.addWidget(dialog)
     dialog.show()
@@ -430,3 +453,4 @@ def test_inventory_status_dialog_rejects_volume_over_capacity(qtbot: QtBot):
     assert inventory is not None
     assert inventory.liq_content.volume == 0
     assert inventory.liq_content.initial_species == {}
+    assert sync_visuals_calls == 0
