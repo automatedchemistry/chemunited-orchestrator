@@ -8,12 +8,19 @@ from loguru import logger
 from PyQt5.Qsci import QsciScintilla
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtGui import QDropEvent, QIcon
-from PyQt5.QtWidgets import QDockWidget, QHBoxLayout, QMainWindow, QWidget
+from PyQt5.QtWidgets import (
+    QDockWidget,
+    QHBoxLayout,
+    QMainWindow,
+    QVBoxLayout,
+    QWidget,
+)
 from qfluentwidgets import FluentIcon, NavigationInterface, NavigationItemPosition
 
 from chemunited.shared.editor.base import EditorBase
 from chemunited.shared.editor.parameters.drag_list import ParameterDragableList
 from chemunited.shared.editor.protocols.command_list import CommandList
+from chemunited.shared.editor.protocols.node_metadata import NodeMetadataEditor
 from chemunited.shared.icon import OrchestratorIcon
 
 if TYPE_CHECKING:
@@ -159,6 +166,8 @@ class ScriptEditor(EditorBase):
 
 
 class ScriptEditorWindow(QMainWindow):
+    metadata_saved = pyqtSignal(str, str, str)
+
     def __init__(
         self,
         path: Path,
@@ -176,6 +185,8 @@ class ScriptEditorWindow(QMainWindow):
 
         self.editor = self._make_editor(path)
         self.editor.drop_accepted.connect(self.format_with_black)  # type: ignore[attr-defined]
+        self._metadata_node_id: str | None = None
+        self.node_metadata_editor = NodeMetadataEditor(self)
 
         self.navigationInterface = NavigationInterface(self, showMenuButton=True)
 
@@ -235,12 +246,21 @@ class ScriptEditorWindow(QMainWindow):
         # --- central widget ---
         central_widget = QWidget(self)
         self.setCentralWidget(central_widget)
-        self.hBoxLayout = QHBoxLayout(central_widget)
+        central_layout = QVBoxLayout(central_widget)
+        central_layout.setContentsMargins(0, 0, 0, 12)
+        central_layout.setSpacing(8)
+
+        content_widget = QWidget(central_widget)
+        self.hBoxLayout = QHBoxLayout(content_widget)
 
         self.hBoxLayout.addWidget(self.editor)
         self.hBoxLayout.addWidget(self.navigationInterface)
         self.hBoxLayout.setContentsMargins(0, 0, 0, 0)
         self.hBoxLayout.setSpacing(0)
+        central_layout.addWidget(content_widget, stretch=1)
+
+        self.node_metadata_editor.setContentsMargins(12, 0, 12, 0)
+        central_layout.addWidget(self.node_metadata_editor)
 
     def initNavigation(self):
         """Initializes the navigation interface by adding home and custom buttons."""
@@ -293,6 +313,22 @@ class ScriptEditorWindow(QMainWindow):
 
     def save(self):
         self.editor.autosave()
+        if self._metadata_node_id is not None:
+            label, description = self.node_metadata_editor.values()
+            self.metadata_saved.emit(
+                self._metadata_node_id,
+                label,
+                description,
+            )
+
+    def set_node_metadata(
+        self,
+        node_id: str,
+        label: str,
+        description: str,
+    ) -> None:
+        self._metadata_node_id = node_id
+        self.node_metadata_editor.set_values(label, description)
 
     def format_with_black(self):
         """Apply Black formatting to the code in a QsciScintilla editor."""

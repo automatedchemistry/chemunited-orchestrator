@@ -104,6 +104,15 @@ class WorkflowController(QObject):
         self._workflow.move_block(name, pos)
         self.block_updated.emit(name)
 
+    def update_block_metadata(
+        self,
+        node_id: str,
+        label: str,
+        description: str,
+    ) -> None:
+        self._workflow.update_block_metadata(node_id, label, description)
+        self.block_updated.emit(node_id)
+
     def connect_nodes(self, start_name: str, end_name: str, start_role: str) -> None:
         start_block = self._workflow.get_block(start_name)
         end_block = self._workflow.get_block(end_name)

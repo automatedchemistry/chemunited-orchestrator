@@ -38,7 +38,6 @@ class BlockData(WorkflowNodeSpec):
         kwargs = {
             k: v
             for k, v in self.model_dump(include=spec_keys).items()
-            if v is not None and v != ""
         }
         kwarg_lines = "".join(
             f"\n{indent}        {k}={v!r}," for k, v in kwargs.items()
@@ -229,8 +228,8 @@ class ProcessWorkflow:
         ports_numbers: int = 1,
         *,
         file_path: Path | None = None,
-        label: str | None = None,
-        description: str | None = None,
+        label: str = "",
+        description: str = "",
         protected: bool = False,
     ) -> BlockData:
         if self.has_block(node_id):
@@ -263,6 +262,17 @@ class ProcessWorkflow:
     def move_block(self, name: str, pos: tuple[float, float]) -> BlockData:
         block = self._require_block(name)
         block.position = (float(pos[0]), float(pos[1]))
+        return block
+
+    def update_block_metadata(
+        self,
+        node_id: str,
+        label: str,
+        description: str,
+    ) -> BlockData:
+        block = self._require_block(node_id)
+        block.label = label.strip() or block.node_id
+        block.description = description.strip()
         return block
 
     def rename_process(self, name: str) -> None:

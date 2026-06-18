@@ -53,6 +53,8 @@ class WorkflowNode(QGraphicsItemGroup):
         block_tag: ProtocolBlock,
         title: str,
         subtitle: str = "",
+        label: str = "",
+        description: str = "",
         ports_numbers: int = 1,
         protected: bool = False,
         on_position_changed: Callable[["WorkflowNode"], None] | None = None,
@@ -62,6 +64,8 @@ class WorkflowNode(QGraphicsItemGroup):
         self.block_tag = block_tag
         self.title = title
         self.subtitle = subtitle
+        self.label = label or node_name
+        self.description = description
         self.ports_numbers = max(1, ports_numbers)
         self.protected = protected
         self.shadow_effect: QGraphicsDropShadowEffect | None = None
@@ -81,6 +85,7 @@ class WorkflowNode(QGraphicsItemGroup):
         self.icon_item: WorkflowSvgIconItem | None = None
         self.title_item = QGraphicsTextItem()
         self.subtitle_item = QGraphicsTextItem()
+        self.description_item = QGraphicsTextItem()
         self.progress_proxy: QGraphicsProxyWidget | None = None
         self.progress_bar: WorkflowStatusBar | None = None
         self.input_ports: WorkflowAccessPoints | None = None
@@ -198,6 +203,10 @@ class WorkflowNode(QGraphicsItemGroup):
         self.subtitle_item.setDefaultTextColor(palette["accent"])
         self.subtitle_item.setPlainText(self.subtitle)
 
+        description_font = QFont("Segoe UI", 8)
+        self.description_item.setFont(description_font)
+        self.description_item.setDefaultTextColor(palette["text"])
+
         if self.is_terminal:
             self.title_item.setPlainText(
                 self._elide_text(self.title, title_font, width - 18)
@@ -215,19 +224,36 @@ class WorkflowNode(QGraphicsItemGroup):
             )
         else:
             display_title = self._elide_text(self.title, title_font, width - 32)
+            display_description = self._elide_text(
+                self.description,
+                description_font,
+                width - 28,
+            )
             self.title_item.setPlainText(display_title)
+            self.description_item.setPlainText(display_description)
             title_rect = self.title_item.boundingRect()
             subtitle_rect = self.subtitle_item.boundingRect()
+            description_rect = self.description_item.boundingRect()
             if self.icon_item:
                 self.icon_item.setPos(14, 12)
-            text_group_height = title_rect.height() + 4 + subtitle_rect.height()
-            group_top = (height - text_group_height) / 2 - 6
+            text_group_height = (
+                title_rect.height()
+                + 3
+                + subtitle_rect.height()
+                + 3
+                + description_rect.height()
+            )
+            group_top = (height - text_group_height) / 2 - 8
             self.title_item.setPos((width - title_rect.width()) / 2, group_top)
             self.subtitle_item.setPos(
                 (width - subtitle_rect.width()) / 2,
-                group_top + title_rect.height() + 4,
+                group_top + title_rect.height() + 3,
             )
-            self.body.setToolTip(self.node_name)
+            self.description_item.setPos(
+                (width - description_rect.width()) / 2,
+                group_top + title_rect.height() + subtitle_rect.height() + 6,
+            )
+            self._update_tooltip()
 
             self._build_progress_bar(width)
             if self.progress_proxy:
@@ -256,6 +282,7 @@ class WorkflowNode(QGraphicsItemGroup):
             self.addToGroup(self.icon_item)
         self.addToGroup(self.title_item)
         self.addToGroup(self.subtitle_item)
+        self.addToGroup(self.description_item)
         if self.progress_proxy:
             self.addToGroup(self.progress_proxy)
         if self.input_ports:
@@ -294,6 +321,64 @@ class WorkflowNode(QGraphicsItemGroup):
             return
         self.input_ports.set_count(count)
         self._layout_ports()
+
+    def update_metadata(
+        self,
+        title: str,
+        label: str,
+        description: str,
+    ) -> None:
+        if self.is_terminal:
+            return
+        self.title = title
+        self.label = label
+        self.description = description
+
+        title_font = self.title_item.font()
+        description_font = self.description_item.font()
+        self.title_item.setPlainText(
+            self._elide_text(title, title_font, self._body_width - 32)
+        )
+        self.description_item.setPlainText(
+            self._elide_text(
+                description,
+                description_font,
+                self._body_width - 28,
+            )
+        )
+
+        title_rect = self.title_item.boundingRect()
+        subtitle_rect = self.subtitle_item.boundingRect()
+        description_rect = self.description_item.boundingRect()
+        text_group_height = (
+            title_rect.height()
+            + 3
+            + subtitle_rect.height()
+            + 3
+            + description_rect.height()
+        )
+        group_top = (self._body_height - text_group_height) / 2 - 8
+        self.title_item.setPos(
+            (self._body_width - title_rect.width()) / 2,
+            group_top,
+        )
+        self.subtitle_item.setPos(
+            (self._body_width - subtitle_rect.width()) / 2,
+            group_top + title_rect.height() + 3,
+        )
+        self.description_item.setPos(
+            (self._body_width - description_rect.width()) / 2,
+            group_top + title_rect.height() + subtitle_rect.height() + 6,
+        )
+        self._update_tooltip()
+        self.update()
+
+    def _update_tooltip(self) -> None:
+        self.body.setToolTip(
+            f"Label: {self.label}\n"
+            f"Node ID: {self.node_name}\n"
+            f"Description: {self.description}"
+        )
 
     def sync_position(self, pos: tuple[float, float]) -> None:
         self._suspend_position_callback = True

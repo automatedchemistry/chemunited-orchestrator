@@ -651,16 +651,19 @@ class OrchestratorProjectFile(OrchestratorExecution):
             if node_id in terminal_names:
                 pos = attrs.get("position")
                 block = workflow.get_block(node_id)
-                if pos is not None and block is not None:
-                    block.position = tuple(pos)
+                if block is not None:
+                    if pos is not None:
+                        block.position = tuple(pos)
+                    block.label = str(attrs.get("label") or node_id)
+                    block.description = str(attrs.get("description") or "")
                 continue
 
             workflow.add_block(
                 node_id=node_id,
                 method=attrs.get("method") or node_id,
                 position=attrs.get("position", (0.0, 0.0)),
-                label=attrs.get("label"),
-                description=attrs.get("description"),
+                label=str(attrs.get("label") or node_id),
+                description=str(attrs.get("description") or ""),
                 block_tag=_infer_block_tag(node_id, attrs, graph),
                 ports_numbers=_coerce_ports_numbers(attrs.get("ports_numbers", 1)),
             )

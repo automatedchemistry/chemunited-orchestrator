@@ -82,6 +82,10 @@ class BaseModeEditorWidget(QWidget):
     # UI construction
     # ------------------------------------------------------------------
 
+    @property
+    def cards(self) -> dict[str, BaseFieldCard]:
+        return self._cards
+
     def _setup_ui(self) -> None:
         outer = QVBoxLayout(self)
         outer.setContentsMargins(0, 0, 0, 0)

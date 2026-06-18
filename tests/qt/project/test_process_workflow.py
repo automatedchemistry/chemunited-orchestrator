@@ -1,7 +1,7 @@
 from pathlib import Path
 from textwrap import dedent
 
-from chemunited.protocols.workflows.process_workflow import BlockData
+from chemunited.protocols.workflows.process_workflow import BlockData, ProcessWorkflow
 
 
 def test_script_method_block_extracts_class_method_and_caches(tmp_path: Path):
@@ -55,3 +55,38 @@ def test_script_method_block_returns_empty_for_missing_function(tmp_path: Path):
     )
 
     assert block.script_method_block == ""
+
+
+def test_block_script_always_writes_all_workflow_node_spec_fields():
+    block = BlockData(
+        node_id="script_1",
+        method="script_1",
+        description="",
+        position=(10.0, 20.0),
+    )
+
+    source = block.to_script()
+
+    assert "node_id='script_1'," in source
+    assert "method='script_1'," in source
+    assert "label='script_1'," in source
+    assert "description=''," in source
+    assert "position=(10.0, 20.0)," in source
+
+
+def test_update_block_metadata_normalizes_empty_label():
+    workflow = ProcessWorkflow("React")
+    workflow.add_block(
+        node_id="script_1",
+        method="script_1",
+        position=(10.0, 20.0),
+    )
+
+    block = workflow.update_block_metadata(
+        "script_1",
+        "   ",
+        "  Wash the reactor  ",
+    )
+
+    assert block.label == "script_1"
+    assert block.description == "Wash the reactor"

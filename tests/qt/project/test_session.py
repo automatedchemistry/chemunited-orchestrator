@@ -360,6 +360,30 @@ def test_sync_process_leaves_invalid_existing_file_unchanged(tmp_path):
     assert process_path.read_text(encoding="utf-8") == original
 
 
+def test_sync_process_writes_node_label_and_description(tmp_path):
+    session = ProjectSession()
+    session.new(name="demo", location=tmp_path, init_git=False)
+    working_dir = tmp_path / "demo"
+
+    workflow = ProcessWorkflow("React")
+    workflow.add_block(
+        node_id="script_1",
+        method="script_1",
+        label="Prepare sample",
+        description="Mix the starting materials",
+        position=(100.0, 200.0),
+    )
+
+    assert session.sync_process("React", workflow) is True
+
+    source = (working_dir / "protocols" / "React.py").read_text(encoding="utf-8")
+    assert "node_id='script_1'," in source
+    assert "method='script_1'," in source
+    assert "label='Prepare sample'," in source
+    assert "description='Mix the starting materials'," in source
+    assert "position=(100.0, 200.0)," in source
+
+
 def test_sync_process_roundtrip_preserves_special_block_types_and_loopback(tmp_path):
     session = ProjectSession()
     session.new(name="demo", location=tmp_path, init_git=False)

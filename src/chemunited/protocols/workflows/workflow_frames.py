@@ -483,8 +483,11 @@ class WorkflowGraph(GraphCore):
             editor = CommandEditorDialog(
                 function_name=data.method or "",
                 command_model=command,
+                label=data.label,
+                description=data.description,
                 parent=self,
             )
+            editor.metadata_saved.connect(self._update_block_metadata)
             editor.saved.connect(
                 lambda sig: self._update_command_script(data.method, sig)
             )
@@ -503,8 +506,14 @@ class WorkflowGraph(GraphCore):
                 main_parameters_path=script_path.parent / "main_parameters.py",
                 parent=self,
             )
+            self._script_editor.metadata_saved.connect(self._update_block_metadata)
 
         if data.method:
+            self._script_editor.set_node_metadata(
+                data.node_id,
+                data.label,
+                data.description,
+            )
             self._script_editor.focus_method(data.method)
         self._script_editor.show()
         self._script_editor.raise_()
@@ -777,7 +786,9 @@ class WorkflowGraph(GraphCore):
         self._connections = {}
         self._selected_port = None
 
-    def _display_text(self, name: str, block_tag: ProtocolBlock) -> tuple[str, str]:
+    def _display_text(self, block: BlockData) -> tuple[str, str]:
+        name = block.node_id
+        block_tag = block.block_tag
         labels = {
             ProtocolBlock.START: ("Start", "Entry"),
             ProtocolBlock.END: ("End", "Exit"),
@@ -786,15 +797,24 @@ class WorkflowGraph(GraphCore):
             ProtocolBlock.IF: (name, "Branch"),
             ProtocolBlock.COMMAND: (name, "Command"),
         }
-        return labels[block_tag]
+        title, subtitle = labels[block_tag]
+        if block_tag not in {ProtocolBlock.START, ProtocolBlock.END}:
+            title = (
+                name
+                if block.label == name
+                else f"{block.label} ({name})"
+            )
+        return title, subtitle
 
     def _add_node_from_block(self, block: BlockData) -> WorkflowNode:
-        title, subtitle = self._display_text(block.node_id, block.block_tag)
+        title, subtitle = self._display_text(block)
         node = WorkflowNode(
             node_name=block.node_id,
             block_tag=block.block_tag,
             title=title,
             subtitle=subtitle,
+            label=block.label,
+            description=block.description,
             ports_numbers=block.ports_numbers,
             protected=block.protected,
             on_position_changed=self._on_node_moved,
@@ -982,6 +1002,8 @@ class WorkflowGraph(GraphCore):
             return
 
         node.protected = block.protected
+        title, _subtitle = self._display_text(block)
+        node.update_metadata(title, block.label, block.description)
         if (node.pos().x(), node.pos().y()) != block.position:
             node.sync_position(block.position)
         self._sync_input_ports(name)
@@ -1143,6 +1165,14 @@ class WorkflowGraph(GraphCore):
         ):
             self._script_editor.editor.clear_protected_zone()
             self._script_editor.editor.setText(new_source)
+
+    def _update_block_metadata(
+        self,
+        node_id: str,
+        label: str,
+        description: str,
+    ) -> None:
+        self.controller.update_block_metadata(node_id, label, description)
 
     def access_process_parameters(self) -> None:
         orchestrator = getattr(self.parent_ref, "orchestrator", None)

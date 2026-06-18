@@ -160,6 +160,69 @@ def test_command_editor_dialog_saves_execution_fields(qtbot: QtBot) -> None:
     assert result.command == "position"
 
 
+def test_command_editor_dialog_saves_node_metadata(qtbot: QtBot) -> None:
+    command = CommandSignature(
+        component="PumpA",
+        command="infuse",
+        method="PUT",
+    )
+    dialog = CommandEditorDialog(
+        function_name="command_1",
+        command_model=command,
+        label="Infuse sample",
+        description="Initial description",
+    )
+    qtbot.addWidget(dialog)
+    captured = []
+    dialog.metadata_saved.connect(lambda *values: captured.append(values))
+
+    dialog.node_metadata_editor.set_values(
+        "Dose reagent",
+        "Add reagent to the reactor",
+    )
+    dialog._on_save()
+
+    assert captured == [
+        (
+            "command_1",
+            "Dose reagent",
+            "Add reagent to the reactor",
+        )
+    ]
+
+
+def test_workflow_node_displays_and_updates_metadata(
+    tmp_path: Path,
+    qtbot: QtBot,
+) -> None:
+    workflow = ProcessWorkflow("React")
+    workflow.add_block(
+        node_id="script_1",
+        method="script_1",
+        label="Prepare sample",
+        description="Mix the starting materials",
+        position=(100.0, 100.0),
+    )
+    graph = _make_graph(working_dir=tmp_path, workflow=workflow, qtbot=qtbot)
+    node = graph._nodes["script_1"]
+
+    assert node.title_item.toPlainText() == "Prepare sample (script_1)"
+    assert node.subtitle_item.toPlainText() == "Module"
+    assert node.description_item.toPlainText() == "Mix the starting materials"
+    assert "Label: Prepare sample" in node.body.toolTip()
+    assert "Node ID: script_1" in node.body.toolTip()
+
+    graph.controller.update_block_metadata(
+        "script_1",
+        "",
+        "Updated description",
+    )
+
+    assert node.title_item.toPlainText() == "script_1"
+    assert node.description_item.toPlainText() == "Updated description"
+    assert workflow.get_block("script_1").label == "script_1"
+
+
 def test_double_click_opens_script_editor_for_valid_process_file(
     tmp_path: Path,
     qtbot: QtBot,
@@ -185,6 +248,46 @@ def test_double_click_opens_script_editor_for_valid_process_file(
     assert graph._script_editor is not None
     assert graph._script_editor.editor.path == process_file
     assert workflow.get_block("script_1").file_path == process_file
+
+    graph._script_editor.close()
+
+
+def test_script_editor_saves_metadata_for_focused_block(
+    tmp_path: Path,
+    qtbot: QtBot,
+) -> None:
+    process_file = tmp_path / "protocols" / "React.py"
+    process_file.parent.mkdir(parents=True, exist_ok=True)
+    process_file.write_text(
+        "def script_1():\n    return True\n",
+        encoding="utf-8",
+    )
+
+    workflow = ProcessWorkflow("React")
+    workflow.add_block(
+        node_id="script_1",
+        method="script_1",
+        position=(100.0, 100.0),
+    )
+    graph = _make_graph(working_dir=tmp_path, workflow=workflow, qtbot=qtbot)
+
+    graph._handle_node_double_click(graph._nodes["script_1"])
+    qtbot.wait(0)
+    assert graph._script_editor is not None
+
+    graph._script_editor.node_metadata_editor.set_values(
+        "Prepare sample",
+        "Mix the starting materials",
+    )
+    graph._script_editor.save()
+
+    block = workflow.get_block("script_1")
+    assert block is not None
+    assert block.label == "Prepare sample"
+    assert block.description == "Mix the starting materials"
+    assert graph._nodes["script_1"].title_item.toPlainText() == (
+        "Prepare sample (script_1)"
+    )
 
     graph._script_editor.close()
 

@@ -3,11 +3,12 @@ from __future__ import annotations
 from typing import Mapping
 
 from chemunited_core.protocols import CommandSignature
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 from qfluentwidgets import PrimaryPushButton, PushButton, isDarkTheme
 from qframelesswindow import FramelessDialog
 
+from chemunited.shared.editor.protocols.node_metadata import NodeMetadataEditor
 from chemunited.shared.widgets.base_mode_editor import BaseModeEditorWidget
 
 QT_ALIGN_LEFT = getattr(Qt, "AlignLeft")
@@ -23,11 +24,14 @@ _HIDDEN_COMMAND_FIELDS = {
 
 class CommandEditorDialog(FramelessDialog):
     saved = pyqtSignal(object)
+    metadata_saved = pyqtSignal(str, str, str)
 
     def __init__(
         self,
         function_name: str,
         command_model: CommandSignature,
+        label: str = "",
+        description: str = "",
         parent=None,
     ):
         super().__init__(parent)
@@ -35,6 +39,8 @@ class CommandEditorDialog(FramelessDialog):
         self._function_name = function_name
         self._command_model = command_model
         self._result_instance: CommandSignature | None = None
+        self.node_metadata_editor = NodeMetadataEditor(self)
+        self.node_metadata_editor.set_values(label, description)
 
         field_overrides: dict[str, Mapping[str, object]] = {
             name: {"visible": False, "editable": False}
@@ -48,6 +54,7 @@ class CommandEditorDialog(FramelessDialog):
             parent=self,
         )
         self._strip_editor_footer()
+        self.custom_signal()
 
         self.setObjectName("commandEditorDialog")
         self.setWindowTitle(function_name or "Command editor")
@@ -64,8 +71,19 @@ class CommandEditorDialog(FramelessDialog):
         layout.addLayout(self._build_header())
         layout.addWidget(self._make_separator())
         layout.addWidget(self._editor, stretch=1)
+        layout.addWidget(self.node_metadata_editor)
         layout.addLayout(self._build_footer())
 
+    def custom_signal(self) -> None:
+        cards = self._editor.cards
+        cards["wait_feedback_status"].value_changed.connect(self._trigger_feedback_signal)
+    
+    @pyqtSlot()
+    def _trigger_feedback_signal(self):
+        value = self._editor.cards["wait_feedback_status"].get_value()
+        self._editor.cards["feedback_status_command"].setEnabled(value)
+        self._editor.cards["feedback_answer"].setEnabled(value)
+    
     def _build_header(self) -> QHBoxLayout:
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -202,6 +220,8 @@ class CommandEditorDialog(FramelessDialog):
             return
 
         self._result_instance = instance
+        label, description = self.node_metadata_editor.values()
+        self.metadata_saved.emit(self._function_name, label, description)
         self.saved.emit(instance)
         self.accept()
 
