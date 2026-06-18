@@ -260,7 +260,7 @@ def _replace_method_body(
 
 def _parse_command_call(
     source: str, method_name: str, class_name: str
-) -> tuple[str, str, dict[str, object]] | None:
+) -> tuple[str, str, str, dict[str, object]] | None:
     from chemunited_core.utils.internal_quantity import ChemUnitQuantity
 
     line = _extract_method_first_expr(source, method_name, class_name)
@@ -275,6 +275,9 @@ def _parse_command_call(
         return None
     func = expr.func
     if not isinstance(func, ast.Attribute):
+        return None
+    http_method = func.attr.upper()
+    if http_method not in {"GET", "PUT"}:
         return None
     subscript = func.value
     if not (
@@ -300,7 +303,7 @@ def _parse_command_call(
             except Exception:
                 pass
 
-    return component_name, command_name, kwargs
+    return component_name, command_name, http_method, kwargs
 
 
 def _build_command_model(
@@ -313,19 +316,25 @@ def _build_command_model(
     parsed = _parse_command_call(source, method_name, class_name)
     if parsed is None:
         return None
-    component_name, command_name, kwargs = parsed
+    component_name, command_name, http_method, kwargs = parsed
 
-    def _find_sig_class(cmd: str, base=CommandSignature):
+    def _find_sig_class(cmd: str, method: str, base=CommandSignature):
         matches: list[type[CommandSignature]] = []
         for sub in base.__subclasses__():
-            info = sub.model_fields.get("command")
-            if info and info.default == cmd:
+            command_info = sub.model_fields.get("command")
+            method_info = sub.model_fields.get("method")
+            if (
+                command_info
+                and command_info.default == cmd
+                and method_info
+                and method_info.default == method
+            ):
                 matches.append(sub)
-            matches.extend(_find_sig_class(cmd, sub))
+            matches.extend(_find_sig_class(cmd, method, sub))
         return matches
 
     if sig_cls is None:
-        matches = _find_sig_class(command_name)
+        matches = _find_sig_class(command_name, http_method)
         if matches:
             # Prefer the most specific subclass when multiple commands share a name.
             sig_cls = max(matches, key=lambda cls: len(cls.mro()))
@@ -465,7 +474,7 @@ class WorkflowGraph(GraphCore):
             if parsed_command is None:
                 logger.warning(f"Could not parse command block {data.method!r}")
                 return
-            component_name, command_name, _kwargs = parsed_command
+            component_name, command_name, http_method, _kwargs = parsed_command
             command = _build_command_model(
                 source,
                 data.method,
@@ -473,6 +482,7 @@ class WorkflowGraph(GraphCore):
                 sig_cls=self._resolve_command_signature_class(
                     component_name,
                     command_name,
+                    http_method,
                 ),
             )
             if command is None:
@@ -542,6 +552,7 @@ class WorkflowGraph(GraphCore):
         self,
         component_name: str,
         command_name: str,
+        http_method: str | None = None,
     ) -> type[CommandSignature] | None:
         orchestrator = getattr(self.parent_ref, "orchestrator", None)
         components = getattr(orchestrator, "components", None)
@@ -561,7 +572,27 @@ class WorkflowGraph(GraphCore):
         if isinstance(command_class, type) and issubclass(
             command_class, CommandSignature
         ):
-            return command_class
+            method_field = command_class.model_fields.get("method")
+            if http_method is None or (
+                method_field is not None and method_field.default == http_method
+            ):
+                return command_class
+
+        for candidate in commands.values():
+            if not (
+                isinstance(candidate, type)
+                and issubclass(candidate, CommandSignature)
+            ):
+                continue
+            command_field = candidate.model_fields.get("command")
+            method_field = candidate.model_fields.get("method")
+            if (
+                command_field is not None
+                and command_field.default == command_name
+                and method_field is not None
+                and method_field.default == http_method
+            ):
+                return candidate
         return None
 
     def _resolve_script_path(self, block: BlockData) -> Path | None:

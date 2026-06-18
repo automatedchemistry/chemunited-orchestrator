@@ -2,11 +2,15 @@ from __future__ import annotations
 
 import math
 
-from chemunited_core.utils import ChemQuantityValidator, ChemUnitQuantity, ureg
+from chemunited_core.utils import (
+    ChemQuantityValidator,
+    ChemUnitQuantity,
+    units_for_dimension,
+    ureg,
+)
 from PyQt5.QtWidgets import QHBoxLayout, QWidget
 from qfluentwidgets import ComboBox, DoubleSpinBox
 
-from .._utils import units_for_dimension
 from .base_card import BaseFieldCard
 
 _FLOAT_MAX = 1e18

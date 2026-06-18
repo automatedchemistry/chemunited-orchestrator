@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 from chemunited_core.compounds import ChemicalEntity
-from chemunited_core.utils import ChemUnitQuantity, ureg
+from chemunited_core.utils import ChemUnitQuantity, units_for_dimension, ureg
 from pytestqt.qtbot import QtBot
 
 from chemunited.elements.compounds import CompoundDialog
@@ -10,7 +10,6 @@ from chemunited.elements.compounds.coolprop_lookup import (
     CoolPropLookupResult,
     lookup_compound_properties,
 )
-from chemunited.shared.widgets.base_mode_editor._utils import units_for_dimension
 
 
 def _magnitude(value, unit: str) -> float:

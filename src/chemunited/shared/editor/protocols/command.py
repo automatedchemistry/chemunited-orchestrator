@@ -233,15 +233,15 @@ if __name__ == "__main__":
     import sys
 
     from chemunited_core.protocols.pumps import WithdrawParameter
+    from chemunited_core.protocols.technical import SetTemperatureParameter
     from chemunited_core.utils.internal_quantity import ChemUnitQuantity
     from PyQt5.QtWidgets import QApplication, QDialog
 
     app = QApplication(sys.argv)
 
-    command = WithdrawParameter(
+    command = SetTemperatureParameter(
         component="Pump",
-        rate=ChemUnitQuantity("10 ml / min"),
-        volume=ChemUnitQuantity("5 ml"),
+        temp="10 degC",
         wait_feedback_status=True,
     )
     command.wait_time = 0.0

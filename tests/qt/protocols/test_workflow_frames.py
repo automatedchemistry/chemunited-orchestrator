@@ -387,6 +387,51 @@ class CustomProcess:
     assert extras["Options"] == ["[[0, 1]]", "[[0, 2]]"]
 
 
+def test_command_block_reconstruction_distinguishes_get_and_put_endpoints(
+    tmp_path: Path,
+    qtbot: QtBot,
+) -> None:
+    from chemunited_core.protocols.technical import (
+        HeiConnectTemperatureControlProtocols,
+        SetTemperatureParameter,
+    )
+
+    protocol = HeiConnectTemperatureControlProtocols("pt100")
+    components = {
+        "pt100": SimpleNamespace(protocols=protocol),
+    }
+    workflow = ProcessWorkflow("React")
+    graph = _make_graph(
+        working_dir=tmp_path,
+        workflow=workflow,
+        qtbot=qtbot,
+        components=components,
+    )
+    source = """
+class CustomProcess:
+    def command_1(self, ctx: NodeExecutionContext) -> bool:
+        self.platform["pt100"].put("temperature", temp="10 degC")
+        return True
+"""
+
+    command_class = graph._resolve_command_signature_class(
+        "pt100",
+        "temperature",
+        "PUT",
+    )
+    command = _build_command_model(
+        source,
+        "command_1",
+        "CustomProcess",
+        sig_cls=command_class,
+    )
+
+    assert command_class is SetTemperatureParameter
+    assert command is not None
+    assert command.method == "PUT"
+    assert command.temp.to("degC").magnitude == 10
+
+
 def test_update_command_script_formats_saved_protocol(
     tmp_path: Path,
     qtbot: QtBot,
