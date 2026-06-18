@@ -16,7 +16,7 @@ from qfluentwidgets import (
 )
 
 from chemunited.monitor import MonitorWindow
-from chemunited.project.storage import ensure_protocols_hystoric_dir
+from chemunited.project.storage import ensure_protocols_historic_dir
 from chemunited.shared.icon import OrchestratorIcon
 from chemunited.shared.widgets.logo_window import show_waiting
 
@@ -173,7 +173,7 @@ class ProtocolsManageList(ScrollArea):
         if not self.parent_ref.orchestrator.working_dir:
             return
 
-        folder = ensure_protocols_hystoric_dir(self.parent_ref.orchestrator.working_dir)
+        folder = ensure_protocols_historic_dir(self.parent_ref.orchestrator.working_dir)
 
         for file in folder.glob("*.json"):
             self.FileCard.add_card(file, ignore_warning=True)
@@ -221,7 +221,7 @@ class ProtocolsManageList(ScrollArea):
             file.parent.parent.parent, f"{file.parent.parent.name}.chemunited"
         )
         monitor.orchestrator.open_project(chemunited_file)
-        monitor.orchestrator.set_project_protocol_script_dir(file)
+        monitor.orchestrator.set_selected_protocol_file(file)
         monitor.switch_components_connection()
         wait_window.close()
 

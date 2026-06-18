@@ -68,8 +68,20 @@ class ApiClient:
         except requests.HTTPError as exc:
             response = exc.response
             status_code = response.status_code if response is not None else None
+            detail = None
+            if response is not None:
+                try:
+                    payload = response.json()
+                except ValueError:
+                    payload = None
+                if isinstance(payload, dict):
+                    detail = payload.get("detail")
             logger.warning("{} {} failed: {}", method.upper(), url, exc)
-            return {"error": str(exc), "status_code": status_code}
+            return {
+                "error": str(exc),
+                "status_code": status_code,
+                "detail": detail,
+            }
         except requests.RequestException as exc:
             logger.warning("{} {} failed: {}", method.upper(), url, exc)
         except ValueError as exc:
@@ -140,11 +152,11 @@ class APIDialog(BaseModeDialog):
 
 
 class RunRequestDialog(BaseModeDialog):
-    def __init__(self, snapshot: str, instance: RunRequest = None, parent=None):
+    def __init__(self, protocol: str, instance: RunRequest = None, parent=None):
         super().__init__(
             model_class=RunRequest,
-            instance=instance or RunRequest(snapshot=snapshot),
-            field_overrides={"snapshot": {"editable": False}},
+            instance=instance or RunRequest(protocol=protocol),
+            field_overrides={"protocol": {"editable": False}},
             parent=parent,
             title="Run Configuration",
         )
@@ -152,6 +164,7 @@ class RunRequestDialog(BaseModeDialog):
 
 class ApiProcess(QObject):
     api_alive = pyqtSignal(bool)
+    project_load_conflict = pyqtSignal(object)
 
     def __init__(self, working_dir: Path, log_browser: TextBrowser, parent=None):
         super().__init__(parent)
@@ -269,6 +282,8 @@ class ApiProcess(QObject):
             data={"project_dir": str(self._working_dir)},
         )
         if result is None or "error" in (result or {}):
+            if isinstance(result, dict) and result.get("status_code") == 409:
+                self.project_load_conflict.emit(result)
             logger.warning("Failed to load project into existing API: {}", result)
         else:
             logger.info("Project '{}' loaded into running API.", self._working_dir)

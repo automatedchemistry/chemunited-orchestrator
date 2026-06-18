@@ -23,7 +23,7 @@ from chemunited.utils.files import load_attribute
 
 _PACK_EXCLUDE = {".git", ".gitignore", ".chemunited_session", "__pycache__", "log"}
 _PROTOCOLS_SKIP = {"__init__", "main_parameters"}
-PROTOCOLS_HYSTORIC_DIR = "protocols_hystoric"
+PROTOCOLS_HISTORIC_DIR = "protocols_historic"
 LOG_DIR = "log"
 
 
@@ -48,8 +48,8 @@ def _is_excluded(file: Path, root: Path) -> bool:
     return any(part in _PACK_EXCLUDE for part in file.relative_to(root).parts)
 
 
-def ensure_protocols_hystoric_dir(working_dir: Path) -> Path:
-    path = working_dir / PROTOCOLS_HYSTORIC_DIR
+def ensure_protocols_historic_dir(working_dir: Path) -> Path:
+    path = working_dir / PROTOCOLS_HISTORIC_DIR
     path.mkdir(parents=True, exist_ok=True)
     return path
 

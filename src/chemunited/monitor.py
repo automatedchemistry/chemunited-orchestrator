@@ -139,6 +139,9 @@ class MonitorWindow(MainWindowBase):
                 working_dir, self.FrameLoggings.detail_loggins, self
             )
             self.api_process.api_alive.connect(self._on_api_ping)
+            self.api_process.project_load_conflict.connect(
+                self.orchestrator.handle_project_load_conflict
+            )
             if not self.api_process.start_api():
                 self.api_process = None
                 return
@@ -206,9 +209,9 @@ class MonitorWindow(MainWindowBase):
         )
 
     def _ensure_summary_window(self):
-        file = self.orchestrator.project_protocol_script_dir
+        file = self.orchestrator.selected_protocol_file
         if file is None:
-            logger.error("No project protocol script directory found.")
+            logger.error("No protocol file is selected.")
             return None
 
         if self.summary_window is None or self.summary_window_file != file:

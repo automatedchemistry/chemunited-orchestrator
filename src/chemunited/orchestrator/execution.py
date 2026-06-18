@@ -1,4 +1,6 @@
+import html
 import json
+import re
 from pathlib import Path
 from typing import Any
 from urllib.parse import quote
@@ -7,7 +9,8 @@ from chemunited_workflow.api.schemas import LogMeta, RunRequest, RunStatus
 from chemunited_workflow.enums import NodeState
 from loguru import logger as _logger
 from pydantic import BaseModel, ConfigDict, TypeAdapter, ValidationError
-from PyQt5.QtCore import QThread, pyqtSignal
+from PyQt5.QtCore import Qt, QThread, pyqtSignal
+from PyQt5.QtWidgets import QLabel, QMessageBox
 
 from chemunited.monitoring.execution_api_process import ApiClient, RunRequestDialog
 from chemunited.shared.enums import WindowCategory
@@ -34,12 +37,6 @@ class RunStartedResponse(BaseModel):
     run_id: str
 
 
-class ActiveRunResponse(BaseModel):
-    model_config = ConfigDict(extra="ignore")
-
-    run_id: str | None
-
-
 class LogContentResponse(BaseModel):
     model_config = ConfigDict(extra="ignore")
 
@@ -56,6 +53,10 @@ def _process_name_from_protocol_key(key: str) -> str | None:
     if not separator or not process_name or not process_index.isdecimal():
         return None
     return process_name
+
+
+def _protocol_name_from_run_id(run_id: str) -> str:
+    return re.sub(r"_\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}$", "", run_id)
 
 
 def _validate_model(model: type[BaseModel], payload: Any, endpoint: str):
@@ -337,7 +338,7 @@ class RunEventStreamThread(QThread):
     def run(self) -> None:
         try:
             self._response = self.client.stream(
-                f"run/{quote(self.run_id)}/stream",
+                "run/stream",
                 timeout=(5, 15),
             )
             for line in self._response.iter_lines(
@@ -460,7 +461,7 @@ class OrchestratorExecution(OrchestratorConnectivity):
 
     def __init__(self, parent):
         super().__init__(parent)
-        self.project_protocol_script_dir: Path | None = None
+        self.selected_protocol_file: Path | None = None
         self.active_run_id: str | None = None
         self._run_polling_thread: RunPollingThread | None = None
         self._run_stream_thread: RunEventStreamThread | None = None
@@ -469,14 +470,17 @@ class OrchestratorExecution(OrchestratorConnectivity):
         self._run_execution_settings: RunRequest = RunRequest()
 
     def dialog_execution_settings(self):
-        snapshot = (
-            self.project_protocol_script_dir.name
-            if self.project_protocol_script_dir is not None
+        protocol = (
+            self.selected_protocol_file.name
+            if self.selected_protocol_file is not None
             else ""
         )
+        settings = self._run_execution_settings.model_copy(
+            update={"protocol": protocol}
+        )
         dialog = RunRequestDialog(
-            snapshot=snapshot,
-            instance=self._run_execution_settings,
+            protocol=protocol,
+            instance=settings,
             parent=self.parent_ref,
         )
         if dialog.exec_():
@@ -484,9 +488,9 @@ class OrchestratorExecution(OrchestratorConnectivity):
             if result is not None:
                 self._run_execution_settings = result
 
-    def set_project_protocol_script_dir(self, dir: Path) -> None:
-        self.project_protocol_script_dir = dir
-        with open(self.project_protocol_script_dir, "r", encoding="utf-8") as f:
+    def set_selected_protocol_file(self, path: Path) -> None:
+        self.selected_protocol_file = path
+        with open(self.selected_protocol_file, "r", encoding="utf-8") as f:
             data = json.load(f)
 
         apply_inventory_status_payload(self.components, data.get("inventory"))
@@ -538,17 +542,26 @@ class OrchestratorExecution(OrchestratorConnectivity):
         if getattr(self, "active_run_id", None) is not None:
             logger.warning("Protocol execution is already running.")
             return False
-        if self.project_protocol_script_dir is None:
+        if self.selected_protocol_file is None:
             logger.error("No protocol history file selected.")
             return False
 
+        if not self._load_api_project(api_process.client):
+            return False
+
         run_settings = getattr(self, "_run_execution_settings", RunRequest())
-        run_settings.snapshot = self.project_protocol_script_dir.name
+        run_settings.protocol = self.selected_protocol_file.name
         self._run_execution_settings = run_settings
         response = api_process.client.post(
             "run/",
             data=run_settings.model_dump(),
         )
+        if isinstance(response, dict) and response.get("status_code") == 409:
+            self._handle_run_conflict(
+                api_process.client,
+                reason="Another protocol is already running.",
+            )
+            return False
         started = _validate_model(RunStartedResponse, response, "POST run/")
         if started is None:
             logger.error("Failed to start protocol execution: {}", response)
@@ -563,41 +576,155 @@ class OrchestratorExecution(OrchestratorConnectivity):
         return True
 
     def stop_execution(self) -> bool:
-        """Cancel the active workflow run through DELETE /run/{run_id}."""
+        """Cancel the active workflow run through DELETE /run/."""
         api_process = self.parent_ref.api_process
         if api_process is None:
             logger.warning("No API running - cannot stop protocol execution.")
             return False
 
         run_id = getattr(self, "active_run_id", None)
-        if run_id is None:
-            active_payload = api_process.client.get("run/active")
-            active = _validate_model(
-                ActiveRunResponse,
-                active_payload,
-                "GET run/active",
+        locally_observed = run_id is not None
+        if not locally_observed:
+            status_payload = api_process.client.get("run/status")
+            status = _validate_model(
+                RunStatus,
+                status_payload,
+                "GET run/status",
             )
-            if active is None:
+            if status is None:
                 logger.warning("Could not read active run from API.")
                 return False
-            run_id = active.run_id
-            if run_id is None:
+            if _is_terminal_run_status(status):
                 logger.warning("There is nothing running to be stopped.")
                 return False
-            self.active_run_id = run_id
+            run_id = status.run_id
 
-        response = api_process.client.delete(f"run/{quote(run_id)}")
+        response = api_process.client.delete("run/")
         if response is None:
             logger.error("Failed to cancel protocol execution run_id={}", run_id)
             return False
         if isinstance(response, dict) and response.get("status_code") == 404:
             logger.info("Protocol execution run_id={} was already gone.", run_id)
-            self._finish_run("cancelled")
+            if locally_observed:
+                self._finish_run("cancelled")
             return True
+        if isinstance(response, dict) and "error" in response:
+            logger.error(
+                "Failed to cancel protocol execution run_id={}: {}",
+                run_id,
+                response,
+            )
+            return False
 
         logger.info("Protocol execution cancellation requested for run_id={}", run_id)
-        self._finish_run("cancelled")
         return True
+
+    def _load_api_project(self, client: ApiClient) -> bool:
+        try:
+            working_dir = object.__getattribute__(self, "working_dir")
+        except (AttributeError, RuntimeError):
+            working_dir = None
+        if working_dir is None:
+            api_process = getattr(self.parent_ref, "api_process", None)
+            working_dir = getattr(api_process, "_working_dir", None)
+        if working_dir is None:
+            logger.error("No project directory is available for the execution API.")
+            return False
+
+        response = client.put(
+            "project/",
+            data={"project_dir": str(working_dir)},
+        )
+        if isinstance(response, dict) and response.get("status_code") == 409:
+            self._handle_run_conflict(
+                client,
+                reason="The API cannot switch projects while a protocol is running.",
+            )
+            return False
+        if response is None or (isinstance(response, dict) and "error" in response):
+            logger.error("Failed to load the execution project: {}", response)
+            return False
+        return True
+
+    def handle_project_load_conflict(self, _payload: object = None) -> None:
+        api_process = getattr(self.parent_ref, "api_process", None)
+        if api_process is None:
+            return
+        self._handle_run_conflict(
+            api_process.client,
+            reason="The API is already executing a protocol from another project.",
+        )
+
+    def _handle_run_conflict(self, client: ApiClient, *, reason: str) -> bool:
+        status_payload = client.get("run/status")
+        status = _validate_model(RunStatus, status_payload, "GET run/status")
+        project_payload = client.get("project/")
+        project_dir = ""
+        if isinstance(project_payload, dict):
+            project_dir = str(project_payload.get("project_dir") or "")
+
+        if status is None:
+            logger.warning("{} Unable to read the current run details.", reason)
+            return False
+
+        if not self._confirm_stop_conflicting_run(
+            run_id=status.run_id,
+            state=status.state,
+            protocol=_protocol_name_from_run_id(status.run_id),
+            project_dir=project_dir,
+            run_control_url=f"{str(client.url).rstrip('/')}/run-control",
+            reason=reason,
+        ):
+            return False
+
+        response = client.delete("run/")
+        if isinstance(response, dict) and response.get("status_code") == 404:
+            logger.info("The conflicting protocol was already stopped.")
+            return True
+        if response is None or (isinstance(response, dict) and "error" in response):
+            logger.error("Failed to stop the conflicting protocol: {}", response)
+            return False
+        logger.info(
+            "Stop requested for conflicting run_id={}. "
+            "Execute again to start the selected protocol.",
+            status.run_id,
+        )
+        return True
+
+    def _confirm_stop_conflicting_run(
+        self,
+        *,
+        run_id: str,
+        state: str,
+        protocol: str,
+        project_dir: str,
+        run_control_url: str,
+        reason: str,
+    ) -> bool:
+        dialog = QMessageBox(self.parent_ref)
+        dialog.setIcon(QMessageBox.Warning)
+        dialog.setWindowTitle("Protocol execution already active")
+        dialog.setText(reason)
+        dialog.setInformativeText(
+            "<b>Current run</b><br>"
+            f"Run ID: {html.escape(run_id)}<br>"
+            f"Protocol: {html.escape(protocol)}<br>"
+            f"State: {html.escape(state)}<br>"
+            f"Project: {html.escape(project_dir or 'unknown')}<br><br>"
+            f'<a href="{html.escape(run_control_url)}">Open API run control</a><br><br>'
+            "Stopping does not start the selected protocol automatically."
+        )
+        dialog.setTextFormat(Qt.RichText)
+        stop_button = dialog.addButton(
+            "Stop current protocol",
+            QMessageBox.AcceptRole,
+        )
+        dialog.addButton("Keep running", QMessageBox.RejectRole)
+        for label in dialog.findChildren(QLabel):
+            label.setOpenExternalLinks(True)
+            label.setTextInteractionFlags(Qt.TextBrowserInteraction)
+        dialog.exec_()
+        return dialog.clickedButton() is stop_button
 
     def _start_run_polling(self, client: ApiClient, run_id: str) -> None:
         self._stop_run_polling()
@@ -673,8 +800,18 @@ class OrchestratorExecution(OrchestratorConnectivity):
         api_process = getattr(self.parent_ref, "api_process", None)
         if api_process is None:
             return None
-        payload = api_process.client.get(f"run/{quote(run_id)}/report", timeout=10)
+        payload = api_process.client.get("run/report", timeout=10)
         if not isinstance(payload, dict):
+            return None
+        if "error" in payload:
+            return None
+        payload_run_id = payload.get("run_id")
+        if payload_run_id != run_id:
+            logger.warning(
+                "Ignoring run report for unexpected run_id={}; expected {}.",
+                payload_run_id,
+                run_id,
+            )
             return None
         return payload
 

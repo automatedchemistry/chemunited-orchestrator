@@ -7,6 +7,7 @@ from qfluentwidgets import TextBrowser
 from chemunited.monitoring import execution_api_process
 from chemunited.monitoring.execution_api_process import (
     DEFAULT_API_PORT,
+    ApiClient,
     ApiProcess,
     _api_url,
     _wait_for_api_ready,
@@ -128,3 +129,58 @@ def test_wait_for_api_ready_waits_before_quiet_probe(monkeypatch):
     )
     assert slept == [2]
     assert requested == [("http://localhost:3116/project/", 2.0)]
+
+
+def test_api_client_preserves_backend_error_detail(monkeypatch):
+    class Response:
+        status_code = 409
+        content = b'{"detail": "A run is already active."}'
+
+        def raise_for_status(self):
+            import requests
+
+            error = requests.HTTPError("409 conflict")
+            error.response = self
+            raise error
+
+        def json(self):
+            return {"detail": "A run is already active."}
+
+    class Session:
+        trust_env = True
+
+        def __init__(self):
+            self.proxies = {}
+
+        def request(self, *_args, **_kwargs):
+            return Response()
+
+    monkeypatch.setattr(execution_api_process.requests, "Session", Session)
+    client = ApiClient(AnyHttpUrl("http://localhost:3116"))
+
+    result = client.post("run/", data={"protocol": "test.json"})
+
+    assert result["status_code"] == 409
+    assert result["detail"] == "A run is already active."
+
+
+def test_api_process_emits_project_load_conflict(tmp_path, qtbot: QtBot):
+    log_browser = TextBrowser()
+    qtbot.addWidget(log_browser)
+    api_process = ApiProcess(tmp_path, log_browser)
+    conflict = {
+        "status_code": 409,
+        "detail": "Cannot switch project while a run is active.",
+        "error": "conflict",
+    }
+    api_process.client = type(
+        "Client",
+        (),
+        {"put": lambda *_args, **_kwargs: conflict},
+    )()
+    captured = []
+    api_process.project_load_conflict.connect(captured.append)
+
+    api_process._load_project()
+
+    assert captured == [conflict]

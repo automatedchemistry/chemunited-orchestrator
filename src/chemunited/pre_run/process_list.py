@@ -459,4 +459,4 @@ class ProcessDoubleList(QWidget):
             if self._ensure_process_parameter_instance(active_name) is None:
                 return
 
-        self.parent_ref.orchestrator.save_protocols_hystoric()
+        self.parent_ref.orchestrator.save_protocols_historic()

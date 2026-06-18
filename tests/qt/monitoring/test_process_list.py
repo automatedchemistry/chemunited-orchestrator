@@ -67,7 +67,9 @@ def test_monitor_processes_widget_toggles_buttons_while_running(
     assert widget.stop_btn.isEnabled()
 
 
-def test_monitor_processes_widget_stop_button_resets_state(qtbot: QtBot) -> None:
+def test_monitor_processes_widget_waits_for_finished_signal_after_stop(
+    qtbot: QtBot,
+) -> None:
     parent = DummyMonitor()
     qtbot.addWidget(parent)
     widget = MonitorProcessesWidget(parent)
@@ -76,8 +78,12 @@ def test_monitor_processes_widget_stop_button_resets_state(qtbot: QtBot) -> None
 
     widget._stop_protocol()
 
-    assert widget.execute_btn.isEnabled()
+    assert not widget.execute_btn.isEnabled()
     assert widget.stop_btn.isEnabled()
+
+    parent.orchestrator.protocol_execution_finished.emit("cancelled")
+
+    assert widget.execute_btn.isEnabled()
 
 
 def test_monitor_processes_widget_updates_status_by_active_key(qtbot: QtBot) -> None:

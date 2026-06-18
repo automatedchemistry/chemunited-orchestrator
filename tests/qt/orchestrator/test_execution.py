@@ -31,7 +31,7 @@ def test_process_name_from_protocol_key_uses_file_stem() -> None:
     assert _process_name_from_protocol_key("React_x") is None
 
 
-def test_set_project_protocol_script_dir_activates_saved_process_names(
+def test_set_selected_protocol_file_activates_saved_process_names(
     tmp_path,
 ) -> None:
     path = tmp_path / "protocol.json"
@@ -62,7 +62,7 @@ def test_set_project_protocol_script_dir_activates_saved_process_names(
     execution.components = {}
     execution.select_process = selected.append
 
-    execution.set_project_protocol_script_dir(path)
+    execution.set_selected_protocol_file(path)
 
     assert protocols_widget.activated == ["clean", "ReactProcess", "my_process"]
     assert execution._active_process_order == [
@@ -78,7 +78,7 @@ def test_set_project_protocol_script_dir_activates_saved_process_names(
     assert selected == ["clean"]
 
 
-def test_set_project_protocol_script_dir_restores_inventory_status(tmp_path) -> None:
+def test_set_selected_protocol_file_restores_inventory_status(tmp_path) -> None:
     path = tmp_path / "protocol.json"
     path.write_text(
         json.dumps(
@@ -109,28 +109,49 @@ def test_set_project_protocol_script_dir_restores_inventory_status(tmp_path) -> 
     execution.components = {"BottleA": SimpleNamespace(inf=component_data)}
     execution.select_process = lambda _name: None
 
-    execution.set_project_protocol_script_dir(path)
+    execution.set_selected_protocol_file(path)
 
     assert inventory.liq_content.volume == pytest.approx(2.5e-6)
     assert inventory.liq_content.initial_species == {"water": 0.125}
 
 
 class FakeClient:
-    def __init__(self, post_response=None, delete_response=None, get_response=None):
+    def __init__(
+        self,
+        post_response=None,
+        delete_response=None,
+        get_response=None,
+        put_response=None,
+    ):
+        self.url = "http://localhost:3116"
         self.post_response = post_response
         self.delete_response = delete_response
         self.get_response = get_response
+        self.put_response = put_response or {"project_dir": "project"}
         self.gets: list[str] = []
+        self.puts: list[tuple[str, dict | None]] = []
         self.posts: list[tuple[str, dict | None]] = []
         self.deletes: list[str] = []
 
     def get(self, endpoint: str, params: dict | None = None, timeout: int = 10):
         self.gets.append(endpoint)
+        if isinstance(self.get_response, dict) and endpoint in self.get_response:
+            return self.get_response[endpoint]
         return self.get_response
 
     def post(self, endpoint: str, data: dict | None = None, timeout: int = 10):
         self.posts.append((endpoint, data))
         return self.post_response
+
+    def put(
+        self,
+        endpoint: str,
+        data: dict | None = None,
+        params: dict | None = None,
+        timeout: int = 10,
+    ):
+        self.puts.append((endpoint, data))
+        return self.put_response
 
     def delete(self, endpoint: str, timeout: int = 10):
         self.deletes.append(endpoint)
@@ -141,10 +162,11 @@ def _execution_with_parent(client: FakeClient, *, online: bool = True):
     execution = OrchestratorExecution.__new__(OrchestratorExecution)
     execution.parent_ref = SimpleNamespace(
         status_widget=SimpleNamespace(text=lambda: "Online" if online else "Offline"),
-        api_process=SimpleNamespace(client=client),
+        api_process=SimpleNamespace(client=client, _working_dir="project"),
     )
     execution.active_run_id = None
     execution._run_polling_thread = None
+    execution._run_execution_settings = RunRequest()
     execution._start_run_polling = lambda _client, _run_id: None
     return execution
 
@@ -152,7 +174,7 @@ def _execution_with_parent(client: FakeClient, *, online: bool = True):
 def test_execute_returns_false_when_offline(tmp_path) -> None:
     client = FakeClient(post_response={"run_id": "RUN-1"})
     execution = _execution_with_parent(client, online=False)
-    execution.project_protocol_script_dir = tmp_path / "protocol.json"
+    execution.selected_protocol_file = tmp_path / "protocol.json"
 
     assert execution.execute() is False
     assert client.posts == []
@@ -165,7 +187,7 @@ def test_execute_returns_false_without_api(tmp_path) -> None:
         api_process=None,
     )
     execution.active_run_id = None
-    execution.project_protocol_script_dir = tmp_path / "protocol.json"
+    execution.selected_protocol_file = tmp_path / "protocol.json"
 
     assert execution.execute() is False
 
@@ -173,7 +195,7 @@ def test_execute_returns_false_without_api(tmp_path) -> None:
 def test_execute_returns_false_without_protocol_history() -> None:
     client = FakeClient(post_response={"run_id": "RUN-1"})
     execution = _execution_with_parent(client)
-    execution.project_protocol_script_dir = None
+    execution.selected_protocol_file = None
 
     assert execution.execute() is False
     assert client.posts == []
@@ -182,16 +204,17 @@ def test_execute_returns_false_without_protocol_history() -> None:
 def test_execute_starts_run_with_protocol_history_file_name(tmp_path) -> None:
     client = FakeClient(post_response={"run_id": "RUN-1"})
     execution = _execution_with_parent(client)
-    execution.project_protocol_script_dir = tmp_path / "protocol.json"
+    execution.selected_protocol_file = tmp_path / "protocol.json"
     execution._run_execution_settings = RunRequest(timeout_commands="10 s")
 
     assert execution.execute() is True
     assert execution.active_run_id == "RUN-1"
+    assert client.puts == [("project/", {"project_dir": "project"})]
     assert client.posts == [
         (
             "run/",
             {
-                "snapshot": "protocol.json",
+                "protocol": "protocol.json",
                 "dry_run": False,
                 "timeout_commands": "10 s",
                 "error_resilient": False,
@@ -200,29 +223,103 @@ def test_execute_starts_run_with_protocol_history_file_name(tmp_path) -> None:
     ]
 
 
+def test_execute_project_conflict_can_stop_without_starting_selected_protocol(
+    tmp_path,
+) -> None:
+    client = FakeClient(
+        put_response={"status_code": 409, "detail": "run active", "error": "conflict"},
+        get_response={
+            "run/status": {
+                "run_id": "existing_2026-06-18T12-00-00",
+                "state": "running",
+                "events": [],
+            },
+            "project/": {"project_dir": "other-project"},
+        },
+        delete_response={"status": "ok"},
+    )
+    execution = _execution_with_parent(client)
+    execution.selected_protocol_file = tmp_path / "protocol.json"
+    captured = []
+    execution._confirm_stop_conflicting_run = lambda **kwargs: (
+        captured.append(kwargs) or True
+    )
+
+    assert execution.execute() is False
+    assert client.posts == []
+    assert client.deletes == ["run/"]
+    assert captured[0]["project_dir"] == "other-project"
+    assert captured[0]["protocol"] == "existing"
+    assert captured[0]["run_control_url"].endswith("/run-control")
+
+
+def test_execute_run_conflict_decline_keeps_current_protocol(tmp_path) -> None:
+    client = FakeClient(
+        post_response={"status_code": 409, "detail": "run active", "error": "conflict"},
+        get_response={
+            "run/status": {
+                "run_id": "existing_2026-06-18T12-00-00",
+                "state": "running",
+                "events": [],
+            },
+            "project/": {"project_dir": "project"},
+        },
+    )
+    execution = _execution_with_parent(client)
+    execution.selected_protocol_file = tmp_path / "protocol.json"
+    execution._confirm_stop_conflicting_run = lambda **_kwargs: False
+
+    assert execution.execute() is False
+    assert len(client.posts) == 1
+    assert client.deletes == []
+
+
+def test_execute_run_conflict_accept_stops_without_retry(tmp_path) -> None:
+    client = FakeClient(
+        post_response={"status_code": 409, "detail": "run active", "error": "conflict"},
+        get_response={
+            "run/status": {
+                "run_id": "existing_2026-06-18T12-00-00",
+                "state": "running",
+                "events": [],
+            },
+            "project/": {"project_dir": "project"},
+        },
+        delete_response={"status": "ok"},
+    )
+    execution = _execution_with_parent(client)
+    execution.selected_protocol_file = tmp_path / "protocol.json"
+    execution._confirm_stop_conflicting_run = lambda **_kwargs: True
+
+    assert execution.execute() is False
+    assert len(client.posts) == 1
+    assert client.deletes == ["run/"]
+
+
 def test_stop_execution_returns_false_without_active_run() -> None:
     client = FakeClient(
-        delete_response={"status": "cancelled"}, get_response={"run_id": None}
+        delete_response={"status": "cancelled"},
+        get_response={"run_id": "RUN-1", "state": "finished", "events": []},
     )
     execution = _execution_with_parent(client)
 
     assert execution.stop_execution() is False
-    assert client.gets == ["run/active"]
+    assert client.gets == ["run/status"]
     assert client.deletes == []
 
 
 def test_stop_execution_discovers_active_api_run() -> None:
     client = FakeClient(
         delete_response={"status": "cancelled"},
-        get_response={"run_id": "RUN-1"},
+        get_response={"run_id": "RUN-1", "state": "running", "events": []},
     )
     execution = _execution_with_parent(client)
     execution._stop_run_polling = lambda: None
 
     assert execution.stop_execution() is True
     assert execution.active_run_id is None
-    assert client.gets == ["run/active", "run/RUN-1/report"]
-    assert client.deletes == ["run/RUN-1"]
+    assert client.gets == ["run/status"]
+    assert client.deletes == ["run/"]
 
 
 def test_stop_execution_cancels_active_run() -> None:
@@ -232,8 +329,8 @@ def test_stop_execution_cancels_active_run() -> None:
     execution._stop_run_polling = lambda: None
 
     assert execution.stop_execution() is True
-    assert execution.active_run_id is None
-    assert client.deletes == ["run/RUN-1"]
+    assert execution.active_run_id == "RUN-1"
+    assert client.deletes == ["run/"]
 
 
 def test_stop_execution_clears_state_when_run_is_already_gone() -> None:
@@ -244,7 +341,7 @@ def test_stop_execution_clears_state_when_run_is_already_gone() -> None:
 
     assert execution.stop_execution() is True
     assert execution.active_run_id is None
-    assert client.deletes == ["run/RUN-1"]
+    assert client.deletes == ["run/"]
 
 
 def test_incremental_text_avoids_duplicate_tail_lines() -> None:
@@ -420,7 +517,7 @@ def test_run_event_stream_thread_emits_statuses_from_sse(qtbot) -> None:
     thread.wait(1000)
 
     assert blocker.args == ["failed"]
-    assert client.streams == ["run/RUN-1/stream"]
+    assert client.streams == ["run/stream"]
     assert stream_events == [
         ("RUN-1", {"event_type": "EXECUTION_STARTED"}),
         ("RUN-1", {"event_type": "EXECUTION_FINISHED"}),
@@ -517,10 +614,27 @@ def test_finish_run_fetches_emits_and_applies_report_once() -> None:
     execution._finish_run("finished")
 
     assert execution.active_run_id is None
-    assert client.gets == ["run/RUN-1/report"]
+    assert client.gets == ["run/report"]
     assert emitted_reports == [("RUN-1", report)]
     assert applied_reports == [("RUN-1", report)]
     assert finished == [("protocol_execution_finished", "finished")]
+
+
+def test_fetch_run_report_ignores_another_run() -> None:
+    client = FakeClient(
+        get_response={
+            "run/report": {
+                "run_id": "RUN-2",
+                "state": "finished",
+                "results": [],
+            }
+        }
+    )
+    execution = OrchestratorExecution.__new__(OrchestratorExecution)
+    execution.parent_ref = SimpleNamespace(api_process=SimpleNamespace(client=client))
+
+    assert execution._fetch_run_report("RUN-1") is None
+    assert client.gets == ["run/report"]
 
 
 def test_orchestrator_execution_updates_workflow_node_status_by_active_key() -> None:
@@ -610,7 +724,7 @@ def test_schema_validation_logs_unexpected_api_payload() -> None:
         parsed = _validate_model(
             RunStatus,
             {"state": "finished"},
-            "GET run/RUN-1/status",
+            "GET run/status",
         )
     finally:
         logger.remove(sink_id)
@@ -618,5 +732,5 @@ def test_schema_validation_logs_unexpected_api_payload() -> None:
     assert parsed is None
     assert len(records) == 1
     assert records[0]["extra"]["window"] == WindowCategory.EXECUTION
-    assert "Unexpected API response for GET run/RUN-1/status" in records[0]["message"]
+    assert "Unexpected API response for GET run/status" in records[0]["message"]
     assert "run_id" in records[0]["message"]

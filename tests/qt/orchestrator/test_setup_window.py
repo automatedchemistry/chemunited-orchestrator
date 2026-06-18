@@ -884,7 +884,7 @@ class CustomProcess(Process[ProcessConfig]):
         assert inventory.liq_content.volume == 0
         assert inventory.liq_content.initial_species == {}
 
-    def test_save_protocols_hystoric_includes_inventory_status(
+    def test_save_protocols_historic_includes_inventory_status(
         self, window: SetupWindow, tmp_path, monkeypatch
     ):
         working_dir = tmp_path / "demo"
@@ -909,9 +909,9 @@ class CustomProcess(Process[ProcessConfig]):
             lambda: None,
         )
 
-        window.orchestrator.save_protocols_hystoric()
+        window.orchestrator.save_protocols_historic()
 
-        files = list((working_dir / "protocols_hystoric").glob("react_*.json"))
+        files = list((working_dir / "protocols_historic").glob("react_*.json"))
         assert len(files) == 1
         data = json.loads(files[0].read_text(encoding="utf-8"))
         assert data["inventory"]["BottleA"]["Inventory"]["liquid"] == {
@@ -919,7 +919,7 @@ class CustomProcess(Process[ProcessConfig]):
             "initial_species": {"water": 0.125},
         }
 
-    def test_save_protocols_hystoric_includes_default_air_inventory(
+    def test_save_protocols_historic_includes_default_air_inventory(
         self, window: SetupWindow, tmp_path, monkeypatch
     ):
         working_dir = tmp_path / "demo"
@@ -939,9 +939,9 @@ class CustomProcess(Process[ProcessConfig]):
             lambda: None,
         )
 
-        window.orchestrator.save_protocols_hystoric()
+        window.orchestrator.save_protocols_historic()
 
-        files = list((working_dir / "protocols_hystoric").glob("react_*.json"))
+        files = list((working_dir / "protocols_historic").glob("react_*.json"))
         assert len(files) == 1
         data = json.loads(files[0].read_text(encoding="utf-8"))
         gas = data["inventory"]["BottleA"]["Inventory"]["gas"]

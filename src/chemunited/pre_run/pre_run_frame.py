@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import QFrame, QHBoxLayout
 from chemunited.shared.enums import SetupStepMode
 
 from .process_list import ProcessDoubleList
-from .protocols_hystoric import ProtocolsManageList
+from .protocols_historic import ProtocolsManageList
 
 if TYPE_CHECKING:
     from chemunited.setup import SetupWindow

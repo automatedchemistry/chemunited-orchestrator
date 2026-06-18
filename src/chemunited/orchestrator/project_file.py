@@ -18,7 +18,7 @@ from chemunited.project.platform_svg import (
 )
 from chemunited.project.recent import RecentProjectsStore
 from chemunited.project.session import ProjectSession
-from chemunited.project.storage import ensure_protocols_hystoric_dir
+from chemunited.project.storage import ensure_protocols_historic_dir
 from chemunited.project.writer import render_python_script
 from chemunited.protocols.workflows import ProcessWorkflow
 from chemunited.shared.enums import WindowCategory
@@ -807,12 +807,12 @@ class OrchestratorProjectFile(OrchestratorExecution):
     def _component_payload(component) -> dict:
         return component.graph.base_mode_instance.model_dump(mode="json")
 
-    def save_protocols_hystoric(self) -> None:
+    def save_protocols_historic(self) -> None:
         if self.working_dir is None:
             self._warn_user("Load or create a project before saving protocol scripts.")
             return
 
-        folder = ensure_protocols_hystoric_dir(self.working_dir)
+        folder = ensure_protocols_historic_dir(self.working_dir)
         data: dict[str, dict[str, Any]] = {}
         pre_run_list = self.parent_ref.preRunFrame.processes_list_widget
 
@@ -856,7 +856,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
         if not ok:
             return
 
-        filename_base = self._protocols_hystoric_filename_base(name)
+        filename_base = self._protocols_historic_filename_base(name)
         if not filename_base:
             self._warn_user(
                 "Protocol script name must contain at least one letter, number, _ or -."
@@ -864,7 +864,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
             return
 
         timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H-%M-%S")
-        path = self._next_protocols_hystoric_path(folder, filename_base, timestamp)
+        path = self._next_protocols_historic_path(folder, filename_base, timestamp)
         path.write_text(json.dumps(data, indent=2), encoding="utf-8")
 
         self.parent_ref.preRunFrame.protocols_list_widget.fill_cards()
@@ -873,12 +873,12 @@ class OrchestratorProjectFile(OrchestratorExecution):
         )
 
     @staticmethod
-    def _protocols_hystoric_filename_base(name: str) -> str:
+    def _protocols_historic_filename_base(name: str) -> str:
         base = re.sub(r"[^A-Za-z0-9_-]+", "_", name.strip())
         return base.strip("_-")
 
     @staticmethod
-    def _next_protocols_hystoric_path(
+    def _next_protocols_historic_path(
         folder: Path,
         filename_base: str,
         timestamp: str,

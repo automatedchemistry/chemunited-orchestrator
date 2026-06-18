@@ -9,7 +9,7 @@ from .storage import (
     delete_process,
     duplicate_process,
     ensure_log_dir,
-    ensure_protocols_hystoric_dir,
+    ensure_protocols_historic_dir,
     list_processes,
     load_connectivity,
     load_draw,
@@ -55,7 +55,7 @@ class ProjectSession:
     ) -> None:
         self.working_dir = location / name
         self.working_dir.mkdir(parents=True, exist_ok=True)
-        ensure_protocols_hystoric_dir(self.working_dir)
+        ensure_protocols_historic_dir(self.working_dir)
         ensure_log_dir(self.working_dir)
         ensure_gitignore(self.working_dir)
         self.manifest = ProjectManifest(
@@ -70,7 +70,7 @@ class ProjectSession:
     def open_directory(self, working_dir: Path) -> None:
         self.working_dir = working_dir
         self.manifest = ProjectManifest.load(working_dir)
-        ensure_protocols_hystoric_dir(working_dir)
+        ensure_protocols_historic_dir(working_dir)
         ensure_log_dir(working_dir)
         ensure_gitignore(working_dir)
         self.git = GitManager.open(working_dir)
@@ -103,7 +103,7 @@ class ProjectSession:
 
         has_existing_git = (target / ".git").is_dir()
         unpack(chemunited_file, target)
-        ensure_protocols_hystoric_dir(target)
+        ensure_protocols_historic_dir(target)
         ensure_log_dir(target)
         ensure_gitignore(target)
         self.working_dir = target
@@ -118,7 +118,7 @@ class ProjectSession:
         working_dir = self._require_working_dir()
         manifest = self._require_manifest()
         dest = destination or working_dir.parent / manifest.name
-        ensure_protocols_hystoric_dir(working_dir)
+        ensure_protocols_historic_dir(working_dir)
         ensure_log_dir(working_dir)
         ensure_gitignore(working_dir)
         manifest.save(working_dir)

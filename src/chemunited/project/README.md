@@ -32,7 +32,7 @@ my_experiment/                       ← working directory (source of truth)
 │   ├── react.py
 │   └── clean.py
 │
-├── protocols_hystoric/
+├── protocols_historic/
 │   └── react_2026-03-27T16-18-00.json ← saved protocol script snapshots
 │
 ├── log/
@@ -234,7 +234,7 @@ created. The user edits it freely afterwards.
 
 ---
 
-### `protocols_hystoric/` — saved protocol JSON files
+### `protocols_historic/` — saved protocol JSON files
 
 Protocol script snapshots saved from the Pre-Running panel. Each snapshot is
 stored as a JSON file so it can be reopened for summary, monitoring, or
@@ -242,7 +242,7 @@ simulation without changing the editable Python process modules in
 `protocols/`.
 
 ```
-protocols_hystoric/
+protocols_historic/
 └── react_2026-03-27T16-18-00.json
 ```
 
@@ -334,7 +334,7 @@ my_experiment.chemunited  (ZIP)
 ├── protocols/calibration.py
 ├── protocols/react.py
 ├── protocols/clean.py
-├── protocols_hystoric/react_2026-03-27T16-18-00.json
+├── protocols_historic/react_2026-03-27T16-18-00.json
 └── connectivity/associations.json
 ```
 
@@ -364,7 +364,7 @@ Write manifest.json, pyproject.toml, __init__.py
 Write main.py  (from template)
 Write protocols/__init__.py  (empty PROCESSES and CONFIGS dicts)
 Write protocols/main_parameters.py  (from template)
-Create protocols_hystoric/  (JSON protocol script snapshots)
+Create protocols_historic/  (JSON protocol script snapshots)
 Create log/  (local execution logs, ignored by Git/export)
 Create draw/setup.py  (empty canvas)
 Create draw/platform.svg  (generated platform drawing)
@@ -381,7 +381,7 @@ Load manifest.json
 Open Git repo if .git/ present
 Load draw/setup.py → call build_draw(platform) and reconstruct ComponentData / EdgeData
 Load protocols via import protocols.PROCESSES / protocols.CONFIGS
-Ensure protocols_hystoric/ exists
+Ensure protocols_historic/ exists
 Ensure log/ exists
 Load connectivity/associations.json
 ```
@@ -407,7 +407,7 @@ User clicks Save Protocol Script
 manifest.json updated (last_modified)
 Refresh draw/setup.py and draw/platform.svg
 Sync each protocols/<process>.py file in place
-Keep protocols_hystoric/*.json files in the working directory/archive
+Keep protocols_historic/*.json files in the working directory/archive
 Keep log/*.log files only in the working directory; never pack them
 Pack working directory → my_experiment.chemunited
 (.git, .gitignore, and log/ excluded from ZIP)

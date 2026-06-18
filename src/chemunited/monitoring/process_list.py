@@ -47,8 +47,7 @@ class MonitorProcessesWidget(ProcessWidget):
             self._set_execution_running(True)
 
     def _stop_protocol(self) -> None:
-        if self._parent.orchestrator.stop_execution():
-            self._set_execution_running(False)
+        self._parent.orchestrator.stop_execution()
 
     def _set_execution_running(self, running: bool) -> None:
         self.execute_btn.setEnabled(not running)
