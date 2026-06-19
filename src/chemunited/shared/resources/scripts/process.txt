@@ -7,7 +7,7 @@ import networkx as nx
 from pydantic import BaseModel, ConfigDict, Field
 from typing import Annotated
 
-from chemunited_workflow.quantity import ChemQuantityValidator, ChemUnitQuantity
+from chemunited_quantities import ChemQuantityValidator, ChemUnitQuantity
 from chemunited_workflow import (
     NodeExecutionContext,
     Process,

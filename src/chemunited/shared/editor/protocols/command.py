@@ -234,7 +234,7 @@ if __name__ == "__main__":
 
     from chemunited_core.protocols.pumps import WithdrawParameter
     from chemunited_core.protocols.technical import SetTemperatureParameter
-    from chemunited_core.utils.internal_quantity import ChemUnitQuantity
+    from chemunited_quantities import ChemUnitQuantity
     from PyQt5.QtWidgets import QApplication, QDialog
 
     app = QApplication(sys.argv)

@@ -3,7 +3,7 @@ from chemunited_core.components.internals import (
     DEFAULT_INVENTORY_KEY,
     InventoryNode,
 )
-from chemunited_core.utils import ChemUnitQuantity
+from chemunited_quantities import ChemUnitQuantity
 
 
 def qty(value: str) -> ChemUnitQuantity:

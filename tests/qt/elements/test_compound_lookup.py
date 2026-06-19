@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import pytest
 from chemunited_core.compounds import ChemicalEntity
-from chemunited_core.utils import ChemUnitQuantity, units_for_dimension, ureg
+from chemunited_quantities import ChemUnitQuantity, units_for_dimension, ureg
 from pytestqt.qtbot import QtBot
 
 from chemunited.elements.compounds import CompoundDialog

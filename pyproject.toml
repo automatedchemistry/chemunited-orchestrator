@@ -21,6 +21,7 @@ classifiers = [
 ]
 dependencies = [
     # sub-packages (provide the entire runtime engine)
+    "chemunited-quantities>=0.0.2,<0.1",
     "chemunited-core @ git+https://github.com/automatedchemistry/chemunited-core.git",
     "chemunited-workflow @ git+https://github.com/automatedchemistry/chemunited-workflow.git",
     "chemunited-sim @ git+https://github.com/automatedchemistry/chemunited-sim.git",

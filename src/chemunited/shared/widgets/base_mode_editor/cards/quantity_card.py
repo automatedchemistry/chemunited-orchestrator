@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 
-from chemunited_core.utils import (
+from chemunited_quantities import (
     ChemQuantityValidator,
     ChemUnitQuantity,
     units_for_dimension,

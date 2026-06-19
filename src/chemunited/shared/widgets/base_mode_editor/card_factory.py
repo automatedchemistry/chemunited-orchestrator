@@ -60,7 +60,7 @@ class CardFactory:
     ) -> BaseFieldCard:
         # 1. ChemQuantityValidator in metadata
         try:
-            from chemunited_core.utils import ChemQuantityValidator
+            from chemunited_quantities import ChemQuantityValidator
 
             for meta in field_info.metadata or []:
                 if isinstance(meta, ChemQuantityValidator):

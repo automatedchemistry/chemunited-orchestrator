@@ -20,7 +20,7 @@ from __future__ import annotations
 import sys
 from typing import Annotated
 
-from chemunited_core.utils import ChemQuantityValidator, ChemUnitQuantity
+from chemunited_quantities import ChemQuantityValidator, ChemUnitQuantity
 from pydantic import BaseModel, Field
 from PyQt5.QtWidgets import QApplication
 

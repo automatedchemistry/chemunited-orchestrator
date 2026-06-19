@@ -14,8 +14,9 @@ from PyQt5 import sip
 from PyQt5.QtCore import QPointF, QRectF, Qt
 from PyQt5.QtGui import QColor, QPainter, QPen
 from PyQt5.QtWidgets import QFrame, QGraphicsItem, QGraphicsView
-from qfluentwidgets import Action, RoundMenu, isDarkTheme
+from qfluentwidgets import Action, InfoBar, InfoBarPosition, RoundMenu, isDarkTheme
 
+from chemunited.project.storage import sync_process
 from chemunited.protocols.workflows.naming import (
     process_class_name,
     process_config_class_name,
@@ -46,49 +47,6 @@ def _format_python_source(source: str) -> str:
     except Exception as exc:
         logger.opt(exception=exc).error("Black formatting failed.")
         return source
-
-
-def _add_method_stub(source: str, method_name: str, class_name: str) -> str:
-    try:
-        tree = ast.parse(source)
-    except SyntaxError:
-        return source
-
-    class_node = next(
-        (
-            n
-            for n in ast.walk(tree)
-            if isinstance(n, ast.ClassDef) and n.name == class_name
-        ),
-        None,
-    )
-    if class_node is None:
-        return source
-
-    existing = {
-        n.name
-        for n in class_node.body
-        if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
-    }
-    if method_name in existing:
-        return source
-
-    lines = source.splitlines(keepends=True)
-    indent = "    "
-    for node in class_node.body:
-        if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
-            raw = lines[node.lineno - 1]
-            indent = " " * (len(raw) - len(raw.lstrip()))
-            break
-
-    newline = "\r\n" if "\r\n" in source else "\n"
-    stub = (
-        f"{newline}{indent}def {method_name}(self, ctx: NodeExecutionContext) -> bool:"
-        f"{newline}{indent}    return True{newline}"
-    )
-    insert_at = class_node.end_lineno or len(lines)
-    lines.insert(insert_at, stub)
-    return "".join(lines)
 
 
 def _add_content_to_method(
@@ -136,50 +94,6 @@ def _add_content_to_method(
     if isinstance(method_node.body[-1], ast.Return):
         insert_line = method_node.body[-1].lineno - 1
     lines.insert(insert_line, f"{formatted}{newline}")
-    return "".join(lines)
-
-
-def _remove_method(source: str, method_name: str, class_name: str) -> str:
-    try:
-        tree = ast.parse(source)
-    except SyntaxError:
-        return source
-
-    class_node = next(
-        (
-            n
-            for n in ast.walk(tree)
-            if isinstance(n, ast.ClassDef) and n.name == class_name
-        ),
-        None,
-    )
-    if class_node is None:
-        return source
-
-    method_node = next(
-        (
-            n
-            for n in class_node.body
-            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
-            and n.name == method_name
-        ),
-        None,
-    )
-    if method_node is None:
-        return source
-
-    lines = source.splitlines(keepends=True)
-    start = (
-        method_node.decorator_list[0].lineno
-        if method_node.decorator_list
-        else method_node.lineno
-    ) - 1
-    end = method_node.end_lineno
-
-    while start > 0 and not lines[start - 1].strip():
-        start -= 1
-
-    del lines[start:end]
     return "".join(lines)
 
 
@@ -253,7 +167,12 @@ def _replace_method_body(
     body_indent = " " * method_node.body[0].col_offset
     first_body = method_node.body[0].lineno - 1
     last_body = method_node.end_lineno
-    replacement = f"{body_indent}{new_content.strip()}{newline}"
+    normalized = textwrap.dedent(new_content).strip("\r\n")
+    replacement = newline.join(
+        f"{body_indent}{line}" if line else ""
+        for line in normalized.splitlines()
+    )
+    replacement = f"{replacement}{newline}"
     lines[first_body:last_body] = [replacement]
     return "".join(lines)
 
@@ -261,7 +180,7 @@ def _replace_method_body(
 def _parse_command_call(
     source: str, method_name: str, class_name: str
 ) -> tuple[str, str, str, dict[str, object]] | None:
-    from chemunited_core.utils.internal_quantity import ChemUnitQuantity
+    from chemunited_quantities import ChemUnitQuantity
 
     line = _extract_method_first_expr(source, method_name, class_name)
     if not line:
@@ -382,6 +301,7 @@ class WorkflowGraph(GraphCore):
         self._nodes: dict[str, WorkflowNode] = {}
         self._connections: dict[tuple[str, str], WorkflowConnection] = {}
         self._selected_port: WorkflowAccessPoints | None = None
+        self._script_sync_rollbacks: set[str] = set()
 
         self._script_editor: ProcessScriptEditorWindow | None = None
         self._parameters_editor: MainParametersEditor | None = None
@@ -701,13 +621,28 @@ class WorkflowGraph(GraphCore):
 
         line_script = bytes(event.mimeData().data(CommandList.MIME)).decode("utf-8")
         scene_pos = self.mapToScene(event.pos())
+        if not self._add_command_block(scene_pos, line_script):
+            event.ignore()
+            return
+        event.acceptProposedAction()
+
+    def _add_command_block(self, scene_pos: QPointF, line_script: str) -> bool:
         block = self.controller.add_block(
             block_tag=ProtocolBlock.COMMAND,
             pos=(scene_pos.x(), scene_pos.y()),
         )
-        # stub already written by sync_script via _on_block_added; inject the command line
-        self._inject_to_script(block.node_id, line_script)
-        event.acceptProposedAction()
+        if self.controller.get_block(block.node_id) is None:
+            return False
+
+        if self._inject_to_script(block.node_id, line_script):
+            return True
+
+        self.controller.remove_block(block.node_id)
+        self._show_script_sync_error(
+            f"Could not add {block.node_id!r} because its command could not "
+            "be written to the process script."
+        )
+        return False
 
     def _build_add_menu(self, scene_pos: QPointF) -> RoundMenu:
         menu = RoundMenu(parent=self)
@@ -721,7 +656,11 @@ class WorkflowGraph(GraphCore):
             action = Action(self)
             action.setText(text)
             action.setIcon(icon)
-            action.triggered.connect(partial(self.add_block, block_tag, scene_pos))
+            action.triggered.connect(
+                lambda _checked=False, tag=block_tag, pos=QPointF(scene_pos): (
+                    self.add_block(tag, pos)
+                )
+            )
             menu.addAction(action)
         menu.addSeparator()
         open_process_parameters_action = Action(self)
@@ -1017,8 +956,16 @@ class WorkflowGraph(GraphCore):
             return
         self._add_node_from_block(block)
         self._sync_input_ports(name)
-        if block.method and not block.protected:
-            self.sync_script(block.method)
+        if block.method and not block.protected and not self._sync_process_script():
+            self._script_sync_rollbacks.add(name)
+            try:
+                self.controller.remove_block(name)
+            finally:
+                self._script_sync_rollbacks.discard(name)
+            self._show_script_sync_error(
+                f"Could not add {name!r} because the process script could not "
+                "be updated safely."
+            )
 
     def _on_block_updated(self, name: str):
         block = self.controller.get_block(name)
@@ -1047,9 +994,17 @@ class WorkflowGraph(GraphCore):
 
         if self._selected_port and self._selected_port.node is node:
             self._clear_selected_port()
-        if node.block_tag not in {ProtocolBlock.START, ProtocolBlock.END}:
-            self.sync_script(name, removed=True)
         self.scene_attribute.removeItem(node)
+        if name in self._script_sync_rollbacks:
+            return
+        if (
+            node.block_tag not in {ProtocolBlock.START, ProtocolBlock.END}
+            and not self._sync_process_script()
+        ):
+            self._show_script_sync_error(
+                f"Removed {name!r} from the graph, but the process script "
+                "could not be updated safely."
+            )
 
     def _on_connection_added(self, start: str, end: str):
         if (start, end) in self._connections:
@@ -1112,7 +1067,7 @@ class WorkflowGraph(GraphCore):
         self._clear_selected_port()
         self.controller.clear_workflow()
 
-    def sync_script(self, method_name: str, removed: bool = False) -> bool:
+    def _sync_process_script(self) -> bool:
         orchestrator = getattr(self.parent_ref, "orchestrator", None)
         working_dir = getattr(orchestrator, "working_dir", None)
         process_name = self.model.process
@@ -1120,28 +1075,50 @@ class WorkflowGraph(GraphCore):
             return False
 
         script_path = Path(working_dir) / "protocols" / f"{process_name}.py"
-        if not self._is_valid_script_file(script_path):
+        try:
+            synced = sync_process(Path(working_dir), process_name, self.model)
+        except Exception as exc:
+            logger.opt(exception=exc).error(
+                f"Could not synchronize process script for {process_name!r}."
+            )
             return False
 
-        class_name = process_class_name(process_name)
-        source = script_path.read_text(encoding="utf-8")
-        new_source = (
-            _remove_method(source, method_name, class_name)
-            if removed
-            else _add_method_stub(source, method_name, class_name)
-        )
-        if new_source == source:
+        if not synced:
+            logger.error(
+                f"Could not synchronize process script for {process_name!r}; "
+                "the existing file was left unchanged."
+            )
             return False
 
-        script_path.write_text(new_source, encoding="utf-8")
         if (
             self._script_editor is not None
             and self._script_editor.isVisible()
             and self._script_editor.editor.path == script_path
         ):
+            source = script_path.read_text(encoding="utf-8")
             self._script_editor.editor.clear_protected_zone()
-            self._script_editor.editor.setText(new_source)
+            self._script_editor.editor.setText(source)
         return True
+
+    def sync_script(self, method_name: str = "", removed: bool = False) -> bool:
+        """Synchronize the complete process file.
+
+        ``method_name`` and ``removed`` remain accepted for compatibility with
+        callers of the previous method-only writer.
+        """
+        return self._sync_process_script()
+
+    def _show_script_sync_error(self, message: str) -> None:
+        logger.error(message)
+        InfoBar.error(
+            title="Process script not updated",
+            content=message,
+            orient=Qt.Horizontal,
+            isClosable=True,
+            position=InfoBarPosition.TOP,
+            duration=5000,
+            parent=self,
+        )
 
     def _inject_to_script(self, method_name: str, content: str) -> bool:
         orchestrator = getattr(self.parent_ref, "orchestrator", None)
@@ -1182,8 +1159,9 @@ class WorkflowGraph(GraphCore):
             return
         class_name = process_class_name(process_name)
         source = script_path.read_text(encoding="utf-8")
+        command_body = f"{sig.line_script}\nreturn True"
         new_source = _replace_method_body(
-            source, method_name, class_name, sig.line_script
+            source, method_name, class_name, command_body
         )
         new_source = _format_python_source(new_source)
         if new_source == source:

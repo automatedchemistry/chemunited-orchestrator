@@ -8,7 +8,7 @@ from functools import partial
 from pathlib import Path
 from typing import Annotated, Any, get_args, get_origin
 
-from chemunited_core.utils import ChemQuantityValidator, ChemUnitQuantity
+from chemunited_quantities import ChemQuantityValidator, ChemUnitQuantity
 from loguru import logger
 from pydantic.config import JsonDict
 from pydantic.fields import FieldInfo

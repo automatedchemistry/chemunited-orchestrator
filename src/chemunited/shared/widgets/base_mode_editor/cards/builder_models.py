@@ -1,4 +1,4 @@
-from chemunited_core.utils.internal_quantity import ChemUnitQuantity
+from chemunited_quantities import ChemUnitQuantity
 from pydantic import BaseModel, Field, field_validator
 
 

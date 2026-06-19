@@ -4,7 +4,7 @@ from collections.abc import Callable
 from dataclasses import dataclass
 from math import isfinite
 
-from chemunited_core.utils import ChemUnitQuantity
+from chemunited_quantities import ChemUnitQuantity
 
 STANDARD_TEMPERATURE_K = 298.15
 STANDARD_PRESSURE_PA = 101325.0

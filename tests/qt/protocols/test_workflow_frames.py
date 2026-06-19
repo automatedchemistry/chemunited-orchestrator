@@ -6,7 +6,7 @@ from chemunited.elements.component.protocols.valves import (
 )
 from chemunited_core.protocols import CommandSignature
 from chemunited_workflow.enums import NodeState
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import QPointF, Qt
 from PyQt5.QtWidgets import QWidget
 from pytestqt.qtbot import QtBot
 
@@ -18,6 +18,7 @@ from chemunited.protocols.workflows.workflow_frames import (
 )
 from chemunited.shared.editor.protocols.command import CommandEditorDialog
 from chemunited.shared.enums import WindowCategory
+from chemunited.shared.enums.protocols_enum import ProtocolBlock
 
 
 class _WorkflowHost(QWidget):
@@ -349,6 +350,120 @@ def test_double_click_ignores_invalid_process_file(
     assert graph._script_editor is None
 
 
+def test_context_menu_actions_persist_complete_blocks(
+    tmp_path: Path,
+    qtbot: QtBot,
+) -> None:
+    workflow = ProcessWorkflow("React")
+    graph = _make_graph(working_dir=tmp_path, workflow=workflow, qtbot=qtbot)
+    menu = graph._build_add_menu(QPointF(120.0, 80.0))
+
+    for action in menu.actions()[:3]:
+        action.trigger()
+
+    process_file = tmp_path / "protocols" / "React.py"
+    source = process_file.read_text(encoding="utf-8")
+    expected = {
+        "script_1": ProtocolBlock.SCRIPT,
+        "loop_1": ProtocolBlock.LOOP,
+        "conditional_1": ProtocolBlock.IF,
+    }
+    for method_name, block_tag in expected.items():
+        block = workflow.get_block(method_name)
+        assert block is not None
+        assert block.block_tag == block_tag
+        assert block.ports_numbers == 1
+        assert method_name in graph._nodes
+        assert source.count(f"def {method_name}(") == 1
+        assert source.count(f"node_id={method_name!r},") == 1
+
+
+def test_context_menu_loop_creates_missing_process_file(
+    tmp_path: Path,
+    qtbot: QtBot,
+) -> None:
+    workflow = ProcessWorkflow("React")
+    graph = _make_graph(working_dir=tmp_path, workflow=workflow, qtbot=qtbot)
+
+    graph._build_add_menu(QPointF()).actions()[1].trigger()
+
+    process_file = tmp_path / "protocols" / "React.py"
+    source = process_file.read_text(encoding="utf-8")
+    assert workflow.get_block("loop_1") is not None
+    assert '"loop_1"' in source
+    assert "def loop_1(self, ctx: NodeExecutionContext) -> bool:" in source
+    assert (tmp_path / "protocols" / "__init__.py").is_file()
+
+
+def test_removing_block_synchronizes_graph_and_method(
+    tmp_path: Path,
+    qtbot: QtBot,
+) -> None:
+    workflow = ProcessWorkflow("React")
+    graph = _make_graph(working_dir=tmp_path, workflow=workflow, qtbot=qtbot)
+    graph._build_add_menu(QPointF()).actions()[1].trigger()
+
+    graph.controller.remove_block("loop_1")
+
+    source = (tmp_path / "protocols" / "React.py").read_text(encoding="utf-8")
+    assert workflow.get_block("loop_1") is None
+    assert "loop_1" not in graph._nodes
+    assert '"loop_1"' not in source
+    assert "def loop_1(" not in source
+
+
+def test_context_menu_add_rolls_back_when_process_file_is_invalid(
+    tmp_path: Path,
+    qtbot: QtBot,
+    monkeypatch,
+) -> None:
+    process_file = tmp_path / "protocols" / "React.py"
+    process_file.parent.mkdir(parents=True, exist_ok=True)
+    original = "def broken(:\n    pass\n"
+    process_file.write_text(original, encoding="utf-8")
+    workflow = ProcessWorkflow("React")
+    graph = _make_graph(working_dir=tmp_path, workflow=workflow, qtbot=qtbot)
+    errors: list[str] = []
+    monkeypatch.setattr(graph, "_show_script_sync_error", errors.append)
+
+    graph._build_add_menu(QPointF()).actions()[1].trigger()
+
+    assert workflow.get_block("loop_1") is None
+    assert "loop_1" not in graph._nodes
+    assert process_file.read_text(encoding="utf-8") == original
+    assert len(errors) == 1
+
+
+def test_command_injection_is_skipped_when_block_persistence_fails(
+    tmp_path: Path,
+    qtbot: QtBot,
+    monkeypatch,
+) -> None:
+    process_file = tmp_path / "protocols" / "React.py"
+    process_file.parent.mkdir(parents=True, exist_ok=True)
+    process_file.write_text("def broken(:\n", encoding="utf-8")
+    workflow = ProcessWorkflow("React")
+    graph = _make_graph(working_dir=tmp_path, workflow=workflow, qtbot=qtbot)
+    errors: list[str] = []
+    injected: list[tuple[str, str]] = []
+    monkeypatch.setattr(graph, "_show_script_sync_error", errors.append)
+    monkeypatch.setattr(
+        graph,
+        "_inject_to_script",
+        lambda method, content: injected.append((method, content)) or True,
+    )
+
+    added = graph._add_command_block(
+        QPointF(),
+        'self.platform["PumpA"].put("infuse")',
+    )
+
+    assert added is False
+    assert workflow.get_block("command_1") is None
+    assert injected == []
+    assert len(errors) == 1
+
+
 def test_command_block_reconstruction_uses_component_protocol_metadata(
     tmp_path: Path,
     qtbot: QtBot,
@@ -458,8 +573,11 @@ def test_update_command_script_formats_saved_protocol(
     )
 
     graph._update_command_script("command_1", command)
+    graph._update_command_script("command_1", command)
 
     source = process_file.read_text(encoding="utf-8")
     assert 'self.platform["PumpA"].put(' in source
     assert '            "infuse",' in source
     assert "wait_feedback_status=True," in source
+    assert source.count("return True") == 1
+    assert source.index('self.platform["PumpA"].put(') < source.index("return True")

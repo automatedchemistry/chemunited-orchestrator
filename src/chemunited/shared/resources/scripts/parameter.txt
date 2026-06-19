@@ -1,7 +1,7 @@
 # Script file of project parameter
 # Updated/Created on: ---DATA---
 # Project name: ---PROJECT_NAME---
-from chemunited_workflow.quantity import ChemQuantityValidator, ChemUnitQuantity
+from chemunited_quantities import ChemQuantityValidator, ChemUnitQuantity
 from pydantic import BaseModel, Field, ConfigDict
 from typing import Annotated
 
