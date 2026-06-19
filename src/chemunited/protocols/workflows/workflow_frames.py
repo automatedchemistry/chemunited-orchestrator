@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import ast
 import textwrap
+from dataclasses import dataclass
 from functools import partial
 from pathlib import Path
 from typing import override
@@ -37,6 +38,20 @@ from .elements.work_node import WorkflowNode
 from .exceptions import WorkflowRuleViolation
 from .process_workflow import BlockData, ConnectionData
 from .workflow_rules import resolve_render_start_role
+
+COMMAND_BLOCK_GUIDANCE = (
+    "# Keep this block limited to one platform command and `return True`."
+)
+LOOP_ITERATION_GUIDANCE = (
+    "# ctx.iteration identifies the current workflow pass. It starts at 0 and",
+    "# increases by 1 when a loopback starts another pass; it is not a local counter.",
+)
+
+
+@dataclass(frozen=True, slots=True)
+class CommandBlockValidationError:
+    line: int
+    reason: str
 
 
 def _format_python_source(source: str) -> str:
@@ -166,63 +181,230 @@ def _replace_method_body(
     newline = "\r\n" if "\r\n" in source else "\n"
     body_indent = " " * method_node.body[0].col_offset
     first_body = method_node.body[0].lineno - 1
+    if (
+        first_body > method_node.lineno
+        and lines[first_body - 1].strip() == COMMAND_BLOCK_GUIDANCE
+    ):
+        first_body -= 1
     last_body = method_node.end_lineno
     normalized = textwrap.dedent(new_content).strip("\r\n")
     replacement = newline.join(
-        f"{body_indent}{line}" if line else ""
-        for line in normalized.splitlines()
+        f"{body_indent}{line}" if line else "" for line in normalized.splitlines()
     )
     replacement = f"{replacement}{newline}"
     lines[first_body:last_body] = [replacement]
     return "".join(lines)
 
 
-def _parse_command_call(
-    source: str, method_name: str, class_name: str
-) -> tuple[str, str, str, dict[str, object]] | None:
+def _ensure_method_comment(
+    source: str,
+    method_name: str,
+    class_name: str,
+    comment_lines: tuple[str, ...],
+) -> str:
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return source
+    class_node = next(
+        (
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ClassDef) and node.name == class_name
+        ),
+        None,
+    )
+    if class_node is None:
+        return source
+    method_node = next(
+        (
+            node
+            for node in class_node.body
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and node.name == method_name
+        ),
+        None,
+    )
+    if method_node is None or not method_node.body:
+        return source
+
+    lines = source.splitlines(keepends=True)
+    method_source = "".join(
+        lines[method_node.lineno - 1 : method_node.end_lineno]
+    )
+    if all(comment in method_source for comment in comment_lines):
+        return source
+
+    newline = "\r\n" if "\r\n" in source else "\n"
+    indent = " " * method_node.body[0].col_offset
+    comment = "".join(f"{indent}{line}{newline}" for line in comment_lines)
+    lines.insert(method_node.body[0].lineno - 1, comment)
+    return "".join(lines)
+
+
+def _validate_command_block(source: str, method_name: str, class_name: str) -> tuple[
+    tuple[str, str, str, dict[str, object]] | None,
+    CommandBlockValidationError | None,
+]:
     from chemunited_quantities import ChemUnitQuantity
 
-    line = _extract_method_first_expr(source, method_name, class_name)
-    if not line:
-        return None
-
     try:
-        expr = ast.parse(line, mode="eval").body
-    except SyntaxError:
-        return None
-    if not isinstance(expr, ast.Call):
-        return None
-    func = expr.func
-    if not isinstance(func, ast.Attribute):
-        return None
-    http_method = func.attr.upper()
-    if http_method not in {"GET", "PUT"}:
-        return None
+        tree = ast.parse(source)
+    except SyntaxError as exc:
+        return None, CommandBlockValidationError(
+            exc.lineno or 1,
+            f"The process file is not valid Python: {exc.msg}.",
+        )
+
+    class_node = next(
+        (
+            node
+            for node in ast.walk(tree)
+            if isinstance(node, ast.ClassDef) and node.name == class_name
+        ),
+        None,
+    )
+    if class_node is None:
+        return None, CommandBlockValidationError(
+            1,
+            f"Class {class_name!r} was not found.",
+        )
+
+    method_node = next(
+        (
+            node
+            for node in class_node.body
+            if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+            and node.name == method_name
+        ),
+        None,
+    )
+    if method_node is None:
+        return None, CommandBlockValidationError(
+            class_node.lineno,
+            f"Method {method_name!r} was not found in {class_name!r}.",
+        )
+
+    body = method_node.body
+    expected_line = (method_node.end_lineno or method_node.lineno) + 1
+    if not body:
+        return None, CommandBlockValidationError(
+            expected_line,
+            "The command block is empty.",
+        )
+
+    command_statement = body[0]
+    if (
+        isinstance(command_statement, ast.Expr)
+        and isinstance(command_statement.value, ast.Constant)
+        and isinstance(command_statement.value.value, str)
+    ):
+        return None, CommandBlockValidationError(
+            command_statement.lineno,
+            "Docstrings are not allowed in command blocks; use a comment instead.",
+        )
+    if not (
+        isinstance(command_statement, ast.Expr)
+        and isinstance(command_statement.value, ast.Call)
+    ):
+        return None, CommandBlockValidationError(
+            command_statement.lineno,
+            "The first executable statement must be one platform command call.",
+        )
+
+    call = command_statement.value
+    func = call.func
+    if not (isinstance(func, ast.Attribute) and func.attr.lower() in {"get", "put"}):
+        return None, CommandBlockValidationError(
+            call.lineno,
+            'Call self.platform["component"].get(...) or .put(...).',
+        )
+
     subscript = func.value
     if not (
         isinstance(subscript, ast.Subscript)
+        and isinstance(subscript.value, ast.Attribute)
+        and isinstance(subscript.value.value, ast.Name)
+        and subscript.value.value.id == "self"
+        and subscript.value.attr == "platform"
         and isinstance(subscript.slice, ast.Constant)
+        and isinstance(subscript.slice.value, str)
+        and subscript.slice.value
     ):
-        return None
-    component_name: str = subscript.slice.value
-    if not expr.args or not isinstance(expr.args[0], ast.Constant):
-        return None
-    command_name: str = expr.args[0].value
+        return None, CommandBlockValidationError(
+            call.lineno,
+            'Use a literal component name: self.platform["component"].put(...).',
+        )
+
+    if (
+        len(call.args) != 1
+        or not isinstance(call.args[0], ast.Constant)
+        or not isinstance(call.args[0].value, str)
+        or not call.args[0].value
+    ):
+        return None, CommandBlockValidationError(
+            call.lineno,
+            "Pass exactly one literal command name as the positional argument.",
+        )
 
     eval_ns = {"ChemUnitQuantity": ChemUnitQuantity}
     kwargs: dict[str, object] = {}
-    for kw in expr.keywords:
-        if kw.arg is None:
-            continue
+    for keyword in call.keywords:
+        if keyword.arg is None:
+            return None, CommandBlockValidationError(
+                keyword.value.lineno,
+                "Expanded keyword arguments (**kwargs) are not supported.",
+            )
         try:
-            kwargs[kw.arg] = ast.literal_eval(kw.value)
+            kwargs[keyword.arg] = ast.literal_eval(keyword.value)
         except (ValueError, TypeError):
             try:
-                kwargs[kw.arg] = eval(ast.unparse(kw.value), eval_ns)
+                kwargs[keyword.arg] = eval(
+                    ast.unparse(keyword.value),
+                    eval_ns,
+                )
             except Exception:
-                pass
+                return None, CommandBlockValidationError(
+                    keyword.value.lineno,
+                    f"Argument {keyword.arg!r} must use a supported literal value.",
+                )
 
-    return component_name, command_name, http_method, kwargs
+    if len(body) == 1:
+        return None, CommandBlockValidationError(
+            expected_line,
+            "The command block must end with `return True`.",
+        )
+    if len(body) > 2:
+        return None, CommandBlockValidationError(
+            body[1].lineno,
+            "Command blocks must contain exactly one platform call followed by "
+            "`return True`; remove all additional executable statements.",
+        )
+
+    final_statement = body[1]
+    if not (
+        isinstance(final_statement, ast.Return)
+        and isinstance(final_statement.value, ast.Constant)
+        and final_statement.value.value is True
+    ):
+        return None, CommandBlockValidationError(
+            final_statement.lineno,
+            "The final statement must be exactly `return True`.",
+        )
+
+    return (
+        subscript.slice.value,
+        call.args[0].value,
+        func.attr.upper(),
+        kwargs,
+    ), None
+
+
+def _parse_command_call(
+    source: str, method_name: str, class_name: str
+) -> tuple[str, str, str, dict[str, object]] | None:
+    parsed, _error = _validate_command_block(source, method_name, class_name)
+    return parsed
 
 
 def _build_command_model(
@@ -390,9 +572,21 @@ class WorkflowGraph(GraphCore):
         if tag == ProtocolBlock.COMMAND:
             class_name = process_class_name(data.process)
             source = script_path.read_text(encoding="utf-8")
-            parsed_command = _parse_command_call(source, data.method, class_name)
+            parsed_command, validation_error = _validate_command_block(
+                source,
+                data.method,
+                class_name,
+            )
             if parsed_command is None:
-                logger.warning(f"Could not parse command block {data.method!r}")
+                self._show_command_format_error(
+                    data.method,
+                    script_path,
+                    validation_error
+                    or CommandBlockValidationError(
+                        1,
+                        "The command block could not be parsed.",
+                    ),
+                )
                 return
             component_name, command_name, http_method, _kwargs = parsed_command
             command = _build_command_model(
@@ -406,8 +600,20 @@ class WorkflowGraph(GraphCore):
                 ),
             )
             if command is None:
-                logger.warning(
-                    f"Could not reconstruct command for block {data.method!r}"
+                command_line = self._command_call_line(
+                    source,
+                    data.method,
+                    class_name,
+                )
+                self._show_command_editor_error(
+                    title="Cannot open command editor",
+                    message=(
+                        f"Command block {data.method!r} has valid syntax, but "
+                        f"{component_name!r}/{http_method} {command_name!r} could "
+                        "not be matched to an available component command.\n"
+                        f"File: {script_path.resolve()}\n"
+                        f"Line: {command_line}"
+                    ),
                 )
                 return
             editor = CommandEditorDialog(
@@ -500,8 +706,7 @@ class WorkflowGraph(GraphCore):
 
         for candidate in commands.values():
             if not (
-                isinstance(candidate, type)
-                and issubclass(candidate, CommandSignature)
+                isinstance(candidate, type) and issubclass(candidate, CommandSignature)
             ):
                 continue
             command_field = candidate.model_fields.get("command")
@@ -769,11 +974,7 @@ class WorkflowGraph(GraphCore):
         }
         title, subtitle = labels[block_tag]
         if block_tag not in {ProtocolBlock.START, ProtocolBlock.END}:
-            title = (
-                name
-                if block.label == name
-                else f"{block.label} ({name})"
-            )
+            title = name if block.label == name else f"{block.label} ({name})"
         return title, subtitle
 
     def _add_node_from_block(self, block: BlockData) -> WorkflowNode:
@@ -956,7 +1157,12 @@ class WorkflowGraph(GraphCore):
             return
         self._add_node_from_block(block)
         self._sync_input_ports(name)
-        if block.method and not block.protected and not self._sync_process_script():
+        if block.method and not block.protected:
+            synced = self._sync_process_script()
+            if synced and block.block_tag == ProtocolBlock.LOOP:
+                synced = self._ensure_loop_iteration_guidance(block.method)
+            if synced:
+                return
             self._script_sync_rollbacks.add(name)
             try:
                 self.controller.remove_block(name)
@@ -1100,6 +1306,37 @@ class WorkflowGraph(GraphCore):
             self._script_editor.editor.setText(source)
         return True
 
+    def _ensure_loop_iteration_guidance(self, method_name: str) -> bool:
+        orchestrator = getattr(self.parent_ref, "orchestrator", None)
+        working_dir = getattr(orchestrator, "working_dir", None)
+        process_name = self.model.process
+        if not working_dir or not process_name:
+            return False
+
+        script_path = Path(working_dir) / "protocols" / f"{process_name}.py"
+        if not self._is_valid_script_file(script_path):
+            return False
+
+        source = script_path.read_text(encoding="utf-8")
+        updated = _ensure_method_comment(
+            source,
+            method_name,
+            process_class_name(process_name),
+            LOOP_ITERATION_GUIDANCE,
+        )
+        if updated == source:
+            return all(comment in source for comment in LOOP_ITERATION_GUIDANCE)
+
+        script_path.write_text(updated, encoding="utf-8")
+        if (
+            self._script_editor is not None
+            and self._script_editor.isVisible()
+            and self._script_editor.editor.path == script_path
+        ):
+            self._script_editor.editor.clear_protected_zone()
+            self._script_editor.editor.setText(updated)
+        return True
+
     def sync_script(self, method_name: str = "", removed: bool = False) -> bool:
         """Synchronize the complete process file.
 
@@ -1120,6 +1357,72 @@ class WorkflowGraph(GraphCore):
             parent=self,
         )
 
+    @staticmethod
+    def _command_call_line(source: str, method_name: str, class_name: str) -> int:
+        try:
+            tree = ast.parse(source)
+        except SyntaxError as exc:
+            return exc.lineno or 1
+        class_node = next(
+            (
+                node
+                for node in ast.walk(tree)
+                if isinstance(node, ast.ClassDef) and node.name == class_name
+            ),
+            None,
+        )
+        if class_node is None:
+            return 1
+        method_node = next(
+            (
+                node
+                for node in class_node.body
+                if isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef))
+                and node.name == method_name
+            ),
+            None,
+        )
+        if method_node is None or not method_node.body:
+            return class_node.lineno
+        return method_node.body[0].lineno
+
+    @staticmethod
+    def _command_block_example(method_name: str) -> str:
+        return (
+            f"def {method_name}(self, ctx: NodeExecutionContext) -> bool:\n"
+            f"    {COMMAND_BLOCK_GUIDANCE}\n"
+            '    self.platform["component"].put("command", ...)\n'
+            "    return True"
+        )
+
+    def _show_command_editor_error(self, title: str, message: str) -> None:
+        logger.warning(message)
+        InfoBar.error(
+            title=title,
+            content=message,
+            orient=Qt.Horizontal,
+            isClosable=True,
+            position=InfoBarPosition.TOP,
+            duration=10000,
+            parent=self,
+        )
+
+    def _show_command_format_error(
+        self,
+        method_name: str,
+        script_path: Path,
+        error: CommandBlockValidationError,
+    ) -> None:
+        message = (
+            f"Command block {method_name!r} does not match the required format.\n"
+            f"File: {script_path.resolve()}\n"
+            f"Line: {error.line}\n"
+            f"Reason: {error.reason}\n\n"
+            "Expected format:\n"
+            f"{self._command_block_example(method_name)}"
+        )
+        self._show_command_editor_error("Invalid command block", message)
+
     def _inject_to_script(self, method_name: str, content: str) -> bool:
         orchestrator = getattr(self.parent_ref, "orchestrator", None)
         working_dir = getattr(orchestrator, "working_dir", None)
@@ -1133,9 +1436,26 @@ class WorkflowGraph(GraphCore):
 
         class_name = process_class_name(process_name)
         source = script_path.read_text(encoding="utf-8")
-        new_source = _add_content_to_method(source, method_name, class_name, content)
+        command_body = f"{COMMAND_BLOCK_GUIDANCE}\n{content}\nreturn True"
+        new_source = _replace_method_body(
+            source,
+            method_name,
+            class_name,
+            command_body,
+        )
         new_source = _format_python_source(new_source)
         if new_source == source:
+            return False
+        parsed, validation_error = _validate_command_block(
+            new_source,
+            method_name,
+            class_name,
+        )
+        if parsed is None:
+            logger.warning(
+                f"Refused to write invalid command block {method_name!r}: "
+                f"{validation_error}"
+            )
             return False
 
         script_path.write_text(new_source, encoding="utf-8")
@@ -1159,12 +1479,21 @@ class WorkflowGraph(GraphCore):
             return
         class_name = process_class_name(process_name)
         source = script_path.read_text(encoding="utf-8")
-        command_body = f"{sig.line_script}\nreturn True"
-        new_source = _replace_method_body(
-            source, method_name, class_name, command_body
-        )
+        command_body = f"{COMMAND_BLOCK_GUIDANCE}\n{sig.line_script}\nreturn True"
+        new_source = _replace_method_body(source, method_name, class_name, command_body)
         new_source = _format_python_source(new_source)
         if new_source == source:
+            return
+        parsed, validation_error = _validate_command_block(
+            new_source,
+            method_name,
+            class_name,
+        )
+        if parsed is None:
+            logger.warning(
+                f"Refused to save invalid command block {method_name!r}: "
+                f"{validation_error}"
+            )
             return
         script_path.write_text(new_source, encoding="utf-8")
         if (

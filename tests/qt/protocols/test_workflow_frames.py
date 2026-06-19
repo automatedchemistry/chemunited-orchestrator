@@ -13,8 +13,11 @@ from pytestqt.qtbot import QtBot
 from chemunited.protocols.workflows.controller import WorkflowController
 from chemunited.protocols.workflows.process_workflow import ProcessWorkflow
 from chemunited.protocols.workflows.workflow_frames import (
+    COMMAND_BLOCK_GUIDANCE,
+    LOOP_ITERATION_GUIDANCE,
     WorkflowGraph,
     _build_command_model,
+    _validate_command_block,
 )
 from chemunited.shared.editor.protocols.command import CommandEditorDialog
 from chemunited.shared.enums import WindowCategory
@@ -96,17 +99,19 @@ def test_workflow_graph_sets_node_status_and_clears_progress(
 
 
 def test_command_editor_dialog_is_form_only(qtbot: QtBot) -> None:
-    command = ThreePortTwoPositionValveProtocols("ValveA").commands[
-        "position"
-    ].model_validate(
-        {
-            "component": "ValveA",
-            "command": "position",
-            "method": "PUT",
-            "wait_time": 1.25,
-            "wait_feedback_status": True,
-            "connect": "[[0, 1]]",
-        }
+    command = (
+        ThreePortTwoPositionValveProtocols("ValveA")
+        .commands["position"]
+        .model_validate(
+            {
+                "component": "ValveA",
+                "command": "position",
+                "method": "PUT",
+                "wait_time": 1.25,
+                "wait_feedback_status": True,
+                "connect": "[[0, 1]]",
+            }
+        )
     )
     dialog = CommandEditorDialog(
         function_name="command_1",
@@ -129,17 +134,19 @@ def test_command_editor_dialog_is_form_only(qtbot: QtBot) -> None:
 
 
 def test_command_editor_dialog_saves_execution_fields(qtbot: QtBot) -> None:
-    command = ThreePortTwoPositionValveProtocols("ValveA").commands[
-        "position"
-    ].model_validate(
-        {
-            "component": "ValveA",
-            "command": "position",
-            "method": "PUT",
-            "wait_time": 0.0,
-            "wait_feedback_status": False,
-            "connect": "[[0, 1]]",
-        }
+    command = (
+        ThreePortTwoPositionValveProtocols("ValveA")
+        .commands["position"]
+        .model_validate(
+            {
+                "component": "ValveA",
+                "command": "position",
+                "method": "PUT",
+                "wait_time": 0.0,
+                "wait_feedback_status": False,
+                "connect": "[[0, 1]]",
+            }
+        )
     )
     dialog = CommandEditorDialog(
         function_name="command_1",
@@ -392,7 +399,41 @@ def test_context_menu_loop_creates_missing_process_file(
     assert workflow.get_block("loop_1") is not None
     assert '"loop_1"' in source
     assert "def loop_1(self, ctx: NodeExecutionContext) -> bool:" in source
+    for comment in LOOP_ITERATION_GUIDANCE:
+        assert source.count(comment) == 1
     assert (tmp_path / "protocols" / "__init__.py").is_file()
+
+
+def test_loop_iteration_guidance_survives_repeated_sync(
+    tmp_path: Path,
+    qtbot: QtBot,
+) -> None:
+    workflow = ProcessWorkflow("React")
+    graph = _make_graph(working_dir=tmp_path, workflow=workflow, qtbot=qtbot)
+
+    graph._build_add_menu(QPointF()).actions()[1].trigger()
+    assert graph.sync_script() is True
+    assert graph.sync_script() is True
+
+    source = (tmp_path / "protocols" / "React.py").read_text(encoding="utf-8")
+    for comment in LOOP_ITERATION_GUIDANCE:
+        assert source.count(comment) == 1
+
+
+def test_iteration_guidance_is_only_added_to_loop_blocks(
+    tmp_path: Path,
+    qtbot: QtBot,
+) -> None:
+    workflow = ProcessWorkflow("React")
+    graph = _make_graph(working_dir=tmp_path, workflow=workflow, qtbot=qtbot)
+
+    menu = graph._build_add_menu(QPointF())
+    menu.actions()[0].trigger()
+    menu.actions()[2].trigger()
+
+    source = (tmp_path / "protocols" / "React.py").read_text(encoding="utf-8")
+    for comment in LOOP_ITERATION_GUIDANCE:
+        assert comment not in source
 
 
 def test_removing_block_synchronizes_graph_and_method(
@@ -487,7 +528,7 @@ def test_command_block_reconstruction_uses_component_protocol_metadata(
     source = """
 class CustomProcess:
     def command_1(self, ctx: NodeExecutionContext) -> bool:
-        platform["ValveA"].put("position", connect="[[0, 1]]")
+        self.platform["ValveA"].put("position", connect="[[0, 1]]")
         return True
 """
     command = _build_command_model(
@@ -579,5 +620,145 @@ def test_update_command_script_formats_saved_protocol(
     assert 'self.platform["PumpA"].put(' in source
     assert '            "infuse",' in source
     assert "wait_feedback_status=True," in source
-    assert source.count("return True") == 1
-    assert source.index('self.platform["PumpA"].put(') < source.index("return True")
+    assert source.count("\n        return True\n") == 1
+    assert source.count(COMMAND_BLOCK_GUIDANCE) == 1
+    assert source.index('self.platform["PumpA"].put(') < source.index(
+        "\n        return True"
+    )
+
+
+def test_new_command_block_replaces_generated_status_stub(
+    tmp_path: Path,
+    qtbot: QtBot,
+) -> None:
+    workflow = ProcessWorkflow("React")
+    graph = _make_graph(working_dir=tmp_path, workflow=workflow, qtbot=qtbot)
+
+    added = graph._add_command_block(
+        QPointF(),
+        'self.platform["PumpA"].put("infuse")',
+    )
+
+    assert added is True
+    source = (tmp_path / "protocols" / "React.py").read_text(encoding="utf-8")
+    assert 'ctx.runtime.status_message = "Command 1 ran."' not in source
+    assert source.count(COMMAND_BLOCK_GUIDANCE) == 1
+    assert 'self.platform["PumpA"].put("infuse")' in source
+    assert source.index('self.platform["PumpA"].put("infuse")') < source.index(
+        "\n        return True",
+        source.index("def command_1"),
+    )
+
+
+def test_command_block_validation_accepts_comments_get_and_put() -> None:
+    for command_call, expected_method in (
+        ('self.platform["PumpA"].put("infuse", wait_time=0.0)', "PUT"),
+        ('self.platform["PumpA"].get("status")', "GET"),
+    ):
+        source = f"""
+class CustomProcess:
+    def command_1(self, ctx):
+        # User comments are safe here.
+        {command_call}
+        return True
+"""
+
+        parsed, error = _validate_command_block(
+            source,
+            "command_1",
+            "CustomProcess",
+        )
+
+        assert error is None
+        assert parsed is not None
+        assert parsed[2] == expected_method
+
+
+def test_command_block_validation_rejects_noncanonical_bodies() -> None:
+    invalid_bodies = (
+        (
+            'ctx.runtime.status_message = "Running"\n'
+            '        self.platform["PumpA"].put("infuse")\n'
+            "        return True",
+            "first executable statement",
+        ),
+        (
+            '"Command docstring"\n'
+            '        self.platform["PumpA"].put("infuse")\n'
+            "        return True",
+            "Docstrings are not allowed",
+        ),
+        (
+            'self.platform["PumpA"].put("infuse")\n'
+            '        self.platform["PumpA"].get("status")\n'
+            "        return True",
+            "exactly one platform call",
+        ),
+        ('self.platform["PumpA"].put("infuse")', "must end with `return True`"),
+        (
+            'self.platform[component].put("infuse")\n        return True',
+            "literal component name",
+        ),
+        (
+            'self.platform["PumpA"].post("infuse")\n        return True',
+            ".get(...) or .put(...)",
+        ),
+    )
+
+    for body, expected_reason in invalid_bodies:
+        source = f"""
+class CustomProcess:
+    def command_1(self, ctx):
+        {body}
+"""
+        parsed, error = _validate_command_block(
+            source,
+            "command_1",
+            "CustomProcess",
+        )
+
+        assert parsed is None
+        assert error is not None
+        assert expected_reason in error.reason
+        assert error.line >= 3
+
+
+def test_invalid_command_block_shows_actionable_location(
+    tmp_path: Path,
+    qtbot: QtBot,
+    monkeypatch,
+) -> None:
+    process_file = tmp_path / "protocols" / "React.py"
+    process_file.parent.mkdir(parents=True, exist_ok=True)
+    process_file.write_text(
+        "class CustomProcess:\n"
+        "    def command_1(self, ctx):\n"
+        '        ctx.runtime.status_message = "Running"\n'
+        '        self.platform["PumpA"].put("infuse")\n'
+        "        return True\n",
+        encoding="utf-8",
+    )
+    workflow = ProcessWorkflow("React")
+    workflow.add_block(
+        node_id="command_1",
+        method="command_1",
+        block_tag=ProtocolBlock.COMMAND,
+    )
+    graph = _make_graph(working_dir=tmp_path, workflow=workflow, qtbot=qtbot)
+    shown: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        graph,
+        "_show_command_editor_error",
+        lambda title, message: shown.append((title, message)),
+    )
+
+    graph._handle_node_double_click(graph._nodes["command_1"])
+
+    assert len(shown) == 1
+    title, message = shown[0]
+    assert title == "Invalid command block"
+    assert str(process_file.resolve()) in message
+    assert "Line: 3" in message
+    assert "first executable statement" in message
+    assert "Expected format:" in message
+    assert 'self.platform["component"].put("command", ...)' in message
