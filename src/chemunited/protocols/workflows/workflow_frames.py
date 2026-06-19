@@ -242,8 +242,39 @@ def _ensure_method_comment(
     return "".join(lines)
 
 
+def _is_config_ref(node: ast.expr) -> str | None:
+    """Return 'self.config.X' or 'self.main_parameters.X' if the node matches, else None."""
+    if (
+        isinstance(node, ast.Attribute)
+        and isinstance(node.value, ast.Attribute)
+        and isinstance(node.value.value, ast.Name)
+        and node.value.value.id == "self"
+        and node.value.attr in {"config", "main_parameters"}
+    ):
+        return f"self.{node.value.attr}.{node.attr}"
+    return None
+
+
+def _extract_model_fields(source: str, class_name: str) -> list[str]:
+    """Return annotated field names of a Pydantic model class in source via AST (no import)."""
+    try:
+        tree = ast.parse(source)
+    except SyntaxError:
+        return []
+    for node in ast.walk(tree):
+        if isinstance(node, ast.ClassDef) and node.name == class_name:
+            return [
+                item.target.id
+                for item in node.body
+                if isinstance(item, ast.AnnAssign)
+                and isinstance(item.target, ast.Name)
+                and item.target.id != "model_config"
+            ]
+    return []
+
+
 def _validate_command_block(source: str, method_name: str, class_name: str) -> tuple[
-    tuple[str, str, str, dict[str, object]] | None,
+    tuple[str, str, str, dict[str, object], dict[str, str]] | None,
     CommandBlockValidationError | None,
 ]:
     from chemunited_quantities import ChemUnitQuantity
@@ -349,12 +380,17 @@ def _validate_command_block(source: str, method_name: str, class_name: str) -> t
 
     eval_ns = {"ChemUnitQuantity": ChemUnitQuantity}
     kwargs: dict[str, object] = {}
+    param_refs: dict[str, str] = {}
     for keyword in call.keywords:
         if keyword.arg is None:
             return None, CommandBlockValidationError(
                 keyword.value.lineno,
                 "Expanded keyword arguments (**kwargs) are not supported.",
             )
+        ref = _is_config_ref(keyword.value)
+        if ref is not None:
+            param_refs[keyword.arg] = ref
+            continue
         try:
             kwargs[keyword.arg] = ast.literal_eval(keyword.value)
         except (ValueError, TypeError):
@@ -397,12 +433,13 @@ def _validate_command_block(source: str, method_name: str, class_name: str) -> t
         call.args[0].value,
         func.attr.upper(),
         kwargs,
+        param_refs,
     ), None
 
 
 def _parse_command_call(
     source: str, method_name: str, class_name: str
-) -> tuple[str, str, str, dict[str, object]] | None:
+) -> tuple[str, str, str, dict[str, object], dict[str, str]] | None:
     parsed, _error = _validate_command_block(source, method_name, class_name)
     return parsed
 
@@ -417,7 +454,7 @@ def _build_command_model(
     parsed = _parse_command_call(source, method_name, class_name)
     if parsed is None:
         return None
-    component_name, command_name, http_method, kwargs = parsed
+    component_name, command_name, http_method, kwargs, param_refs = parsed
 
     def _find_sig_class(cmd: str, method: str, base=CommandSignature):
         matches: list[type[CommandSignature]] = []
@@ -443,7 +480,10 @@ def _build_command_model(
         return None
 
     try:
-        return sig_cls.model_validate({"component": component_name, **kwargs})
+        instance = sig_cls.model_validate({"component": component_name, **kwargs})
+        if param_refs:
+            instance.param_refs = param_refs
+        return instance
     except Exception:
         logger.warning(
             f"Could not instantiate {sig_cls.__name__} for command {command_name!r}"
@@ -588,7 +628,7 @@ class WorkflowGraph(GraphCore):
                     ),
                 )
                 return
-            component_name, command_name, http_method, _kwargs = parsed_command
+            component_name, command_name, http_method, _kwargs, _param_refs = parsed_command
             command = _build_command_model(
                 source,
                 data.method,
@@ -616,11 +656,20 @@ class WorkflowGraph(GraphCore):
                     ),
                 )
                 return
+            config_fields = _extract_model_fields(source, "ProcessConfig")
+            mp_path = script_path.parent / "main_parameters.py"
+            main_params_fields = (
+                _extract_model_fields(mp_path.read_text(encoding="utf-8"), "MainParameter")
+                if mp_path.exists()
+                else []
+            )
             editor = CommandEditorDialog(
                 function_name=data.method or "",
                 command_model=command,
                 label=data.label,
                 description=data.description,
+                config_fields=config_fields,
+                main_params_fields=main_params_fields,
                 parent=self,
             )
             editor.metadata_saved.connect(self._update_block_metadata)

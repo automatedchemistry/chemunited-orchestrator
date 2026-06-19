@@ -5,10 +5,11 @@ from typing import Mapping
 from chemunited_core.protocols import CommandSignature
 from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
-from qfluentwidgets import PrimaryPushButton, PushButton, isDarkTheme
+from qfluentwidgets import PrimaryPushButton, PushButton, SmoothScrollArea, isDarkTheme
 from qframelesswindow import FramelessDialog
 
 from chemunited.shared.editor.protocols.node_metadata import NodeMetadataEditor
+from chemunited.shared.editor.protocols.param_ref_card import ParamRefCard
 from chemunited.shared.widgets.base_mode_editor import BaseModeEditorWidget
 
 QT_ALIGN_LEFT = getattr(Qt, "AlignLeft")
@@ -18,7 +19,8 @@ _HIDDEN_COMMAND_FIELDS = {
     "command",
     "method",
     "description",
-    "id"
+    "id",
+    "param_refs",
 }
 
 
@@ -32,6 +34,8 @@ class CommandEditorDialog(FramelessDialog):
         command_model: CommandSignature,
         label: str = "",
         description: str = "",
+        config_fields: list[str] | None = None,
+        main_params_fields: list[str] | None = None,
         parent=None,
     ):
         super().__init__(parent)
@@ -54,6 +58,7 @@ class CommandEditorDialog(FramelessDialog):
             parent=self,
         )
         self._strip_editor_footer()
+        self._setup_param_refs(command_model, config_fields or [], main_params_fields or [])
         self.custom_signal()
 
         self.setObjectName("commandEditorDialog")
@@ -73,6 +78,44 @@ class CommandEditorDialog(FramelessDialog):
         layout.addWidget(self._editor, stretch=1)
         layout.addWidget(self.node_metadata_editor)
         layout.addLayout(self._build_footer())
+
+    def _setup_param_refs(
+        self,
+        command_model: CommandSignature,
+        config_fields: list[str],
+        main_params_fields: list[str],
+    ) -> None:
+        if not config_fields and not main_params_fields:
+            return
+
+        options: list[tuple[str, str]] = [
+            (f"self.config.{f}", f"self.config.{f}") for f in config_fields
+        ] + [
+            (f"self.main_parameters.{f}", f"self.main_parameters.{f}")
+            for f in main_params_fields
+        ]
+
+        base_fields = set(CommandSignature.model_fields)
+
+        scroll_area = self._editor.layout().itemAt(0).widget()
+        if not isinstance(scroll_area, SmoothScrollArea):
+            return
+        scroll_content = scroll_area.widget()
+        cards_layout = scroll_content.layout()
+
+        for name, card in list(self._editor.cards.items()):
+            if name in base_fields or card.isHidden():
+                continue
+            idx = cards_layout.indexOf(card)
+            cards_layout.removeWidget(card)
+            ref_card = ParamRefCard(name=name, wrapped_card=card, parent=scroll_content)
+            ref_card.enable_reference_mode(options)
+            cards_layout.insertWidget(idx, ref_card)
+            self._editor.cards[name] = ref_card
+
+        for name, ref in (command_model.param_refs or {}).items():
+            if name in self._editor.cards:
+                self._editor.cards[name].set_reference(ref)
 
     def custom_signal(self) -> None:
         cards = self._editor.cards
@@ -218,6 +261,13 @@ class CommandEditorDialog(FramelessDialog):
         instance = self._base_instance()
         if instance is None:
             return
+
+        param_refs = {
+            name: card.active_reference
+            for name, card in self._editor.cards.items()
+            if getattr(card, "active_reference", None) is not None
+        }
+        instance = instance.model_copy(update={"param_refs": param_refs})
 
         self._result_instance = instance
         label, description = self.node_metadata_editor.values()
