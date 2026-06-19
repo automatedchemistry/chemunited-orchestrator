@@ -15,8 +15,9 @@ from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefinedType
 from PyQt5.QtCore import QIODevice, QSaveFile
 from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QFrame, QHBoxLayout, QMainWindow, QWidget
+from PyQt5.QtWidgets import QFrame, QHBoxLayout, QMainWindow, QVBoxLayout, QWidget
 from qfluentwidgets import (
+    CheckBox,
     FluentIcon,
     InfoBar,
     InfoBarPosition,
@@ -232,6 +233,7 @@ class MainParametersEditor(QMainWindow):
         super().__init__(parent)
         self._path = path
         self._class_name = class_name
+        self._frozen: bool = False
 
         self.setWindowTitle(f"Parameters Editor - {path.name} - {class_name}")
         self.setWindowIcon(QIcon(OrchestratorIcon.CHEMUNITED.path()))
@@ -260,11 +262,31 @@ class MainParametersEditor(QMainWindow):
         central = QWidget(self)
         self.setCentralWidget(central)
 
-        layout = QHBoxLayout(central)
+        outer = QVBoxLayout(central)
+        outer.setContentsMargins(0, 0, 0, 0)
+        outer.setSpacing(0)
+
+        toggle_bar = QWidget(central)
+        toggle_layout = QHBoxLayout(toggle_bar)
+        toggle_layout.setContentsMargins(12, 6, 12, 6)
+        self._frozen_toggle = CheckBox("Lock parameters (prevent changes during run)", toggle_bar)
+        self._frozen_toggle.setToolTip(
+            "When enabled, parameters are protected and cannot be changed while\n"
+            "a workflow is running. This helps ensure repeatable results.\n"
+            "Disable if you need to update parameters between runs."
+        )
+        self._frozen_toggle.stateChanged.connect(self._on_frozen_toggled)
+        toggle_layout.addWidget(self._frozen_toggle)
+        toggle_layout.addStretch()
+        outer.addWidget(toggle_bar)
+
+        content = QWidget(central)
+        layout = QHBoxLayout(content)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         layout.addWidget(self.param_list, stretch=1)
         layout.addWidget(self.navigationInterface)
+        outer.addWidget(content, stretch=1)
 
         self.param_list.setFrameShape(QFrame.NoFrame)
 
@@ -353,6 +375,12 @@ class MainParametersEditor(QMainWindow):
         base_class_name = model_class.__bases__[0].__name__
         self.param_list.set_base_class_name(base_class_name)
 
+        frozen = bool(getattr(model_class, "model_config", {}).get("frozen", False))
+        self._frozen = frozen
+        self._frozen_toggle.blockSignals(True)
+        self._frozen_toggle.setChecked(frozen)
+        self._frozen_toggle.blockSignals(False)
+
         with self.param_list.suspend_writes():
             self.param_list.clear_all()
             for field_name, field_info in model_class.model_fields.items():
@@ -360,18 +388,44 @@ class MainParametersEditor(QMainWindow):
                 if mode is not None:
                     self.param_list.add_card(mode)
 
+    def _on_frozen_toggled(self, state: int) -> None:
+        self._frozen = bool(state)
+        source = self.param_list.build_source()
+        if source:
+            self._write_to_file(source)
+
     def _add_card(self, mode: BasicVariableBuildMode) -> None:
         self.param_list.add_card(copy.deepcopy(mode))
 
     def _on_user_change(self, class_source: str) -> None:
         self._write_to_file(class_source)
 
+    def _ensure_configdict_import(self, text: str) -> str:
+        """Add ConfigDict to the pydantic import line if it is missing."""
+        try:
+            tree = ast.parse(text)
+        except SyntaxError:
+            return text
+        lines = text.splitlines(keepends=True)
+        for node in tree.body:
+            if not (isinstance(node, ast.ImportFrom) and node.module == "pydantic"):
+                continue
+            existing = [alias.name for alias in node.names]
+            if "ConfigDict" in existing:
+                return text
+            sorted_names = sorted(existing + ["ConfigDict"])
+            new_import = f"from pydantic import {', '.join(sorted_names)}\n"
+            new_lines = lines[: node.lineno - 1] + [new_import] + lines[node.end_lineno :]
+            return "".join(new_lines)
+        return text
+
     def _write_to_file(self, class_source: str) -> None:
         """Splice the rendered class definition back into the original file."""
         try:
             original = self._path.read_text(encoding="utf-8")
-            tree = ast.parse(original)
-            lines = original.splitlines(keepends=True)
+            text = self._ensure_configdict_import(original)
+            tree = ast.parse(text)
+            lines = text.splitlines(keepends=True)
 
             for node in tree.body:
                 if not isinstance(node, ast.ClassDef) or node.name != self._class_name:
@@ -384,6 +438,11 @@ class MainParametersEditor(QMainWindow):
                 for item in sorted(node.body, key=lambda child: child.lineno):
                     if isinstance(item, ast.AnnAssign):
                         continue
+                    if isinstance(item, ast.Assign) and any(
+                        isinstance(t, ast.Name) and t.id == "model_config"
+                        for t in item.targets
+                    ):
+                        continue
 
                     decorators = getattr(item, "decorator_list", [])
                     item_start = (
@@ -394,11 +453,11 @@ class MainParametersEditor(QMainWindow):
                     if segment:
                         preserved.append(segment)
 
+                config_line = f"    model_config = ConfigDict(frozen={self._frozen})"
+                all_preserved = [config_line] + preserved
+
                 new_class = class_source.rstrip("\n")
-                if preserved:
-                    new_class += "\n\n" + "\n\n".join(preserved) + "\n"
-                else:
-                    new_class += "\n"
+                new_class += "\n\n" + "\n\n".join(all_preserved) + "\n"
 
                 new_text = "".join(lines[:start]) + new_class + "".join(lines[end:])
                 self._write_to_file_raw(new_text)
