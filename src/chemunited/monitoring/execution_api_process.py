@@ -7,7 +7,7 @@ from typing import Any
 
 import requests
 from chemunited_workflow.api.schemas import RunRequest
-from loguru import logger
+from loguru import logger as _logger
 from pydantic import (
     AnyHttpUrl,
     BaseModel,
@@ -19,8 +19,11 @@ from PyQt5.QtCore import QObject, QProcess, QTimer, QUrl, pyqtSignal
 from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkRequest
 from qfluentwidgets import TextBrowser
 
+from chemunited.shared.enums import WindowCategory
 from chemunited.shared.widgets.base_mode_editor.dialog import BaseModeDialog
 from chemunited.utils.flowchem_listener import access_url
+
+logger = _logger.bind(window=WindowCategory.EXECUTION)
 
 DEFAULT_API_PORT = 3116
 BASE_URL = f"http://localhost:{DEFAULT_API_PORT}"
@@ -165,6 +168,7 @@ class RunRequestDialog(BaseModeDialog):
 class ApiProcess(QObject):
     api_alive = pyqtSignal(bool)
     project_load_conflict = pyqtSignal(object)
+    process_log_received = pyqtSignal(str, str)  # (text, source: "stdout"|"stderr")
 
     def __init__(self, working_dir: Path, log_browser: TextBrowser, parent=None):
         super().__init__(parent)
@@ -183,6 +187,8 @@ class ApiProcess(QObject):
         self._process.readyReadStandardOutput.connect(self._on_stdout)
         self._process.readyReadStandardError.connect(self._on_stderr)
         self._process.started.connect(self._on_started)
+        self._process.errorOccurred.connect(self._on_process_error)
+        self._process.finished.connect(self._on_process_finished)
 
     @property
     def url(self) -> str:
@@ -200,7 +206,7 @@ class ApiProcess(QObject):
                 QTimer.singleShot(2000, self._fetch_logs)
                 self._load_project()
                 return True
-            logger.warning(
+            logger.error(
                 "Port {} is occupied by an unrecognized process. Cannot start execution API.",
                 DEFAULT_API_PORT,
             )
@@ -210,15 +216,16 @@ class ApiProcess(QObject):
         arguments = ["--silent", "--port", str(DEFAULT_API_PORT)]
         self._process.start(executable, arguments)
         if not self._process.waitForStarted(3000):
-            logger.warning(
-                "Failed to launch execution API tray process with '{}' and arguments {}.",
+            logger.error(
+                "Failed to launch execution API '{}' {} — QProcess error code {}.",
                 executable,
                 arguments,
+                int(self._process.error()),
             )
             return False
 
         if not _wait_for_api_ready(BASE_URL):
-            logger.warning(
+            logger.error(
                 "Execution API tray was launched, but '{}' was not reachable.",
                 BASE_URL,
             )
@@ -239,10 +246,14 @@ class ApiProcess(QObject):
     def _on_stdout(self):
         data = self._process.readAllStandardOutput().data().decode(errors="replace")
         self._append(data)
+        if data.strip():
+            self.process_log_received.emit(data.rstrip(), "stdout")
 
     def _on_stderr(self):
         data = self._process.readAllStandardError().data().decode(errors="replace")
         self._append(data)
+        if data.strip():
+            self.process_log_received.emit(data.rstrip(), "stderr")
 
     def _append(self, text: str):
         self._log_browser.append(text.rstrip())
@@ -251,6 +262,27 @@ class ApiProcess(QObject):
         QTimer.singleShot(2000, self._fetch_logs)
         self._ping_timer.start()
 
+    def _on_process_error(self, error) -> None:
+        _NAMES = {0: "FailedToStart", 1: "Crashed", 2: "Timedout",
+                  3: "WriteError", 4: "ReadError", 5: "UnknownError"}
+        logger.error(
+            "API subprocess error: {} ({}). See Detailed Records for output.",
+            _NAMES.get(int(error), "Unknown"),
+            int(error),
+        )
+        self.api_alive.emit(False)
+
+    def _on_process_finished(self, exit_code: int, exit_status) -> None:
+        if exit_status == QProcess.ExitStatus.CrashExit or exit_code != 0:  # type: ignore[attr-defined]
+            logger.error(
+                "API subprocess exited unexpectedly: exit_code={}, status={}.",
+                exit_code,
+                "CrashExit" if exit_status == QProcess.ExitStatus.CrashExit else "NormalExit",  # type: ignore[attr-defined]
+            )
+            self.api_alive.emit(False)
+        else:
+            logger.info("API subprocess finished normally: exit_code={}.", exit_code)
+
     def _ping(self):
         req = QNetworkRequest(QUrl(_api_url(self.client.url, "processes")))
         reply = self._nam.get(req)
@@ -258,7 +290,12 @@ class ApiProcess(QObject):
             reply.finished.connect(lambda: self._on_ping_reply(reply))
 
     def _on_ping_reply(self, reply):
-        alive = reply.error() == reply.NetworkError.NoError  # type: ignore[attr-defined]
+        try:
+            alive = reply.error() == reply.NetworkError.NoError  # type: ignore[attr-defined]
+        except Exception:
+            alive = False
+        finally:
+            reply.deleteLater()
         self.api_alive.emit(alive)
 
     def _fetch_logs(self):
@@ -269,6 +306,7 @@ class ApiProcess(QObject):
 
     def _on_logs_reply(self, reply):
         raw = reply.readAll().data().decode(errors="replace")
+        reply.deleteLater()
         try:
             logs = json.loads(raw)
             if logs:

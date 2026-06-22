@@ -370,7 +370,11 @@ class RunEventStreamThread(QThread):
                     self.run_finished.emit(final_state)
                     return
         except Exception as exc:
-            if not self._stop_requested:
+            if self._stop_requested:
+                logger.debug(
+                    "Run stream closed for {} during stop: {}", self.run_id, exc
+                )
+            else:
                 logger.warning("Run stream failed for {}: {}", self.run_id, exc)
                 self.run_finished.emit("error")
         finally:

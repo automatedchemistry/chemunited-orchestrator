@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import html
 import json
 import re
 from datetime import datetime
@@ -183,6 +184,13 @@ class ReportFrame(QWidget):
             "Raw JSON",
             FluentIcon.CODE.icon(),
         )
+        self.process_log_page = self._build_process_log_page()
+        self.pages.addSubInterface(
+            self.process_log_page,
+            "process_log_page",
+            "Process Logs",
+            FluentIcon.DOCUMENT.icon(),
+        )
         root.addWidget(self.pages, 1)
         self._set_state("IDLE")
 
@@ -272,6 +280,19 @@ class ReportFrame(QWidget):
         layout.addWidget(self.report_scroll)
         return page
 
+    def _build_process_log_page(self) -> QWidget:
+        page = QWidget(self)
+        layout = QVBoxLayout(page)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        self.process_log_browser = TextBrowser(page)
+        self.process_log_browser.setReadOnly(True)
+        self.process_log_browser.setPlaceholderText(
+            "API subprocess stdout/stderr will appear here during execution."
+        )
+        layout.addWidget(self.process_log_browser)
+        return page
+
     def start_run(self, run_id: str) -> None:
         self._run_id = run_id
         self._current_process_key = None
@@ -303,6 +324,21 @@ class ReportFrame(QWidget):
             self._set_state(state.upper())
         self._update_counts()
         self._append_event_row(payload)
+
+    def append_process_log(self, text: str, source: str) -> None:
+        ts = datetime.now().strftime("%H:%M:%S")
+        color = "#B71C1C" if source == "stderr" else "#1B5E20"
+        body = html.escape(text.rstrip())
+        log_html = (
+            f'<span style="color:{color};font-family:Consolas,monospace;font-size:11px;">'
+            f"[{ts}][{source.upper()}] {body}"
+            f"</span>"
+        )
+        sb = self.process_log_browser.verticalScrollBar()
+        at_bottom = sb.value() >= sb.maximum() - 5
+        self.process_log_browser.append(log_html)
+        if at_bottom:
+            sb.setValue(sb.maximum())
 
     def finish_run(self, state: str) -> None:
         if self._run_id is None:
@@ -437,11 +473,14 @@ class ReportFrame(QWidget):
         layout.addWidget(raw)
 
         def toggle_raw() -> None:
-            visible = not raw.isVisible()
-            raw.setVisible(visible)
-            raw_button.setIcon(
-                FluentIcon.CHEVRON_DOWN_MED if visible else FluentIcon.CHEVRON_RIGHT_MED
-            )
+            try:
+                visible = not raw.isVisible()
+                raw.setVisible(visible)
+                raw_button.setIcon(
+                    FluentIcon.CHEVRON_DOWN_MED if visible else FluentIcon.CHEVRON_RIGHT_MED
+                )
+            except RuntimeError:
+                pass  # widget deleted between clicks (e.g. run restarted)
 
         raw_button.clicked.connect(toggle_raw)  # type: ignore[attr-defined]
         return card
@@ -655,6 +694,9 @@ class SummaryExecutionWindow(SegmentWindow):
     def start_run(self, run_id: str) -> None:
         self.report_frame.start_run(run_id)
         self.switchTo(self.report_frame)
+
+    def append_process_log(self, text: str, source: str) -> None:
+        self.report_frame.append_process_log(text, source)
 
     def append_stream_event(self, run_id: str, payload: dict[str, Any]) -> None:
         self.report_frame.append_stream_event(run_id, payload)

@@ -142,6 +142,7 @@ class MonitorWindow(MainWindowBase):
             self.api_process.project_load_conflict.connect(
                 self.orchestrator.handle_project_load_conflict
             )
+            self.api_process.process_log_received.connect(self._on_api_process_log)
             if not self.api_process.start_api():
                 self.api_process = None
                 return
@@ -156,6 +157,10 @@ class MonitorWindow(MainWindowBase):
             QDesktopServices.openUrl(QUrl(self.api_process.url))
         else:
             logger.warning("No API running — connect first.")
+
+    def _on_api_process_log(self, text: str, source: str) -> None:
+        if self.summary_window is not None and text.strip():
+            self.summary_window.append_process_log(text, source)
 
     def _on_api_ping(self, alive: bool):
         if alive:
