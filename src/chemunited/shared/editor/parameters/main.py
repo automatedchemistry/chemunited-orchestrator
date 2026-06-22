@@ -85,6 +85,29 @@ def _field_extra_dict(fi: FieldInfo) -> JsonDict:
     return {}
 
 
+def _list_element_type(annotation: Any, default: list[Any]) -> str:
+    args = get_args(annotation)
+    if args and args[0] in (str, int, float):
+        return args[0].__name__
+
+    if default and all(isinstance(item, str) for item in default):
+        return "str"
+    if default and all(
+        isinstance(item, int) and not isinstance(item, bool) for item in default
+    ):
+        return "int"
+    if (
+        default
+        and all(
+            isinstance(item, (int, float)) and not isinstance(item, bool)
+            for item in default
+        )
+        and any(isinstance(item, float) for item in default)
+    ):
+        return "float"
+    return "str"
+
+
 def field_info_to_build_mode(
     field_name: str,
     field_info: FieldInfo,
@@ -188,6 +211,8 @@ def field_info_to_build_mode(
     if annotation is list or get_origin(annotation) is list:
         default = _field_default(field_info, [])
         default_list = list(default) if isinstance(default, (list, tuple)) else []
+        min_length = _metadata_value(metadata, "min_length")
+        max_length = _metadata_value(metadata, "max_length")
         return ListVariableBuildMode(
             name=field_name,
             title=title,
@@ -195,7 +220,10 @@ def field_info_to_build_mode(
             group=group,
             editable=editable,
             visible=visible,
+            element_type=_list_element_type(annotation, default_list),
             default=default_list,
+            min_length=int(min_length) if min_length is not None else 0,
+            max_length=int(max_length) if max_length is not None else 10,
         )
 
     if annotation is str:
@@ -269,7 +297,9 @@ class MainParametersEditor(QMainWindow):
         toggle_bar = QWidget(central)
         toggle_layout = QHBoxLayout(toggle_bar)
         toggle_layout.setContentsMargins(12, 6, 12, 6)
-        self._frozen_toggle = CheckBox("Lock parameters (prevent changes during run)", toggle_bar)
+        self._frozen_toggle = CheckBox(
+            "Lock parameters (prevent changes during run)", toggle_bar
+        )
         self._frozen_toggle.setToolTip(
             "When enabled, parameters are protected and cannot be changed while\n"
             "a workflow is running. This helps ensure repeatable results.\n"
@@ -415,7 +445,9 @@ class MainParametersEditor(QMainWindow):
                 return text
             sorted_names = sorted(existing + ["ConfigDict"])
             new_import = f"from pydantic import {', '.join(sorted_names)}\n"
-            new_lines = lines[: node.lineno - 1] + [new_import] + lines[node.end_lineno :]
+            new_lines = (
+                lines[: node.lineno - 1] + [new_import] + lines[node.end_lineno :]
+            )
             return "".join(new_lines)
         return text
 

@@ -20,6 +20,7 @@ from PyQt5.QtWidgets import (
 from qfluentwidgets import (
     BodyLabel,
     CaptionLabel,
+    ComboBox,
     DoubleSpinBox,
     FluentIcon,
     LineEdit,
@@ -123,7 +124,7 @@ def generate_field_code(mode: BasicVariableBuildMode) -> str:
     elif isinstance(mode, StringVariableBuildMode):
         annotation = "str"
     elif isinstance(mode, ListVariableBuildMode):
-        annotation = "list"
+        annotation = f"list[{v.get('element_type', 'str')}]"
     elif isinstance(mode, ChoiceVariableBuildMode):
         annotation = "str"
     elif isinstance(mode, BoolVariableBuildMode):
@@ -167,12 +168,12 @@ def generate_field_code(mode: BasicVariableBuildMode) -> str:
         if max_len is not None:
             validation_lines.append(f"    max_length={max_len!r},")
     elif isinstance(mode, ListVariableBuildMode):
-        min_items = v.get("min_items")
-        max_items = v.get("max_items")
-        if min_items is not None:
-            validation_lines.append(f"    min_items={min_items!r},")
-        if max_items is not None:
-            validation_lines.append(f"    max_items={max_items!r},")
+        min_length = v.get("min_length")
+        max_length = v.get("max_length")
+        if min_length is not None:
+            validation_lines.append(f"    min_length={min_length!r},")
+        if max_length is not None:
+            validation_lines.append(f"    max_length={max_length!r},")
 
     # ── json_schema_extra ───────────────────────────────────────────────
     extra: dict[str, Any] = {
@@ -387,7 +388,17 @@ class VariableCard(QWidget):
         title = field_info.title or field_name
         editor: QWidget
 
-        if annotation is int:
+        if (
+            isinstance(self.mode, ListVariableBuildMode)
+            and field_name == "element_type"
+        ):
+            w = ComboBox()
+            w.addItems(["str", "int", "float"])
+            w.setCurrentText(str(default))
+            w.currentTextChanged.connect(self._on_change)
+            editor = w
+
+        elif annotation is int:
             w = SpinBox()
             ge = self._bound(field_info, "ge")
             le = self._bound(field_info, "le")
@@ -657,6 +668,8 @@ class VariableCard(QWidget):
                 result[fname] = widget.value()
             elif isinstance(widget, SwitchButton):
                 result[fname] = widget.isChecked()
+            elif isinstance(widget, ComboBox):
+                result[fname] = widget.currentText()
             elif isinstance(widget, LineEdit):
                 if _is_list_annotation(annotation):
                     result[fname] = self._parse_list_text(widget.text())

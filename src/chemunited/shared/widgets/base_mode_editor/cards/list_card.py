@@ -23,7 +23,21 @@ class ListFieldCard(BaseFieldCard):
 
     def _inner_type(self) -> type:
         args = typing.get_args(self._field_info.annotation)
-        return args[0] if args else str
+        if args:
+            return args[0]
+
+        default = self._field_info.default
+        if isinstance(default, list) and default:
+            if all(
+                isinstance(item, int) and not isinstance(item, bool) for item in default
+            ):
+                return int
+            if all(
+                isinstance(item, (int, float)) and not isinstance(item, bool)
+                for item in default
+            ) and any(isinstance(item, float) for item in default):
+                return float
+        return str
 
     def _build_input(self) -> QWidget:
         self._container = QWidget(self)

@@ -1,5 +1,7 @@
+from typing import Any, Literal
+
 from chemunited_quantities import ChemUnitQuantity
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, model_validator
 
 
 class BasicVariableBuildMode(BaseModel):
@@ -132,15 +134,67 @@ class BoolVariableBuildMode(BasicVariableBuildMode):
 
 
 class ListVariableBuildMode(BasicVariableBuildMode):
+    element_type: Literal["str", "int", "float"] = Field(
+        default="str",
+        title="Item Type",
+        description="Python type used for every item in the array.",
+        json_schema_extra={"group": "General"},
+    )
     default: list = Field(
-        default=["A", "B", "C"], json_schema_extra={"group": "General"}
+        default_factory=lambda: ["A", "B", "C"],
+        json_schema_extra={"group": "General"},
     )
-    min_items: int = Field(
-        default=0, title="Minimum Items", json_schema_extra={"group": "Validation"}
+    min_length: int = Field(
+        default=0,
+        title="Minimum Items",
+        ge=0,
+        json_schema_extra={"group": "Validation"},
     )
-    max_items: int = Field(
-        default=10, title="Maximum Items", json_schema_extra={"group": "Validation"}
+    max_length: int = Field(
+        default=10,
+        title="Maximum Items",
+        ge=1,
+        json_schema_extra={"group": "Validation"},
     )
+
+    @model_validator(mode="before")
+    @classmethod
+    def coerce_default_items(cls, data: Any) -> Any:
+        if not isinstance(data, dict):
+            return data
+
+        values = list(data.get("default", ["A", "B", "C"]))
+        element_type = data.get("element_type", "str")
+        converted: list[str | int | float] = []
+
+        for index, value in enumerate(values):
+            try:
+                if element_type == "str":
+                    converted.append(str(value))
+                elif element_type == "int":
+                    if isinstance(value, bool):
+                        raise ValueError
+                    if isinstance(value, float) and not value.is_integer():
+                        raise ValueError
+                    converted.append(int(value))
+                elif element_type == "float":
+                    if isinstance(value, bool):
+                        raise ValueError
+                    converted.append(float(value))
+            except (TypeError, ValueError):
+                raise ValueError(
+                    f"Item {index + 1} ({value!r}) is not a valid {element_type}."
+                ) from None
+
+        data = dict(data)
+        data["default"] = converted
+        return data
+
+    @model_validator(mode="after")
+    def validate_length_range(self):
+        if self.min_length > self.max_length:
+            raise ValueError("Minimum items cannot exceed maximum items.")
+        return self
 
 
 class ChoiceVariableBuildMode(BasicVariableBuildMode):

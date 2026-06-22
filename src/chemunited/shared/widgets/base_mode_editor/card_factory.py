@@ -89,7 +89,7 @@ class CardFactory:
             return IntFieldCard(field_name, field_info, parent)
         if annotation is float:
             return FloatFieldCard(field_name, field_info, parent)
-        if origin is list:
+        if annotation is list or origin is list:
             return ListFieldCard(field_name, field_info, parent)
 
         return StrFieldCard(field_name, field_info, parent)
