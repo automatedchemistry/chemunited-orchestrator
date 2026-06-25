@@ -50,6 +50,7 @@ class OrchestratorIcon(FluentIconBase, Enum):
     PRESSURE_LINE = "line_pressure"
     PROCESS = "process"
     PYTHON = "python"
+    ROUTER = "router"
     SELECT = "select"
     SCISSOR = "scissor"
     SIMULATION = "simulation"

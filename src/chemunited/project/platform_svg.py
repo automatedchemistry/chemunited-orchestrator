@@ -4,13 +4,12 @@ from math import ceil
 from pathlib import Path
 
 from PyQt5.QtCore import QRectF, QSize, Qt
-from PyQt5.QtGui import QColor, QPainter
+from PyQt5.QtGui import QBrush, QPainter
 from PyQt5.QtSvg import QSvgGenerator
 from PyQt5.QtWidgets import QGraphicsItem, QGraphicsScene
 
 PLATFORM_SVG_RELATIVE_PATH = Path("draw") / "platform.svg"
 
-_BACKGROUND = QColor("#ffffff")
 _EMPTY_SCENE_RECT = QRectF(0, 0, 640, 360)
 _MARGIN = 24.0
 _EXPORT_SCALE = 2.0
@@ -34,7 +33,7 @@ def export_platform_svg(
         scene.clearSelection()
         for item in hidden_items:
             item.setVisible(False)
-        scene.setBackgroundBrush(_BACKGROUND)
+        scene.setBackgroundBrush(QBrush(Qt.NoBrush))
 
         source_rect = _export_rect(scene)
         size = QSize(
