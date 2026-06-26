@@ -21,6 +21,7 @@ from .pre_run.pre_run_frame import PreRunFrame
 from .protocols.graph import ProtocolGraphicView
 from .protocols.process_list import ProtocolsWidget
 from .protocols.workflows.workflow_widget import WorkflowsWidget
+from .simulation import SimulateWindowReport, SimGraphicView
 from .shared.editor.parameters.main import MainParametersEditor
 from .shared.editor.protocols.command_list import CommandList
 from .shared.enums import SetupStepMode, WindowCategory
@@ -70,6 +71,10 @@ class SetupWindow(MainWindowBase):
         # Compounds frame (not a main segment tab, but used in the protocols editor)
         self.compounds_widget = CompoundsWidget(self)
         self.compound_list = self.compounds_widget
+
+        # Simulation Report Window
+        self.SimGraphicView = SimGraphicView(self.scene_attribute, self)
+        self.SimulateWindowReport = SimulateWindowReport(self.SimGraphicView, self)
 
         # Main Orchestrator Object
         # It depends on drawGraph being available during construction.
@@ -447,10 +452,11 @@ class SetupWindow(MainWindowBase):
 
         UpdateDialog(self._pending_updates, parent=self).exec_()
 
-    def closeEvent(self, event):
+    def closeEvent(self, a0):
         if self.mcp_service.is_running:
             self.mcp_service.stop()
-        super().closeEvent(event)
+        self.SimulateWindowReport.close()
+        super().closeEvent(a0)
 
     @pyqtSlot(str)
     def _on_current_widget_changed(self, _route_key: str) -> None:
@@ -467,3 +473,11 @@ class SetupWindow(MainWindowBase):
         if isinstance(classification, str):
             return SetupStepMode.__members__.get(classification)
         return None
+
+    def open_simulate_window(self, process: str):
+        if self.orchestrator.working_dir:
+            self.SimulateWindowReport.simulate(
+                process=process,
+                project_path=self.orchestrator.working_dir
+            )
+            self.SimulateWindowReport.show()

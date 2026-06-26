@@ -64,91 +64,6 @@ def _format_python_source(source: str) -> str:
         return source
 
 
-def _add_content_to_method(
-    source: str, method_name: str, class_name: str, content: str
-) -> str:
-    if not content.strip():
-        return source
-
-    try:
-        tree = ast.parse(source)
-    except SyntaxError:
-        return source
-
-    class_node = next(
-        (
-            n
-            for n in ast.walk(tree)
-            if isinstance(n, ast.ClassDef) and n.name == class_name
-        ),
-        None,
-    )
-    if class_node is None:
-        return source
-
-    method_node = next(
-        (
-            n
-            for n in class_node.body
-            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
-            and n.name == method_name
-        ),
-        None,
-    )
-    if method_node is None or not method_node.body:
-        return source
-
-    lines = source.splitlines(keepends=True)
-    newline = "\r\n" if "\r\n" in source else "\n"
-    body_indent = " " * method_node.body[0].col_offset
-    normalized = textwrap.dedent(content).strip("\r\n")
-    formatted = newline.join(
-        f"{body_indent}{line}" if line else "" for line in normalized.splitlines()
-    )
-    insert_line = method_node.end_lineno or len(lines)
-    if isinstance(method_node.body[-1], ast.Return):
-        insert_line = method_node.body[-1].lineno - 1
-    lines.insert(insert_line, f"{formatted}{newline}")
-    return "".join(lines)
-
-
-def _extract_method_first_expr(
-    source: str, method_name: str, class_name: str
-) -> str | None:
-    try:
-        tree = ast.parse(source)
-    except SyntaxError:
-        return None
-    class_node = next(
-        (
-            n
-            for n in ast.walk(tree)
-            if isinstance(n, ast.ClassDef) and n.name == class_name
-        ),
-        None,
-    )
-    if class_node is None:
-        return None
-    method_node = next(
-        (
-            n
-            for n in class_node.body
-            if isinstance(n, (ast.FunctionDef, ast.AsyncFunctionDef))
-            and n.name == method_name
-        ),
-        None,
-    )
-    if method_node is None:
-        return None
-    for stmt in method_node.body:
-        if isinstance(stmt, ast.Pass):
-            continue
-        seg = ast.get_source_segment(source, stmt)
-        if seg:
-            return seg.strip()
-    return None
-
-
 def _replace_method_body(
     source: str, method_name: str, class_name: str, new_content: str
 ) -> str:
@@ -923,6 +838,12 @@ class WorkflowGraph(GraphCore):
         open_process_parameters_action.triggered.connect(self.access_process_parameters)
         menu.addAction(open_process_parameters_action)
 
+        access_simulation = Action(self)
+        access_simulation.setText("Simulate Process")
+        access_simulation.setIcon(OrchestratorIcon.SIMULATION.icon())
+        access_simulation.triggered.connect(self.access_simulation)
+        menu.addAction(access_simulation)
+
         return menu
 
     def _build_node_menu(self, node: WorkflowNode) -> RoundMenu:
@@ -1593,3 +1514,7 @@ class WorkflowGraph(GraphCore):
         self._parameters_editor.show()
         self._parameters_editor.raise_()
         self._parameters_editor.activateWindow()
+    
+    def access_simulation(self) -> None:
+        if hasattr(self.parent_ref, "open_simulate_window"):
+            self.parent_ref.open_simulate_window(self.model.process)
