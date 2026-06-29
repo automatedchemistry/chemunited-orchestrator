@@ -52,8 +52,8 @@ class CompoundsWidget(QWidget):
             self._open_inventory_dialog
         )
 
-    def showEvent(self, event) -> None:
-        super().showEvent(event)
+    def showEvent(self, a0) -> None:
+        super().showEvent(a0)
         self.compound_list.sync()
 
     def sync(self) -> None:

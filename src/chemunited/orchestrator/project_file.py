@@ -26,7 +26,7 @@ from chemunited.shared.enums.protocols_enum import ProtocolBlock
 
 from .draw import call_component_model
 from .execution import OrchestratorExecution
-from .inventory_state import build_inventory_status_payload
+from .inventory_state import apply_inventory_status_payload, build_inventory_status_payload
 from .protocols import is_valid_name
 
 
@@ -556,6 +556,8 @@ class OrchestratorProjectFile(OrchestratorExecution):
                 logger.bind(window=WindowCategory.SETUP).opt(exception=exc).warning(
                     f"Skipped connection: {exc}"
                 )
+
+        apply_inventory_status_payload(self.components, draw_data.get("inventory", {}))
         self._sync_compound_list()
 
     def _restore_connectivity_data(self, connectivity_data: dict) -> None:
@@ -771,10 +773,12 @@ class OrchestratorProjectFile(OrchestratorExecution):
             conn.base_mode_instance.model_dump(mode="json")
             for conn in self.connections.values()
         ]
+        inventory = build_inventory_status_payload(self.components.values())
         return {
             "compounds": compounds,
             "components": components,
             "connections": connections,
+            "inventory": inventory,
         }
 
     def _sync_compound_list(self) -> None:
@@ -838,10 +842,6 @@ class OrchestratorProjectFile(OrchestratorExecution):
                     return
             key = f"{process_name}_{index}"
             data[key] = instance.model_dump(mode="json")
-
-        inventory = build_inventory_status_payload(self.components.values())
-        if inventory:
-            data["inventory"] = inventory
 
         if not data:  # Should not happen if pre_run_list._active_data is not empty
             return

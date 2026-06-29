@@ -48,14 +48,14 @@ class PreRunFrame(QFrame):
             widget=self.desktop_conf,
             objectName="desktop_conf",
             text="Pre-Execute internally",
-            icon=FluentIcon.ACCEPT_MEDIUM
+            icon=FluentIcon.ACCEPT_MEDIUM.path()
         )
 
         self.segment_window.addSubInterface(
             widget=self.DashBoardLauncherFrame,
             objectName="DashBoardLauncherFrame",
             text="Dashboard Launcher",
-            icon=OrchestratorIcon.ROUTER
+            icon=OrchestratorIcon.ROUTER.path()
         )
 
         self.main_layout.addWidget(self.segment_window)

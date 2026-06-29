@@ -90,13 +90,6 @@ class MonitorWindow(MainWindowBase):
         )
 
         self.executionFrame.addNavigationAction(
-            icon=FluentIcon.EDIT,
-            text="Inventories",
-            onClick=self._open_inventory_dialog,
-            tooltip="Edit inventory content",
-        )
-
-        self.executionFrame.addNavigationAction(
             icon=FluentIcon.SETTING,
             text="Settings",
             onClick=self._open_settings,
@@ -170,14 +163,14 @@ class MonitorWindow(MainWindowBase):
             self.status_widget.setIcon(OrchestratorIcon.OFFLINE)
             self.status_widget.setToolTip("API unreachable — reconnect?")
 
-    def closeEvent(self, event):
+    def closeEvent(self, a0):
         if self.summary_window is not None:
             self.summary_window.close()
             self.summary_window = None
             self.summary_window_file = None
         if self.api_process is not None:
             self.api_process.stop_api()
-        super().closeEvent(event)
+        super().closeEvent(a0)
 
     def recenter_views(self):
         self.executionGraph.recenter_view()
@@ -185,13 +178,6 @@ class MonitorWindow(MainWindowBase):
 
     def _open_settings(self):
         self.orchestrator.dialog_execution_settings()
-
-    def _open_inventory_dialog(self):
-        dialog = InventoryStatusDialog(
-            component_provider=lambda: self.orchestrator.components.items(),
-            parent=self,
-        )
-        dialog.exec_()
 
     def show_summary(self):
         window = self._ensure_summary_window()

@@ -10,6 +10,7 @@ import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
+from chemunited_core.components.internals import DEFAULT_INVENTORY_KEY
 from loguru import logger
 
 from chemunited.project.writer import render_python_script
@@ -99,6 +100,7 @@ class _DrawRecorder:
         self.compounds: list[dict] = []
         self.components: list[dict] = []
         self.connections: list[dict] = []
+        self.inventory: dict[str, dict] = {}
 
     def add_compound(self, **payload) -> None:
         self.compounds.append(dict(payload))
@@ -134,11 +136,22 @@ class _DrawRecorder:
         connection.update(payload)
         self.connections.append(connection)
 
+    def fill_iventory(
+        self,
+        component: str,
+        iventory: str = DEFAULT_INVENTORY_KEY,
+        phase: str = "liq",
+        content: dict = {},
+    ) -> None:
+        phase_key = "LIQUID" if phase == "liq" else "GAS"
+        self.inventory.setdefault(component, {}).setdefault(iventory, {})[phase_key] = dict(content)
+
     def data(self) -> dict:
         return {
             "compounds": self.compounds,
             "components": self.components,
             "connections": self.connections,
+            "inventory": self.inventory,
         }
 
 
@@ -169,9 +182,39 @@ def _render_draw_body(draw_data: dict) -> str:
     for connection in draw_data.get("connections", []):
         calls.append(_render_call("platform.add_connection", connection, "connection"))
 
+    for comp_name, inv_data in draw_data.get("inventory", {}).items():
+        for inv_key, phases in inv_data.items():
+            for phase_kind, phase_data in phases.items():
+                if not phase_data.get("initial_species"):
+                    continue
+                phase_arg = "liq" if phase_kind == "LIQUID" else "gas"
+                calls.append(_render_fill_inventory(comp_name, inv_key, phase_arg, phase_data))
+
     if not calls:
         return "    pass\n"
     return "\n\n".join(calls) + "\n"
+
+
+def _render_fill_inventory(
+    component: str, inv_key: str, phase: str, phase_data: dict
+) -> str:
+    lines = [
+        "    platform.fill_iventory(",
+        f"        component={component!r},",
+        f"        iventory={inv_key!r},",
+        f"        phase={phase!r},",
+        "        content={",
+        f"            'volume': {phase_data.get('volume', 0.0)!r},",
+        "            'initial_species': {",
+    ]
+    for species, amount in phase_data.get("initial_species", {}).items():
+        lines.append(f"                {species!r}: {amount!r},")
+    lines += [
+        "            },",
+        "        },",
+        "    )",
+    ]
+    return "\n".join(lines)
 
 
 def _render_call(function_name: str, payload: dict, payload_type: str) -> str:

@@ -1,6 +1,7 @@
 import re
 
 from chemunited_core.common.enums import ConnectionType
+from chemunited_core.components.internals import DEFAULT_INVENTORY_KEY
 from chemunited_core.connections import EdgeData, EdgeMode
 from chemunited_quantities import ChemUnitQuantity
 from loguru import logger
@@ -316,3 +317,27 @@ class OrchestratorDraw(OrchestratorCore):
             return
         component = self.components[name]
         component.widget.show()
+    
+    def fill_iventory(
+            self,
+            component: str,
+            iventory: str = DEFAULT_INVENTORY_KEY,
+            phase: str = "liq",
+            content: dict = {},
+        ):
+        if component not in self.components:
+            return
+        comp = self.components[component]
+        inventories = getattr(comp.inf, "internal_inventories", {})
+        node = inventories.get(iventory)
+        if node is None:
+            return
+        phase_content = node.liq_content if phase == "liq" else node.gas_content
+        if "volume" in content:
+            phase_content.volume = float(content["volume"])
+        if "initial_species" in content:
+            phase_content.initial_species = {
+                str(k): float(v)
+                for k, v in content["initial_species"].items()
+                if float(v) > 0.0
+            }
