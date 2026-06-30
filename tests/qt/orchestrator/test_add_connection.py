@@ -215,49 +215,44 @@ class TestAddConnection:
 
     # ── remove: validation errors ──────────────────────────────────────────
 
-    def test_remove_nonexistent_connection_raises(self, two_pumps: SetupWindow):
-        with pytest.raises(ValueError, match="does not exist"):
-            two_pumps.orchestrator.remove_connection("no_such_connection")
+    def test_remove_nonexistent_connection_is_handled(self, two_pumps: SetupWindow):
+        # Should log the error and return without crashing.
+        two_pumps.orchestrator.remove_connection("no_such_connection")
+        assert not two_pumps.orchestrator.connections
 
     # ── add: validation errors ─────────────────────────────────────────────
 
-    def test_nonexistent_origin_raises(self, two_pumps: SetupWindow):
-        with pytest.raises(ValueError, match="does not exist"):
-            two_pumps.orchestrator.add_connection(
-                origin="Ghost",
-                destiny="PumpB",
-            )
+    def test_nonexistent_origin_is_handled(self, two_pumps: SetupWindow):
+        two_pumps.orchestrator.add_connection(origin="Ghost", destiny="PumpB")
+        assert not two_pumps.orchestrator.connections
 
-    def test_nonexistent_destiny_raises(self, two_pumps: SetupWindow):
-        with pytest.raises(ValueError, match="does not exist"):
-            two_pumps.orchestrator.add_connection(
-                origin="PumpA",
-                destiny="Ghost",
-            )
+    def test_nonexistent_destiny_is_handled(self, two_pumps: SetupWindow):
+        two_pumps.orchestrator.add_connection(origin="PumpA", destiny="Ghost")
+        assert not two_pumps.orchestrator.connections
 
-    def test_invalid_origin_port_raises(self, two_pumps: SetupWindow):
-        with pytest.raises(ValueError, match="does not exist"):
-            two_pumps.orchestrator.add_connection(
-                origin="PumpA",
-                destiny="PumpB",
-                origin_port=99,
-                destiny_port=1,
-            )
+    def test_invalid_origin_port_is_handled(self, two_pumps: SetupWindow):
+        two_pumps.orchestrator.add_connection(
+            origin="PumpA",
+            destiny="PumpB",
+            origin_port=99,
+            destiny_port=1,
+        )
+        assert not two_pumps.orchestrator.connections
 
-    def test_invalid_destiny_port_raises(self, two_pumps: SetupWindow):
-        with pytest.raises(ValueError, match="does not exist"):
-            two_pumps.orchestrator.add_connection(
-                origin="PumpA",
-                destiny="PumpB",
-                origin_port=2,
-                destiny_port=99,
-            )
+    def test_invalid_destiny_port_is_handled(self, two_pumps: SetupWindow):
+        two_pumps.orchestrator.add_connection(
+            origin="PumpA",
+            destiny="PumpB",
+            origin_port=2,
+            destiny_port=99,
+        )
+        assert not two_pumps.orchestrator.connections
 
-    def test_duplicate_connection_raises(self, two_pumps_connected: SetupWindow):
-        with pytest.raises(ValueError, match="already exists"):
-            two_pumps_connected.orchestrator.add_connection(
-                origin="PumpA",
-                destiny="PumpB",
-                origin_port=2,
-                destiny_port=1,
-            )
+    def test_duplicate_connection_is_handled(self, two_pumps_connected: SetupWindow):
+        two_pumps_connected.orchestrator.add_connection(
+            origin="PumpA",
+            destiny="PumpB",
+            origin_port=2,
+            destiny_port=1,
+        )
+        assert len(two_pumps_connected.orchestrator.connections) == 1

@@ -336,7 +336,7 @@ def test_inventory_status_dialog_converts_ml_amount_to_moles(qtbot: QtBot):
 
     inventory = bottle.inf.internal_inventory
     assert inventory is not None
-    expected_moles = 1e-6 / COMPOUNDS["water"].molar_volume_liquid()
+    expected_moles = 1e-6 / COMPOUNDS["water"].molar_volume_liquid().magnitude
     assert inventory.liq_content.initial_species == {
         "water": pytest.approx(expected_moles)
     }

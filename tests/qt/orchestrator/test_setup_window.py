@@ -132,19 +132,20 @@ class TestAddComponent:
         assert set(component.inf.ports_by_number) == {1}
         assert component.inf.ports_by_number[1].category == ConnectionType.HYDRAULIC
 
-    def test_duplicate_name_raises(self, window: SetupWindow):
+    def test_duplicate_name_is_handled(self, window: SetupWindow):
         window.orchestrator.add_component(
             name="HPLCPump",
             figure="HPLCPump",
             position=(0.0, 0.0),
         )
 
-        with pytest.raises(ValueError, match="already exists"):
-            window.orchestrator.add_component(
-                name="HPLCPump",
-                figure="HPLCPump",
-                position=(50.0, 50.0),
-            )
+        window.orchestrator.add_component(
+            name="HPLCPump",
+            figure="HPLCPump",
+            position=(50.0, 50.0),
+        )
+
+        assert len(window.orchestrator.components) == 1
 
     def test_project_menu_shortcuts(self, window: SetupWindow):
         assert isinstance(window.project_menu_button, NavigationTreeWidget)

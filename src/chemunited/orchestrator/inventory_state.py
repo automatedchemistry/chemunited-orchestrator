@@ -43,14 +43,12 @@ def ensure_air_defaults(component_data: Any) -> None:
             gas_content.volume = remaining
 
         air = COMPOUNDS["air"]
+        molar_vol_m3_per_mol = air.molar_volume_gas(
+            gas_content.initial_temperature,
+            gas_content.initial_pressure,
+        ).magnitude
         gas_content.phase_kind = PhaseKind.GAS
-        gas_content.initial_species = {
-            "air": gas_volume
-            / air.molar_volume_gas(
-                gas_content.initial_temperature,
-                gas_content.initial_pressure,
-            )
-        }
+        gas_content.initial_species = {"air": gas_volume / molar_vol_m3_per_mol}
 
 
 def build_inventory_status_payload(components: Iterable[Any]) -> dict[str, dict]:

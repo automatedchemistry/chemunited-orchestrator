@@ -3,7 +3,7 @@ from pathlib import Path
 
 import pytest
 from PyQt5.QtGui import QPixmap
-from pytestqt.qtbot import QtBot
+from pytestqt.qtbot import QtBot, _iter_widgets
 
 SCREENSHOT_DIR = Path("tests/screenshots")
 
@@ -34,8 +34,10 @@ def screenshot_on_failure(request, qtbot: QtBot):
     yield
     rep = getattr(request.node, "rep_call", None)
     if rep is not None and rep.failed:
-        for i, widget in enumerate(qtbot.widgets):
-            _capture(widget, f"FAILED_widget_{i}", request.node.name)
+        for i, widget_ref in enumerate(_iter_widgets(request.node)):
+            widget = widget_ref()
+            if widget is not None:
+                _capture(widget, f"FAILED_widget_{i}", request.node.name)
 
 
 @pytest.hookimpl(tryfirst=True, hookwrapper=True)

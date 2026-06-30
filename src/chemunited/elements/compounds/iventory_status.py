@@ -466,11 +466,11 @@ class InventoryStatusWidget(QWidget):
     def _molar_volume(self, name: str, content) -> float:
         entity = COMPOUNDS[name]
         if content.phase_kind == PhaseKind.LIQUID:
-            return entity.molar_volume_liquid()
+            return entity.molar_volume_liquid().magnitude
         return entity.molar_volume_gas(
             content.initial_temperature,
             content.initial_pressure,
-        )
+        ).magnitude
 
     def _show_error(self, title: str, content: str) -> None:
         InfoBar.error(

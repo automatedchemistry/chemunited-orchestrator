@@ -53,7 +53,8 @@ class OrchestratorCore(QObject):
         exc_type = exc_type_obj.__name__ if exc_type_obj is not None else "Exception"
         exc_value = str(getattr(exc, "value", "") or "").strip()
         summary = exc_type if not exc_value else f"{exc_type}: {exc_value}"
-        if summary and summary not in message:
+        already_in_message = bool(exc_value and exc_value in message)
+        if summary and not already_in_message:
             return f"{message}\n{summary}\nSee Detailed Records for traceback."
         return f"{message}\nSee Detailed Records for traceback."
 

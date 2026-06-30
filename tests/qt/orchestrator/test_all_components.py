@@ -121,6 +121,6 @@ class TestAllComponents:
         for item in graph_items:
             assert item not in scene_items
 
-    def test_remove_nonexistent_component_raises(self, window: SetupWindow):
-        with pytest.raises(ValueError, match="does not exist"):
-            window.orchestrator.remove_component("NoSuchComponent")
+    def test_remove_nonexistent_component_is_handled(self, window: SetupWindow):
+        window.orchestrator.remove_component("NoSuchComponent")
+        assert "NoSuchComponent" not in window.orchestrator.components

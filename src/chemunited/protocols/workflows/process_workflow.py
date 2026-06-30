@@ -1,12 +1,13 @@
 from __future__ import annotations
 
+import ast
 from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Iterator
 
 from chemunited_workflow import WorkflowNodeSpec
 from networkx import DiGraph
-from pydantic import ConfigDict
+from pydantic import ConfigDict, PrivateAttr
 
 from chemunited.shared.enums.protocols_enum import ProtocolBlock
 
