@@ -22,7 +22,7 @@ classifiers = [
 dependencies = [
     # sub-packages (provide the entire runtime engine)
     "chemunited-quantities>=0.0.2,<0.1",
-    "chemunited-core>=0.03",
+    "chemunited-core>=0.0.3",
     "chemunited-workflow>=0.0.2",
     "chemunited-sim @ git+https://github.com/automatedchemistry/chemunited-sim.git",
     "PyQt-Fluent-Widgets>=1.7.0,<2.0",  # Qt UI

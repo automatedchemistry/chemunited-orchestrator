@@ -1,6 +1,5 @@
 from typing import ClassVar
 
-from chemunited_core.common.constant import PATTERN_DIMENSION
 from chemunited_core.figure_registry import get_figure_path
 from chemunited_core.figure_registry.vessels import VialData, _well_key
 from PyQt5.QtCore import QPointF, QRectF, Qt
@@ -133,7 +132,7 @@ class FramePanel(SceneItem):
 
 
 class VialContent(FlaskContent):
-    def __init__(self, width=40, height=40, vial:str = "A1", parent=None) -> None:
+    def __init__(self, width=40, height=40, vial: str = "A1", parent=None) -> None:
         super().__init__(width=width, height=height, parent=parent)
         self._vial = vial
 
@@ -157,7 +156,7 @@ class VialContent(FlaskContent):
             self.width,
             self.height * fill,
         )
-        painter.drawRoundedRect(rect, 15, 15)
+        painter.drawRoundedRect(rect, 0, 0)
 
 
 class Vial(GraphComponent[VialData]):
@@ -178,8 +177,8 @@ class Vial(GraphComponent[VialData]):
             for column_index in range(self._data.column):
                 key = _well_key(row_index, column_index)
                 self.vial_content[key] = VialContent(
-                    width=int(PATTERN_DIMENSION * self.SVG_SCALE * 0.05),
-                    height=int(PATTERN_DIMENSION * self.SVG_SCALE * 0.05),
+                    width=int(CELL_SIZE * 0.32),
+                    height=int(CELL_SIZE * 0.5),
                     vial=key,
                     parent=self,
                 )
@@ -199,10 +198,7 @@ class Vial(GraphComponent[VialData]):
                     centered_offset.x() + center_x,
                     centered_offset.y() + center_y,
                 )
-                self.vial_content[key].setPos(
-                    centered_offset.x() + center_x,
-                    centered_offset.y() + center_y,
-                )
+                self.vial_content[key].setPos(center_x, center_y + CELL_SIZE * 0.08)
                 self.addToGroup(self.vial_content[key])
                 self.addToGroup(vial_graph)
 

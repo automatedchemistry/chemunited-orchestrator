@@ -1,4 +1,7 @@
-from chemunited_core.components.internals import VolumeContentBase, DEFAULT_INVENTORY_KEY
+from chemunited_core.components.internals import (
+    DEFAULT_INVENTORY_KEY,
+    VolumeContentBase,
+)
 from chemunited_core.compounds.registry import COMPOUNDS
 from PyQt5.QtCore import QRectF, Qt
 from PyQt5.QtGui import QColor
