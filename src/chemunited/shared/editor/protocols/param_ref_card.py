@@ -1,16 +1,21 @@
 from __future__ import annotations
 
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QHBoxLayout, QSizePolicy, QStackedWidget, QVBoxLayout, QWidget
+from PyQt5.QtWidgets import (
+    QHBoxLayout,
+    QSizePolicy,
+    QStackedWidget,
+    QVBoxLayout,
+    QWidget,
+)
 from qfluentwidgets import (
-    CaptionLabel,
-    RoundMenu,
     Action,
+    CaptionLabel,
+    FluentIcon,
+    PushButton,
+    RoundMenu,
     StrongBodyLabel,
     TransparentToolButton,
-    PushButton,
-    isDarkTheme,
-    FluentIcon,
 )
 
 from chemunited.shared.widgets.base_mode_editor.cards.base_card import BaseFieldCard

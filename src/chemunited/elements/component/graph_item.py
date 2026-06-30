@@ -353,10 +353,10 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
     def sync_visuals(self) -> None:
         """
         Reconcile visuals to match the current ComponentData without changing geometry.
-        
-        This is useful when internal state changes (e.g. inventory levels) 
-        that affect the appearance but not the position/rotation.  
-        By default, this does nothing — This should be overridden by subclasses 
+
+        This is useful when internal state changes (e.g. inventory levels)
+        that affect the appearance but not the position/rotation.
+        By default, this does nothing — This should be overridden by subclasses
         that need to update their visuals based on internal state changes.
         """
         pass

@@ -378,8 +378,7 @@ def test_sync_process_writes_node_label_and_description(tmp_path):
 
     source = (working_dir / "protocols" / "React.py").read_text(encoding="utf-8")
     assert (
-        "from chemunited_quantities import "
-        "ChemQuantityValidator, ChemUnitQuantity"
+        "from chemunited_quantities import " "ChemQuantityValidator, ChemUnitQuantity"
     ) in source
     assert "node_id='script_1'," in source
     assert "method='script_1'," in source

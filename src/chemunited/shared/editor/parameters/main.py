@@ -220,7 +220,7 @@ def field_info_to_build_mode(
             group=group,
             editable=editable,
             visible=visible,
-            element_type=_list_element_type(annotation, default_list),
+            element_type=_list_element_type(annotation, default_list),  # type: ignore[arg-type]
             default=default_list,
             min_length=int(min_length) if min_length is not None else 0,
             max_length=int(max_length) if max_length is not None else 10,

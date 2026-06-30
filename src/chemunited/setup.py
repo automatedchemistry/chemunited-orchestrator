@@ -21,7 +21,6 @@ from .pre_run.pre_run_frame import PreRunFrame
 from .protocols.graph import ProtocolGraphicView
 from .protocols.process_list import ProtocolsWidget
 from .protocols.workflows.workflow_widget import WorkflowsWidget
-from .simulation import SimulateWindowReport, SimGraphicView
 from .shared.editor.parameters.main import MainParametersEditor
 from .shared.editor.protocols.command_list import CommandList
 from .shared.enums import SetupStepMode, WindowCategory
@@ -30,6 +29,7 @@ from .shared.icon import OrchestratorIcon
 from .shared.widgets.frame_base import FrameBase
 from .shared.widgets.main_window import MainWindowBase
 from .shared.widgets.segment_widget import SegmentWindow
+from .simulation import SimGraphicView, SimulateWindowReport
 
 
 class SetupWindow(MainWindowBase):
@@ -217,7 +217,7 @@ class SetupWindow(MainWindowBase):
             widget=self.drawFrame,
             objectName="drawFrame",
             text="Draw",
-            icon=FluentIcon.EDIT,
+            icon=FluentIcon.EDIT.path(),
         )
 
         self.protocolFrame.setGraphWidget(self.protocolGraph)
@@ -344,7 +344,7 @@ class SetupWindow(MainWindowBase):
         current_widget = self.SegmentWindow.stackedWidget.currentWidget()
         classification = getattr(current_widget, "classification", SetupStepMode.DESIGN)
         step = self._setup_step_mode(classification)
-        comment = self._SAVE_COMMENTS.get(step, "Save: project updated")
+        comment = self._SAVE_COMMENTS.get(step, "Save: project updated")  # type: ignore[arg-type]
         self.orchestrator.save(comment)
         self.update_project_actions()
 
@@ -477,7 +477,6 @@ class SetupWindow(MainWindowBase):
     def open_simulate_window(self, process: str):
         if self.orchestrator.working_dir:
             self.SimulateWindowReport.simulate(
-                process=process,
-                project_path=self.orchestrator.working_dir
+                process=process, project_path=self.orchestrator.working_dir
             )
             self.SimulateWindowReport.show()

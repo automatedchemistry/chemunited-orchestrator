@@ -144,9 +144,7 @@ def _ensure_method_comment(
         return source
 
     lines = source.splitlines(keepends=True)
-    method_source = "".join(
-        lines[method_node.lineno - 1 : method_node.end_lineno]
-    )
+    method_source = "".join(lines[method_node.lineno - 1 : method_node.end_lineno])
     if all(comment in method_source for comment in comment_lines):
         return source
 
@@ -543,7 +541,9 @@ class WorkflowGraph(GraphCore):
                     ),
                 )
                 return
-            component_name, command_name, http_method, _kwargs, _param_refs = parsed_command
+            component_name, command_name, http_method, _kwargs, _param_refs = (
+                parsed_command
+            )
             command = _build_command_model(
                 source,
                 data.method,
@@ -574,7 +574,9 @@ class WorkflowGraph(GraphCore):
             config_fields = _extract_model_fields(source, "ProcessConfig")
             mp_path = script_path.parent / "main_parameters.py"
             main_params_fields = (
-                _extract_model_fields(mp_path.read_text(encoding="utf-8"), "MainParameter")
+                _extract_model_fields(
+                    mp_path.read_text(encoding="utf-8"), "MainParameter"
+                )
                 if mp_path.exists()
                 else []
             )
@@ -1320,7 +1322,7 @@ class WorkflowGraph(GraphCore):
         InfoBar.error(
             title="Process script not updated",
             content=message,
-            orient=Qt.Horizontal,
+            orient=Qt.Horizontal,  # type: ignore[attr-defined]
             isClosable=True,
             position=InfoBarPosition.TOP,
             duration=5000,
@@ -1370,7 +1372,7 @@ class WorkflowGraph(GraphCore):
         InfoBar.error(
             title=title,
             content=message,
-            orient=Qt.Horizontal,
+            orient=Qt.Horizontal,  # type: ignore[attr-defined]
             isClosable=True,
             position=InfoBarPosition.TOP,
             duration=10000,
@@ -1514,7 +1516,7 @@ class WorkflowGraph(GraphCore):
         self._parameters_editor.show()
         self._parameters_editor.raise_()
         self._parameters_editor.activateWindow()
-    
+
     def access_simulation(self) -> None:
         if hasattr(self.parent_ref, "open_simulate_window"):
             self.parent_ref.open_simulate_window(self.model.process)

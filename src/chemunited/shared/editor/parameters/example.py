@@ -16,32 +16,56 @@ def some_method(): ...
 
 class MainParameter(BaseModel):
 
-    sample_loop_volume: Annotated[ChemUnitQuantity, ChemQuantityValidator("ml")] = Field(
-        title="Sample Loop Volume",
-        description="Volume loaded into the injection loop for each screening shot.",
-        default=ChemUnitQuantity("2.5 ml"),
-        json_schema_extra={'group': 'Flow Setup', 'editable': True, 'visible': True, 'unit': 'ml'},
+    sample_loop_volume: Annotated[ChemUnitQuantity, ChemQuantityValidator("ml")] = (
+        Field(
+            title="Sample Loop Volume",
+            description="Volume loaded into the injection loop for each screening shot.",
+            default=ChemUnitQuantity("2.5 ml"),
+            json_schema_extra={
+                "group": "Flow Setup",
+                "editable": True,
+                "visible": True,
+                "unit": "ml",
+            },
+        )
     )
 
     residence_time: Annotated[ChemUnitQuantity, ChemQuantityValidator("s")] = Field(
         title="Residence Time",
         description="Target time the reaction slug spends inside the reactor.",
         default=ChemUnitQuantity("90 s"),
-        json_schema_extra={'group': 'Flow Setup', 'editable': True, 'visible': True, 'unit': 's'},
+        json_schema_extra={
+            "group": "Flow Setup",
+            "editable": True,
+            "visible": True,
+            "unit": "s",
+        },
     )
 
     back_pressure: Annotated[ChemUnitQuantity, ChemQuantityValidator("bar")] = Field(
         title="Back Pressure",
         description="Pressure applied to stabilize flow and suppress degassing.",
         default=ChemUnitQuantity("6 bar"),
-        json_schema_extra={'group': 'Flow Setup', 'editable': True, 'visible': True, 'unit': 'bar'},
+        json_schema_extra={
+            "group": "Flow Setup",
+            "editable": True,
+            "visible": True,
+            "unit": "bar",
+        },
     )
 
-    quench_flow_rate: Annotated[ChemUnitQuantity, ChemQuantityValidator("ml / min")] = Field(
-        title="Quench Flow Rate",
-        description="Flow rate of the quench stream merged before collection.",
-        default=ChemUnitQuantity("0.35 ml / min"),
-        json_schema_extra={'group': 'Flow Setup', 'editable': True, 'visible': True, 'unit': 'ml / min'},
+    quench_flow_rate: Annotated[ChemUnitQuantity, ChemQuantityValidator("ml / min")] = (
+        Field(
+            title="Quench Flow Rate",
+            description="Flow rate of the quench stream merged before collection.",
+            default=ChemUnitQuantity("0.35 ml / min"),
+            json_schema_extra={
+                "group": "Flow Setup",
+                "editable": True,
+                "visible": True,
+                "unit": "ml / min",
+            },
+        )
     )
 
     repeat_cycles: int = Field(
@@ -50,7 +74,7 @@ class MainParameter(BaseModel):
         default=10,
         ge=1,
         le=12,
-        json_schema_extra={'group': 'Automation', 'editable': True, 'visible': True},
+        json_schema_extra={"group": "Automation", "editable": True, "visible": True},
     )
 
     uv_trigger_threshold: float = Field(
@@ -59,14 +83,14 @@ class MainParameter(BaseModel):
         default=2.75,
         ge=0.1,
         le=10.0,
-        json_schema_extra={'group': 'Automation', 'editable': True, 'visible': True},
+        json_schema_extra={"group": "Automation", "editable": True, "visible": True},
     )
 
     archive_trace_automatically: bool = Field(
         title="Archive Trace Automatically here",
         description="Store chromatograms and sensor traces as soon as the run ends.",
         default=True,
-        json_schema_extra={'group': 'Automation', 'editable': True, 'visible': True},
+        json_schema_extra={"group": "Automation", "editable": True, "visible": True},
     )
 
     experiment_name: str = Field(
@@ -75,7 +99,7 @@ class MainParameter(BaseModel):
         default="some",
         min_length=0,
         max_length=50,
-        json_schema_extra={'group': 'General', 'editable': True, 'visible': True},
+        json_schema_extra={"group": "General", "editable": True, "visible": True},
     )
 
     model_config = ConfigDict(frozen=True)

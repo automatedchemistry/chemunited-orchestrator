@@ -181,6 +181,7 @@ def build_draw(platform):
                 "diameter": "1 mm",
             }
         ],
+        "inventory": {},
     }
 
 
@@ -220,6 +221,7 @@ def build_draw(platform):
             }
         ],
         "connections": [],
+        "inventory": {},
     }
 
 

@@ -14,8 +14,8 @@ class MultiChannelBory(SceneItem):
         super().__init__(width=15, height=16 * data.channels + 4)
 
     def paint(self, painter, option, widget=None) -> None:
-        painter.setPen(QPen(Qt.black, 1))
-        painter.setBrush(QBrush(Qt.white))
+        painter.setPen(QPen(Qt.GlobalColor.black, 1))
+        painter.setBrush(QBrush(Qt.GlobalColor.white))
         painter.drawRect(self.boundingRect())
         value = self._data.active
         r = 4

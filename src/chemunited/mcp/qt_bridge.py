@@ -13,9 +13,9 @@ class QtMainThreadBridge(QObject):
 
     def __init__(self, parent: QObject | None = None):
         super().__init__(parent)
-        self._call_requested.connect(  # type: ignore[arg-type]
+        self._call_requested.connect(  # type: ignore[call-arg]
             self._run_call,
-            Qt.QueuedConnection,
+            Qt.QueuedConnection,  # type: ignore[attr-defined]
         )
 
     def call(self, func: Callable[[], Any], *, timeout: float = 30.0) -> Any:

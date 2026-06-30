@@ -6,7 +6,6 @@ What is tested:
 - duplicate name raises ValueError
 """
 
-import json
 import zipfile
 from types import SimpleNamespace
 
@@ -461,6 +460,7 @@ class TestAddComponent:
             "compounds": [],
             "components": [],
             "connections": [],
+            "inventory": {},
         }
         assert session.export_destination == source_file
         assert store.list() == [source_file.resolve()]
@@ -884,11 +884,7 @@ class CustomProcess(Process[ProcessConfig]):
         assert inventory.liq_content.volume == 0
         assert inventory.liq_content.initial_species == {}
 
-    def test_save_protocols_historic_includes_inventory_status(
-        self, window: SetupWindow, tmp_path, monkeypatch
-    ):
-        working_dir = tmp_path / "demo"
-        window.orchestrator.working_dir = working_dir
+    def test_build_draw_data_includes_inventory_status(self, window: SetupWindow):
         window.orchestrator.add_component(
             name="BottleA",
             figure="GlassBottle",
@@ -899,52 +895,24 @@ class CustomProcess(Process[ProcessConfig]):
         assert inventory is not None
         inventory.liq_content.volume = 2.5e-6
         inventory.liq_content.initial_species = {"water": 0.125}
-        monkeypatch.setattr(
-            "chemunited.orchestrator.project_file.QInputDialog.getText",
-            lambda *_args, **_kwargs: ("react", True),
-        )
-        monkeypatch.setattr(
-            window.preRunFrame.protocols_list_widget,
-            "fill_cards",
-            lambda: None,
-        )
 
-        window.orchestrator.save_protocols_historic()
+        draw_data = window.orchestrator._build_draw_data()
 
-        files = list((working_dir / "protocols_historic").glob("react_*.json"))
-        assert len(files) == 1
-        data = json.loads(files[0].read_text(encoding="utf-8"))
-        assert data["inventory"]["BottleA"]["Inventory"]["liquid"] == {
+        assert draw_data["inventory"]["BottleA"]["Inventory"]["liquid"] == {
             "volume": 2.5e-6,
             "initial_species": {"water": 0.125},
         }
 
-    def test_save_protocols_historic_includes_default_air_inventory(
-        self, window: SetupWindow, tmp_path, monkeypatch
-    ):
-        working_dir = tmp_path / "demo"
-        window.orchestrator.working_dir = working_dir
+    def test_build_draw_data_includes_default_air_inventory(self, window: SetupWindow):
         window.orchestrator.add_component(
             name="BottleA",
             figure="GlassBottle",
             position=(0.0, 0.0),
         )
-        monkeypatch.setattr(
-            "chemunited.orchestrator.project_file.QInputDialog.getText",
-            lambda *_args, **_kwargs: ("react", True),
-        )
-        monkeypatch.setattr(
-            window.preRunFrame.protocols_list_widget,
-            "fill_cards",
-            lambda: None,
-        )
 
-        window.orchestrator.save_protocols_historic()
+        draw_data = window.orchestrator._build_draw_data()
 
-        files = list((working_dir / "protocols_historic").glob("react_*.json"))
-        assert len(files) == 1
-        data = json.loads(files[0].read_text(encoding="utf-8"))
-        gas = data["inventory"]["BottleA"]["Inventory"]["gas"]
+        gas = draw_data["inventory"]["BottleA"]["Inventory"]["gas"]
         assert gas["volume"] == pytest.approx(1e-6)
         assert gas["initial_species"]["air"] > 0
 

@@ -33,7 +33,7 @@ def export_platform_svg(
         scene.clearSelection()
         for item in hidden_items:
             item.setVisible(False)
-        scene.setBackgroundBrush(QBrush(Qt.NoBrush))
+        scene.setBackgroundBrush(QBrush(Qt.BrushStyle.NoBrush))
 
         source_rect = _export_rect(scene)
         size = QSize(

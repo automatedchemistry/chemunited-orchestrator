@@ -12,7 +12,7 @@ class Spectrum(SceneItem):
         self,
         width: int = PATTERN_DIMENSION,
         height: int | None = None,
-        color=Qt.red,
+        color=Qt.GlobalColor.red,
         parent=None,
     ):
         super().__init__(width, height, parent)

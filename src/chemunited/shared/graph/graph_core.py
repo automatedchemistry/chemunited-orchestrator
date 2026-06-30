@@ -36,7 +36,7 @@ class GraphCore(QGraphicsView):
         self._grid_line_color: QColor | None = None
 
         # Menu Event Context (additional context menu options can be added here, and will be rendered in the context menu event handler)
-        self._add_context_menu_event = {}
+        self._add_context_menu_event: dict = {}
 
     # === Mouse Events ===
     def mousePressEvent(self, event):
@@ -133,7 +133,7 @@ class GraphCore(QGraphicsView):
 
     def set_grid_enabled(self, enabled: bool) -> None:
         self._grid_enabled = enabled
-        self.viewport().update()
+        self.viewport().update()  # type: ignore[union-attr]
 
     def _default_grid_background_color(self) -> QColor:
         return self.scene_attribute.background_color()

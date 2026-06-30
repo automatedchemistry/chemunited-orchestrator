@@ -25,7 +25,7 @@ class SceneCore(QGraphicsScene):
         self.setBackgroundBrush(self.background_color())
         self.update()
         for view in self.views():
-            view.viewport().update()
+            view.viewport().update()  # type: ignore[union-attr]
 
     def toggle_dark_background(self) -> None:
         self.set_dark_background_enabled(not self._dark_background_enabled)
@@ -34,4 +34,4 @@ class SceneCore(QGraphicsScene):
         self.setBackgroundBrush(self.background_color())
         self.update()
         for view in self.views():
-            view.viewport().update()
+            view.viewport().update()  # type: ignore[union-attr]

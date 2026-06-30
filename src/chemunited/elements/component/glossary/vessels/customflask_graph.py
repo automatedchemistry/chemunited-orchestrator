@@ -15,7 +15,7 @@ from .common import FlaskContent as BaseFlaskContent
 
 class FlaskContent(BaseFlaskContent):
     def paint(self, painter, option, widget=None) -> None:
-        color = Qt.blue
+        color = self.content_color()
         painter.setPen(Qt.PenStyle.NoPen)
         painter.setBrush(color)
 
@@ -46,8 +46,8 @@ class CustomFlask(GraphComponent[VesselComponentData]):
 
     def build(self) -> None:
         self._content_item = FlaskContent(
-            width=PATTERN_DIMENSION * self.SVG_SCALE * 0.6,
-            height=PATTERN_DIMENSION * self.SVG_SCALE,
+            width=int(PATTERN_DIMENSION * self.SVG_SCALE * 0.6),
+            height=int(PATTERN_DIMENSION * self.SVG_SCALE),
             parent=self,
         )
         self.addToGroup(self._content_item)

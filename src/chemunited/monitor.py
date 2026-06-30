@@ -3,7 +3,6 @@ from PyQt5.QtCore import QUrl
 from PyQt5.QtGui import QDesktopServices
 from qfluentwidgets import FluentIcon, NavigationItemPosition
 
-from .elements.compounds.iventory_status import InventoryStatusDialog
 from .monitoring.execution_api_process import ApiProcess
 from .monitoring.graph import ExecutionGraph
 from .monitoring.process_list import MonitorProcessesWidget

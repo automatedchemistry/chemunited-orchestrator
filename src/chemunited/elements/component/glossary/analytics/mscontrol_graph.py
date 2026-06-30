@@ -14,7 +14,9 @@ class MSControl(GraphComponent[ComponentData]):
     def build(self) -> None:
         super().build()
 
-        self.spectrum = Spectrum(width=50, height=20, color=Qt.green, parent=self)
+        self.spectrum = Spectrum(
+            width=50, height=20, color=Qt.GlobalColor.green, parent=self
+        )
 
         self.spectrum.setPos(
             QPointF(

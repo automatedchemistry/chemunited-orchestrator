@@ -35,10 +35,7 @@ class BlockData(WorkflowNodeSpec):
 
     def to_script(self, indent: str = "        ") -> str:
         spec_keys = set(WorkflowNodeSpec.model_fields)
-        kwargs = {
-            k: v
-            for k, v in self.model_dump(include=spec_keys).items()
-        }
+        kwargs = {k: v for k, v in self.model_dump(include=spec_keys).items()}
         kwarg_lines = "".join(
             f"\n{indent}        {k}={v!r}," for k, v in kwargs.items()
         )

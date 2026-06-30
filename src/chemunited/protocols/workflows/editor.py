@@ -37,7 +37,7 @@ class ProtectedZoneEditor(ScriptEditor):
 
     def _setup_dim_indicator(self) -> None:
         self.indicatorDefine(QsciScintilla.FullBoxIndicator, self._DIM_INDICATOR)
-        self.setIndicatorDrawUnder(self._DIM_INDICATOR, True)
+        self.setIndicatorDrawUnder(self._DIM_INDICATOR, True)  # type: ignore[arg-type]
         self.setIndicatorForegroundColor(QColor(128, 128, 128), self._DIM_INDICATOR)
         self.SendScintilla(
             QsciScintilla.SCI_INDICSETALPHA,
@@ -49,7 +49,7 @@ class ProtectedZoneEditor(ScriptEditor):
         self.setMarginType(self._FOCUS_MARGIN, QsciScintilla.SymbolMargin)
         self.setMarginWidth(self._FOCUS_MARGIN, self._FOCUS_MARGIN_WIDTH)
         self.setMarginMarkerMask(self._FOCUS_MARGIN, 1 << self._FOCUS_MARKER)
-        self.markerDefine(QsciScintilla.SC_MARK_FULLRECT, self._FOCUS_MARKER)
+        self.markerDefine(QsciScintilla.SC_MARK_FULLRECT, self._FOCUS_MARKER)  # type: ignore[call-overload]
         self.setMarkerBackgroundColor(self._FOCUS_COLOR, self._FOCUS_MARKER)
         self.setMarkerForegroundColor(self._FOCUS_COLOR, self._FOCUS_MARKER)
 
@@ -126,14 +126,16 @@ class ProtectedZoneEditor(ScriptEditor):
                 return True
         return False
 
-    def keyPressEvent(self, event: QKeyEvent) -> None:
+    def keyPressEvent(self, event: QKeyEvent | None) -> None:
+        if event is None:
+            return
         if not self._protected:
             super().keyPressEvent(event)
             return
 
         key = event.key()
         mods = event.modifiers()
-        ctrl = bool(mods & Qt.ControlModifier)
+        ctrl = bool(mods & Qt.ControlModifier)  # type: ignore[attr-defined]
 
         # Always allow: navigation, undo/redo, copy, select-all, find
         if (
@@ -204,7 +206,9 @@ class ProtectedZoneEditor(ScriptEditor):
                 return
         super().paste()
 
-    def dropEvent(self, event: QDropEvent) -> None:
+    def dropEvent(self, event: QDropEvent | None) -> None:
+        if event is None:
+            return
         if self._protected:
             pos = self.SendScintilla(
                 QsciScintilla.SCI_POSITIONFROMPOINT,

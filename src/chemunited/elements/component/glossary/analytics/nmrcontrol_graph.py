@@ -14,7 +14,9 @@ class NMRControl(GraphComponent[ComponentData]):
     def build(self) -> None:
         super().build()
 
-        self.spectrum = Spectrum(width=50, height=20, color=Qt.yellow, parent=self)
+        self.spectrum = Spectrum(
+            width=50, height=20, color=Qt.GlobalColor.yellow, parent=self
+        )
 
         self.spectrum.setPos(
             QPointF(

@@ -341,7 +341,7 @@ class RunEventStreamThread(QThread):
                 "run/stream",
                 timeout=(5, 15),
             )
-            for line in self._response.iter_lines(
+            for line in self._response.iter_lines(  # type: ignore[attr-defined]
                 chunk_size=1,
                 decode_unicode=True,
             ):
@@ -356,7 +356,7 @@ class RunEventStreamThread(QThread):
                     self.process_status_received.emit(active_name, status)
                 node_state = _node_state_from_stream_payload(payload)
                 active_name = (
-                    _process_key_from_stream_payload(payload)
+                    _process_key_from_stream_payload(payload)  # type: ignore[assignment]
                     or self._tracker.current_process_name
                 )
                 node_name = _node_name_from_stream_payload(payload)
@@ -497,7 +497,7 @@ class OrchestratorExecution(OrchestratorConnectivity):
         with open(self.selected_protocol_file, "r", encoding="utf-8") as f:
             data = json.load(f)
 
-        apply_inventory_status_payload(self.components, data.get("inventory"))
+        apply_inventory_status_payload(self.components, data.get("inventory"))  # type: ignore[arg-type]
 
         active_processes: list[tuple[str, str]] = []
         actual_process: str = ""
@@ -718,7 +718,7 @@ class OrchestratorExecution(OrchestratorConnectivity):
             f'<a href="{html.escape(run_control_url)}">Open API run control</a><br><br>'
             "Stopping does not start the selected protocol automatically."
         )
-        dialog.setTextFormat(Qt.RichText)
+        dialog.setTextFormat(Qt.RichText)  # type: ignore[attr-defined]
         stop_button = dialog.addButton(
             "Stop current protocol",
             QMessageBox.AcceptRole,
@@ -726,7 +726,7 @@ class OrchestratorExecution(OrchestratorConnectivity):
         dialog.addButton("Keep running", QMessageBox.RejectRole)
         for label in dialog.findChildren(QLabel):
             label.setOpenExternalLinks(True)
-            label.setTextInteractionFlags(Qt.TextBrowserInteraction)
+            label.setTextInteractionFlags(Qt.TextBrowserInteraction)  # type: ignore[attr-defined]
         dialog.exec_()
         return dialog.clickedButton() is stop_button
 

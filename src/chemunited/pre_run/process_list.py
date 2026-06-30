@@ -90,7 +90,7 @@ class ActiveProcessList(ProcessList):
     def names(self) -> list[str]:
         result = []
         for i in range(self._list_widget.count()):
-            active_name = self._list_widget.item(i).data(Qt.UserRole)
+            active_name = self._list_widget.item(i).data(Qt.UserRole)  # type: ignore[attr-defined]
             if active_name is not None:
                 result.append(str(active_name))
         return result

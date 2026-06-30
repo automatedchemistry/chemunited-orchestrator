@@ -1,15 +1,15 @@
 from pathlib import Path
 from types import SimpleNamespace
 
-from chemunited.elements.component.protocols.valves import (
-    ThreePortTwoPositionValveProtocols,
-)
 from chemunited_core.protocols import CommandSignature
 from chemunited_workflow.enums import NodeState
 from PyQt5.QtCore import QPointF, Qt
 from PyQt5.QtWidgets import QWidget
 from pytestqt.qtbot import QtBot
 
+from chemunited.elements.component.protocols.valves import (
+    ThreePortTwoPositionValveProtocols,
+)
 from chemunited.protocols.workflows.controller import WorkflowController
 from chemunited.protocols.workflows.process_workflow import ProcessWorkflow
 from chemunited.protocols.workflows.workflow_frames import (

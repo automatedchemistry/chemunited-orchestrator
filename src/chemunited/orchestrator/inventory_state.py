@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from collections.abc import Iterable
+from collections.abc import Iterable, Mapping
 from typing import Any
 
 from chemunited_core.common.enums import PhaseKind
@@ -9,7 +9,7 @@ from chemunited_core.compounds import COMPOUNDS
 
 def coerce_float(value: object, default: float = 0.0) -> float:
     try:
-        return float(value)
+        return float(value)  # type: ignore[arg-type]
     except (TypeError, ValueError):
         return default
 
@@ -26,7 +26,7 @@ def ensure_air_defaults(component_data: Any) -> None:
         apply_air_defaults()
 
     for inventory in getattr(component_data, "internal_inventories", {}).values():
-        if _inventory_has_species(inventory):
+        if inventory.gas_content.initial_species:
             continue
 
         gas_content = inventory.gas_content
@@ -35,8 +35,12 @@ def ensure_air_defaults(component_data: Any) -> None:
             capacity = float(getattr(component_data, "capacity_value", 0.0) or 0.0)
             if capacity <= 0.0:
                 continue
-            gas_volume = capacity
-            gas_content.volume = capacity
+            liq_volume = float(getattr(inventory.liq_content, "volume", 0.0) or 0.0)
+            remaining = capacity - liq_volume
+            if remaining <= 0.0:
+                continue
+            gas_volume = remaining
+            gas_content.volume = remaining
 
         air = COMPOUNDS["air"]
         gas_content.phase_kind = PhaseKind.GAS
@@ -63,7 +67,7 @@ def build_inventory_status_payload(components: Iterable[Any]) -> dict[str, dict]
 
 
 def apply_inventory_status_payload(
-    components: dict[str, Any],
+    components: Mapping[str, Any],
     payload: object,
 ) -> bool:
     if not isinstance(payload, dict):
@@ -140,9 +144,3 @@ def _apply_component_inventory_payload(component_data: Any, payload: object) -> 
             }
             restored = True
     return restored
-
-
-def _inventory_has_species(inventory: Any) -> bool:
-    return bool(inventory.liq_content.initial_species) or bool(
-        inventory.gas_content.initial_species
-    )

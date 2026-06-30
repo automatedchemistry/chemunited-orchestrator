@@ -27,6 +27,16 @@ def is_coolprop_available() -> bool:
     return True
 
 
+def get_fluid_names() -> list[str]:
+    """Return sorted list of all CoolProp fluid names, or [] if unavailable."""
+    try:
+        from CoolProp.CoolProp import FluidsList
+
+        return sorted(FluidsList())
+    except ImportError:
+        return []
+
+
 def lookup_compound_properties(
     compound_name: str,
     *,

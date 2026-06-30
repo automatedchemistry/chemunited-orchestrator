@@ -220,7 +220,7 @@ class ApiProcess(QObject):
                 "Failed to launch execution API '{}' {} — QProcess error code {}.",
                 executable,
                 arguments,
-                int(self._process.error()),
+                int(self._process.error()),  # type: ignore[operator]
             )
             return False
 
@@ -263,8 +263,14 @@ class ApiProcess(QObject):
         self._ping_timer.start()
 
     def _on_process_error(self, error) -> None:
-        _NAMES = {0: "FailedToStart", 1: "Crashed", 2: "Timedout",
-                  3: "WriteError", 4: "ReadError", 5: "UnknownError"}
+        _NAMES = {
+            0: "FailedToStart",
+            1: "Crashed",
+            2: "Timedout",
+            3: "WriteError",
+            4: "ReadError",
+            5: "UnknownError",
+        }
         logger.error(
             "API subprocess error: {} ({}). See Detailed Records for output.",
             _NAMES.get(int(error), "Unknown"),

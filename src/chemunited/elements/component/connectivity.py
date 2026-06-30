@@ -23,7 +23,7 @@ class ComponentConnnectivity(BaseModel):
     def is_online(self) -> bool:
         """Check if the component is online."""
         try:
-            response = requests.get(self.url, timeout=0.1)
+            response = requests.get(str(self.url), timeout=0.1)
             return response.status_code == 200
         except requests.exceptions.RequestException:
             return False

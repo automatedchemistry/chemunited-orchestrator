@@ -47,7 +47,9 @@ DEFAULT_PORT = 3116
 DEFAULT_HOST = "127.0.0.1"
 
 
-def inpect_execution_address(host: str = DEFAULT_HOST, port: int = DEFAULT_PORT) -> bool:
+def inpect_execution_address(
+    host: str = DEFAULT_HOST, port: int = DEFAULT_PORT
+) -> bool:
     """Return True if the port is already in use."""
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.settimeout(0.5)
@@ -148,14 +150,14 @@ class DashBoardLauncherFrame(QFrame):
 
         scroll = ScrollArea(self)
         scroll.setWidgetResizable(True)
-        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)
+        scroll.setHorizontalScrollBarPolicy(Qt.ScrollBarAlwaysOff)  # type: ignore[attr-defined]
         scroll.enableTransparentBackground()
 
         content = QWidget()
         layout = QVBoxLayout(content)
         layout.setContentsMargins(16, 16, 16, 16)
         layout.setSpacing(12)
-        layout.setAlignment(Qt.AlignTop)
+        layout.setAlignment(Qt.AlignTop)  # type: ignore[attr-defined]
 
         layout.addWidget(self._build_status_card())
         layout.addWidget(self._build_options_card())
@@ -166,7 +168,7 @@ class DashBoardLauncherFrame(QFrame):
         layout.addWidget(self._launch_btn)
 
         self._refresh_btn = TransparentPushButton(FluentIcon.SYNC, "Refresh Status")
-        layout.addWidget(self._refresh_btn, 0, Qt.AlignHCenter)
+        layout.addWidget(self._refresh_btn, 0, Qt.AlignHCenter)  # type: ignore[attr-defined]
 
         layout.addWidget(self._build_mcp_card())
         layout.addStretch(1)
@@ -193,7 +195,9 @@ class DashBoardLauncherFrame(QFrame):
 
         vlay.addWidget(_SectionSeparator())
 
-        self._local_addr_label = self._addr_label(f"http://{DEFAULT_HOST}:{DEFAULT_PORT}/")
+        self._local_addr_label = self._addr_label(
+            f"http://{DEFAULT_HOST}:{DEFAULT_PORT}/"
+        )
         vlay.addWidget(self._labeled_row("Local:", self._local_addr_label))
 
         self._network_addr_label = self._addr_label("")
@@ -229,7 +233,7 @@ class DashBoardLauncherFrame(QFrame):
     @staticmethod
     def _addr_label(text: str) -> BodyLabel:
         lbl = BodyLabel(text)
-        lbl.setTextInteractionFlags(Qt.TextSelectableByMouse)
+        lbl.setTextInteractionFlags(Qt.TextSelectableByMouse)  # type: ignore[attr-defined]
         return lbl
 
     @staticmethod
@@ -267,7 +271,13 @@ class DashBoardLauncherFrame(QFrame):
         self._host_edit.setText(DEFAULT_HOST)
         self._host_edit.setFixedWidth(180)
         self._host_edit.setEnabled(False)
-        vlay.addWidget(_OptionRow("Host", "Managed automatically (0.0.0.0 when LAN advertisement is on)", self._host_edit))
+        vlay.addWidget(
+            _OptionRow(
+                "Host",
+                "Managed automatically (0.0.0.0 when LAN advertisement is on)",
+                self._host_edit,
+            )
+        )
         vlay.addWidget(_SectionSeparator())
 
         self._tray_switch = SwitchButton()
@@ -404,7 +414,7 @@ class DashBoardLauncherFrame(QFrame):
         copy_btn.clicked.connect(  # type: ignore[attr-defined]
             lambda: self._copy_mcp_config(self._mcp_json_browser.toPlainText())
         )
-        vlay.addWidget(copy_btn, 0, Qt.AlignLeft)
+        vlay.addWidget(copy_btn, 0, Qt.AlignLeft)  # type: ignore[attr-defined]
 
         self._mcp_card.setVisible(False)
         return self._mcp_card
@@ -482,7 +492,9 @@ class DashBoardLauncherFrame(QFrame):
 
     def _update_command_preview(self) -> None:
         args = self._build_args()
-        options = args[4:]  # skip [sys.executable, "-m", "chemunited_workflow.cli", "serve"]
+        options = args[
+            4:
+        ]  # skip [sys.executable, "-m", "chemunited_workflow.cli", "serve"]
         exe_name = "chemunited-workflow.exe" if _IS_WINDOWS else "chemunited-workflow"
         cmd = exe_name + " serve"
         if options:
@@ -526,7 +538,7 @@ class DashBoardLauncherFrame(QFrame):
             InfoBar.warning(
                 "No Project Loaded",
                 "Open a project in the orchestrator first.",
-                orient=Qt.Horizontal,
+                orient=Qt.Horizontal,  # type: ignore[attr-defined]
                 isClosable=True,
                 position=InfoBarPosition.TOP,
                 duration=4000,
@@ -547,7 +559,7 @@ class DashBoardLauncherFrame(QFrame):
                 InfoBar.success(
                     "Project Loaded",
                     "Dashboard is now serving this project.",
-                    orient=Qt.Horizontal,
+                    orient=Qt.Horizontal,  # type: ignore[attr-defined]
                     isClosable=True,
                     position=InfoBarPosition.TOP,
                     duration=4000,
@@ -563,7 +575,7 @@ class DashBoardLauncherFrame(QFrame):
                 InfoBar.error(
                     "Set Project Failed",
                     f"HTTP {exc.code}: {exc.reason}",
-                    orient=Qt.Horizontal,
+                    orient=Qt.Horizontal,  # type: ignore[attr-defined]
                     isClosable=True,
                     position=InfoBarPosition.BOTTOM_RIGHT,
                     duration=6000,
@@ -573,7 +585,7 @@ class DashBoardLauncherFrame(QFrame):
             InfoBar.error(
                 "Set Project Failed",
                 str(exc),
-                orient=Qt.Horizontal,
+                orient=Qt.Horizontal,  # type: ignore[attr-defined]
                 isClosable=True,
                 position=InfoBarPosition.BOTTOM_RIGHT,
                 duration=6000,
@@ -584,7 +596,11 @@ class DashBoardLauncherFrame(QFrame):
         args = [sys.executable, "-m", "chemunited_workflow.cli", "serve"]
         if self._tray_switch.isChecked():
             args.append("--tray")
-        if _IS_WINDOWS and self._silent_switch.isChecked() and self._tray_switch.isChecked():
+        if (
+            _IS_WINDOWS
+            and self._silent_switch.isChecked()
+            and self._tray_switch.isChecked()
+        ):
             args.append("--silent")
         if self._advertise_switch.isChecked():
             args.append("--advertise")
@@ -604,7 +620,7 @@ class DashBoardLauncherFrame(QFrame):
             InfoBar.warning(
                 "Already Running",
                 "The dashboard is already accessible at the configured address.",
-                orient=Qt.Horizontal,
+                orient=Qt.Horizontal,  # type: ignore[attr-defined]
                 isClosable=True,
                 position=InfoBarPosition.TOP,
                 duration=4000,
@@ -620,7 +636,10 @@ class DashBoardLauncherFrame(QFrame):
 
         args = self._build_args()
 
-        if self._tray_switch.isChecked() and importlib.util.find_spec("pystray") is None:
+        if (
+            self._tray_switch.isChecked()
+            and importlib.util.find_spec("pystray") is None
+        ):
             logger.warning(
                 "System Tray requires pystray — launching without tray support. "
                 "Install it with: pip install chemunited-workflow[tray]"
@@ -638,7 +657,7 @@ class DashBoardLauncherFrame(QFrame):
             InfoBar.success(
                 "Dashboard Launched",
                 "Server is starting — click Refresh in a few seconds to verify.",
-                orient=Qt.Horizontal,
+                orient=Qt.Horizontal,  # type: ignore[attr-defined]
                 isClosable=True,
                 position=InfoBarPosition.TOP,
                 duration=5000,
@@ -658,11 +677,11 @@ class DashBoardLauncherFrame(QFrame):
             logger.error(f"Launch Failed — {exc}")
 
     def _copy_mcp_config(self, json_text: str) -> None:
-        QApplication.clipboard().setText(json_text)
+        QApplication.clipboard().setText(json_text)  # type: ignore[union-attr]
         InfoBar.success(
             "Copied",
             "MCP configuration copied to clipboard.",
-            orient=Qt.Horizontal,
+            orient=Qt.Horizontal,  # type: ignore[attr-defined]
             isClosable=True,
             position=InfoBarPosition.TOP,
             duration=2500,

@@ -58,7 +58,9 @@ class CommandEditorDialog(FramelessDialog):
             parent=self,
         )
         self._strip_editor_footer()
-        self._setup_param_refs(command_model, config_fields or [], main_params_fields or [])
+        self._setup_param_refs(
+            command_model, config_fields or [], main_params_fields or []
+        )
         self.custom_signal()
 
         self.setObjectName("commandEditorDialog")
@@ -97,7 +99,7 @@ class CommandEditorDialog(FramelessDialog):
 
         base_fields = set(CommandSignature.model_fields)
 
-        scroll_area = self._editor.layout().itemAt(0).widget()
+        scroll_area = self._editor.layout().itemAt(0).widget()  # type: ignore[union-attr]
         if not isinstance(scroll_area, SmoothScrollArea):
             return
         scroll_content = scroll_area.widget()
@@ -119,14 +121,16 @@ class CommandEditorDialog(FramelessDialog):
 
     def custom_signal(self) -> None:
         cards = self._editor.cards
-        cards["wait_feedback_status"].value_changed.connect(self._trigger_feedback_signal)
-    
+        cards["wait_feedback_status"].value_changed.connect(
+            self._trigger_feedback_signal
+        )
+
     @pyqtSlot()
     def _trigger_feedback_signal(self):
         value = self._editor.cards["wait_feedback_status"].get_value()
         self._editor.cards["feedback_status_command"].setEnabled(value)
         self._editor.cards["feedback_answer"].setEnabled(value)
-    
+
     def _build_header(self) -> QHBoxLayout:
         layout = QHBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
@@ -282,9 +286,7 @@ class CommandEditorDialog(FramelessDialog):
 if __name__ == "__main__":
     import sys
 
-    from chemunited_core.protocols.pumps import WithdrawParameter
     from chemunited_core.protocols.technical import SetTemperatureParameter
-    from chemunited_quantities import ChemUnitQuantity
     from PyQt5.QtWidgets import QApplication, QDialog
 
     app = QApplication(sys.argv)

@@ -42,9 +42,9 @@ class SvgLayer(QGraphicsSvgItem):
         """Construct an SvgLayer from raw SVG bytes (e.g. from a package resource)."""
         instance = cls.__new__(cls)
         QGraphicsSvgItem.__init__(instance, parent=parent)
-        instance.setCacheMode(QGraphicsItem.NoCache)
-        instance.setFlag(QGraphicsItem.ItemIsSelectable, False)
-        instance.setFlag(QGraphicsItem.ItemIsMovable, False)
+        instance.setCacheMode(QGraphicsItem.NoCache)  # type: ignore[attr-defined]
+        instance.setFlag(QGraphicsItem.ItemIsSelectable, False)  # type: ignore[attr-defined]
+        instance.setFlag(QGraphicsItem.ItemIsMovable, False)  # type: ignore[attr-defined]
         instance._scale = scale
         instance.setSharedRenderer(QSvgRenderer(QByteArray(svg_bytes)))
         instance._apply_scale()

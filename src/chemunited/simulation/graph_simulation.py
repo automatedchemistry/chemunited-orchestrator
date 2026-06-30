@@ -1,5 +1,5 @@
-from chemunited.shared.graph import GraphCore, SceneCore
 from chemunited.shared.enums import SetupStepMode
+from chemunited.shared.graph import GraphCore, SceneCore
 
 
 class SimGraphicView(GraphCore):

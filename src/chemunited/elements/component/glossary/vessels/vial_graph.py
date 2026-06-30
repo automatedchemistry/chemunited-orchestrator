@@ -1,13 +1,16 @@
 from typing import ClassVar
 
+from chemunited_core.common.constant import PATTERN_DIMENSION
 from chemunited_core.figure_registry import get_figure_path
-from chemunited_core.figure_registry.vessels import VialData
+from chemunited_core.figure_registry.vessels import VialData, _well_key
 from PyQt5.QtCore import QPointF, QRectF, Qt
 from PyQt5.QtGui import QColor, QFont, QPen
 
 from chemunited.elements.component.component_parts import SceneItem, SvgLayer
 from chemunited.elements.component.graph_item import GraphComponent
 from chemunited.utils.math_functions import position_to_letter
+
+from .common import FlaskContent
 
 CELL_SIZE = 40
 ROW_HEADER_WIDTH = 12
@@ -129,18 +132,57 @@ class FramePanel(SceneItem):
             )
 
 
+class VialContent(FlaskContent):
+    def __init__(self, width=40, height=40, vial:str = "A1", parent=None) -> None:
+        super().__init__(width=width, height=height, parent=parent)
+        self._vial = vial
+
+    def paint(self, painter, option, widget=None) -> None:
+        color = self.content_color(iventory=self._vial)
+        painter.setPen(Qt.PenStyle.NoPen)
+        painter.setBrush(color)
+
+        fill = 0.0
+        component_data = getattr(self.parent_ref, "inf", None)
+        inventories = getattr(component_data, "internal_inventories", {})
+        inventory = next(iter(inventories.values()), None)
+        capacity = float(getattr(component_data, "capacity_value", 0.0) or 0.0)
+        if inventory is not None and capacity > 0:
+            fill = inventory.liq_content.volume / capacity
+            fill = max(0.0, min(1.0, fill))
+
+        rect = QRectF(
+            -self.width / 2,
+            self.height / 2 - self.height * fill,
+            self.width,
+            self.height * fill,
+        )
+        painter.drawRoundedRect(rect, 15, 15)
+
+
 class Vial(GraphComponent[VialData]):
     FIGURE: ClassVar[str] = "Vial"
+
+    def __init__(self, data: VialData) -> None:
+        self.vial_content: dict[str, VialContent] = {}
+        super().__init__(data)
 
     def build(self) -> None:
         if not self._data.is_array:
             super().build()
             return
 
-        self._svg = FramePanel(self._data, self)
+        self._svg = FramePanel(self._data, self)  # type: ignore[assignment]
         self.addToGroup(self._svg)
         for row_index in range(self._data.row):
             for column_index in range(self._data.column):
+                key = _well_key(row_index, column_index)
+                self.vial_content[key] = VialContent(
+                    width=int(PATTERN_DIMENSION * self.SVG_SCALE * 0.05),
+                    height=int(PATTERN_DIMENSION * self.SVG_SCALE * 0.05),
+                    vial=key,
+                    parent=self,
+                )
                 vial_graph = SvgLayer.from_bytes(
                     get_figure_path("Vial").read_bytes(),
                     scale=VIAL_ICON_SCALE * CELL_SIZE,
@@ -157,6 +199,11 @@ class Vial(GraphComponent[VialData]):
                     centered_offset.x() + center_x,
                     centered_offset.y() + center_y,
                 )
+                self.vial_content[key].setPos(
+                    centered_offset.x() + center_x,
+                    centered_offset.y() + center_y,
+                )
+                self.addToGroup(self.vial_content[key])
                 self.addToGroup(vial_graph)
 
         self.build_connections_points()

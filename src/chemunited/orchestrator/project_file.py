@@ -26,7 +26,10 @@ from chemunited.shared.enums.protocols_enum import ProtocolBlock
 
 from .draw import call_component_model
 from .execution import OrchestratorExecution
-from .inventory_state import apply_inventory_status_payload, build_inventory_status_payload
+from .inventory_state import (
+    apply_inventory_status_payload,
+    build_inventory_status_payload,
+)
 from .protocols import is_valid_name
 
 
@@ -557,7 +560,9 @@ class OrchestratorProjectFile(OrchestratorExecution):
                     f"Skipped connection: {exc}"
                 )
 
-        apply_inventory_status_payload(self.components, draw_data.get("inventory", {}))
+        apply_inventory_status_payload(self.components, draw_data.get("inventory", {}))  # type: ignore[arg-type]
+        for comp in self.components.values():
+            comp.graph.sync_visuals()
         self._sync_compound_list()
 
     def _restore_connectivity_data(self, connectivity_data: dict) -> None:

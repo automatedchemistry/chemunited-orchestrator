@@ -128,8 +128,12 @@ class ScriptEditor(EditorBase):
     def __init__(self, path: Path, parent=None):
         super().__init__(parent, path=path)
 
-    def dropEvent(self, event: QDropEvent) -> None:
+    def dropEvent(self, event: QDropEvent | None) -> None:
+        if event is None:
+            return
         mime_data = event.mimeData()
+        if mime_data is None:
+            return
         if mime_data.hasFormat(ParameterDragableList.MIME) and mime_data.hasFormat(
             ParameterDragableList.PATH_MIME
         ):

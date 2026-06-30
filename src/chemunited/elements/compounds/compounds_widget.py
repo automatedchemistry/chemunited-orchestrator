@@ -42,7 +42,7 @@ class CompoundsWidget(QWidget):
         )
         action_row.addWidget(
             self.edit_inventory_button,
-            alignment=Qt.AlignLeft,  # type: ignore[arg-type]
+            alignment=Qt.AlignLeft,  # type: ignore[arg-type, attr-defined]
         )
         action_row.addStretch()
         layout.addLayout(action_row)

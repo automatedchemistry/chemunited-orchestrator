@@ -57,6 +57,7 @@ Series = dict[str, tuple[list[float], list[float]]]
 # Server helpers
 # ---------------------------------------------------------------------------
 
+
 def _sim_server_executable() -> str:
     scripts_dir = Path(sys.executable).parent
     name = "chemunited-sim.exe" if sys.platform == "win32" else "chemunited-sim"
@@ -86,6 +87,7 @@ def _wait_for_api(base_url: str, timeout: float = _API_READY_TIMEOUT) -> bool:
 # DB helpers
 # ---------------------------------------------------------------------------
 
+
 def _matches(db_key: str, name: str) -> bool:
     key = db_key.lower()
     n = name.lower()
@@ -102,6 +104,7 @@ def _table_exists(conn: sqlite3.Connection, table: str) -> bool:
 # ---------------------------------------------------------------------------
 # SimDbReader
 # ---------------------------------------------------------------------------
+
 
 class SimDbReader:
     """Read per-component time-series from a simulation SQLite DB."""
@@ -151,13 +154,18 @@ class SimDbReader:
                         xs.append(float(row["time"]))
                         ys.append(float(row["temperature"]) + _K_TO_C)
             if _table_exists(self._conn, "cell_state"):
-                for row in self._conn.execute("""
+                for row in self._conn.execute(
+                    """
                     SELECT time, edge_id, AVG(temperature) AS avg_temp
                     FROM cell_state
                     GROUP BY time, edge_id
                     ORDER BY time
-                """):
-                    if _matches(row["edge_id"], component) and row["avg_temp"] is not None:
+                """
+                ):
+                    if (
+                        _matches(row["edge_id"], component)
+                        and row["avg_temp"] is not None
+                    ):
                         xs, ys = series[row["edge_id"]]
                         xs.append(float(row["time"]))
                         ys.append(float(row["avg_temp"]) + _K_TO_C)
@@ -184,12 +192,14 @@ class SimDbReader:
         series: dict[str, tuple[list, list]] = defaultdict(lambda: ([], []))
         try:
             if _table_exists(self._conn, "inventory_content"):
-                for row in self._conn.execute("""
+                for row in self._conn.execute(
+                    """
                     SELECT time, node_id, phase, species_id, moles
                     FROM inventory_content
                     WHERE species_id != '__carrier__'
                     ORDER BY time
-                """):
+                """
+                ):
                     if _matches(row["node_id"], component):
                         key = f"{row['node_id']} / {row['phase']} / {row['species_id']}"
                         xs, ys = series[key]
@@ -203,6 +213,7 @@ class SimDbReader:
 # ---------------------------------------------------------------------------
 # SimRunWorker
 # ---------------------------------------------------------------------------
+
 
 class SimRunWorker(QThread):
     """Background thread that drives the full simulation pipeline."""
@@ -224,7 +235,9 @@ class SimRunWorker(QThread):
         return self._session.get(f"{_SIM_BASE_URL}{endpoint}", timeout=timeout)
 
     def _post(self, endpoint: str, data: dict, timeout: int = 10):
-        return self._session.post(f"{_SIM_BASE_URL}{endpoint}", json=data, timeout=timeout)
+        return self._session.post(
+            f"{_SIM_BASE_URL}{endpoint}", json=data, timeout=timeout
+        )
 
     def run(self) -> None:
         try:
@@ -242,7 +255,14 @@ class SimRunWorker(QThread):
             sim_dir.mkdir(parents=True, exist_ok=True)
             try:
                 subprocess.Popen(
-                    [exe, str(self._project_path), "--port", str(_SIM_SERVER_PORT), "--db", str(sim_dir)],
+                    [
+                        exe,
+                        str(self._project_path),
+                        "--port",
+                        str(_SIM_SERVER_PORT),
+                        "--db",
+                        str(sim_dir),
+                    ],
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
                 )
@@ -252,11 +272,15 @@ class SimRunWorker(QThread):
                 )
                 return
             if not _wait_for_api(_SIM_BASE_URL):
-                self.simulation_failed.emit("Simulation server did not respond in time.")
+                self.simulation_failed.emit(
+                    "Simulation server did not respond in time."
+                )
                 return
         else:
             if not _wait_for_api(_SIM_BASE_URL, timeout=5):
-                self.simulation_failed.emit("Port 1472 is in use but server is not responding.")
+                self.simulation_failed.emit(
+                    "Port 1472 is in use but server is not responding."
+                )
                 return
 
         # 2. Load project
@@ -324,7 +348,9 @@ class SimRunWorker(QThread):
             if sim_status == "idle":
                 break
             if sim_status == "no_project":
-                self.simulation_failed.emit("Server lost the project during simulation.")
+                self.simulation_failed.emit(
+                    "Server lost the project during simulation."
+                )
                 return
 
         # 6. Get DB path
@@ -345,6 +371,7 @@ class SimRunWorker(QThread):
 # ---------------------------------------------------------------------------
 # ProfilePlot
 # ---------------------------------------------------------------------------
+
 
 class ProfilePlot(QWidget):
     """Thin QWidget wrapper around a matplotlib canvas for time-series charts."""
@@ -383,9 +410,12 @@ class ProfilePlot(QWidget):
         self._ax.clear()
         self._apply_theme()
         self._ax.text(
-            0.5, 0.5, message,
+            0.5,
+            0.5,
+            message,
             transform=self._ax.transAxes,
-            ha="center", va="center",
+            ha="center",
+            va="center",
             fontsize=10,
             color="#888888",
         )
@@ -406,9 +436,12 @@ class ProfilePlot(QWidget):
         if not series:
             msg = f"No data for '{component}'" if component else "No data available"
             self._ax.text(
-                0.5, 0.5, msg,
+                0.5,
+                0.5,
+                msg,
                 transform=self._ax.transAxes,
-                ha="center", va="center",
+                ha="center",
+                va="center",
                 fontsize=10,
                 color="#888888",
             )
@@ -438,9 +471,9 @@ _SEGMENTS = [
 
 _PLOT_META = {
     "temperature": ("Time (s)", "Temperature (°C)", "Temperature"),
-    "pressure":    ("Time (s)", "Pressure (bar)",   "Pressure"),
-    "flow":        ("Time (s)", "Flow (mL/min)",     "Flow"),
-    "content":     ("Time (s)", "Moles (mol)",       "Content"),
+    "pressure": ("Time (s)", "Pressure (bar)", "Pressure"),
+    "flow": ("Time (s)", "Flow (mL/min)", "Flow"),
+    "content": ("Time (s)", "Moles (mol)", "Content"),
 }
 
 
@@ -482,7 +515,9 @@ class ProfilesWidget(QWidget):
             plot = ProfilePlot(self)
             self._plots[key] = plot
             self._plot_stack.addWidget(plot)
-            self._segment.addItem(routeKey=key, text=text, onClick=lambda k=key: self._switch(k))
+            self._segment.addItem(
+                routeKey=key, text=text, onClick=lambda k=key: self._switch(k)
+            )
 
         self._segment.setCurrentItem(_SEGMENTS[0][0])
 
@@ -557,9 +592,9 @@ class ProfilesWidget(QWidget):
         try:
             data = {
                 "temperature": reader.temperature(name),
-                "pressure":    reader.pressure(name),
-                "flow":        reader.flow(name),
-                "content":     reader.content(name),
+                "pressure": reader.pressure(name),
+                "flow": reader.flow(name),
+                "content": reader.content(name),
             }
         finally:
             reader.close()
@@ -572,6 +607,7 @@ class ProfilesWidget(QWidget):
 # ---------------------------------------------------------------------------
 # SimulateWindowReport
 # ---------------------------------------------------------------------------
+
 
 class SimulateWindowReport(QMainWindow):
 

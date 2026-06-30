@@ -410,7 +410,7 @@ class WorkflowNode(QGraphicsItemGroup):
             return
         scene.update(self.sceneBoundingRect())
         for view in scene.views():
-            view.viewport().update()
+            view.viewport().update()  # type: ignore[union-attr]
 
     def itemChange(self, change, value):
         if change == QGraphicsItem.GraphicsItemChange.ItemSelectedHasChanged:

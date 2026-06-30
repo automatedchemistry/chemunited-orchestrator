@@ -398,7 +398,7 @@ class ReportFrame(QWidget):
     def _clear_layout(layout: QVBoxLayout) -> None:
         while layout.count():
             item = layout.takeAt(0)
-            widget = item.widget()  # type: ignore[attr-defined]
+            widget = item.widget()  # type: ignore[union-attr]
             if widget is not None:
                 widget.deleteLater()
 
@@ -412,8 +412,8 @@ class ReportFrame(QWidget):
         row = self._build_event_row(payload)
         insert_at = max(0, self.stream_layout.count() - 1)
         self.stream_layout.insertWidget(insert_at, row)
-        self.stream_scroll.verticalScrollBar().setValue(  # type: ignore[attr-defined]
-            self.stream_scroll.verticalScrollBar().maximum()  # type: ignore[attr-defined]
+        self.stream_scroll.verticalScrollBar().setValue(  # type: ignore[union-attr]
+            self.stream_scroll.verticalScrollBar().maximum()  # type: ignore[union-attr]
         )
 
     def _build_event_row(self, payload: dict[str, Any]) -> QWidget:
@@ -477,7 +477,9 @@ class ReportFrame(QWidget):
                 visible = not raw.isVisible()
                 raw.setVisible(visible)
                 raw_button.setIcon(
-                    FluentIcon.CHEVRON_DOWN_MED if visible else FluentIcon.CHEVRON_RIGHT_MED
+                    FluentIcon.CHEVRON_DOWN_MED
+                    if visible
+                    else FluentIcon.CHEVRON_RIGHT_MED
                 )
             except RuntimeError:
                 pass  # widget deleted between clicks (e.g. run restarted)

@@ -317,14 +317,14 @@ class OrchestratorDraw(OrchestratorCore):
             return
         component = self.components[name]
         component.widget.show()
-    
+
     def fill_iventory(
-            self,
-            component: str,
-            iventory: str = DEFAULT_INVENTORY_KEY,
-            phase: str = "liq",
-            content: dict = {},
-        ):
+        self,
+        component: str,
+        iventory: str = DEFAULT_INVENTORY_KEY,
+        phase: str = "liq",
+        content: dict = {},
+    ):
         if component not in self.components:
             return
         comp = self.components[component]
@@ -341,3 +341,4 @@ class OrchestratorDraw(OrchestratorCore):
                 for k, v in content["initial_species"].items()
                 if float(v) > 0.0
             }
+        comp.graph.sync_visuals()

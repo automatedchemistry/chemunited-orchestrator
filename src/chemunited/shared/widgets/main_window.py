@@ -3,9 +3,6 @@ from typing import override
 from PyQt5.QtCore import QFile, Qt, QTextStream, QTimer
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication, QHBoxLayout, QStackedWidget, QWidget
-
-_ICON_PATH = ":/icons/icons/chemunited.ico"
-
 from qfluentwidgets import (
     FluentIcon,
     NavigationInterface,
@@ -17,6 +14,8 @@ from qframelesswindow import FramelessWindow, StandardTitleBar
 
 from chemunited.shared.enums import WindowCategory
 from chemunited.shared.widgets.loggings_widget import FrameLoggings
+
+_ICON_PATH = ":/icons/icons/chemunited.ico"
 
 
 class WindowBase(FramelessWindow):

@@ -220,12 +220,12 @@ class InventoryStatusWidget(QWidget):
             return False
         for entry in self._entries:
             self._copy_content(
-                entry.live_inventory.liq_content,
-                entry.draft_inventory.liq_content,
+                entry.live_inventory.liq_content,  # type: ignore[attr-defined]
+                entry.draft_inventory.liq_content,  # type: ignore[attr-defined]
             )
             self._copy_content(
-                entry.live_inventory.gas_content,
-                entry.draft_inventory.gas_content,
+                entry.live_inventory.gas_content,  # type: ignore[attr-defined]
+                entry.draft_inventory.gas_content,  # type: ignore[attr-defined]
             )
             ensure_air_defaults(entry.component_data)
         managers = {id(entry.manager): entry.manager for entry in self._entries}
@@ -379,7 +379,7 @@ class InventoryStatusWidget(QWidget):
         self._amount_spins = {}
         while self.species_layout.count():
             item = self.species_layout.takeAt(0)
-            widget = item.widget()
+            widget = item.widget()  # type: ignore[union-attr]
             if widget is not None:
                 widget.setParent(None)
                 widget.deleteLater()
@@ -409,8 +409,8 @@ class InventoryStatusWidget(QWidget):
             capacity = self._capacity_limit_m3(entry.component_data)
             if capacity is None:
                 continue
-            total = float(entry.draft_inventory.liq_content.volume) + float(
-                entry.draft_inventory.gas_content.volume
+            total = float(entry.draft_inventory.liq_content.volume) + float(  # type: ignore[attr-defined]
+                entry.draft_inventory.gas_content.volume  # type: ignore[attr-defined]
             )
             if total > capacity + 1e-15:
                 self._show_error(
@@ -486,8 +486,8 @@ class InventoryStatusWidget(QWidget):
     @staticmethod
     def _content_for_phase(inventory: object, phase: PhaseKind):
         if phase == PhaseKind.LIQUID:
-            return inventory.liq_content
-        return inventory.gas_content
+            return inventory.liq_content  # type: ignore[attr-defined]
+        return inventory.gas_content  # type: ignore[attr-defined]
 
     @staticmethod
     def _entry_text(component_name: str, inventory_key: str) -> str:

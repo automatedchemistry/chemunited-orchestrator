@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from chemunited_core.compounds import ChemicalEntity
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QHBoxLayout
+from PyQt5.QtCore import QStringListModel, Qt
+from PyQt5.QtWidgets import QCompleter, QHBoxLayout
 from qfluentwidgets import FluentIcon, InfoBar, InfoBarPosition, PushButton
 
 from chemunited.shared.widgets.base_mode_editor import BaseModeDialog
@@ -21,6 +21,20 @@ class CompoundDialog(BaseModeDialog):
             parent=parent,
         )
         self._setup_coolprop_action()
+        self._setup_name_completer()
+
+    def _setup_name_completer(self) -> None:
+        fluid_names = coolprop_lookup.get_fluid_names()
+        if not fluid_names:
+            return
+        name_card = self.editor_widget._cards.get("name")
+        if name_card is None or not hasattr(name_card, "_line_edit"):
+            return
+        model = QStringListModel(fluid_names, self)
+        completer = QCompleter(model, self)
+        completer.setCaseSensitivity(Qt.CaseInsensitive)  # type: ignore[attr-defined]
+        completer.setFilterMode(Qt.MatchContains)  # type: ignore[attr-defined]
+        name_card._line_edit.setCompleter(completer)
 
     def _setup_coolprop_action(self) -> None:
         action_row = QHBoxLayout()

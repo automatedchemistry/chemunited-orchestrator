@@ -56,11 +56,11 @@ class CompoundList(QWidget):
         self.remove_button.setToolTip("Remove the selected user-added compound")
         layout.addWidget(
             self.remove_button,
-            alignment=Qt.AlignLeft,  # type: ignore[arg-type]
+            alignment=Qt.AlignLeft,  # type: ignore[arg-type, attr-defined]
         )
 
         self._add_button = PrimaryPushButton(FluentIcon.ADD, "Add compound", self)
-        layout.addWidget(self._add_button, alignment=Qt.AlignLeft)  # type: ignore[arg-type]
+        layout.addWidget(self._add_button, alignment=Qt.AlignLeft)  # type: ignore[arg-type, attr-defined]
 
     def _connect_signals(self) -> None:
         self._add_button.clicked.connect(self._open_add_dialog)  # type: ignore[attr-defined]
@@ -92,7 +92,7 @@ class CompoundList(QWidget):
         if selected is not None:
             matches = self.list_widget.findItems(  # type: ignore[arg-type]
                 selected,
-                Qt.MatchExactly,
+                Qt.MatchExactly,  # type: ignore[attr-defined]
             )
             if matches:
                 self.list_widget.setCurrentItem(matches[0])
@@ -115,19 +115,19 @@ class CompoundList(QWidget):
         entity = dialog.get_result_instance()
         if entity is None:
             return
-        if not is_valid_name(entity.name):
+        if not is_valid_name(entity.name):  # type: ignore[attr-defined]
             self._show_warning(
                 "Compound name may contain only letters, numbers, _ and -."
             )
             return
-        if entity.name in COMPOUNDS:
-            self._show_warning(f"A compound named {entity.name!r} already exists.")
+        if entity.name in COMPOUNDS:  # type: ignore[attr-defined]
+            self._show_warning(f"A compound named {entity.name!r} already exists.")  # type: ignore[attr-defined]
             return
-        COMPOUNDS.register(entity)
+        COMPOUNDS.register(entity)  # type: ignore[arg-type]
         self.sync()
-        self._select_name(entity.name)
+        self._select_name(entity.name)  # type: ignore[attr-defined]
         self.compounds_changed.emit()
-        self._show_success(f"Compound {entity.name!r} added.")
+        self._show_success(f"Compound {entity.name!r} added.")  # type: ignore[attr-defined]
 
     def remove_selected_compound(self) -> None:
         name = self.selected_name()
@@ -170,7 +170,7 @@ class CompoundList(QWidget):
     def _select_name(self, name: str) -> None:
         matches = self.list_widget.findItems(  # type: ignore[arg-type]
             name,
-            Qt.MatchExactly,
+            Qt.MatchExactly,  # type: ignore[attr-defined]
         )
         if matches:
             self.list_widget.setCurrentItem(matches[0])
@@ -216,19 +216,19 @@ class _CompoundRowWidget(QWidget):
         layout = QHBoxLayout(self)
         layout.setContentsMargins(8, 0, 8, 0)
         layout.setSpacing(8)
-        layout.setAlignment(Qt.AlignVCenter)  # type: ignore[arg-type]
+        layout.setAlignment(Qt.AlignVCenter)  # type: ignore[arg-type, attr-defined]
 
         swatch = QFrame(self)
         swatch.setObjectName("compound-color-swatch")
         swatch.setFixedSize(_SWATCH_SIZE, _SWATCH_SIZE)
         swatch.setToolTip(_swatch_tooltip(entity))
         swatch.setStyleSheet(_swatch_stylesheet(entity))
-        layout.addWidget(swatch, alignment=Qt.AlignVCenter)  # type: ignore[arg-type]
+        layout.addWidget(swatch, alignment=Qt.AlignVCenter)  # type: ignore[arg-type, attr-defined]
 
         label = QLabel(entity.name, self)
         label.setObjectName("compound-name-label")
-        label.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)  # type: ignore[arg-type]
-        layout.addWidget(label, stretch=1, alignment=Qt.AlignVCenter)  # type: ignore[arg-type]
+        label.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)  # type: ignore[arg-type, attr-defined]
+        layout.addWidget(label, stretch=1, alignment=Qt.AlignVCenter)  # type: ignore[arg-type, attr-defined]
 
 
 def _swatch_stylesheet(entity: ChemicalEntity) -> str:

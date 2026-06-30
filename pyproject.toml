@@ -22,8 +22,8 @@ classifiers = [
 dependencies = [
     # sub-packages (provide the entire runtime engine)
     "chemunited-quantities>=0.0.2,<0.1",
-    "chemunited-core @ git+https://github.com/automatedchemistry/chemunited-core.git",
-    "chemunited-workflow @ git+https://github.com/automatedchemistry/chemunited-workflow.git",
+    "chemunited-core>=0.03",
+    "chemunited-workflow>=0.0.2",
     "chemunited-sim @ git+https://github.com/automatedchemistry/chemunited-sim.git",
     "PyQt-Fluent-Widgets>=1.7.0,<2.0",  # Qt UI
     "QScintilla>=2.14.0",
@@ -141,6 +141,15 @@ module = [
     "uvicorn.*",
     "zeroconf",
     "pydantic_pint",
+]
+ignore_missing_imports = true
+
+[[tool.mypy.overrides]]
+module = [
+    "matplotlib",
+    "matplotlib.*",
+    "CoolProp",
+    "CoolProp.*",
 ]
 ignore_missing_imports = true
 

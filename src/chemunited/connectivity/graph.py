@@ -46,7 +46,7 @@ class ConnectivityGraphicView(GraphCore):
             while current is not None:
                 if isinstance(current, GraphComponent):
                     return current
-                current = current.parentItem()
+                current = current.parentItem()  # type: ignore[assignment]
         return None
 
     @override

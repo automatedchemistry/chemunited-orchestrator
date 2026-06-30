@@ -143,8 +143,10 @@ class _DrawRecorder:
         phase: str = "liq",
         content: dict = {},
     ) -> None:
-        phase_key = "LIQUID" if phase == "liq" else "GAS"
-        self.inventory.setdefault(component, {}).setdefault(iventory, {})[phase_key] = dict(content)
+        phase_key = "liquid" if phase == "liq" else "gas"
+        self.inventory.setdefault(component, {}).setdefault(iventory, {})[phase_key] = (
+            dict(content)
+        )
 
     def data(self) -> dict:
         return {
@@ -187,8 +189,10 @@ def _render_draw_body(draw_data: dict) -> str:
             for phase_kind, phase_data in phases.items():
                 if not phase_data.get("initial_species"):
                     continue
-                phase_arg = "liq" if phase_kind == "LIQUID" else "gas"
-                calls.append(_render_fill_inventory(comp_name, inv_key, phase_arg, phase_data))
+                phase_arg = "liq" if phase_kind == "liquid" else "gas"
+                calls.append(
+                    _render_fill_inventory(comp_name, inv_key, phase_arg, phase_data)
+                )
 
     if not calls:
         return "    pass\n"
