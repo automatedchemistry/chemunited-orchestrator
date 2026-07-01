@@ -13,6 +13,7 @@ from qfluentwidgets import (
 from qframelesswindow import FramelessWindow, StandardTitleBar
 
 from chemunited.shared.enums import WindowCategory
+from chemunited.shared.widgets.busy_status import BusyStatusController
 from chemunited.shared.widgets.loggings_widget import FrameLoggings
 
 _ICON_PATH = ":/icons/icons/chemunited.ico"
@@ -29,6 +30,7 @@ class WindowBase(FramelessWindow):
         self.hBoxLayout = QHBoxLayout(self)
         self.navigationInterface = NavigationInterface(self, showMenuButton=True)
         self.stackWidget = QStackedWidget(self)
+        self._busy_status = BusyStatusController(self)
 
     def buildUi(self):
         """Build the UI"""
@@ -122,10 +124,23 @@ class WindowBase(FramelessWindow):
         self.titleBar.move(46, 0)
         self.titleBar.resize(self.width() - 46, self.titleBar.height())
         self.titleBar.raise_()
+        self._busy_status.reposition()
 
     def setTheme(self):
         """Handle theme change"""
         self.setQss()
+
+    def show_busy_status(self, title: str, message: str) -> None:
+        self._busy_status.show(title, message)
+
+    def update_busy_status(self, message: str) -> None:
+        self._busy_status.update(message)
+
+    def finish_busy_status(self, message: str) -> None:
+        self._busy_status.finish(message)
+
+    def fail_busy_status(self, message: str) -> None:
+        self._busy_status.fail(message)
 
 
 class MainWindowBase(WindowBase):

@@ -100,13 +100,13 @@ def _export_platform_devices(
 
     devices: list[dict] = []
     for name, component in components:
-        rect = component.graph.sceneBoundingRect()
+        rect = component.graph.sceneBoundingRect()  # type: ignore
         devices.append(
             {
                 "id": name,
                 "label": name,
-                "figure": component.inf.figure,
-                "is_electronic": component.inf.is_electronic,
+                "figure": component.inf.figure,  # type: ignore
+                "is_electronic": component.inf.is_electronic,  # type: ignore
                 "x": (rect.x() - source_rect.x()) * scale_x,
                 "y": (rect.y() - source_rect.y()) * scale_y,
                 "w": rect.width() * scale_x,

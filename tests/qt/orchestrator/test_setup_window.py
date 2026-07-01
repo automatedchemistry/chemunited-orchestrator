@@ -6,6 +6,7 @@ What is tested:
 - duplicate name raises ValueError
 """
 
+import threading
 import zipfile
 from types import SimpleNamespace
 
@@ -17,6 +18,7 @@ from pytestqt.qtbot import QtBot
 from qfluentwidgets import NavigationTreeWidget
 
 from chemunited.mcp import McpServiceResult
+from chemunited.orchestrator import project_file as project_file_module
 from chemunited.project.recent import RecentProjectsStore
 from chemunited.project.session import ProjectSession
 from chemunited.setup import SetupWindow
@@ -291,6 +293,82 @@ class TestAddComponent:
         assert "PumpA" not in window.orchestrator.components
         assert "PumpB" in window.orchestrator.components
         assert window.orchestrator._session.source_file == source_file
+
+    def test_async_project_load_shows_busy_status_and_disables_actions(
+        self, window: SetupWindow, tmp_path, monkeypatch, qtbot: QtBot
+    ):
+        session = ProjectSession()
+        session.new(name="demo", location=tmp_path, init_git=False)
+        session.save_draw(
+            {
+                "components": [
+                    {
+                        "name": "PumpA",
+                        "figure": "HPLCPump",
+                        "position": [0.0, 0.0],
+                    }
+                ],
+                "connections": [],
+            }
+        )
+        original_load_payload = project_file_module._load_project_payload
+        started = threading.Event()
+        release = threading.Event()
+
+        def slow_load_payload(*args, **kwargs):
+            started.set()
+            release.wait(timeout=2)
+            return original_load_payload(*args, **kwargs)
+
+        monkeypatch.setattr(
+            project_file_module,
+            "_load_project_payload",
+            slow_load_payload,
+        )
+
+        assert window.orchestrator.open_project_async(tmp_path / "demo")
+        qtbot.waitUntil(started.is_set, timeout=1000)
+
+        assert window._busy_status.last_title == "Loading project"
+        assert window.orchestrator.is_project_operation_running
+        assert not window.load_project_action.isEnabled()
+        assert not window.refresh_project_action.isEnabled()
+
+        release.set()
+        qtbot.waitUntil(lambda: "PumpA" in window.orchestrator.components, timeout=2000)
+        assert window._busy_status.last_content == "Project loaded"
+        assert window.load_project_action.isEnabled()
+
+    def test_async_project_load_failure_keeps_current_project(
+        self, window: SetupWindow, tmp_path, qtbot: QtBot
+    ):
+        session = ProjectSession()
+        session.new(name="demo", location=tmp_path, init_git=False)
+        session.save_draw(
+            {
+                "components": [
+                    {
+                        "name": "PumpA",
+                        "figure": "HPLCPump",
+                        "position": [0.0, 0.0],
+                    }
+                ],
+                "connections": [],
+            }
+        )
+        working_dir = tmp_path / "demo"
+        window.orchestrator.open_project(working_dir)
+        (working_dir / "draw" / "setup.py").write_text(
+            "def build_draw(platform):\n    raise RuntimeError('boom')\n",
+            encoding="utf-8",
+        )
+
+        assert window.orchestrator.open_project_async(working_dir)
+        qtbot.waitUntil(lambda: window._busy_status.last_failed, timeout=2000)
+
+        assert "PumpA" in window.orchestrator.components
+        assert window.orchestrator.working_dir == working_dir
+        assert window.load_project_action.isEnabled()
 
     def test_failed_refresh_keeps_current_project(self, window: SetupWindow, tmp_path):
         session = ProjectSession()

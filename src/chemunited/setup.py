@@ -368,10 +368,21 @@ class SetupWindow(MainWindowBase):
     def update_project_actions(self) -> None:
         if not hasattr(self, "refresh_project_action"):
             return
+        busy = self.orchestrator.is_project_operation_running
+
+        self.add_project_action.setEnabled(not busy)
+        self.load_project_action.setEnabled(not busy)
+        self.save_project_action.setEnabled(not busy)
+        for action in self.recent_projects_menu.actions():
+            if action.text() != "No Recent Files":
+                action.setEnabled(not busy)
+
         block_reason = self.orchestrator.refresh_project_block_reason()
-        self.refresh_project_action.setEnabled(block_reason is None)
+        self.refresh_project_action.setEnabled(block_reason is None and not busy)
         self.refresh_project_action.setToolTip(
-            block_reason or "Reload the current project from disk"
+            "Project operation in progress"
+            if busy
+            else block_reason or "Reload the current project from disk"
         )
         self._update_mcp_action()
 
@@ -387,12 +398,15 @@ class SetupWindow(MainWindowBase):
     def _update_mcp_action(self) -> None:
         if not hasattr(self, "mcp_project_action"):
             return
+        busy = self.orchestrator.is_project_operation_running
         running = self.mcp_service.is_running
         can_start = self.orchestrator.working_dir is not None
-        self.mcp_project_action.setEnabled(running or can_start)
+        self.mcp_project_action.setEnabled((running or can_start) and not busy)
         self.mcp_project_action.setChecked(running)
         self.mcp_project_action.setText("Disable MCP" if running else "Enable MCP")
-        if running and self.mcp_service.url:
+        if busy:
+            self.mcp_project_action.setToolTip("Project operation in progress")
+        elif running and self.mcp_service.url:
             self.mcp_project_action.setToolTip(f"Project MCP: {self.mcp_service.url}")
         elif can_start:
             self.mcp_project_action.setToolTip("Expose project files over local MCP")

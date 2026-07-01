@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import json
 import re
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from chemunited_core.compounds import COMPOUNDS, ChemicalEntity
 from loguru import logger
-from PyQt5.QtCore import QTimer, pyqtSlot
+from PyQt5.QtCore import QThread, QTimer, pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import QFileDialog, QInputDialog, QMessageBox
 
 from chemunited.project.manifest import ProjectManifest
@@ -108,6 +109,74 @@ def _quantity_magnitude(value, unit: str) -> float:
     return float(value.to(unit).magnitude)
 
 
+@dataclass
+class ProjectLoadPayload:
+    session: ProjectSession
+    draw_data: dict
+    process_classes: dict
+    connectivity_data: dict
+
+
+class ProjectLoadThread(QThread):
+    loaded = pyqtSignal(object)
+    failed = pyqtSignal(object)
+
+    def __init__(
+        self,
+        path: Path,
+        *,
+        overwrite: bool = False,
+        source_file: Path | None = None,
+        parent=None,
+    ) -> None:
+        super().__init__(parent)
+        self.path = path
+        self.overwrite = overwrite
+        self.source_file = source_file
+
+    def run(self) -> None:
+        try:
+            payload = _load_project_payload(
+                self.path,
+                overwrite=self.overwrite,
+                source_file=self.source_file,
+            )
+        except Exception as exc:
+            self.failed.emit(exc)
+            return
+        self.loaded.emit(payload)
+
+
+def _open_project_session(path: Path, overwrite: bool = False) -> ProjectSession:
+    session = ProjectSession()
+    if path.is_dir():
+        session.open_directory(path)
+    elif path.suffix.lower() == ".chemunited":
+        session.import_chemunited(path, overwrite=overwrite)
+    elif path.name == "manifest.json":
+        session.open_directory(path.parent)
+    else:
+        raise ValueError(f"Unsupported project path: {path}")
+    return session
+
+
+def _load_project_payload(
+    path: Path,
+    *,
+    overwrite: bool = False,
+    source_file: Path | None = None,
+) -> ProjectLoadPayload:
+    session = _open_project_session(path, overwrite=overwrite)
+    if source_file is not None:
+        session.source_file = source_file
+    return ProjectLoadPayload(
+        session=session,
+        draw_data=session.load_draw(),
+        process_classes=session.load_process_classes(),
+        connectivity_data=session.load_connectivity(),
+    )
+
+
 class OrchestratorProjectFile(OrchestratorExecution):
     def __init__(self, parent):
         super().__init__(parent)
@@ -115,6 +184,11 @@ class OrchestratorProjectFile(OrchestratorExecution):
         self._session: ProjectSession | None = None
         self.recent_projects = RecentProjectsStore()
         self.recent_projects.prune_missing()
+        self._project_load_thread: ProjectLoadThread | None = None
+
+    @property
+    def is_project_operation_running(self) -> bool:
+        return self._project_load_thread is not None
 
     def load(self) -> None:
         if not self._confirm_replace_current_project():
@@ -129,7 +203,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
         if not path:
             return
 
-        self.open_project(Path(path))
+        self.open_project_async(Path(path))
 
     def new_project(self) -> None:
         if not self._confirm_replace_current_project():
@@ -168,24 +242,34 @@ class OrchestratorProjectFile(OrchestratorExecution):
                 existing directory when importing an archive.
         """
         try:
-            session = self._open_session(path, overwrite=overwrite)
-            draw_data = session.load_draw()
-            process_classes = session.load_process_classes()
+            payload = _load_project_payload(path, overwrite=overwrite)
         except Exception as exc:
             logger.bind(window=WindowCategory.SETUP).opt(exception=exc).error(
                 f"Could not open project '{path.name}': {exc}"
             )
             return
 
-        self._reset_project_state()
-        self._session = session
-        self.working_dir = session.working_dir
-        self._restore_draw_data(draw_data)
-        self._restore_connectivity_data(session.load_connectivity())
-        self._restore_protocols(process_classes)
+        self._apply_loaded_project(payload)
 
         logger.bind(window=WindowCategory.SETUP).success(f"Project loaded from {path}")
         self._record_recent_project(path)
+
+    def open_project_async(self, path: Path, overwrite: bool = False) -> bool:
+        if self.is_project_operation_running:
+            logger.bind(window=WindowCategory.SETUP).warning(
+                "A project operation is already running."
+            )
+            return False
+
+        self._show_busy_status("Loading project", f"Opening {path.name}...")
+        return self._start_project_load_thread(
+            path,
+            overwrite=overwrite,
+            success_message=f"Project loaded from {path}",
+            done_message="Project loaded",
+            failure_prefix=f"Could not open project '{path.name}'",
+            recent_project=path,
+        )
 
     def refresh_project(self) -> bool:
         """Confirm and schedule a project refresh from disk."""
@@ -193,8 +277,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
             return False
         if not self._confirm_refresh_project():
             return False
-        QTimer.singleShot(50, self._run_refresh_current_project)
-        return True
+        return self.refresh_current_project_async()
 
     def refresh_project_block_reason(self) -> str | None:
         if self.working_dir is None:
@@ -214,29 +297,43 @@ class OrchestratorProjectFile(OrchestratorExecution):
         working_dir = self.working_dir
         source_file = self._session.source_file if self._session is not None else None
         try:
-            session = ProjectSession()
-            session.open_directory(working_dir)
-            session.source_file = source_file
-            draw_data = session.load_draw()
-            process_classes = session.load_process_classes()
-            connectivity_data = session.load_connectivity()
+            payload = _load_project_payload(working_dir, source_file=source_file)
         except Exception as exc:
             logger.bind(window=WindowCategory.SETUP).opt(exception=exc).error(
                 f"Could not refresh project '{working_dir.name}': {exc}"
             )
             return False
 
-        self._reset_project_state()
-        self._session = session
-        self.working_dir = session.working_dir
-        self._restore_draw_data(draw_data)
-        self._restore_connectivity_data(connectivity_data)
-        self._restore_protocols(process_classes)
+        self._apply_loaded_project(payload)
 
         logger.bind(window=WindowCategory.SETUP).success(
             f"Project refreshed from {working_dir}"
         )
         return True
+
+    def refresh_current_project_async(self) -> bool:
+        if self.working_dir is None:
+            logger.bind(window=WindowCategory.SETUP).warning(
+                "No project loaded - cannot refresh."
+            )
+            return False
+        if self.is_project_operation_running:
+            logger.bind(window=WindowCategory.SETUP).warning(
+                "A project operation is already running."
+            )
+            return False
+
+        working_dir = self.working_dir
+        source_file = self._session.source_file if self._session is not None else None
+        self._show_busy_status("Refreshing project", f"Reloading {working_dir.name}...")
+        return self._start_project_load_thread(
+            working_dir,
+            source_file=source_file,
+            success_message=f"Project refreshed from {working_dir}",
+            done_message="Project refreshed",
+            failure_prefix=f"Could not refresh project '{working_dir.name}'",
+            after_success=self._sync_project_views_after_refresh,
+        )
 
     def _run_refresh_current_project(self) -> None:
         if self.refresh_current_project():
@@ -258,7 +355,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
             )
             return
 
-        self.open_project(path)
+        self.open_project_async(path)
 
     def save(self, comment: str = "") -> None:
         export_destination: Path | None = None
@@ -493,17 +590,107 @@ class OrchestratorProjectFile(OrchestratorExecution):
         if pre_run_frame is not None:
             pre_run_frame.sync()
 
+    def _start_project_load_thread(
+        self,
+        path: Path,
+        *,
+        overwrite: bool = False,
+        source_file: Path | None = None,
+        success_message: str,
+        done_message: str,
+        failure_prefix: str,
+        recent_project: Path | None = None,
+        after_success: Callable[[], None] | None = None,
+    ) -> bool:
+        thread = ProjectLoadThread(
+            path,
+            overwrite=overwrite,
+            source_file=source_file,
+            parent=self,
+        )
+        self._project_load_thread = thread
+        thread.loaded.connect(
+            lambda payload: self._on_project_load_success(
+                payload,
+                success_message=success_message,
+                done_message=done_message,
+                recent_project=recent_project,
+                after_success=after_success,
+            )
+        )
+        thread.failed.connect(
+            lambda exc: self._on_project_load_failed(
+                exc,
+                failure_prefix=failure_prefix,
+            )
+        )
+        thread.finished.connect(thread.deleteLater)
+        self._notify_project_actions_changed()
+        thread.start()
+        return True
+
+    def _on_project_load_success(
+        self,
+        payload: ProjectLoadPayload,
+        *,
+        success_message: str,
+        done_message: str,
+        recent_project: Path | None,
+        after_success: Callable[[], None] | None,
+    ) -> None:
+        try:
+            self._apply_loaded_project(payload)
+            logger.bind(window=WindowCategory.SETUP).success(success_message)
+            self._record_recent_project(recent_project)
+            if after_success is not None:
+                after_success()
+            self._finish_busy_status(done_message)
+        finally:
+            self._project_load_thread = None
+            self._notify_project_actions_changed()
+
+    def _on_project_load_failed(self, exc: Exception, *, failure_prefix: str) -> None:
+        logger.bind(window=WindowCategory.SETUP).opt(exception=exc).error(
+            f"{failure_prefix}: {exc}"
+        )
+        self._fail_busy_status(f"{failure_prefix}: {exc}")
+        self._project_load_thread = None
+        self._notify_project_actions_changed()
+
+    def _apply_loaded_project(self, payload: ProjectLoadPayload) -> None:
+        self._reset_project_state()
+        self._session = payload.session
+        self.working_dir = payload.session.working_dir
+        self._restore_draw_data(payload.draw_data)
+        self._restore_connectivity_data(payload.connectivity_data)
+        self._restore_protocols(payload.process_classes)
+
+    def _show_busy_status(self, title: str, message: str) -> None:
+        show_busy_status = getattr(self.parent_ref, "show_busy_status", None)
+        if callable(show_busy_status):
+            show_busy_status(title, message)
+
+    def _finish_busy_status(self, message: str) -> None:
+        finish_busy_status = getattr(self.parent_ref, "finish_busy_status", None)
+        if callable(finish_busy_status):
+            finish_busy_status(message)
+
+    def _fail_busy_status(self, message: str) -> None:
+        fail_busy_status = getattr(self.parent_ref, "fail_busy_status", None)
+        if callable(fail_busy_status):
+            fail_busy_status(message)
+
+    def _notify_project_actions_changed(self) -> None:
+        update_project_actions = getattr(
+            self.parent_ref,
+            "update_project_actions",
+            None,
+        )
+        if callable(update_project_actions):
+            update_project_actions()
+
     def _open_session(self, path: Path, overwrite: bool = False) -> ProjectSession:
-        session = ProjectSession()
-        if path.is_dir():
-            session.open_directory(path)
-        elif path.suffix.lower() == ".chemunited":
-            session.import_chemunited(path, overwrite=overwrite)
-        elif path.name == "manifest.json":
-            session.open_directory(path.parent)
-        else:
-            raise ValueError(f"Unsupported project path: {path}")
-        return session
+        return _open_project_session(path, overwrite=overwrite)
 
     def _reset_project_state(self) -> None:
         close_main_parameters_editor = getattr(
