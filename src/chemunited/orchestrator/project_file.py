@@ -13,6 +13,7 @@ from PyQt5.QtWidgets import QFileDialog, QInputDialog, QMessageBox
 
 from chemunited.project.manifest import ProjectManifest
 from chemunited.project.platform_svg import (
+    PLATFORM_DEVICES_RELATIVE_PATH,
     PLATFORM_SVG_RELATIVE_PATH,
     export_platform_svg,
 )
@@ -407,6 +408,8 @@ class OrchestratorProjectFile(OrchestratorExecution):
         export_platform_svg(
             self.parent_ref.scene_attribute,
             self.working_dir / PLATFORM_SVG_RELATIVE_PATH,
+            devices_path=self.working_dir / PLATFORM_DEVICES_RELATIVE_PATH,
+            components=self.components.items(),
         )
 
     def _record_recent_project(self, path: Path | None) -> None:

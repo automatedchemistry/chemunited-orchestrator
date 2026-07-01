@@ -1,7 +1,9 @@
 from __future__ import annotations
 
+import json
 from math import ceil
 from pathlib import Path
+from typing import Iterable
 
 from PyQt5.QtCore import QRectF, QSize, Qt
 from PyQt5.QtGui import QBrush, QPainter
@@ -9,6 +11,7 @@ from PyQt5.QtSvg import QSvgGenerator
 from PyQt5.QtWidgets import QGraphicsItem, QGraphicsScene
 
 PLATFORM_SVG_RELATIVE_PATH = Path("draw") / "platform.svg"
+PLATFORM_DEVICES_RELATIVE_PATH = Path("draw") / "platform-devices.json"
 
 _EMPTY_SCENE_RECT = QRectF(0, 0, 640, 360)
 _MARGIN = 24.0
@@ -19,9 +22,19 @@ def export_platform_svg(
     scene: QGraphicsScene,
     path: Path,
     *,
+    devices_path: Path | None = None,
+    components: Iterable[tuple[str, object]] = (),
     scale: float = _EXPORT_SCALE,
 ) -> None:
-    """Export the current platform scene as an SVG project companion file."""
+    """Export the current platform scene as an SVG project companion file.
+
+    If ``devices_path`` is given, a companion JSON manifest listing each
+    component's bounding box in the *same pixel space as the exported SVG's
+    viewBox* is written alongside it. The manifest is derived from the exact
+    ``source_rect``/``size`` used for this render, inside the same
+    hidden-handles/cleared-selection window — it must never be produced by a
+    separate call, or its coordinates can drift out of sync with the SVG.
+    """
     path.parent.mkdir(parents=True, exist_ok=True)
     scale = max(scale, 0.1)
 
@@ -65,12 +78,46 @@ def export_platform_svg(
             )
         finally:
             painter.end()
+
+        if devices_path is not None:
+            _export_platform_devices(devices_path, components, source_rect, size)
     finally:
         scene.setBackgroundBrush(previous_background)
         for item in hidden_items:
             item.setVisible(True)
         for item in selected_items:
             item.setSelected(True)
+
+
+def _export_platform_devices(
+    devices_path: Path,
+    components: Iterable[tuple[str, object]],
+    source_rect: QRectF,
+    size: QSize,
+) -> None:
+    scale_x = size.width() / source_rect.width()
+    scale_y = size.height() / source_rect.height()
+
+    devices: list[dict] = []
+    for name, component in components:
+        rect = component.graph.sceneBoundingRect()
+        devices.append(
+            {
+                "id": name,
+                "label": name,
+                "figure": component.inf.figure,
+                "is_electronic": component.inf.is_electronic,
+                "x": (rect.x() - source_rect.x()) * scale_x,
+                "y": (rect.y() - source_rect.y()) * scale_y,
+                "w": rect.width() * scale_x,
+                "h": rect.height() * scale_y,
+            }
+        )
+
+    devices_path.parent.mkdir(parents=True, exist_ok=True)
+    devices_path.write_text(
+        json.dumps({"devices": devices}, indent=2), encoding="utf-8"
+    )
 
 
 def _visible_edit_handles(scene: QGraphicsScene) -> tuple[QGraphicsItem, ...]:
