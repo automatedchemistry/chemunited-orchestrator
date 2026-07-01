@@ -287,13 +287,14 @@ if __name__ == "__main__":
     import sys
 
     from chemunited_core.protocols.technical import SetTemperatureParameter
+    from chemunited_quantities import ChemUnitQuantity
     from PyQt5.QtWidgets import QApplication, QDialog
 
     app = QApplication(sys.argv)
 
     command = SetTemperatureParameter(
         component="Pump",
-        temp="10 degC",
+        temp=ChemUnitQuantity("10 degC"),
         wait_feedback_status=True,
     )
     command.wait_time = 0.0
