@@ -144,7 +144,7 @@ def test_command_editor_dialog_saves_execution_fields(qtbot: QtBot) -> None:
                 "method": "PUT",
                 "wait_time": 0.0,
                 "wait_feedback_status": False,
-                "connect": "[[0, 1]]",
+                "connect": "[[1, 2]]",
             }
         )
     )
@@ -528,7 +528,7 @@ def test_command_block_reconstruction_uses_component_protocol_metadata(
     source = """
 class CustomProcess:
     def command_1(self, ctx: NodeExecutionContext) -> bool:
-        self.platform["ValveA"].put("position", connect="[[0, 1]]")
+        self.platform["ValveA"].put("position", connect="[[1, 2]]")
         return True
 """
     command = _build_command_model(
@@ -540,7 +540,7 @@ class CustomProcess:
 
     assert command is not None
     extras = type(command).model_fields["connect"].json_schema_extra or {}
-    assert extras["Options"] == ["[[0, 1]]", "[[0, 2]]"]
+    assert extras["Options"] == ["[[1, 2]]", "[[2, 3]]"]
 
 
 def test_command_block_reconstruction_distinguishes_get_and_put_endpoints(

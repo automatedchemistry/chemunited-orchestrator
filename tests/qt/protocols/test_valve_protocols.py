@@ -12,5 +12,5 @@ def test_valve_position_command_populates_connect_options() -> None:
     options = extras.get("Options")
 
     assert isinstance(options, list)
-    assert options == ["[[0, 1]]", "[[0, 2]]"]
+    assert options == ["[[1, 2]]", "[[2, 3]]"]
     assert all(isinstance(option, str) for option in options)
