@@ -102,6 +102,13 @@ extend-exclude = [
 [tool.ruff.lint]
 extend-select = ["I"]
 
+[tool.bandit]
+# B101 (assert_used): style nit, not a vulnerability check — we use asserts as
+# internal invariants after a preceding guard already rules out the failing case.
+# B404 (import subprocess): blacklists the import itself with zero signal; the
+# meaningful check is B603 on each call site, reviewed individually below.
+skips = ["B101", "B404"]
+
 [tool.mypy]
 python_version = "3.13"
 files = ["src/chemunited"]

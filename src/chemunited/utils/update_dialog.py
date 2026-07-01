@@ -22,7 +22,7 @@ class PipUpgradeThread(QThread):
         self._packages = packages
 
     def run(self) -> None:
-        proc = subprocess.Popen(
+        proc = subprocess.Popen(  # nosec B603 # shell=False; packages come from a static TRACKED list, not user input
             [sys.executable, "-m", "pip", "install", "--upgrade", *self._packages],
             stdout=subprocess.PIPE,
             stderr=subprocess.STDOUT,

@@ -254,7 +254,7 @@ class SimRunWorker(QThread):
             sim_dir = self._project_path / "simulations"
             sim_dir.mkdir(parents=True, exist_ok=True)
             try:
-                subprocess.Popen(
+                subprocess.Popen(  # nosec B603 # shell=False; exe resolved from sys.executable's dir, args are ints/paths
                     [
                         exe,
                         str(self._project_path),

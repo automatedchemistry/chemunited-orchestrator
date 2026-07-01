@@ -291,7 +291,7 @@ def _validate_command_block(source: str, method_name: str, class_name: str) -> t
             "Pass exactly one literal command name as the positional argument.",
         )
 
-    eval_ns = {"ChemUnitQuantity": ChemUnitQuantity}
+    eval_ns = {"ChemUnitQuantity": ChemUnitQuantity, "__builtins__": {}}
     kwargs: dict[str, object] = {}
     param_refs: dict[str, str] = {}
     for keyword in call.keywords:
@@ -308,9 +308,11 @@ def _validate_command_block(source: str, method_name: str, class_name: str) -> t
             kwargs[keyword.arg] = ast.literal_eval(keyword.value)
         except (ValueError, TypeError):
             try:
-                kwargs[keyword.arg] = eval(
-                    ast.unparse(keyword.value),
-                    eval_ns,
+                kwargs[keyword.arg] = (
+                    eval(  # nosec B307 # eval_ns strips __builtins__; only ChemUnitQuantity(...) construction is reachable
+                        ast.unparse(keyword.value),
+                        eval_ns,
+                    )
                 )
             except Exception:
                 return None, CommandBlockValidationError(

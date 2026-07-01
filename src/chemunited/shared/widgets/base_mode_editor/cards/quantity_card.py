@@ -86,7 +86,9 @@ class ChemUnitQuantityCard(BaseFieldCard):
             try:
                 q = ChemUnitQuantity.parse(str(value))
                 self.set_value(q)
-            except Exception:
+            except (
+                Exception
+            ):  # nosec B110 # unparsable input just leaves the field at its prior value
                 pass
 
     def _display_unit_for(self, value: ChemUnitQuantity) -> str | None:
@@ -110,7 +112,9 @@ class ChemUnitQuantityCard(BaseFieldCard):
             try:
                 if value.to(unit).dimensionality == self._expected_dims:
                     return unit
-            except Exception:
+            except (
+                Exception
+            ):  # nosec B112 # incompatible unit conversion is expected; keep scanning remaining options
                 continue
         return self._unit_combo.currentText()
 

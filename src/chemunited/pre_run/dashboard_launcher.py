@@ -457,7 +457,11 @@ class DashBoardLauncherFrame(QFrame):
         port = self._port_spin.value()
         advertise_on = self._advertise_switch.isChecked()
 
-        self._host_edit.setText("0.0.0.0" if advertise_on else DEFAULT_HOST)
+        self._host_edit.setText(
+            "0.0.0.0"
+            if advertise_on
+            else DEFAULT_HOST  # nosec B104 # user opt-in via "Advertise" switch, not a default
+        )
         self._local_addr_label.setText(f"http://127.0.0.1:{port}/")
 
         if advertise_on:
@@ -555,7 +559,9 @@ class DashBoardLauncherFrame(QFrame):
             method="PUT",
         )
         try:
-            with urllib_request.urlopen(req, timeout=5):
+            with urllib_request.urlopen(
+                req, timeout=5
+            ):  # nosec B310 # fixed http://127.0.0.1 scheme/host, not user-controlled
                 InfoBar.success(
                     "Project Loaded",
                     "Dashboard is now serving this project.",
@@ -647,7 +653,7 @@ class DashBoardLauncherFrame(QFrame):
             args = [a for a in args if a not in ("--tray", "--silent")]
 
         try:
-            subprocess.Popen(
+            subprocess.Popen(  # nosec B603 # shell=False; args built from sys.executable + fixed subcommand list
                 args,
                 close_fds=True,
                 stdin=subprocess.DEVNULL,

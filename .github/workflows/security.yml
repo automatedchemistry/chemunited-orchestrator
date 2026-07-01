@@ -37,4 +37,4 @@ jobs:
             --ignore-vuln PYSEC-2025-183  # false positive — not reachable via chemunited's usage
 
       - name: Run Bandit
-        run: bandit -r src/chemunited
+        run: bandit -c pyproject.toml -r src/chemunited

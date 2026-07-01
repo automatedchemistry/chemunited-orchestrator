@@ -31,11 +31,15 @@ class VersionCheckThread(QThread):
                     f"https://pypi.org/pypi/{pkg}/json",
                     headers={"User-Agent": "chemunited-orchestrator"},
                 )
-                with urlopen(req, timeout=5) as resp:
+                with urlopen(
+                    req, timeout=5
+                ) as resp:  # nosec B310 # fixed https://pypi.org scheme/host, not user-controlled
                     latest = Version(loads(resp.read())["info"]["version"])
                 if latest > installed:
                     updates.append(UpdateAvailable(pkg, str(installed), str(latest)))
-            except Exception:
+            except (
+                Exception
+            ):  # nosec B110 # best-effort update check; network/parse failures just skip the package
                 pass
         if updates:
             self.updates_found.emit(updates)
