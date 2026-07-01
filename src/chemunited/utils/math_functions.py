@@ -20,7 +20,7 @@ def _round_corner(
     v1 = _unit_vector(p0 - p1)
     v2 = _unit_vector(p2 - p1)
 
-    if np.abs(np.cross(v1, v2)) < 1e-6:
+    if np.abs(v1[0] * v2[1] - v1[1] * v2[0]) < 1e-6:
         return p1, [p1], p1  # collinear — no corner needed
 
     bisector = _unit_vector(v1 + v2)
