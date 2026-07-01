@@ -86,7 +86,10 @@ def paths_to_device_components(paths: dict) -> dict[str, list[str]]:
     return {dev: sorted(list(comps)) for dev, comps in devices.items()}
 
 
-def flowchem_addresses_dict(timeout_ms=2000) -> dict[str, dict[str, list[str]]]:
+def flowchem_addresses_dict(
+    timeout_ms=2000,
+    openapi_cache: dict[str, dict] | None = None,
+) -> dict[str, dict[str, list[str]]]:
     result = {}
     flowchem_address = list_flowchem_addresses(timeout_ms)
     for url in flowchem_address:
@@ -108,6 +111,8 @@ def flowchem_addresses_dict(timeout_ms=2000) -> dict[str, dict[str, list[str]]]:
             )
             continue
         result[url] = paths_to_device_components(data["paths"])
+        if openapi_cache is not None:
+            openapi_cache[url] = data
     return result
 
 
@@ -117,7 +122,20 @@ class flowchem_servers:
 
         self.servers: dict[str, dict[str, list[str]]] = {}
 
+        self.openapi: dict[str, dict] = {}
+
         self.correspondent: dict[str, str] = {}
+
+    def register_openapi(self, url: str, openapi: dict) -> None:
+        paths = openapi.get("paths")
+        if not isinstance(paths, dict):
+            return
+        normalized_url = url.rstrip("/")
+        self.openapi[normalized_url] = openapi
+        self.servers[normalized_url] = paths_to_device_components(paths)
+
+    def get_openapi(self, url: str) -> dict | None:
+        return self.openapi.get(url.rstrip("/"))
 
     def match_component(self, url, abstract_component):
 
@@ -146,7 +164,8 @@ class flowchem_servers:
 
     def update(self):
 
-        self.servers = flowchem_addresses_dict()
+        self.openapi = {}
+        self.servers = flowchem_addresses_dict(openapi_cache=self.openapi)
 
 
 FLOWCHEM_SERVERS = flowchem_servers()

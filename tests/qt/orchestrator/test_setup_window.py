@@ -23,10 +23,25 @@ from chemunited.project.recent import RecentProjectsStore
 from chemunited.project.session import ProjectSession
 from chemunited.setup import SetupWindow
 from chemunited.shared.enums import SetupStepMode
+from chemunited.utils.flowchem_listener import FLOWCHEM_SERVERS
 
 
 def _magnitude(value, unit: str) -> float:
     return float(value.to(unit).magnitude)
+
+
+@pytest.fixture(autouse=True)
+def reset_flowchem_servers():
+    original_servers = dict(FLOWCHEM_SERVERS.servers)
+    original_openapi = dict(FLOWCHEM_SERVERS.openapi)
+    original_correspondent = dict(FLOWCHEM_SERVERS.correspondent)
+    FLOWCHEM_SERVERS.servers = {}
+    FLOWCHEM_SERVERS.openapi = {}
+    FLOWCHEM_SERVERS.correspondent = {}
+    yield
+    FLOWCHEM_SERVERS.servers = original_servers
+    FLOWCHEM_SERVERS.openapi = original_openapi
+    FLOWCHEM_SERVERS.correspondent = original_correspondent
 
 
 class TestAddComponent:
@@ -214,6 +229,107 @@ class TestAddComponent:
 
         assert not window.mcp_project_action.isChecked()
         assert window.mcp_project_action.text() == "Enable MCP"
+
+    def test_association_merges_dynamic_flowchem_commands(
+        self, window: SetupWindow, monkeypatch
+    ):
+        window.orchestrator.add_component(
+            name="PumpA",
+            figure="HPLCPump",
+            position=(0.0, 0.0),
+        )
+        FLOWCHEM_SERVERS.register_openapi(
+            "http://127.0.0.1:9",
+            {
+                "paths": {
+                    "/Pump/device/prime": {
+                        "put": {
+                            "parameters": [{"name": "volume", "in": "query"}],
+                        }
+                    }
+                }
+            },
+        )
+        syncs: list[bool] = []
+        monkeypatch.setattr(
+            window.command_list,
+            "sync_protocols",
+            lambda *args, **kwargs: syncs.append(True),
+        )
+
+        window.orchestrator.associate_component(
+            "PumpA",
+            "http://127.0.0.1:9/Pump/device",
+            validate_object=False,
+        )
+
+        command_class = window.orchestrator.components["PumpA"].protocols.commands[
+            "prime"
+        ]
+        assert command_class.model_fields["command"].default == "prime"
+        assert command_class.model_fields["method"].default == "PUT"
+        assert command_class.model_fields["volume"].annotation is str
+        assert syncs
+
+    def test_disassociation_restores_default_commands(self, window: SetupWindow):
+        window.orchestrator.add_component(
+            name="PumpA",
+            figure="HPLCPump",
+            position=(0.0, 0.0),
+        )
+        FLOWCHEM_SERVERS.register_openapi(
+            "http://127.0.0.1:9",
+            {"paths": {"/Pump/device/prime": {"put": {}}}},
+        )
+        window.orchestrator.associate_component(
+            "PumpA",
+            "http://127.0.0.1:9/Pump/device",
+            validate_object=False,
+        )
+
+        window.orchestrator.disassociate_component("PumpA")
+
+        commands = window.orchestrator.components["PumpA"].protocols.commands
+        assert "prime" not in commands
+        assert {"is-pumping", "infuse", "stop"} <= set(commands)
+
+    def test_project_open_restores_dynamic_flowchem_commands(
+        self, window: SetupWindow, tmp_path
+    ):
+        session = ProjectSession()
+        session.new(name="demo", location=tmp_path, init_git=False)
+        session.save_draw(
+            {
+                "components": [
+                    {
+                        "name": "PumpA",
+                        "figure": "HPLCPump",
+                        "position": [0.0, 0.0],
+                    }
+                ],
+                "connections": [],
+            }
+        )
+        session.save_connectivity(
+            {
+                "server_url": "http://127.0.0.1:9",
+                "associations": [
+                    {
+                        "component": "PumpA",
+                        "component_url": "Pump/device",
+                    }
+                ],
+            }
+        )
+        FLOWCHEM_SERVERS.register_openapi(
+            "http://127.0.0.1:9",
+            {"paths": {"/Pump/device/prime": {"put": {}}}},
+        )
+
+        window.orchestrator.open_project(tmp_path / "demo")
+
+        commands = window.orchestrator.components["PumpA"].protocols.commands
+        assert "prime" in commands
 
     def test_refresh_project_action_is_disabled_without_project(
         self, window: SetupWindow

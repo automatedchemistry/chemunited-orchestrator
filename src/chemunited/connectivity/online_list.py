@@ -2,7 +2,7 @@ from typing import TYPE_CHECKING, Optional
 from urllib.parse import urlsplit, urlunsplit
 
 from loguru import logger
-from PyQt5.QtCore import QFile, QMimeData, Qt
+from PyQt5.QtCore import QMimeData, Qt
 from PyQt5.QtGui import QColor, QDrag, QFont, QIcon, QPainter, QPixmap
 from PyQt5.QtWidgets import QHBoxLayout, QLabel, QListWidgetItem, QVBoxLayout, QWidget
 from qfluentwidgets import (
@@ -19,7 +19,6 @@ from chemunited.shared.icon import OrchestratorIcon
 from chemunited.utils.flowchem_listener import (
     FLOWCHEM_SERVERS,
     access_url,
-    paths_to_device_components,
 )
 
 if TYPE_CHECKING:
@@ -34,7 +33,7 @@ class OnlineList(ListWidget):
         self.api_obj = api_obj
         self.setDragEnabled(True)
         # Important: allow dragging outside the widget
-        self.setDefaultDropAction(Qt.MoveAction)  # type:ignore[attr-defined]
+        self.setDefaultDropAction(Qt.MoveAction)  # type: ignore[attr-defined]
 
     def startDrag(self, supportedActions):
         item = self.currentItem()
@@ -55,7 +54,7 @@ class OnlineList(ListWidget):
             width = max(140, len(text) * 8 + 40)
             height = 36
             pixmap = QPixmap(width, height)
-            pixmap.fill(Qt.transparent)  # type:ignore[attr-defined]
+            pixmap.fill(Qt.transparent)  # type: ignore[attr-defined]
 
             painter = QPainter(pixmap)
 
@@ -65,7 +64,7 @@ class OnlineList(ListWidget):
             )
             painter.setRenderHint(QPainter.Antialiasing)
             painter.setBrush(bg_color)
-            painter.setPen(Qt.NoPen)  # type:ignore[attr-defined]
+            painter.setPen(Qt.NoPen)  # type: ignore[attr-defined]
             painter.drawRoundedRect(0, 0, width, height, 8, 8)
 
             # Draw icon
@@ -76,7 +75,7 @@ class OnlineList(ListWidget):
             # Draw text
             painter.setFont(QFont("Segoe UI", 9))
             painter.setPen(
-                Qt.white if isDarkTheme() else Qt.black  # type:ignore[attr-defined]
+                Qt.white if isDarkTheme() else Qt.black  # type: ignore[attr-defined]
             )
             painter.drawText(36, 22, text)
 
@@ -86,7 +85,7 @@ class OnlineList(ListWidget):
             drag.setPixmap(pixmap)
             drag.setHotSpot(pixmap.rect().center())
 
-            drag.exec_(Qt.CopyAction)  # type:ignore[attr-defined]
+            drag.exec_(Qt.CopyAction)  # type: ignore[attr-defined]
 
 
 class OnlineComponent(QWidget):
@@ -146,6 +145,10 @@ class OnlineComponent(QWidget):
             )
             return
 
+        self._show_busy_status(
+            "Inspecting FlowChem API",
+            f"Reading {normalized_url}/openapi.json...",
+        )
         ok, data = access_url(f"{normalized_url}/openapi.json", timeout=1)
         if not ok:
             self._reject_manual_api(
@@ -175,11 +178,14 @@ class OnlineComponent(QWidget):
             )
             return
 
-        FLOWCHEM_SERVERS.servers[normalized_url] = paths_to_device_components(
-            data["paths"]
-        )
+        FLOWCHEM_SERVERS.register_openapi(normalized_url, data)
         self._select_registered_api(raw_url=raw_url, normalized_url=normalized_url)
         self.update_button.setEnabled(True)
+        component_count = sum(
+            len(components)
+            for components in FLOWCHEM_SERVERS.servers[normalized_url].values()
+        )
+        self._finish_busy_status(f"Registered {component_count} FlowChem component(s).")
 
     @staticmethod
     def _normalize_api_url(raw_url: str) -> str:
@@ -224,7 +230,30 @@ class OnlineComponent(QWidget):
         self._remove_unregistered_api_items(raw_url, normalized_url)
         self.api.setText(raw_url)
         self.update_button.setEnabled(True)
+        formatted = message.format(*args) if args else message
+        self._fail_busy_status(formatted)
         logger.warning(message, *args)
+
+    def _show_busy_status(self, title: str, message: str) -> None:
+        if self._parent is None:
+            return
+        show_busy_status = getattr(self._parent, "show_busy_status", None)
+        if callable(show_busy_status):
+            show_busy_status(title, message)
+
+    def _finish_busy_status(self, message: str) -> None:
+        if self._parent is None:
+            return
+        finish_busy_status = getattr(self._parent, "finish_busy_status", None)
+        if callable(finish_busy_status):
+            finish_busy_status(message)
+
+    def _fail_busy_status(self, message: str) -> None:
+        if self._parent is None:
+            return
+        fail_busy_status = getattr(self._parent, "fail_busy_status", None)
+        if callable(fail_busy_status):
+            fail_busy_status(message)
 
     def _remove_unregistered_api_items(self, *urls: str):
         for url in dict.fromkeys(urls):
@@ -236,8 +265,6 @@ class OnlineComponent(QWidget):
                 self.api.removeItem(index)
 
     def select_api(self, item):
-        # Determine current theme
-        _theme = "DARK" if isDarkTheme() else "LIGHT"
         url = item.rstrip("/")
         self.OnlineList.clear()
 
@@ -245,44 +272,14 @@ class OnlineComponent(QWidget):
             for device in FLOWCHEM_SERVERS.servers[url]:
                 for component in FLOWCHEM_SERVERS.servers[url][device]:
                     urlc = f"{url}/{device}/{component}"
-                    status, info = access_url(url=urlc)
-                    if not isinstance(info, dict):
-                        info = {}
-
-                    # Default icon (fallback)
                     figure = OrchestratorIcon.COMPONENT_ICON.path()
-
-                    # Try to find a component-specific icon based on theme
-                    for item in info.get("corresponding_class", []):
-                        icon_path = (
-                            f":/orchestrator/components_icons/{item}{_theme}.png"
-                        )
-                        # Check if that resource actually exists
-                        if QFile.exists(icon_path):
-                            figure = icon_path
-                            break
 
                     # Create the list item with icon + text
                     text = f"{device}/{component}"
                     list_item = QListWidgetItem(QIcon(figure), text)
                     self.OnlineList.addItem(list_item)
 
-                    # Optional: show online/offline status and matching classes in the tooltip
-                    tooltip = "✅ Online" if status else "❌ Offline"
-                    possible_classes = [
-                        component_class
-                        for component_class in info.get("corresponding_class", [])
-                        if component_class not in {"FlowchemComponent", "object"}
-                    ]
-                    details = (
-                        "\n".join(
-                            f"  - {component_class}"
-                            for component_class in possible_classes
-                        )
-                        if possible_classes
-                        else "  - No information available"
-                    )
-                    list_item.setToolTip(f"{text} - {tooltip}\n{details}")
+                    list_item.setToolTip(f"{text}\nDiscovered from openapi.json")
 
                     used_by = self._component_using_url(urlc)
                     if used_by is not None:

@@ -7,6 +7,7 @@ from PyQt5.QtCore import QPointF, Qt
 from PyQt5.QtWidgets import QWidget
 from pytestqt.qtbot import QtBot
 
+from chemunited.connectivity.openapi_commands import merge_openapi_commands
 from chemunited.elements.component.protocols.valves import (
     ThreePortTwoPositionValveProtocols,
 )
@@ -586,6 +587,59 @@ class CustomProcess:
     assert command is not None
     assert command.method == "PUT"
     assert command.temp.to("degC").magnitude == 10
+
+
+def test_command_block_reconstruction_resolves_dynamic_openapi_command(
+    tmp_path: Path,
+    qtbot: QtBot,
+) -> None:
+    from chemunited_core.protocols import ComponentProtocol
+
+    protocol = ComponentProtocol("PumpA")
+    merge_openapi_commands(
+        protocol=protocol,
+        openapi={
+            "paths": {
+                "/Pump/device/prime": {
+                    "put": {
+                        "parameters": [{"name": "volume", "in": "query"}],
+                    }
+                }
+            }
+        },
+        device="Pump",
+        component="device",
+    )
+    components = {
+        "PumpA": SimpleNamespace(protocols=protocol),
+    }
+    workflow = ProcessWorkflow("React")
+    graph = _make_graph(
+        working_dir=tmp_path,
+        workflow=workflow,
+        qtbot=qtbot,
+        components=components,
+    )
+    source = """
+class CustomProcess:
+    def command_1(self, ctx: NodeExecutionContext) -> bool:
+        self.platform["PumpA"].put("prime", volume="1 ml")
+        return True
+"""
+
+    command_class = graph._resolve_command_signature_class("PumpA", "prime", "PUT")
+    command = _build_command_model(
+        source,
+        "command_1",
+        "CustomProcess",
+        sig_cls=command_class,
+    )
+
+    assert command_class is protocol.commands["prime"]
+    assert command is not None
+    assert command.command == "prime"
+    assert command.method == "PUT"
+    assert command.volume == "1 ml"
 
 
 def test_update_command_script_formats_saved_protocol(

@@ -1,7 +1,11 @@
 from loguru import logger
 from pydantic import AnyHttpUrl, TypeAdapter, ValidationError
 
-from chemunited.utils.flowchem_listener import access_url
+from chemunited.connectivity.openapi_commands import (
+    apply_openapi_commands,
+    reset_protocol_to_default,
+)
+from chemunited.utils.flowchem_listener import FLOWCHEM_SERVERS, access_url
 
 from .protocols import OrchestratorProtocols
 
@@ -13,6 +17,7 @@ class OrchestratorConnectivity(OrchestratorProtocols):
         urlc: AnyHttpUrl | str,
         *,
         update_online_list: bool = False,
+        inspect_commands: bool = True,
     ) -> bool:
         try:
             validated_url = TypeAdapter(AnyHttpUrl).validate_python(urlc)
@@ -23,6 +28,8 @@ class OrchestratorConnectivity(OrchestratorProtocols):
         component = self.components[name]
         component.connectivity.url = validated_url
         component.graph.set_online(component.is_online, str(component.url))
+        if inspect_commands:
+            self._inspect_component_commands(name)
 
         parent_ref = getattr(self, "parent_ref", None)
         if (
@@ -36,6 +43,49 @@ class OrchestratorConnectivity(OrchestratorProtocols):
             )
 
         return True
+
+    def _inspect_component_commands(self, name: str) -> None:
+        component = self.components[name]
+        openapi = self._openapi_for_component(component)
+        if openapi is None:
+            reset_protocol_to_default(component)
+            self._refresh_command_list()
+            logger.warning(
+                f"Could not inspect FlowChem commands for component {name!r}; "
+                "using default commands."
+            )
+            return
+
+        added = apply_openapi_commands(component, openapi)
+        self._refresh_command_list()
+        if added:
+            logger.info(
+                f"Added {added} dynamic FlowChem command(s) for component {name!r}."
+            )
+
+    def _openapi_for_component(self, component) -> dict | None:
+        base_url = component.connectivity.base_url.rstrip("/")
+        cached = FLOWCHEM_SERVERS.get_openapi(base_url)
+        if cached is not None:
+            return cached
+
+        ok, data = access_url(f"{base_url}/openapi.json", timeout=1)
+        if (
+            not ok
+            or not isinstance(data, dict)
+            or not isinstance(data.get("paths"), dict)
+        ):
+            return None
+
+        FLOWCHEM_SERVERS.register_openapi(base_url, data)
+        return data
+
+    def _refresh_command_list(self) -> None:
+        parent_ref = getattr(self, "parent_ref", None)
+        command_list = getattr(parent_ref, "command_list", None)
+        sync_protocols = getattr(command_list, "sync_protocols", None)
+        if callable(sync_protocols):
+            sync_protocols()
 
     def associate_component(self, name: str, urlc: AnyHttpUrl, validate_object=True):
 
@@ -60,7 +110,9 @@ class OrchestratorConnectivity(OrchestratorProtocols):
             return
 
         if validate_object:
-            status, info = access_url(str(validated_url))
+            _, info = access_url(str(validated_url))
+            if not isinstance(info, dict):
+                info = {}
             # Try to find a component-specific icon based on theme
             possibles_mach: list[str] = [
                 c.lower()
@@ -91,4 +143,10 @@ class OrchestratorConnectivity(OrchestratorProtocols):
             logger.error(f"Component {name} is not a electronic component.")
             return
 
-        self._apply_component_connectivity(name, "http://0.0.0.0:0000")
+        self._apply_component_connectivity(
+            name,
+            "http://0.0.0.0:0000",
+            inspect_commands=False,
+        )
+        reset_protocol_to_default(self.components[name])
+        self._refresh_command_list()
