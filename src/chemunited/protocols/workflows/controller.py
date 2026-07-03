@@ -102,6 +102,7 @@ class WorkflowController(QObject):
             label=source.label,
             description=source.description,
             protected=False,
+            parameters=dict(source.parameters),
         )
         self.block_added.emit(block.node_id)
         return block
@@ -136,6 +137,14 @@ class WorkflowController(QObject):
         description: str,
     ) -> None:
         self._workflow.update_block_metadata(node_id, label, description)
+        self.block_updated.emit(node_id)
+
+    def update_block_parameters(
+        self,
+        node_id: str,
+        parameters: dict[str, str | int | float | bool],
+    ) -> None:
+        self._workflow.update_block_parameters(node_id, parameters)
         self.block_updated.emit(node_id)
 
     def connect_nodes(self, start_name: str, end_name: str, start_role: str) -> None:

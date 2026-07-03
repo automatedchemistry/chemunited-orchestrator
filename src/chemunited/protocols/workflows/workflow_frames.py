@@ -43,6 +43,7 @@ from .elements.access_point import WorkflowAccessPoints
 from .elements.work_connection import WorkflowConnection
 from .elements.work_node import WorkflowNode
 from .exceptions import WorkflowRuleViolation
+from .node_parameters_dialog import NodeParametersDialog
 from .process_workflow import BlockData, ConnectionData
 from .workflow_rules import resolve_render_start_role
 
@@ -867,6 +868,14 @@ class WorkflowGraph(GraphCore):
         reuse_action.triggered.connect(partial(self.reuse_node, node.node_name))
         menu.addAction(reuse_action)
 
+        edit_parameters_action = Action(self)
+        edit_parameters_action.setText("Edit parameters")
+        edit_parameters_action.setIcon(OrchestratorIcon.VARIABLE.icon())
+        edit_parameters_action.triggered.connect(
+            partial(self.edit_node_parameters, node.node_name)
+        )
+        menu.addAction(edit_parameters_action)
+
         delete_action = Action(self)
         delete_action.setText("Delete block")
         delete_action.setIcon(OrchestratorIcon.TRASH.icon())
@@ -1102,6 +1111,14 @@ class WorkflowGraph(GraphCore):
             self.controller.reuse_block(source_name, offset_pos)
         except WorkflowRuleViolation:
             pass
+
+    def edit_node_parameters(self, node_name: str):
+        block = self.controller.get_block(node_name)
+        if block is None:
+            return
+        dialog = NodeParametersDialog(node_name, block.parameters, parent=self)
+        dialog.parameters_saved.connect(self.controller.update_block_parameters)
+        dialog.exec_()
 
     def _handle_access_point_click(self, port: WorkflowAccessPoints):
         if self.window_container != WindowCategory.SETUP:

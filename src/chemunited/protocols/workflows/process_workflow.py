@@ -6,7 +6,7 @@ from typing import Any, Iterator
 
 from chemunited_workflow import WorkflowNodeSpec
 from networkx import DiGraph
-from pydantic import ConfigDict
+from pydantic import ConfigDict, Field
 
 from chemunited.shared.enums.protocols_enum import ProtocolBlock
 
@@ -29,6 +29,7 @@ class BlockData(WorkflowNodeSpec):
     ports_numbers: int = 1
     file_path: Path | None = None
     protected: bool = False
+    parameters: dict[str, str | int | float | bool] = Field(default_factory=dict)
 
     def to_attrs(self) -> dict[str, Any]:
         return self.model_dump(exclude={"node_id"})
@@ -48,6 +49,11 @@ class BlockData(WorkflowNodeSpec):
         ]
         if self.ports_numbers != 1:
             lines.append(f"{indent}    ports_numbers={self.ports_numbers!r},")
+        if self.parameters:
+            lines.append(
+                f"{indent}    node_config=NodeParameters("
+                f"node_id={self.node_id!r}, parameters={self.parameters!r}),"
+            )
         lines.append(f"{indent})")
         return "\n".join(lines)
 
@@ -233,6 +239,7 @@ class ProcessWorkflow:
         label: str = "",
         description: str = "",
         protected: bool = False,
+        parameters: dict[str, str | int | float | bool] | None = None,
     ) -> BlockData:
         if self.has_block(node_id):
             raise WorkflowRuleViolation(f"Workflow block '{node_id}' already exists")
@@ -249,6 +256,7 @@ class ProcessWorkflow:
             label=label,
             description=description,
             protected=protected,
+            parameters=dict(parameters) if parameters else {},
         )
         self._store_block(block)
         return block
@@ -275,6 +283,15 @@ class ProcessWorkflow:
         block = self._require_block(node_id)
         block.label = label.strip() or block.node_id
         block.description = description.strip()
+        return block
+
+    def update_block_parameters(
+        self,
+        node_id: str,
+        parameters: dict[str, str | int | float | bool],
+    ) -> BlockData:
+        block = self._require_block(node_id)
+        block.parameters = dict(parameters)
         return block
 
     def rename_process(self, name: str) -> None:

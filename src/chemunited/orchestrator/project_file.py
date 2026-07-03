@@ -855,6 +855,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
                     block.description = str(attrs.get("description") or "")
                 continue
 
+            node_config = attrs.get("node_config")
             workflow.add_block(
                 node_id=node_id,
                 method=attrs.get("method") or node_id,
@@ -863,6 +864,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
                 description=str(attrs.get("description") or ""),
                 block_tag=_infer_block_tag(node_id, attrs, graph),
                 ports_numbers=_coerce_ports_numbers(attrs.get("ports_numbers", 1)),
+                parameters=dict(getattr(node_config, "parameters", None) or {}),
             )
 
         for source, target, attrs in graph.edges(data=True):

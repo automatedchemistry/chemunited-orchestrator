@@ -534,7 +534,7 @@ def _sync_process_content(original: str, workflow: ProcessWorkflow) -> str | Non
         return None
 
     new_managed_methods = _workflow_managed_methods(workflow)
-    return _rewrite_process_class(
+    rewritten = _rewrite_process_class(
         original,
         class_node,
         build_workflow_node,
@@ -542,6 +542,9 @@ def _sync_process_content(original: str, workflow: ProcessWorkflow) -> str | Non
         new_managed_methods,
         workflow,
     )
+    if any(block.parameters for _, block in workflow.iter_blocks()):
+        rewritten = _ensure_node_parameters_support(rewritten)
+    return rewritten
 
 
 def _extract_managed_methods(
@@ -733,6 +736,108 @@ def _rewrite_process_class(
 
     chunks.append(original[class_end:])
     return "".join(chunks)
+
+
+def _has_import(tree: ast.Module, module: str, name: str) -> bool:
+    return any(
+        isinstance(node, ast.ImportFrom)
+        and node.module == module
+        and any(alias.name == name for alias in node.names)
+        for node in ast.walk(tree)
+    )
+
+
+def _ensure_import(content: str, module: str, name: str) -> str:
+    try:
+        tree = ast.parse(content)
+    except SyntaxError:
+        return content
+    if _has_import(tree, module, name):
+        return content
+
+    lines = content.splitlines(keepends=True)
+    last_import_node = next(
+        (
+            node
+            for node in reversed(tree.body)
+            if isinstance(node, (ast.Import, ast.ImportFrom))
+        ),
+        None,
+    )
+    statement = f"from {module} import {name}\n"
+    if last_import_node is None:
+        return statement + "\n" + content
+    insert_at = _node_end_offset(last_import_node, lines)
+    return content[:insert_at] + "\n" + statement + content[insert_at:]
+
+
+_NODE_PARAMETERS_CLASS = (
+    "\n\nclass NodeParameters(NodeConfig):\n"
+    '    """Per-block parameters set via each block\'s "Edit parameters" menu."""\n'
+    "\n"
+    "    model_config = ConfigDict(frozen=True)\n"
+    "\n"
+    "    parameters: dict[str, str | int | float | bool] = {}\n"
+)
+
+
+def _ensure_node_parameters_class(content: str) -> str:
+    try:
+        tree = ast.parse(content)
+    except SyntaxError:
+        return content
+
+    lines = content.splitlines(keepends=True)
+    class_node = next(
+        (
+            node
+            for node in tree.body
+            if isinstance(node, ast.ClassDef) and node.name == "NodeParameters"
+        ),
+        None,
+    )
+
+    if class_node is None:
+        last_import_node = next(
+            (
+                node
+                for node in reversed(tree.body)
+                if isinstance(node, (ast.Import, ast.ImportFrom))
+            ),
+            None,
+        )
+        if last_import_node is None:
+            return _NODE_PARAMETERS_CLASS + "\n\n" + content
+        insert_at = _node_end_offset(last_import_node, lines)
+        return content[:insert_at] + "\n" + _NODE_PARAMETERS_CLASS + content[insert_at:]
+
+    has_parameters_field = any(
+        isinstance(item, ast.AnnAssign)
+        and isinstance(item.target, ast.Name)
+        and item.target.id == "parameters"
+        for item in class_node.body
+    )
+    if has_parameters_field:
+        return content
+
+    # A `NodeParameters` class already exists but doesn't declare the
+    # `parameters` field (e.g. a stale/hand-written version) — patch it in
+    # place instead of trusting the name alone.
+    insert_at = _node_end_offset(class_node, lines)
+    field_line = "\n    parameters: dict[str, str | int | float | bool] = {}\n"
+    return content[:insert_at] + field_line + content[insert_at:]
+
+
+def _ensure_node_parameters_support(content: str) -> str:
+    """Back-fill the ``NodeConfig``/``ConfigDict`` imports and the
+    ``NodeParameters`` class (or its missing ``parameters`` field) into
+    process files that predate, or incompletely define, per-block
+    parameters, so that ``node_config=NodeParameters(...)`` calls emitted by
+    ``BlockData.to_script()`` resolve correctly.
+    """
+    content = _ensure_import(content, "chemunited_workflow", "NodeConfig")
+    content = _ensure_import(content, "pydantic", "ConfigDict")
+    return _ensure_node_parameters_class(content)
 
 
 def _append_separated_block(chunks: list[str], block: str) -> None:

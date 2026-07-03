@@ -9,6 +9,7 @@ from typing import Annotated
 
 from chemunited_quantities import ChemQuantityValidator, ChemUnitQuantity
 from chemunited_workflow import (
+    NodeConfig,
     NodeExecutionContext,
     Process,
     WorkflowEdgeSpec,
@@ -25,6 +26,14 @@ class ProcessConfig(BaseModel):
     # Add your process-level parameters here
     # Example:
     # flow_rate: str = "5 ml/min"
+
+
+class NodeParameters(NodeConfig):
+    """Per-block parameters set via each block's "Edit parameters" menu."""
+
+    model_config = ConfigDict(frozen=True)
+
+    parameters: dict[str, str | int | float | bool] = {}
 
 
 # ── Process class ──────────────────────────────────────────────────────────────
@@ -117,5 +126,14 @@ class CustomProcess(Process[ProcessConfig]):
 #    def my_step(self, ctx: NodeExecutionContext) -> bool:
 #        rate = self.config.flow_rate          # process-level config
 #        volume = ctx.runtime.local_data["parameters"].total_volume
+#        return True
+#
+# ACCESSING PER-BLOCK PARAMETERS
+# ---------------------------------------------
+# Set per-block, per-instance values from the block's right-click
+# "Edit parameters" menu (e.g. reused blocks can each have their own):
+#
+#    def my_step(self, ctx: NodeExecutionContext) -> bool:
+#        rate = ctx.node_config.parameters["flow_rate"]
 #        return True
 # =============================================
