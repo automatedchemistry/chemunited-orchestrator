@@ -4,10 +4,12 @@ from PyQt5.QtCore import QObject, pyqtSignal
 
 from chemunited.shared.enums.protocols_enum import ProtocolBlock
 
+from .exceptions import WorkflowRuleViolation
 from .process_workflow import BlockData, ConnectionData, ProcessWorkflow
 from .workflow_rules import (
     derive_connection_attributes,
     generate_block_name,
+    generate_reuse_name,
     incoming_port_count,
     validate_connection_request,
 )
@@ -77,6 +79,29 @@ class WorkflowController(QObject):
             position=pos,
             block_tag=block_tag,
             ports_numbers=ports_numbers,
+        )
+        self.block_added.emit(block.node_id)
+        return block
+
+    def reuse_block(self, source_name: str, pos: tuple[float, float]) -> BlockData:
+        source = self._workflow.get_block(source_name)
+        if source is None or source.protected:
+            raise WorkflowRuleViolation(
+                f"Workflow block '{source_name}' cannot be reused"
+            )
+
+        new_id = generate_reuse_name(self._workflow.block_names(), source_name)
+        block = self._workflow.add_block(
+            node_id=new_id,
+            method=source.method,
+            file=source.file,
+            position=pos,
+            block_tag=source.block_tag,
+            ports_numbers=source.ports_numbers,
+            file_path=source.file_path,
+            label=source.label,
+            description=source.description,
+            protected=False,
         )
         self.block_added.emit(block.node_id)
         return block

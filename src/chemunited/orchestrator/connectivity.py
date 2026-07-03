@@ -25,10 +25,10 @@ class OrchestratorConnectivity(OrchestratorProtocols):
             logger.error(f"Invalid URL for component {name}.")
             return False
 
-        component = self.components[name]
+        component = self.components.electronic[name]
         component.connectivity.url = validated_url
-        component.graph.set_online(component.is_online, str(component.url))
-        if inspect_commands:
+        online = component.graph.set_online(component.is_online, str(component.url))
+        if inspect_commands and online:
             self._inspect_component_commands(name)
 
         parent_ref = getattr(self, "parent_ref", None)
@@ -97,7 +97,7 @@ class OrchestratorConnectivity(OrchestratorProtocols):
             logger.error(f"Component {name} is not a electronic component.")
             return
 
-        connectivity = self.components[name].connectivity
+        connectivity = self.components.electronic[name].connectivity
 
         if connectivity.is_online:
             logger.error(f"Component {name} is already connected.")

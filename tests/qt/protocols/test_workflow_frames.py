@@ -454,6 +454,70 @@ def test_removing_block_synchronizes_graph_and_method(
     assert "def loop_1(" not in source
 
 
+def test_reuse_block_shares_method_without_duplicating_stub(
+    tmp_path: Path,
+    qtbot: QtBot,
+) -> None:
+    workflow = ProcessWorkflow("React")
+    graph = _make_graph(working_dir=tmp_path, workflow=workflow, qtbot=qtbot)
+    graph._build_add_menu(QPointF(50.0, 60.0)).actions()[0].trigger()
+
+    graph.reuse_node("script_1")
+
+    reused = workflow.get_block("script_1-1")
+    assert reused is not None
+    assert reused.method == "script_1"
+    assert reused.position == (90.0, 100.0)
+    assert "script_1-1" in graph._nodes
+    assert workflow.has_connection("script_1", "script_1-1") is False
+
+    source = (tmp_path / "protocols" / "React.py").read_text(encoding="utf-8")
+    assert source.count("def script_1(") == 1
+    assert source.count('"script_1-1"') == 1
+    assert source.count("method='script_1',") == 2
+
+    assert graph._nodes["script_1"].shared_badge.isVisible() is True
+    assert graph._nodes["script_1-1"].shared_badge.isVisible() is True
+    assert graph._nodes["script_1-1"].shared_with == ("script_1",)
+
+
+def test_reuse_block_ignores_protected_terminal_block(
+    tmp_path: Path,
+    qtbot: QtBot,
+) -> None:
+    workflow = ProcessWorkflow("React")
+    graph = _make_graph(working_dir=tmp_path, workflow=workflow, qtbot=qtbot)
+
+    graph.reuse_node("start")
+
+    assert workflow.block_names() == ("start", "end")
+
+
+def test_removing_one_reused_block_keeps_shared_method_stub(
+    tmp_path: Path,
+    qtbot: QtBot,
+) -> None:
+    workflow = ProcessWorkflow("React")
+    graph = _make_graph(working_dir=tmp_path, workflow=workflow, qtbot=qtbot)
+    graph._build_add_menu(QPointF()).actions()[0].trigger()
+    graph.reuse_node("script_1")
+
+    graph.remove_node("script_1")
+
+    source = (tmp_path / "protocols" / "React.py").read_text(encoding="utf-8")
+    assert workflow.get_block("script_1") is None
+    assert workflow.get_block("script_1-1") is not None
+    assert source.count("def script_1(") == 1
+    assert graph._nodes["script_1-1"].shared_badge.isVisible() is False
+    assert graph._nodes["script_1-1"].shared_with == ()
+
+    graph.remove_node("script_1-1")
+
+    source = (tmp_path / "protocols" / "React.py").read_text(encoding="utf-8")
+    assert workflow.get_block("script_1-1") is None
+    assert "def script_1(" not in source
+
+
 def test_context_menu_add_rolls_back_when_process_file_is_invalid(
     tmp_path: Path,
     qtbot: QtBot,

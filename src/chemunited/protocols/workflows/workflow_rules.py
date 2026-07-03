@@ -1,11 +1,14 @@
 from __future__ import annotations
 
+import re
 from dataclasses import dataclass
 from typing import Iterable, TypedDict
 
 from chemunited.shared.enums.protocols_enum import ProtocolBlock
 
 from .exceptions import WorkflowRuleViolation
+
+_REUSE_SUFFIX_RE = re.compile(r"^(?P<base>.+)-(?P<index>\d+)$")
 
 
 @dataclass(frozen=True, slots=True)
@@ -58,6 +61,17 @@ def generate_block_name(existing_names: Iterable[str], block_tag: ProtocolBlock)
     while f"{prefix}_{index}" in existing:
         index += 1
     return f"{prefix}_{index}"
+
+
+def generate_reuse_name(existing_names: Iterable[str], source_name: str) -> str:
+    match = _REUSE_SUFFIX_RE.match(source_name)
+    base = match.group("base") if match else source_name
+
+    existing = set(existing_names)
+    index = 1
+    while f"{base}-{index}" in existing:
+        index += 1
+    return f"{base}-{index}"
 
 
 def validate_connection_request(

@@ -15,7 +15,14 @@ from PyQt5 import sip
 from PyQt5.QtCore import QPointF, QRectF, Qt
 from PyQt5.QtGui import QColor, QPainter, QPen
 from PyQt5.QtWidgets import QFrame, QGraphicsItem, QGraphicsView
-from qfluentwidgets import Action, InfoBar, InfoBarPosition, RoundMenu, isDarkTheme
+from qfluentwidgets import (
+    Action,
+    FluentIcon,
+    InfoBar,
+    InfoBarPosition,
+    RoundMenu,
+    isDarkTheme,
+)
 
 from chemunited.project.storage import sync_process
 from chemunited.protocols.workflows.naming import (
@@ -853,6 +860,13 @@ class WorkflowGraph(GraphCore):
     def _build_node_menu(self, node: WorkflowNode) -> RoundMenu:
         menu = RoundMenu(parent=self)
 
+        reuse_action = Action(self)
+        reuse_action.setText("Reuse block")
+        reuse_action.setIcon(FluentIcon.COPY.icon())
+        reuse_action.setEnabled(not node.is_protected)
+        reuse_action.triggered.connect(partial(self.reuse_node, node.node_name))
+        menu.addAction(reuse_action)
+
         delete_action = Action(self)
         delete_action.setText("Delete block")
         delete_action.setIcon(OrchestratorIcon.TRASH.icon())
@@ -928,6 +942,26 @@ class WorkflowGraph(GraphCore):
 
         for node_name in self._nodes:
             self._sync_input_ports(node_name)
+
+        seen_methods: set[str] = set()
+        for _, block in self.controller.iter_blocks():
+            if (
+                block.method
+                and not block.protected
+                and block.method not in seen_methods
+            ):
+                seen_methods.add(block.method)
+                self._refresh_shared_indicators(block.method)
+
+    def _refresh_shared_indicators(self, method_name: str) -> None:
+        siblings = self.model.blocks_sharing_method(method_name)
+        shared = len(siblings) > 1
+        for node_id in siblings:
+            node = self._nodes.get(node_id)
+            if node is None:
+                continue
+            others = tuple(other for other in siblings if other != node_id)
+            node.set_shared(shared, others)
 
     def _clear_scene_objects(self):
         self.scene_attribute.clear()
@@ -1035,11 +1069,15 @@ class WorkflowGraph(GraphCore):
                 deleted_any = True
 
         for node_name in selected_nodes:
+            block = self.controller.get_block(node_name)
+            method = block.method if block is not None else ""
             try:
                 self.controller.remove_block(node_name)
             except WorkflowRuleViolation:
                 continue
             deleted_any = True
+            if method:
+                self._refresh_shared_indicators(method)
 
         return deleted_any
 
@@ -1054,6 +1092,16 @@ class WorkflowGraph(GraphCore):
             pos=(scene_pos.x(), scene_pos.y()),
             ports_numbers=ports_numbers,
         )
+
+    def reuse_node(self, source_name: str):
+        source = self.controller.get_block(source_name)
+        if source is None:
+            return
+        offset_pos = (source.position[0] + 40.0, source.position[1] + 40.0)
+        try:
+            self.controller.reuse_block(source_name, offset_pos)
+        except WorkflowRuleViolation:
+            pass
 
     def _handle_access_point_click(self, port: WorkflowAccessPoints):
         if self.window_container != WindowCategory.SETUP:
@@ -1136,6 +1184,7 @@ class WorkflowGraph(GraphCore):
             if synced and block.block_tag == ProtocolBlock.LOOP:
                 synced = self._ensure_loop_iteration_guidance(block.method)
             if synced:
+                self._refresh_shared_indicators(block.method)
                 return
             self._script_sync_rollbacks.add(name)
             try:
@@ -1223,10 +1272,14 @@ class WorkflowGraph(GraphCore):
         self.controller.remove_connection(start_node, end_node)
 
     def remove_node(self, node_name: str):
+        block = self.controller.get_block(node_name)
+        method = block.method if block is not None else ""
         try:
             self.controller.remove_block(node_name)
         except WorkflowRuleViolation:
             return
+        if method:
+            self._refresh_shared_indicators(method)
 
     def set_node_status(self, node_name: str, status) -> None:
         node = self._nodes.get(node_name)

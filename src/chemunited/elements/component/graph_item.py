@@ -427,11 +427,12 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
         self._badge.setVisible(badge_visible)
         self._badge.set_api_visible(badge_visible and self._hover_active)
 
-    def set_online(self, online: bool, api: str = "") -> None:
+    def set_online(self, online: bool, api: str = "") -> bool:
         """Drive the connectivity badge. Called by ConnectivityManager."""
         if self._badge is not None:
             self._badge.setStatus(online, api)
             self.post_layout()
+        return online
 
     def show_warning(self, visible: bool, message: str = "") -> None:
         """Drive the warning badge. Called by GraphBuilder or SimAdapter.

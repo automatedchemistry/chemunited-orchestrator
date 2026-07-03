@@ -72,6 +72,8 @@ class WorkflowNode(QGraphicsItemGroup):
         self._body_width = 0
         self._body_height = 0
         self.block_icon = self._icon_for_block()
+        self.shared_with: tuple[str, ...] = ()
+        self.shared_badge: WorkflowSvgIconItem | None = None
         self._on_position_changed = on_position_changed
         self._suspend_position_callback = False
 
@@ -193,6 +195,11 @@ class WorkflowNode(QGraphicsItemGroup):
         icon_size = 20 if self.is_terminal else 22
         self.icon_item = WorkflowSvgIconItem(self.block_icon, icon_size)
 
+        if not self.is_terminal:
+            self.shared_badge = WorkflowSvgIconItem(OrchestratorIcon.LINK, 14)
+            self.shared_badge.setPos(width - 20, 6)
+            self.shared_badge.setVisible(False)
+
         title_font = QFont("Segoe UI", 10)
         title_font.setBold(True)
         self.title_item.setFont(title_font)
@@ -280,6 +287,8 @@ class WorkflowNode(QGraphicsItemGroup):
         self.addToGroup(self.body)
         if self.icon_item:
             self.addToGroup(self.icon_item)
+        if self.shared_badge:
+            self.addToGroup(self.shared_badge)
         self.addToGroup(self.title_item)
         self.addToGroup(self.subtitle_item)
         self.addToGroup(self.description_item)
@@ -374,11 +383,20 @@ class WorkflowNode(QGraphicsItemGroup):
         self.update()
 
     def _update_tooltip(self) -> None:
-        self.body.setToolTip(
+        tooltip = (
             f"Label: {self.label}\n"
             f"Node ID: {self.node_name}\n"
             f"Description: {self.description}"
         )
+        if self.shared_with:
+            tooltip += f"\nShares script with: {', '.join(self.shared_with)}"
+        self.body.setToolTip(tooltip)
+
+    def set_shared(self, shared: bool, other_ids: tuple[str, ...]) -> None:
+        self.shared_with = other_ids if shared else ()
+        if self.shared_badge:
+            self.shared_badge.setVisible(shared)
+        self._update_tooltip()
 
     def sync_position(self, pos: tuple[float, float]) -> None:
         self._suspend_position_callback = True

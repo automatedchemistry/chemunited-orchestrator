@@ -34,3 +34,14 @@ def test_update_block_metadata_normalizes_empty_label():
 
     assert block.label == "script_1"
     assert block.description == "Wash the reactor"
+
+
+def test_blocks_sharing_method_returns_all_nodes_with_same_method():
+    workflow = ProcessWorkflow("React")
+    workflow.add_block(node_id="script_1", method="script_1", position=(0.0, 0.0))
+    workflow.add_block(node_id="script_1-1", method="script_1", position=(40.0, 40.0))
+    workflow.add_block(node_id="script_2", method="script_2", position=(80.0, 80.0))
+
+    assert workflow.blocks_sharing_method("script_1") == ("script_1", "script_1-1")
+    assert workflow.blocks_sharing_method("script_2") == ("script_2",)
+    assert workflow.blocks_sharing_method("missing") == ()

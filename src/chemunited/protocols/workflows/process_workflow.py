@@ -215,6 +215,11 @@ class ProcessWorkflow:
     def block_names(self) -> tuple[str, ...]:
         return tuple(self._graph.nodes)
 
+    def blocks_sharing_method(self, method: str) -> tuple[str, ...]:
+        return tuple(
+            name for name, block in self.iter_blocks() if block.method == method
+        )
+
     def add_block(
         self,
         node_id: str,

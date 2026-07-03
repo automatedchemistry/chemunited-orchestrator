@@ -91,6 +91,12 @@ Why this matters:
 - the runtime world cares about `WorkflowNodeSpec`
 - the editor world also needs visual type information, port counts, file references, and protection flags
 
+`node_id` and `method` are independent fields. Normally a freshly created block gets
+`method == node_id`, but that is not an invariant: `WorkflowController.reuse_block()` creates a
+second `BlockData` with a new `node_id` and the *same* `method` as its source, so two nodes can
+execute the same generated Python method. `storage.py` and the runtime executor already dedupe
+and dispatch purely by `method`, so this is a supported, not incidental, state.
+
 `BlockData.to_script()` bridges the two by rendering a Python `graph.add_node(...)` call that includes both:
 
 - the runtime-friendly `WorkflowNodeSpec(...)`
@@ -316,6 +322,21 @@ This is the typical flow for user actions.
 5. the controller writes the new `BlockData` into `ProcessWorkflow`
 6. the controller emits `block_added`
 7. `WorkflowGraph._on_block_added()` creates the corresponding `WorkflowNode`
+
+### Reuse a block
+
+1. User right-clicks an existing SCRIPT, LOOP, IF, or COMMAND block and chooses "Reuse block"
+2. `WorkflowGraph.reuse_node()` calls `WorkflowController.reuse_block()`
+3. the controller asks `workflow_rules.generate_reuse_name()` for a fresh `node_id`
+   (`script_1` → `script_1-1` → `script_1-2` → ...)
+4. the controller writes a new `BlockData` with that `node_id` but the **same `method`** as the
+   source block, and no connections
+5. the controller emits `block_added`, reusing the normal add-block path
+6. `WorkflowGraph._on_block_added()` creates the node and, since the method already has a stub in
+   the process file, `storage.sync_process()` leaves the script untouched instead of adding a
+   duplicate stub
+7. `WorkflowGraph._refresh_shared_indicators()` turns on the "linked" badge on every block that
+   shares this method, so it is visible on canvas that editing one edits all of them
 
 ### Connect two blocks
 
