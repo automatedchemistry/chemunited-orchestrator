@@ -20,7 +20,7 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from qfluentwidgets import TreeWidget, isDarkTheme
+from qfluentwidgets import LineEdit, TreeWidget, isDarkTheme
 
 from chemunited.shared.icon import OrchestratorIcon
 
@@ -186,6 +186,7 @@ class _ComponentCard(QFrame):
 class CommandList(TreeWidget):
     ROLE_KIND = Qt.UserRole + 1  # type: ignore[attr-defined]
     ROLE_LINE_SCRIPT = Qt.UserRole + 2  # type: ignore[attr-defined]
+    ROLE_SEARCH_TEXT = Qt.UserRole + 3  # type: ignore[attr-defined]
     MIME = "application/x-chemunited-command"
 
     command_activated = pyqtSignal(str)
@@ -305,10 +306,16 @@ class CommandList(TreeWidget):
                     f"{source.component_name} | {command_instance.method} | "
                     f"{len(command_instance.parameters)} parameter(s)"
                 )
+                search_text = (
+                    f"{command_instance.command or command_key} {command_key} "
+                    f"{source.component_name} {command_instance.method}"
+                ).lower()
+
                 item = QTreeWidgetItem(component_item)
                 item.setData(0, QT_DISPLAY_ROLE, "")
                 item.setData(0, self.ROLE_KIND, "command")
                 item.setData(0, self.ROLE_LINE_SCRIPT, line_script)
+                item.setData(0, self.ROLE_SEARCH_TEXT, search_text)
                 item.setToolTip(0, line_script)
                 item.setFlags(
                     QT_ITEM_IS_ENABLED | QT_ITEM_IS_SELECTABLE | QT_ITEM_IS_DRAG_ENABLED
@@ -328,6 +335,22 @@ class CommandList(TreeWidget):
 
         self.expandAll()
         return total_commands
+
+    def filter_commands(self, text: str) -> None:
+        """Show only commands (and their component) matching `text`."""
+        needle = text.strip().lower()
+        for i in range(self.topLevelItemCount()):
+            component_item = self.topLevelItem(i)
+            any_visible = not needle
+            for j in range(component_item.childCount()):
+                command_item = component_item.child(j)
+                haystack = command_item.data(0, self.ROLE_SEARCH_TEXT) or ""
+                match = not needle or needle in haystack
+                command_item.setHidden(not match)
+                any_visible = any_visible or match
+            component_item.setHidden(not any_visible)
+            if any_visible:
+                component_item.setExpanded(True)
 
     def current_line_script(self) -> str | None:
         item = self.currentItem()
@@ -399,6 +422,30 @@ class CommandList(TreeWidget):
         self.snippet_activated.emit(line_script)
 
 
+class CommandListPanel(QWidget):
+    """Search box stacked above a `CommandList`."""
+
+    def __init__(
+        self,
+        command_list: CommandList,
+        parent: QWidget | None = None,
+    ) -> None:
+        super().__init__(parent)
+        self.command_list = command_list
+        self.command_list.setParent(self)
+
+        self.search_edit = LineEdit(self)
+        self.search_edit.setPlaceholderText("Search commands...")
+        self.search_edit.setClearButtonEnabled(True)
+        self.search_edit.textChanged.connect(self.command_list.filter_commands)
+
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(6)
+        layout.addWidget(self.search_edit)
+        layout.addWidget(self.command_list)
+
+
 if __name__ == "__main__":
     import sys
 
@@ -410,5 +457,6 @@ if __name__ == "__main__":
         components_figures=["SyringePump", "SixPortTwoPositionValve"]
     )
     command_list.snippet_activated.connect(print)
-    command_list.show()
+    panel = CommandListPanel(command_list)
+    panel.show()
     sys.exit(app.exec_())

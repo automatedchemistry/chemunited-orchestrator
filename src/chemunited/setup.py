@@ -22,7 +22,7 @@ from .protocols.graph import ProtocolGraphicView
 from .protocols.process_list import ProtocolsWidget
 from .protocols.workflows.workflow_widget import WorkflowsWidget
 from .shared.editor.parameters.main import MainParametersEditor
-from .shared.editor.protocols.command_list import CommandList
+from .shared.editor.protocols.command_list import CommandList, CommandListPanel
 from .shared.enums import SetupStepMode, WindowCategory
 from .shared.graph import SceneCore
 from .shared.icon import OrchestratorIcon
@@ -58,6 +58,7 @@ class SetupWindow(MainWindowBase):
         self.protocolGraph = ProtocolGraphicView(self.scene_attribute, self)
         self.workflows_protocol = WorkflowsWidget(self)
         self.command_list = CommandList(self)
+        self.command_list_panel = CommandListPanel(self.command_list, self)
         self.parameter_list_widget: MainParametersEditor | None = None
 
         # Connectivity frame
@@ -248,7 +249,7 @@ class SetupWindow(MainWindowBase):
         )
 
         self.protocolFrame.addSubInterface(
-            widget=self.command_list,
+            widget=self.command_list_panel,
             text="Command List",
             icon=OrchestratorIcon.BUILD,
             routeKey="command_list",

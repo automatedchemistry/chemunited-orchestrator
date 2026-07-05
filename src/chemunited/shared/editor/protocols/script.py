@@ -19,7 +19,10 @@ from qfluentwidgets import FluentIcon, NavigationInterface, NavigationItemPositi
 
 from chemunited.shared.editor.base import EditorBase
 from chemunited.shared.editor.parameters.drag_list import ParameterDragableList
-from chemunited.shared.editor.protocols.command_list import CommandList
+from chemunited.shared.editor.protocols.command_list import (
+    CommandList,
+    CommandListPanel,
+)
 from chemunited.shared.editor.protocols.node_metadata import NodeMetadataEditor
 from chemunited.shared.icon import OrchestratorIcon
 
@@ -203,9 +206,10 @@ class ScriptEditorWindow(QMainWindow):
 
         # --- command dock ---
         self.command_list = CommandList(parent=self)
+        self.command_list_panel = CommandListPanel(self.command_list, self)
 
         self.command_dock = QDockWidget("Commands", self)
-        self.command_dock.setWidget(self.command_list)
+        self.command_dock.setWidget(self.command_list_panel)
         self.command_dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)  # type: ignore[attr-defined]
         self.addDockWidget(Qt.RightDockWidgetArea, self.command_dock)  # type: ignore[attr-defined]
         self.command_dock.hide()

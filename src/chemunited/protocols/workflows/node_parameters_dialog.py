@@ -1,8 +1,8 @@
 from __future__ import annotations
 
+from pydantic.fields import FieldInfo
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
-from pydantic.fields import FieldInfo
 from qfluentwidgets import (
     ComboBox,
     FluentIcon,
