@@ -81,6 +81,9 @@ class BaseConnectionItem(MovablePathItem):
         }
         return EdgeMode.model_validate(mode_data)
 
+    def sync(self, mode: EdgeMode) -> None:
+        self._data.update(mode)
+
     def _sync_path_data(self) -> None:
         p1 = self._origin_port.scenePos()
         p2 = self._destination_port.scenePos()

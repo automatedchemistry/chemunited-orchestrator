@@ -310,6 +310,17 @@ class DrawGraphicView(GraphCore):
                 )
                 menu.addAction(air_action)
 
+                properties_action = Action(menu)
+                properties_action.setText("Properties")
+                properties_action.setIcon(FluentIcon.EDIT.icon())
+                properties_action.triggered.connect(
+                    partial(
+                        self.parent_ref.orchestrator.show_connection_properties,
+                        target.inf.name,
+                    )
+                )
+                menu.addAction(properties_action)
+
             menu.addSeparator()
 
         if isinstance(target, GraphComponent):

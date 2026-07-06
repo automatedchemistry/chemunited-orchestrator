@@ -318,6 +318,33 @@ class OrchestratorDraw(OrchestratorCore):
         component = self.components[name]
         component.widget.show()
 
+    def show_connection_properties(self, name: str) -> None:
+        if name not in self.connections:
+            _log_draw_error(self.parent_ref, f"Connection '{name}' does not exist.")
+            return
+        connection = self.connections[name]
+
+        dialog = BaseModeDialog(
+            model_class=EdgeMode,
+            instance=connection.base_mode_instance,
+            field_overrides={
+                "straight_path": {"visible": False},
+                "air_pressure_line": {"visible": False},
+            },
+            title=f"Connection Properties — {connection.inf.origin} → {connection.inf.destination}",
+            parent=self.parent_ref,
+        )
+        if not dialog.exec():
+            return
+
+        mode = dialog.get_result_instance()
+        if mode is None:
+            return
+        connection.sync(mode)
+        logger.bind(window=self.parent_ref.WINDOW_TYPE).info(
+            f"Connection '{name}' properties updated."
+        )
+
     def fill_iventory(
         self,
         component: str,
