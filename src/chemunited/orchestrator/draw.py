@@ -340,6 +340,8 @@ class OrchestratorDraw(OrchestratorCore):
         mode = dialog.get_result_instance()
         if mode is None:
             return
+        if not isinstance(mode, EdgeMode):
+            mode = EdgeMode.model_validate(mode)
         connection.sync(mode)
         logger.bind(window=self.parent_ref.WINDOW_TYPE).info(
             f"Connection '{name}' properties updated."

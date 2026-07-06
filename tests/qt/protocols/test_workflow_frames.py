@@ -52,6 +52,12 @@ def _make_graph(
     return graph
 
 
+def _press_delete(graph: WorkflowGraph, qtbot: QtBot) -> None:
+    graph.show()
+    graph.setFocus()
+    qtbot.keyClick(graph, Qt.Key_Delete)
+
+
 def test_workflow_graph_sets_node_status_and_clears_progress(
     tmp_path: Path,
     qtbot: QtBot,
@@ -452,6 +458,89 @@ def test_removing_block_synchronizes_graph_and_method(
     assert "loop_1" not in graph._nodes
     assert '"loop_1"' not in source
     assert "def loop_1(" not in source
+
+
+def test_delete_key_removes_selected_block_from_graph_and_script(
+    tmp_path: Path,
+    qtbot: QtBot,
+) -> None:
+    workflow = ProcessWorkflow("React")
+    graph = _make_graph(working_dir=tmp_path, workflow=workflow, qtbot=qtbot)
+    graph._build_add_menu(QPointF()).actions()[0].trigger()
+
+    graph._nodes["script_1"].setSelected(True)
+    _press_delete(graph, qtbot)
+
+    source = (tmp_path / "protocols" / "React.py").read_text(encoding="utf-8")
+    assert workflow.get_block("script_1") is None
+    assert "script_1" not in graph._nodes
+    assert '"script_1"' not in source
+    assert "def script_1(" not in source
+
+
+def test_delete_key_removes_attached_connections_and_resyncs_input_ports(
+    tmp_path: Path,
+    qtbot: QtBot,
+) -> None:
+    workflow = ProcessWorkflow("React")
+    graph = _make_graph(working_dir=tmp_path, workflow=workflow, qtbot=qtbot)
+    graph.add_block(ProtocolBlock.SCRIPT, QPointF())
+    graph.add_block(ProtocolBlock.SCRIPT, QPointF(120.0, 0.0))
+    graph.add_block(ProtocolBlock.SCRIPT, QPointF(240.0, 0.0))
+    graph.controller.connect_nodes("script_1", "script_3", "right")
+    graph.controller.connect_nodes("script_2", "script_3", "right")
+
+    target_ports = graph._nodes["script_3"].input_ports
+    assert target_ports is not None
+    assert target_ports.count == 2
+
+    graph._nodes["script_1"].setSelected(True)
+    _press_delete(graph, qtbot)
+
+    target_ports = graph._nodes["script_3"].input_ports
+    assert target_ports is not None
+    assert workflow.get_block("script_1") is None
+    assert not workflow.has_connection("script_1", "script_3")
+    assert workflow.has_connection("script_2", "script_3")
+    assert ("script_1", "script_3") not in graph._connections
+    assert target_ports.count == 1
+
+
+def test_delete_key_clears_selected_port_without_removing_block(
+    tmp_path: Path,
+    qtbot: QtBot,
+) -> None:
+    workflow = ProcessWorkflow("React")
+    graph = _make_graph(working_dir=tmp_path, workflow=workflow, qtbot=qtbot)
+    graph._build_add_menu(QPointF()).actions()[0].trigger()
+    port = graph._nodes["script_1"].output_ports
+    assert port is not None
+
+    graph._set_selected_port(port)
+    _press_delete(graph, qtbot)
+
+    assert workflow.get_block("script_1") is not None
+    assert "script_1" in graph._nodes
+    assert graph._selected_port is None
+    assert not port.isSelected()
+    assert all(not child_port.isSelected() for child_port in port.ports)
+
+
+def test_delete_key_keeps_protected_terminal_blocks(
+    tmp_path: Path,
+    qtbot: QtBot,
+) -> None:
+    workflow = ProcessWorkflow("React")
+    graph = _make_graph(working_dir=tmp_path, workflow=workflow, qtbot=qtbot)
+
+    graph._nodes["start"].setSelected(True)
+    graph._nodes["end"].setSelected(True)
+    _press_delete(graph, qtbot)
+
+    assert workflow.get_block("start") is not None
+    assert workflow.get_block("end") is not None
+    assert "start" in graph._nodes
+    assert "end" in graph._nodes
 
 
 def test_reuse_block_shares_method_without_duplicating_stub(

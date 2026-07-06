@@ -155,7 +155,12 @@ class APIDialog(BaseModeDialog):
 
 
 class RunRequestDialog(BaseModeDialog):
-    def __init__(self, protocol: str, instance: RunRequest = None, parent=None):
+    def __init__(
+        self,
+        protocol: str,
+        instance: RunRequest | None = None,
+        parent=None,
+    ):
         super().__init__(
             model_class=RunRequest,
             instance=instance or RunRequest(protocol=protocol),

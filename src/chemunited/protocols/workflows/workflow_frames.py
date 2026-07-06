@@ -1062,11 +1062,19 @@ class WorkflowGraph(GraphCore):
         selected_connections: set[tuple[str, str]] = set()
 
         for item in self.scene_attribute.selectedItems():
-            target = self._resolve_context_target(item)
-            if isinstance(target, WorkflowNode):
-                selected_nodes.add(target.node_name)
-            elif isinstance(target, WorkflowConnection):
-                selected_connections.add((target.start_node, target.end_node))
+            if isinstance(item, WorkflowNode):
+                selected_nodes.add(item.node_name)
+            elif isinstance(item, WorkflowConnection):
+                selected_connections.add((item.start_node, item.end_node))
+
+        if self._selected_port is not None and not selected_connections:
+            port_node = self._selected_port.node
+            if (
+                port_node is not None
+                and selected_nodes
+                and selected_nodes <= {port_node.node_name}
+            ):
+                return False
 
         if not selected_nodes and not selected_connections:
             return False
@@ -1078,15 +1086,11 @@ class WorkflowGraph(GraphCore):
                 deleted_any = True
 
         for node_name in selected_nodes:
-            block = self.controller.get_block(node_name)
-            method = block.method if block is not None else ""
-            try:
-                self.controller.remove_block(node_name)
-            except WorkflowRuleViolation:
+            if self.controller.get_block(node_name) is None:
                 continue
-            deleted_any = True
-            if method:
-                self._refresh_shared_indicators(method)
+            self.remove_node(node_name)
+            if self.controller.get_block(node_name) is None:
+                deleted_any = True
 
         return deleted_any
 
