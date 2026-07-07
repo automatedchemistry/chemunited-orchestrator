@@ -1,6 +1,8 @@
+import math
 from dataclasses import asdict
 from typing import override
 
+from chemunited_core.compounds import COMPOUNDS
 from chemunited_core.connections import ConnectionType, EdgeData, EdgeMode
 from PyQt5.QtCore import QPointF, Qt
 from PyQt5.QtGui import QColor, QPainterPath, QPen
@@ -16,6 +18,9 @@ QT_DASH_LINE = getattr(Qt, "DashLine")
 QT_ROUND_CAP = getattr(Qt, "RoundCap")
 QT_ROUND_JOIN = getattr(Qt, "RoundJoin")
 QT_SOLID_LINE = getattr(Qt, "SolidLine")
+
+_INNER_PATH_SAMPLE_LENGTH = 0.002  # meters (2 mm) of pocket length per sampled point
+_INNER_PATH_MIN_SAMPLES = 2  # floor so even a sliver-sized pocket still draws a line
 
 
 class TemporaryConnectionItem(PathElementItem):
@@ -140,9 +145,9 @@ class BaseConnectionItem(MovablePathItem):
         painter.drawPath(self.path())
 
     def paint(self, painter, option, widget=None):
-        painter.setPen(self.pen())
-        painter.setBrush(self.brush())
-        painter.drawPath(self.path())
+        painter.setPen(self.pen())  # type: ignore
+        painter.setBrush(self.brush())  # type: ignore
+        painter.drawPath(self.path())  # type: ignore
         self._draw_selection(painter)
 
     def remove(self) -> None:
@@ -152,6 +157,27 @@ class BaseConnectionItem(MovablePathItem):
         """
         self._origin_port.setCallbackPosChange(None)
         self._destination_port.setCallbackPosChange(None)
+
+
+def _rgba_hex_to_qcolor(hex_str: str) -> QColor:
+    h = hex_str.lstrip("#")
+    return QColor(int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16), int(h[6:8], 16))
+
+
+def _sub_path(path: QPainterPath, t0: float, t1: float, samples: int) -> QPainterPath:
+    """Polyline approximation of `path` between arc-length fractions t0 and t1."""
+    t0 = max(0.0, min(1.0, t0))
+    t1 = max(0.0, min(1.0, t1))
+    samples = max(_INNER_PATH_MIN_SAMPLES, samples)
+    sub = QPainterPath()
+    for i in range(samples):
+        t = t0 + (t1 - t0) * i / (samples - 1)
+        point = path.pointAtPercent(t)
+        if i == 0:
+            sub.moveTo(point)
+        else:
+            sub.lineTo(point)
+    return sub
 
 
 class HydraulicConnectionItem(BaseConnectionItem):
@@ -204,17 +230,61 @@ class HydraulicConnectionItem(BaseConnectionItem):
         )
         painter.drawPath(self.path())
 
-        painter.setPen(
-            QPen(
-                self._inner_color,
-                self._inner_width,
-                QT_SOLID_LINE,
-                QT_ROUND_CAP,
-                QT_ROUND_JOIN,
-            )
-        )
-        painter.drawPath(self.path())
+        self._draw_inner_path(painter)
+
         self._draw_selection(painter)
+
+    def _draw_inner_path(self, painter) -> None:
+        """Draw the fluid column, segmented per pocket when content volumes are known."""
+        path = self.path()
+        content = self.inf.content
+        total_volume = sum(pocket.volume for pocket in content)
+        cross_section_area = math.pi * (self.inf.diameter_value / 2.0) ** 2
+
+        if (
+            self.inf.air_pressure_line
+            or not content
+            or total_volume <= 0
+            or cross_section_area <= 0
+            or path.length() <= 0
+        ):
+            painter.setPen(
+                QPen(
+                    self._inner_color,
+                    self._inner_width,
+                    QT_SOLID_LINE,
+                    QT_ROUND_CAP,
+                    QT_ROUND_JOIN,
+                )
+            )
+            painter.drawPath(path)
+            return
+
+        ordered_pockets = list(reversed(content))  # content[-1]=origin-side -> path t=0
+        cumulative = 0.0
+        start_fraction = 0.0
+        last_index = len(ordered_pockets) - 1
+        for index, pocket in enumerate(ordered_pockets):
+            cumulative += pocket.volume
+            end_fraction = 1.0 if index == last_index else cumulative / total_volume
+            span = end_fraction - start_fraction
+            if span > 1e-9:
+                pocket_length = pocket.volume / cross_section_area
+                samples = max(
+                    _INNER_PATH_MIN_SAMPLES,
+                    round(pocket_length / _INNER_PATH_SAMPLE_LENGTH),
+                )
+                painter.setPen(
+                    QPen(
+                        _rgba_hex_to_qcolor(COMPOUNDS.get_color(pocket)),
+                        self._inner_width,
+                        QT_SOLID_LINE,
+                        QT_ROUND_CAP,
+                        QT_ROUND_JOIN,
+                    )
+                )
+                painter.drawPath(_sub_path(path, start_fraction, end_fraction, samples))
+            start_fraction = end_fraction
 
 
 class HeatConnectionItem(BaseConnectionItem):
