@@ -17,27 +17,47 @@ from chemunited.shared.graph import GraphCore, SceneCore
 def _register_demo_compounds() -> None:
     COMPOUNDS.register(
         ChemicalEntity(
-            name="violet_dye", color_red=140, color_green=30, color_blue=200, color_alpha=255
+            name="violet_dye",
+            color_red=140,
+            color_green=30,
+            color_blue=200,
+            color_alpha=255,
         )
     )
     COMPOUNDS.register(
         ChemicalEntity(
-            name="blue_dye", color_red=30, color_green=100, color_blue=255, color_alpha=255
+            name="blue_dye",
+            color_red=30,
+            color_green=100,
+            color_blue=255,
+            color_alpha=255,
         )
     )
     COMPOUNDS.register(
         ChemicalEntity(
-            name="green_dye", color_red=30, color_green=200, color_blue=60, color_alpha=255
+            name="green_dye",
+            color_red=30,
+            color_green=200,
+            color_blue=60,
+            color_alpha=255,
         )
     )
     COMPOUNDS.register(
         ChemicalEntity(
-            name="yellow_dye", color_red=230, color_green=200, color_blue=20, color_alpha=255
+            name="yellow_dye",
+            color_red=230,
+            color_green=200,
+            color_blue=20,
+            color_alpha=255,
         )
     )
     COMPOUNDS.register(
         ChemicalEntity(
-            name="red_dye", color_red=220, color_green=30, color_blue=30, color_alpha=255
+            name="red_dye",
+            color_red=220,
+            color_green=30,
+            color_blue=30,
+            color_alpha=255,
         )
     )
 
