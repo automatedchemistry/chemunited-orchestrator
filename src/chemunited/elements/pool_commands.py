@@ -69,4 +69,3 @@ def apply_pool_command(components: Components, entry: dict) -> None:
             f"Pool command '{command}' failed to apply on component '{name}'"
         )
         return
-    
