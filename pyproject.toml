@@ -24,7 +24,7 @@ dependencies = [
     "chemunited-quantities>=0.0.3",
     "chemunited-core>=0.0.3",
     "chemunited-workflow>=0.0.2",
-    "chemunited-sim @ git+https://github.com/automatedchemistry/chemunited-sim.git",
+    "chemunited-sim[tray] @ git+https://github.com/automatedchemistry/chemunited-sim.git",
     "PyQt-Fluent-Widgets>=1.7.0,<2.0",  # Qt UI
     "QScintilla>=2.14.0",
     "platformdirs>=4.0",
