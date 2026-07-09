@@ -491,6 +491,7 @@ class SetupWindow(MainWindowBase):
 
     def open_simulate_window(self, process: str):
         if self.orchestrator.working_dir:
+            self.orchestrator.save()
             self.SimulateWindowReport.simulate(
                 process=process, project_path=self.orchestrator.working_dir
             )
