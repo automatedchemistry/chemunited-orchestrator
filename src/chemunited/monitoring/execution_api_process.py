@@ -218,7 +218,7 @@ class ApiProcess(QObject):
             return False
 
         executable = _workflow_tray_executable()
-        arguments = ["--silent", "--port", str(DEFAULT_API_PORT)]
+        arguments = ["serve", "--port", str(DEFAULT_API_PORT), "--tray", "--silent"]
         self._process.start(executable, arguments)
         if not self._process.waitForStarted(3000):
             logger.error(
@@ -341,9 +341,9 @@ class ApiProcess(QObject):
 def _workflow_tray_executable() -> str:
     executable = Path(sys.executable)
     name = (
-        "chemunited-workflow-tray.exe"
+        "chemunited-workflow.exe"
         if sys.platform.startswith("win")
-        else "chemunited-workflow-tray"
+        else "chemunited-workflow"
     )
     candidate = executable.parent / name
     if candidate.exists():
