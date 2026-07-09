@@ -27,8 +27,8 @@ class OrchestratorConnectivity(OrchestratorProtocols):
 
         component = self.components.electronic[name]
         component.connectivity.url = validated_url
-        online = component.graph.set_online(component.is_online, str(component.url))
-        if inspect_commands and online:
+        component.graph.set_online(component.is_online, str(component.url))
+        if inspect_commands:
             self._inspect_component_commands(name)
 
         parent_ref = getattr(self, "parent_ref", None)

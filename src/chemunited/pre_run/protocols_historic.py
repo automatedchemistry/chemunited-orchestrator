@@ -202,7 +202,7 @@ class ProtocolsManageList(ScrollArea):
             return  # user cancelled
 
         self.__open_window_instance(
-            monitor=MonitorWindow(),
+            monitor=MonitorWindow(scene=self.parent_ref.scene_attribute),
             file=file_path,
             name="Monitoring",
         )
@@ -216,11 +216,7 @@ class ProtocolsManageList(ScrollArea):
 
         wait_window = show_waiting(2)
 
-        # Load required scripts
-        chemunited_file = Path(
-            file.parent.parent.parent, f"{file.parent.parent.name}.chemunited"
-        )
-        monitor.orchestrator.open_project(chemunited_file)
+        monitor.orchestrator.adopt_from(self.parent_ref.orchestrator)
         monitor.orchestrator.set_selected_protocol_file(file)
         monitor.switch_components_connection()
         wait_window.close()

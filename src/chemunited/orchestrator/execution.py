@@ -12,6 +12,7 @@ from pydantic import BaseModel, ConfigDict, TypeAdapter, ValidationError
 from PyQt5.QtCore import Qt, QThread, pyqtSignal
 from PyQt5.QtWidgets import QLabel, QMessageBox
 
+from chemunited.elements.pool_commands import apply_pool_command
 from chemunited.monitoring.execution_api_process import ApiClient, RunRequestDialog
 from chemunited.shared.enums import WindowCategory
 
@@ -46,6 +47,29 @@ class LogContentResponse(BaseModel):
 LOG_LIST_RESPONSE = TypeAdapter(list[LogMeta])
 POOL_RESPONSE = TypeAdapter(list[dict[str, Any]])
 STOPPED_RUN_STATES = {"cancelled", "canceled", "stopped"}
+
+# Execution only ever runs through a MonitorWindow's Orchestrator instance, but a
+# SetupWindow with the same project open also needs to know a run is active (so its
+# PoolLogTailer can pause rather than race the workflow API server's own pool drain).
+# active_run_id alone can't signal that across separate Orchestrator instances, so this
+# is tracked here by resolved project path instead of by instance.
+_ACTIVE_RUN_PROJECTS: set[str] = set()
+
+
+def is_run_active_for(working_dir: Path | str | None) -> bool:
+    if working_dir is None:
+        return False
+    return str(Path(working_dir).resolve()) in _ACTIVE_RUN_PROJECTS
+
+
+def _safe_working_dir(obj: Any) -> Path | str | None:
+    # OrchestratorExecution doesn't own working_dir (OrchestratorProjectFile does), and
+    # test doubles for this class often bypass __init__ entirely - same defensive access
+    # pattern already used by _load_api_project() below.
+    try:
+        return object.__getattribute__(obj, "working_dir")
+    except (AttributeError, RuntimeError):
+        return None
 
 
 def _process_name_from_protocol_key(key: str) -> str | None:
@@ -573,6 +597,9 @@ class OrchestratorExecution(OrchestratorConnectivity):
 
         run_id = started.run_id
         self.active_run_id = run_id
+        working_dir = _safe_working_dir(self)
+        if working_dir is not None:
+            _ACTIVE_RUN_PROJECTS.add(str(Path(working_dir).resolve()))
         logger.info("Protocol execution started with run_id={}", run_id)
         self._reset_process_statuses()
         self._emit_signal("protocol_execution_started", run_id)
@@ -752,6 +779,7 @@ class OrchestratorExecution(OrchestratorConnectivity):
 
         polling_thread = RunPollingThread(client, run_id, parent=self)
         polling_thread.logs_received.connect(self._append_execution_log_text)  # type: ignore[attr-defined]
+        polling_thread.pool_drained.connect(self._on_pool_drained)  # type: ignore[attr-defined]
         self._run_polling_thread = polling_thread
 
         stream_thread.start()
@@ -766,6 +794,10 @@ class OrchestratorExecution(OrchestratorConnectivity):
             if thread.isRunning():
                 thread.wait(1500)
             setattr(self, attr_name, None)
+
+    def _on_pool_drained(self, commands: list[dict]) -> None:
+        for entry in commands:
+            apply_pool_command(self.components, entry)
 
     def _on_process_status_received(self, active_name: str, status: NodeState) -> None:
         if status == NodeState.RUNNING:
@@ -791,7 +823,14 @@ class OrchestratorExecution(OrchestratorConnectivity):
     def _finish_run(self, state: str) -> None:
         run_id = self.active_run_id
         self.active_run_id = None
+        # Wait for the polling thread to fully stop (its in-flight final _poll_pool()
+        # cycle can take up to ~interval_ms more) *before* letting a SetupWindow tailer
+        # for this project resume - otherwise it can race ahead of the last legitimate
+        # drain and steal trailing pool entries meant for this run's own components.
         self._stop_run_polling()
+        working_dir = _safe_working_dir(self)
+        if working_dir is not None:
+            _ACTIVE_RUN_PROJECTS.discard(str(Path(working_dir).resolve()))
         logger.info("Protocol execution finished with state={}", state)
         if run_id is not None:
             report = self._fetch_run_report(run_id)

@@ -28,7 +28,8 @@ from chemunited_core.components import ComponentData, ComponentMode
 from chemunited_core.figure_registry import COMPONENTS, get_figure_path
 from loguru import logger
 from pydantic import BaseModel
-from PyQt5.QtCore import QRectF, QSize, Qt
+from PyQt5 import sip
+from PyQt5.QtCore import QRectF, QSize, Qt, QTimer
 from PyQt5.QtGui import QColor, QPainter, QPen, QTransform
 from PyQt5.QtSvg import QSvgGenerator
 from PyQt5.QtWidgets import (
@@ -141,6 +142,7 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
         self._deletable: bool = True
         self._warning_active: bool = False
         self._hover_active: bool = False
+        self._flash_active: bool = False
 
         # ── group children (contribute to boundingRect) ────────────
         self._svg: SvgLayer | QGraphicsRectItem
@@ -457,8 +459,10 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
 
         Used to indicate selection or hover state.  Effects are applied only
         to group children (_svg, _points) — plain children are unaffected.
+        `active` is OR'd with `_flash_active` so a hover-leave during a `flash()`
+        window doesn't cut the flash short.
         """
-        if active:
+        if active or self._flash_active:
             self._svg.setGraphicsEffect(_make_shadow())
             for pt in self._points.values():
                 pt.setGraphicsEffect(_make_shadow())
@@ -466,6 +470,18 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
             self._svg.setGraphicsEffect(None)
             for pt in self._points.values():
                 pt.setGraphicsEffect(None)
+
+    def flash(self, duration_ms: int = 4000) -> None:
+        """Briefly apply the highlight effect, e.g. to show a pool command landed here."""
+        self._flash_active = True
+        self.highlight(self._hover_active)
+        QTimer.singleShot(duration_ms, self._end_flash)
+
+    def _end_flash(self) -> None:
+        if sip.isdeleted(self):
+            return
+        self._flash_active = False
+        self.highlight(self._hover_active)
 
     def show_bounding_rect(self, visible: bool) -> None:
         self._bounding_rect.setVisible(visible)

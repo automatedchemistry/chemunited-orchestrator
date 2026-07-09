@@ -57,8 +57,8 @@ class RotorChannel(QGraphicsObject):
 
 class RotaryValveGraph(GraphComponent[ValveT], Generic[ValveT]):
     def __init__(self, data: ValveT) -> None:
-        super().__init__(data)
         self._internal_channel: RotorChannel | None = None
+        super().__init__(data)
 
     def build(self) -> None:
         super().build()
@@ -82,3 +82,11 @@ class RotaryValveGraph(GraphComponent[ValveT], Generic[ValveT]):
         # Rotor
         self._internal_channel = RotorChannel(self._data)
         self.addToGroup(self._internal_channel)
+
+    def sync_visuals(self) -> None:
+        # RotorChannel.paint() reads self._data.rotor_ports live, so a repaint
+        # is all that's needed to reflect a rotor position changed elsewhere
+        # (e.g. by ComponentData.apply("position", ...)).
+        if self._internal_channel is not None:
+            self._internal_channel.update()
+        self.update()

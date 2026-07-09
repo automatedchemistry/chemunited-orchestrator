@@ -24,10 +24,10 @@ class MonitorWindow(MainWindowBase):
     TITLE = "ChemUnited Orchestrator"
     WINDOW_TYPE = WindowCategory.EXECUTION
 
-    def __init__(self):
+    def __init__(self, scene: SceneCore | None = None):
         super().__init__()
 
-        self.scene_attribute = SceneCore()
+        self.scene_attribute = scene if scene is not None else SceneCore()
         self.SegmentWindow = SegmentWindow(self)
 
         # Graph frame

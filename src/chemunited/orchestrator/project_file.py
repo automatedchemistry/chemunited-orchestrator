@@ -12,6 +12,7 @@ from loguru import logger
 from PyQt5.QtCore import QThread, QTimer, pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import QFileDialog, QInputDialog, QMessageBox
 
+from chemunited.monitoring.pool_log_tailer import PoolLogTailer
 from chemunited.project.manifest import ProjectManifest
 from chemunited.project.platform_svg import (
     PLATFORM_DEVICES_RELATIVE_PATH,
@@ -27,7 +28,7 @@ from chemunited.shared.enums import WindowCategory
 from chemunited.shared.enums.protocols_enum import ProtocolBlock
 
 from .draw import call_component_model
-from .execution import OrchestratorExecution
+from .execution import OrchestratorExecution, is_run_active_for
 from .inventory_state import (
     apply_inventory_status_payload,
     build_inventory_status_payload,
@@ -185,6 +186,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
         self.recent_projects = RecentProjectsStore()
         self.recent_projects.prune_missing()
         self._project_load_thread: ProjectLoadThread | None = None
+        self._pool_tailer: PoolLogTailer | None = None
 
     @property
     def is_project_operation_running(self) -> bool:
@@ -226,6 +228,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
             f"Project added at {self._session.source_file}"
         )
         self._record_recent_project(chemunited_path)
+        self._restart_pool_tailer()
 
     def open_project(self, path: Path, overwrite: bool = False) -> None:
         """Open a project file or manifest-backed project directory.
@@ -253,6 +256,35 @@ class OrchestratorProjectFile(OrchestratorExecution):
 
         logger.bind(window=WindowCategory.SETUP).success(f"Project loaded from {path}")
         self._record_recent_project(path)
+
+    def adopt_from(self, other: "OrchestratorProjectFile") -> None:
+        """Point this orchestrator's platform data at another's, instead of reloading
+        from disk.
+
+        Used when a MonitorWindow is opened for the project already live in the
+        calling SetupWindow - keeps parent_ref-scoped behavior (logging, frames,
+        api_process) tied to this orchestrator's own window, while both windows
+        render and mutate the exact same components/connections/scene.
+        """
+        self.working_dir = other.working_dir
+        self._session = other._session
+        self.components = other.components
+        self.connections = other.connections
+
+        # protocols is mutated in place, not reassigned: MonitorProcessesWidget
+        # captures a reference to it at construction time (before adopt_from() can
+        # run), and that widget's list only ever re-reads the same object it was
+        # given - reassigning the attribute would leave it pointed at a stale,
+        # permanently empty dict.
+        self.protocols.clear()
+        self.protocols.update(other.protocols)
+
+        # Mirrors _restore_protocols()'s widget-population side effects, targeting
+        # this orchestrator's own parent_ref widgets - building self.protocols alone
+        # doesn't populate the workflow-diagram widget or refresh the process list.
+        for name, workflow in self.protocols.items():
+            self.parent_ref.workflows_protocol.add_process(name, workflow)
+        self.parent_ref.protocols_widget.sync_list()
 
     def open_project_async(self, path: Path, overwrite: bool = False) -> bool:
         if self.is_project_operation_running:
@@ -664,6 +696,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
         self._restore_draw_data(payload.draw_data)
         self._restore_connectivity_data(payload.connectivity_data)
         self._restore_protocols(payload.process_classes)
+        self._restart_pool_tailer()
 
     def _show_busy_status(self, title: str, message: str) -> None:
         show_busy_status = getattr(self.parent_ref, "show_busy_status", None)
@@ -693,6 +726,10 @@ class OrchestratorProjectFile(OrchestratorExecution):
         return _open_project_session(path, overwrite=overwrite)
 
     def _reset_project_state(self) -> None:
+        if self._pool_tailer is not None:
+            self._pool_tailer.stop()
+            self._pool_tailer = None
+
         close_main_parameters_editor = getattr(
             self.parent_ref,
             "close_main_parameters_editor",
@@ -721,6 +758,22 @@ class OrchestratorProjectFile(OrchestratorExecution):
         self.clear_protocols()
         COMPOUNDS.clear()
         self._sync_compound_list()
+
+    def _restart_pool_tailer(self) -> None:
+        if self._pool_tailer is not None:
+            self._pool_tailer.stop()
+            self._pool_tailer = None
+
+        if self.working_dir is None:
+            return
+
+        self._pool_tailer = PoolLogTailer(
+            self.working_dir,
+            self.components,
+            lambda: is_run_active_for(self.working_dir),
+            parent=self,
+        )
+        self._pool_tailer.start()
 
     def _restore_draw_data(self, draw_data: dict) -> None:
         for compound in draw_data.get("compounds", []):
