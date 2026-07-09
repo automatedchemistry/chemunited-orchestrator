@@ -27,7 +27,7 @@ def test_api_process_starts_silent_workflow_tray(
     monkeypatch.setattr(
         execution_api_process,
         "_workflow_tray_executable",
-        lambda: r".venv\Scripts\chemunited-workflow-tray.exe",
+        lambda: r".venv\Scripts\chemunited-workflow.exe",
     )
     monkeypatch.setattr(
         execution_api_process,
@@ -54,8 +54,8 @@ def test_api_process_starts_silent_workflow_tray(
     assert api_process.start_api() is True
     assert started == [
         (
-            r".venv\Scripts\chemunited-workflow-tray.exe",
-            ["--silent", "--port", str(DEFAULT_API_PORT)],
+            r".venv\Scripts\chemunited-workflow.exe",
+            ["serve", "--port", str(DEFAULT_API_PORT), "--tray", "--silent"],
         )
     ]
     assert loaded == [True]

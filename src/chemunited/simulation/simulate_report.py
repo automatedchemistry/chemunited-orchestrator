@@ -262,6 +262,7 @@ class SimRunWorker(QThread):
                         str(_SIM_SERVER_PORT),
                         "--db",
                         str(sim_dir),
+                        "--tray",
                     ],
                     stdout=subprocess.DEVNULL,
                     stderr=subprocess.DEVNULL,
@@ -636,6 +637,7 @@ class SimulateWindowReport(QMainWindow):
             position=NavigationItemPosition.TOP,
             tooltip="Recenter the view",
         )
+        self.central.workflowFrame.setMinimumHeight(100)
 
     def simulate(self, process: str, project_path: Path | str) -> None:
         """Start a workflow simulation for *process* against *project_path*."""
