@@ -18,6 +18,7 @@ class OrchestratorConnectivity(OrchestratorProtocols):
         *,
         update_online_list: bool = False,
         inspect_commands: bool = True,
+        known_online: bool | None = None,
     ) -> bool:
         try:
             validated_url = TypeAdapter(AnyHttpUrl).validate_python(urlc)
@@ -27,7 +28,8 @@ class OrchestratorConnectivity(OrchestratorProtocols):
 
         component = self.components.electronic[name]
         component.connectivity.url = validated_url
-        component.graph.set_online(component.is_online, str(component.url))
+        online = component.is_online if known_online is None else known_online
+        component.graph.set_online(online, str(component.url))
         if inspect_commands:
             self._inspect_component_commands(name)
 

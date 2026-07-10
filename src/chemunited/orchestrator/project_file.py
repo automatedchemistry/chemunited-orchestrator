@@ -12,6 +12,7 @@ from loguru import logger
 from PyQt5.QtCore import QThread, QTimer, pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import QFileDialog, QInputDialog, QMessageBox
 
+from chemunited.connectivity.openapi_commands import reset_protocol_to_default
 from chemunited.monitoring.pool_log_tailer import PoolLogTailer
 from chemunited.project.manifest import ProjectManifest
 from chemunited.project.platform_svg import (
@@ -26,6 +27,7 @@ from chemunited.project.writer import render_python_script
 from chemunited.protocols.workflows import ProcessWorkflow
 from chemunited.shared.enums import WindowCategory
 from chemunited.shared.enums.protocols_enum import ProtocolBlock
+from chemunited.utils.flowchem_listener import FLOWCHEM_SERVERS, access_url
 
 from .draw import call_component_model
 from .execution import OrchestratorExecution, is_run_active_for
@@ -810,6 +812,8 @@ class OrchestratorProjectFile(OrchestratorExecution):
 
     def _restore_connectivity_data(self, connectivity_data: dict) -> None:
         server_url = connectivity_data.get("server_url", "").rstrip("/")
+
+        pairs: list[tuple[str, str]] = []
         for association in connectivity_data.get("associations", []):
             component_name = association.get("component", "")
             component_url = (
@@ -826,10 +830,47 @@ class OrchestratorProjectFile(OrchestratorExecution):
             if not component.inf.is_electronic:
                 continue
             if server_url and component_url:
+                pairs.append((component_name, component_url))
+
+        if not pairs:
+            return
+
+        # All associations share a single FlowChem server, so probe it once
+        # instead of letting every component pay its own connect timeout.
+        # Reuse an already-cached openapi doc (e.g. from Zeroconf discovery)
+        # before hitting the network again.
+        data = FLOWCHEM_SERVERS.get_openapi(server_url)
+        if data is None:
+            ok, fetched = access_url(f"{server_url}/openapi.json", timeout=1)
+            if (
+                ok
+                and isinstance(fetched, dict)
+                and isinstance(fetched.get("paths"), dict)
+            ):
+                data = fetched
+        reachable = data is not None
+        if reachable:
+            FLOWCHEM_SERVERS.register_openapi(server_url, data)
+            for component_name, component_url in pairs:
                 self._apply_component_connectivity(
                     component_name,
                     f"{server_url}/{component_url}",
+                    known_online=True,
                 )
+        else:
+            logger.warning(
+                f"FlowChem server '{server_url}' is unreachable; marking "
+                f"{len(pairs)} component(s) offline with default commands."
+            )
+            for component_name, component_url in pairs:
+                self._apply_component_connectivity(
+                    component_name,
+                    f"{server_url}/{component_url}",
+                    inspect_commands=False,
+                    known_online=False,
+                )
+                reset_protocol_to_default(self.components[component_name])
+            self._refresh_command_list()
 
     def _validated_component_payload(self, payload: dict) -> dict:
         payload.pop("type", None)

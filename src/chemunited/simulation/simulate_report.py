@@ -13,6 +13,7 @@ from typing import TYPE_CHECKING
 
 import requests
 from loguru import logger
+from PyQt5 import sip
 from PyQt5.QtCore import QThread, pyqtSignal
 from PyQt5.QtWidgets import (
     QHBoxLayout,
@@ -382,7 +383,7 @@ class ProfilePlot(QWidget):
         from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
         from matplotlib.figure import Figure
 
-        self._fig = Figure(figsize=(4, 2.5), tight_layout=True)
+        self._fig = Figure(figsize=(4, 2.5), layout="constrained")
         self._canvas = FigureCanvasQTAgg(self._fig)
         self._ax = self._fig.add_subplot(111)
 
@@ -516,10 +517,9 @@ class ProfilesWidget(QWidget):
             plot = ProfilePlot(self)
             self._plots[key] = plot
             self._plot_stack.addWidget(plot)
-            self._segment.addItem(
-                routeKey=key, text=text, onClick=lambda k=key: self._switch(k)
-            )
+            self._segment.addItem(routeKey=key, text=text)
 
+        self._segment.currentItemChanged.connect(self._switch)
         self._segment.setCurrentItem(_SEGMENTS[0][0])
 
         layout = QVBoxLayout(self)
@@ -674,6 +674,8 @@ class SimulateWindowReport(QMainWindow):
         from chemunited.elements.component.graph_item import GraphComponent
 
         scene = self.central._graph.scene_attribute  # type: ignore
+        if sip.isdeleted(scene):
+            return
         for item in scene.selectedItems():
             if isinstance(item, GraphComponent):
                 self.widget_profiles.load_component(item.inf.name)
