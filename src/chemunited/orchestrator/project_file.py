@@ -848,8 +848,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
                 and isinstance(fetched.get("paths"), dict)
             ):
                 data = fetched
-        reachable = data is not None
-        if reachable:
+        if data is not None:
             FLOWCHEM_SERVERS.register_openapi(server_url, data)
             for component_name, component_url in pairs:
                 self._apply_component_connectivity(
