@@ -450,8 +450,8 @@ class DashBoardLauncherFrame(QFrame):
         if self._advertise_switch.isChecked():
             name = self._advertise_name_edit.text().strip()
             mdns_host = name.replace(" ", "-") if name else socket.gethostname()
-            return f"http://{mdns_host}.local:{port}/mcp"
-        return f"http://127.0.0.1:{port}/mcp"
+            return f"http://{mdns_host}.local:{port}/mcp/"
+        return f"http://127.0.0.1:{port}/mcp/"
 
     def _update_address_display(self) -> None:
         port = self._port_spin.value()

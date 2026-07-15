@@ -205,3 +205,7 @@ class Vial(GraphComponent[VialData]):
         self.build_connections_points()
 
         self.build_labels_and_flags()
+
+    def sync_visuals(self) -> None:
+        for content_item in self.vial_content.values():
+            content_item.update()
