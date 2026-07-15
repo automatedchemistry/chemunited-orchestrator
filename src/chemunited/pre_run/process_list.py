@@ -197,20 +197,6 @@ class ProcessDoubleList(QWidget):
         )
         button_layout.addWidget(self.main_params_button)
 
-        self.run_monitoring_button = PushButton(
-            OrchestratorIcon.CHEMUNITED.icon(), "Run Monitoring"
-        )
-        self.run_monitoring_button.setEnabled(False)
-        self.run_monitoring_button.setToolTip("Run monitoring is not available yet")
-        button_layout.addWidget(self.run_monitoring_button)
-
-        self.run_simulation_button = PushButton(
-            OrchestratorIcon.CHEMUNITED_SIMU.icon(), "Run Simulation"
-        )
-        self.run_simulation_button.setEnabled(False)
-        self.run_simulation_button.setToolTip("Run simulation is not available yet")
-        button_layout.addWidget(self.run_simulation_button)
-
         self.save_button = PushButton(FluentIcon.SAVE.icon(), "Save Protocols Script")
         button_layout.addWidget(self.save_button)
         layout.addLayout(button_layout)

@@ -63,10 +63,6 @@ class FileCard(GroupHeaderCardWidget):
         btn_open.clicked.connect(partial(self._parent.open_monitoring, file))  # type: ignore
         btn_open.setToolTip("Open Monitoring Window")
 
-        btn_open_simu = TransparentToolButton(OrchestratorIcon.CHEMUNITED_SIMU)
-        btn_open_simu.clicked.connect(partial(self._parent.open_simulation, file))  # type: ignore
-        btn_open_simu.setToolTip("Open Simulation Window")
-
         btn_remove = TransparentToolButton(OrchestratorIcon.TRASH)
         btn_remove.clicked.connect(partial(self.remove_file, file))  # type: ignore
         btn_remove.setToolTip("Remove/delete the protocol script")
@@ -74,7 +70,6 @@ class FileCard(GroupHeaderCardWidget):
         layout.addWidget(btn_view)
         layout.addWidget(btn_summary)
         layout.addWidget(btn_open)
-        layout.addWidget(btn_open_simu)
         layout.addWidget(btn_remove)
 
         # Add group to card widget
@@ -91,7 +86,6 @@ class FileCard(GroupHeaderCardWidget):
         else:
             btn_summary.setVisible(False)
             btn_open.setVisible(False)
-            btn_open_simu.setVisible(False)
             warning_btn = TransparentPushButton("File is corrupted!")
             warning_btn.setStyleSheet(
                 """
@@ -206,10 +200,6 @@ class ProtocolsManageList(ScrollArea):
             file=file_path,
             name="Monitoring",
         )
-
-    def open_simulation(self, file_path: Path):
-        """Open or create a simulation window for the given protocol file."""
-        ...
 
     def __open_window_instance(self, monitor: MonitorWindow, file: Path, name: str):
         """Open a new window instance to run the simulation or monitoring process."""
