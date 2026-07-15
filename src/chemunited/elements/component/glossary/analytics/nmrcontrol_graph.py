@@ -15,7 +15,7 @@ class NMRControl(GraphComponent[ComponentData]):
         super().build()
 
         self.spectrum = Spectrum(
-            width=50, height=20, color=Qt.GlobalColor.yellow, parent=self
+            width=50, height=20, color=Qt.GlobalColor.darkRed, parent=self
         )
 
         self.spectrum.setPos(
