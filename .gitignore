@@ -230,6 +230,7 @@ example/AGA/
 example/SugarPlatform/
 example/RTD/
 example/Dani/
+example/test_sim/
 
 # Test Temporal files
 .flowchem-sim/

@@ -14,7 +14,7 @@ from typing import TYPE_CHECKING
 import requests
 from loguru import logger
 from PyQt5 import sip
-from PyQt5.QtCore import QThread, pyqtSignal
+from PyQt5.QtCore import Qt, QThread, QTimer, pyqtSignal
 from PyQt5.QtWidgets import (
     QHBoxLayout,
     QMainWindow,
@@ -24,9 +24,11 @@ from PyQt5.QtWidgets import (
 )
 from qfluentwidgets import (
     BodyLabel,
+    CaptionLabel,
     IndeterminateProgressRing,
     NavigationItemPosition,
     SegmentedWidget,
+    Slider,
     isDarkTheme,
 )
 
@@ -34,6 +36,7 @@ from chemunited.shared.icon import OrchestratorIcon
 from chemunited.shared.widgets.frame_base import FrameBase
 
 from .graph_simulation import SimGraphicView
+from .playback import SimulationPlayback
 
 if TYPE_CHECKING:
     from chemunited.setup import SetupWindow
@@ -386,6 +389,7 @@ class ProfilePlot(QWidget):
         self._fig = Figure(figsize=(4, 2.5), layout="constrained")
         self._canvas = FigureCanvasQTAgg(self._fig)
         self._ax = self._fig.add_subplot(111)
+        self._cursor_line = None
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -434,6 +438,7 @@ class ProfilePlot(QWidget):
         component: str = "",
     ) -> None:
         self._ax.clear()
+        self._cursor_line = None  # clear() destroys the previous cursor artist too
         self._apply_theme()
         if not series:
             msg = f"No data for '{component}'" if component else "No data available"
@@ -459,6 +464,22 @@ class ProfilePlot(QWidget):
                 self._ax.legend(fontsize=7, loc="best")
         self._canvas.draw_idle()
 
+    def set_cursor(self, t: float | None) -> None:
+        """Show (or move) a vertical marker at time *t*, or hide it if None."""
+        if t is None:
+            if self._cursor_line is not None:
+                self._cursor_line.set_visible(False)
+                self._canvas.draw_idle()
+            return
+        if self._cursor_line is None:
+            self._cursor_line = self._ax.axvline(
+                t, color="#e04b4b", linewidth=1, linestyle="--", zorder=5
+            )
+        else:
+            self._cursor_line.set_xdata([t, t])
+            self._cursor_line.set_visible(True)
+        self._canvas.draw_idle()
+
 
 # ---------------------------------------------------------------------------
 # ProfilesWidget
@@ -482,11 +503,17 @@ _PLOT_META = {
 class ProfilesWidget(QWidget):
     """Panel that shows per-component simulation profiles below the graph."""
 
+    scrub_requested = pyqtSignal(float)
+
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self._db_path: Path | None = None
         self._component: str = ""
         self._running_process: str = ""
+        self._scrub_times: list[float] = []
+        self._pending_scrub_index: int | None = None
+        self._suppress_scrub_signal = False
+        self._last_scrub_time: float | None = None
 
         # --- Header stack: normal label vs. running indicator ---
         self._header_stack = QStackedWidget(self)
@@ -508,6 +535,26 @@ class ProfilesWidget(QWidget):
         _running_layout.addWidget(self._running_label, 1)
         self._header_stack.addWidget(_running_page)
 
+        # --- Scrub bar: time slider, shown once there are >=2 recorded frames ---
+        self._scrub_bar = QWidget(self)
+        _scrub_layout = QHBoxLayout(self._scrub_bar)
+        _scrub_layout.setContentsMargins(0, 0, 0, 4)
+        _scrub_layout.setSpacing(8)
+        self._scrub_slider = Slider(Qt.Horizontal, self._scrub_bar)
+        self._scrub_slider.setRange(0, 0)
+        self._scrub_time_label = CaptionLabel("t = 0.0s / 0.0s", self._scrub_bar)
+        _scrub_layout.addWidget(self._scrub_slider, 1)
+        _scrub_layout.addWidget(self._scrub_time_label)
+        self._scrub_bar.hide()
+
+        self._scrub_slider.valueChanged.connect(self._on_scrub_value_changed)
+        self._scrub_slider.sliderReleased.connect(self._flush_scrub)
+
+        self._scrub_timer = QTimer(self)
+        self._scrub_timer.setSingleShot(True)
+        self._scrub_timer.setInterval(33)  # ~30 fps cap while dragging
+        self._scrub_timer.timeout.connect(self._emit_scrub)
+
         # --- Segment control & plot stack ---
         self._segment = SegmentedWidget(self)
         self._plot_stack = QStackedWidget(self)
@@ -526,6 +573,7 @@ class ProfilesWidget(QWidget):
         layout.setContentsMargins(8, 8, 8, 4)
         layout.setSpacing(4)
         layout.addWidget(self._header_stack)
+        layout.addWidget(self._scrub_bar)
         layout.addWidget(self._segment)
         layout.addWidget(self._plot_stack, 1)
 
@@ -534,6 +582,65 @@ class ProfilesWidget(QWidget):
         if plot is not None:
             self._plot_stack.setCurrentWidget(plot)
 
+    # --- Scrub bar ---
+
+    def set_scrub_times(self, times: list[float]) -> None:
+        """Configure the scrub slider for a newly opened simulation run.
+
+        *times* is the full sorted list of recorded snapshot instants. Hidden
+        when there are fewer than two recorded frames — nothing to scrub
+        between.
+        """
+        self._scrub_times = list(times)
+        self._scrub_timer.stop()
+        self._pending_scrub_index = None
+
+        if len(self._scrub_times) < 2:
+            self._scrub_bar.hide()
+            return
+
+        last_index = len(self._scrub_times) - 1
+        self._suppress_scrub_signal = True
+        try:
+            self._scrub_slider.setMinimum(0)
+            self._scrub_slider.setMaximum(last_index)
+            self._scrub_slider.setValue(last_index)
+        finally:
+            self._suppress_scrub_signal = False
+        self._update_scrub_label(last_index)
+        self._scrub_bar.show()
+
+    def set_cursor_time(self, t: float | None) -> None:
+        """Move the vertical cursor marker on every plot to time *t*."""
+        self._last_scrub_time = t
+        for plot in self._plots.values():
+            plot.set_cursor(t)
+
+    def _update_scrub_label(self, index: int) -> None:
+        t = self._scrub_times[index]
+        total = self._scrub_times[-1]
+        self._scrub_time_label.setText(f"t = {t:.1f}s / {total:.1f}s")
+
+    def _on_scrub_value_changed(self, index: int) -> None:
+        if self._suppress_scrub_signal:
+            return
+        if not (0 <= index < len(self._scrub_times)):
+            return
+        self._update_scrub_label(index)
+        self._pending_scrub_index = index
+        if not self._scrub_timer.isActive():
+            self._scrub_timer.start()
+
+    def _emit_scrub(self) -> None:
+        if self._pending_scrub_index is None:
+            return
+        index, self._pending_scrub_index = self._pending_scrub_index, None
+        self.scrub_requested.emit(self._scrub_times[index])
+
+    def _flush_scrub(self) -> None:
+        self._scrub_timer.stop()
+        self._emit_scrub()
+
     # --- Simulation state ---
 
     def show_running(self, process_name: str) -> None:
@@ -541,6 +648,7 @@ class ProfilesWidget(QWidget):
         self._running_label.setText(f"Simulating {process_name}…")
         self._header_stack.setCurrentIndex(1)
         self._progress_ring.start()
+        self._scrub_bar.hide()
         for plot in self._plots.values():
             plot._show_placeholder("Simulation running…")
 
@@ -556,6 +664,10 @@ class ProfilesWidget(QWidget):
         self._label.setText(f"Simulation error: {message}")
         for plot in self._plots.values():
             plot._show_placeholder("Simulation failed")
+        if len(self._scrub_times) >= 2:
+            # A previous successful run's scrub session is still valid — restore it
+            # rather than stranding the user with no scrubbable data.
+            self._scrub_bar.show()
 
     def on_sim_done(self) -> None:
         self._progress_ring.stop()
@@ -603,6 +715,7 @@ class ProfilesWidget(QWidget):
         for key, plot in self._plots.items():
             x_label, y_label, title = _PLOT_META[key]
             plot.update_plot(data[key], x_label, y_label, title, component=name)
+            plot.set_cursor(self._last_scrub_time)
 
 
 # ---------------------------------------------------------------------------
@@ -614,8 +727,10 @@ class SimulateWindowReport(QMainWindow):
 
     def __init__(self, graph: SimGraphicView, parent: "SetupWindow") -> None:
         super().__init__(parent)
+        self._setup_window = parent
         self._process: str = ""
         self._worker: SimRunWorker | None = None
+        self._playback: SimulationPlayback | None = None
 
         self.widget_profiles = ProfilesWidget()
         self.central = FrameBase(
@@ -628,6 +743,7 @@ class SimulateWindowReport(QMainWindow):
 
         scene = graph.scene_attribute
         scene.selectionChanged.connect(self._on_selection_changed)
+        self.widget_profiles.scrub_requested.connect(self._on_scrub_requested)
 
     def initNavigation(self) -> None:
         self.central.addNavigationAction(
@@ -666,9 +782,38 @@ class SimulateWindowReport(QMainWindow):
         if self.widget_profiles._component:
             self.widget_profiles.load_component(self.widget_profiles._component)
 
+        self._close_playback()
+        self._playback = SimulationPlayback.open(Path(db_path))
+        times = self._playback.times if self._playback is not None else []
+        self.widget_profiles.set_scrub_times(times)
+        if times:
+            self._apply_scrub(times[-1])
+
     def _on_sim_failed(self, message: str) -> None:
         logger.error(f"Simulation failed: {message}")
         self.widget_profiles.show_sim_error(message)
+
+    def _close_playback(self) -> None:
+        if self._playback is not None:
+            self._playback.close()
+            self._playback = None
+
+    def _on_scrub_requested(self, t: float) -> None:
+        self._apply_scrub(t)
+
+    def _apply_scrub(self, t: float) -> None:
+        if self._playback is None:
+            return
+        self._playback.apply_at_time(
+            t,
+            self._setup_window.orchestrator.components,
+            self._setup_window.orchestrator.connections,
+        )
+        self.widget_profiles.set_cursor_time(t)
+
+    def closeEvent(self, a0) -> None:
+        self._close_playback()
+        super().closeEvent(a0)
 
     def _on_selection_changed(self) -> None:
         from chemunited.elements.component.graph_item import GraphComponent

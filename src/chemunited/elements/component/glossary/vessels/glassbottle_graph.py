@@ -86,3 +86,7 @@ class GlassBottle(GraphComponent[GlassBottleData]):
                 self.addToGroup(_svg_access)
 
         super().build()
+
+    def sync_visuals(self) -> None:
+        if self._content_item is not None:
+            self._content_item.update()
