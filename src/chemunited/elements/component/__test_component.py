@@ -8,7 +8,7 @@ from chemunited.elements.component.component_factory import list_components
 from chemunited.elements.component.graph_item import GraphComponent
 from chemunited.shared.graph import GraphCore, SceneCore
 
-FIGURE = "Vial"
+FIGURE = "SyringePump"
 SPACING_X = 200
 SPACING_Y = 180
 
