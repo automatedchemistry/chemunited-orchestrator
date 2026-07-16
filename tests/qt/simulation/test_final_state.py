@@ -6,10 +6,13 @@ from pathlib import Path
 from chemunited_core.common.enums import PhaseKind
 from chemunited_core.components import VesselComponentData, VesselMode
 from chemunited_core.components.internals import DEFAULT_INVENTORY_KEY
+from chemunited_core.figure_registry import SolenoidValve2WayData, SolenoidValveData
+from chemunited_core.figure_registry.rotary_valve import RotaryValveData
 from chemunited_quantities import ChemUnitQuantity
 from chemunited_sim.recorder.schema import create_all_tables
 
 from chemunited.simulation.final_state import (
+    _apply_discrete_state,
     _apply_edge_content,
     _apply_inventories,
     _build_inventory_payload,
@@ -267,6 +270,74 @@ def test_apply_edge_content_clears_content_for_known_edge_empty_at_time(
 
     assert connection.update_calls == 1
     assert connection.inf.content == []
+
+
+def test_apply_discrete_state_restores_rotor_ports_not_latest(tmp_path: Path) -> None:
+    conn = _connect(tmp_path / "sim.db")
+    conn.executemany(
+        "INSERT INTO component_state (time, component, state) VALUES (?, ?, ?)",
+        [
+            (1.0, "Valve1", '{"rotor_ports": [[0, 1, null, null, null, null], [0]]}'),
+            (2.0, "Valve1", '{"rotor_ports": [[0, null, 2, null, null, null], [0]]}'),
+        ],
+    )
+    conn.commit()
+
+    valve = RotaryValveData(name="Valve1")
+    component = _FakeComponent(inf=valve)
+
+    _apply_discrete_state(conn, 1.0, {"Valve1": component})
+
+    assert valve.rotor_ports == [(0, 1, None, None, None, None), (0,)]
+    assert component.sync_calls == 1
+
+
+def test_apply_discrete_state_restores_solenoid_opened(tmp_path: Path) -> None:
+    conn = _connect(tmp_path / "sim.db")
+    conn.execute(
+        "INSERT INTO component_state (time, component, state) VALUES (?, ?, ?)",
+        (1.0, "Sol1", '{"opened": false}'),
+    )
+    conn.commit()
+
+    solenoid = SolenoidValveData(name="Sol1")
+    assert solenoid.opened is True  # default, sanity-check the restore actually flips it
+    component = _FakeComponent(inf=solenoid)
+
+    _apply_discrete_state(conn, 1.0, {"Sol1": component})
+
+    assert solenoid.opened is False
+    assert component.sync_calls == 1
+
+
+def test_apply_discrete_state_restores_solenoid_2way_opened(tmp_path: Path) -> None:
+    conn = _connect(tmp_path / "sim.db")
+    conn.execute(
+        "INSERT INTO component_state (time, component, state) VALUES (?, ?, ?)",
+        (1.0, "Sol2", '{"opened": false}'),
+    )
+    conn.commit()
+
+    solenoid = SolenoidValve2WayData(name="Sol2")
+    component = _FakeComponent(inf=solenoid)
+
+    _apply_discrete_state(conn, 1.0, {"Sol2": component})
+
+    assert solenoid.opened is False
+    assert component.sync_calls == 1
+
+
+def test_apply_discrete_state_missing_table_is_noop(tmp_path: Path) -> None:
+    conn = _connect(tmp_path / "sim.db")
+    conn.execute("DROP TABLE component_state")
+    conn.commit()
+
+    valve = RotaryValveData(name="Valve1")
+    component = _FakeComponent(inf=valve)
+
+    _apply_discrete_state(conn, 1.0, {"Valve1": component})  # must not raise
+
+    assert component.sync_calls == 0
 
 
 def test_apply_inventories_updates_real_vessel_component_data(tmp_path: Path) -> None:

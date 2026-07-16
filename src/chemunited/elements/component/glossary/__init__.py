@@ -21,6 +21,9 @@ from .technical.multichannel_graph import (
 # concrete valve subclasses are created dynamically by the factory)
 from .valve.rotary_valve_graph import RotaryValveGraph
 
+# valve — kept: open/closed status overlay
+from .valve.solenoid_valve_graph import SolenoidValve, SolenoidValve2Way
+
 # vessels — kept: composite SVG layers / procedural geometry
 from .vessels.customflask_graph import CustomFlask
 from .vessels.flowreactor_graph import FlowReactor, PhotoReactor
@@ -44,6 +47,8 @@ __all__ = [
     "MultiChannelRelay",
     # valve
     "RotaryValveGraph",
+    "SolenoidValve",
+    "SolenoidValve2Way",
     # vessels
     "CustomFlask",
     "FlowReactor",

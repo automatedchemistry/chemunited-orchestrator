@@ -6,6 +6,7 @@ from pathlib import Path
 from chemunited_sim.recorder.schema import create_all_tables
 from pytestqt.qtbot import QtBot
 
+from chemunited.elements.component.component_parts import StatusOverlay
 from chemunited.setup import SetupWindow
 from chemunited.simulation.simulate_report import ProfilesWidget
 
@@ -106,6 +107,11 @@ class TestSimulateWindowReportPlayback:
             origin_port=2,
             destiny_port=1,
         )
+        window.orchestrator.add_component(
+            name="Sol1",
+            figure="SolenoidValve",
+            position=(600.0, 0.0),
+        )
 
     def _build_two_frame_db(self, db_path: Path) -> None:
         conn = _connect(db_path)
@@ -143,6 +149,13 @@ class TestSimulateWindowReportPlayback:
                 (24.0, "PumpA_2_PumpB_1", 0, "liquid", "blue_dye", 0.009),
             ],
         )
+        conn.executemany(
+            "INSERT INTO component_state (time, component, state) VALUES (?, ?, ?)",
+            [
+                (0.0, "Sol1", '{"opened": true}'),
+                (24.0, "Sol1", '{"opened": false}'),
+            ],
+        )
         conn.commit()
         conn.close()
 
@@ -167,6 +180,9 @@ class TestSimulateWindowReportPlayback:
         assert len(edge.content) == 1
         assert edge.content[0].initial_species == {"blue_dye": 0.009}
 
+        solenoid = window.orchestrator.components["Sol1"].inf
+        assert solenoid.opened is False  # last frame (t=24)
+
     def test_scrubbing_updates_canvas_to_selected_frame(
         self, qtbot: QtBot, tmp_path: Path
     ) -> None:
@@ -184,6 +200,27 @@ class TestSimulateWindowReportPlayback:
 
         edge = window.orchestrator.connections["PumpA_2_PumpB_1"].inf
         assert edge.content[0].initial_species == {"blue_dye": 0.002}
+
+        solenoid = window.orchestrator.components["Sol1"].inf
+        assert solenoid.opened is True  # first frame (t=0)
+
+    def test_scrubbing_updates_solenoid_valve_overlay(
+        self, qtbot: QtBot, tmp_path: Path
+    ) -> None:
+        window = self._build_window(qtbot)
+        self._add_platform(window)
+        db_path = tmp_path / "sim.db"
+        self._build_two_frame_db(db_path)
+        window.SimulateWindowReport._on_sim_done(str(db_path))
+
+        overlay = window.orchestrator.components["Sol1"].graph._overlay
+        assert overlay.isVisible()
+        assert overlay._color == StatusOverlay.COLOR_ERROR  # closed at t=24 (last frame)
+
+        window.SimulateWindowReport.widget_profiles._scrub_slider.setValue(0)
+        qtbot.wait(_THROTTLE_WAIT_MS)
+
+        assert overlay._color == StatusOverlay.COLOR_ACTIVE  # open at t=0
 
     def test_on_sim_done_closes_previous_playback_before_opening_new(
         self, qtbot: QtBot, tmp_path: Path

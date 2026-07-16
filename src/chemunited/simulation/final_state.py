@@ -12,6 +12,7 @@ recorded instant.
 
 from __future__ import annotations
 
+import json
 import math
 import sqlite3
 from collections import defaultdict
@@ -19,6 +20,8 @@ from pathlib import Path
 
 from chemunited_core.common.enums import PhaseKind
 from chemunited_core.compounds import VolumeContentBase
+from chemunited_core.figure_registry import SolenoidValve2WayData, SolenoidValveData
+from chemunited_core.figure_registry.rotary_valve import RotaryValveData
 from loguru import logger
 
 from chemunited.elements.access import Components, Connections
@@ -69,6 +72,7 @@ def apply_simulation_state_at(
     """
     _apply_inventories(conn, t, components)
     _apply_edge_content(conn, t, connections)
+    _apply_discrete_state(conn, t, components)
 
 
 def _latest_time(conn: sqlite3.Connection) -> float | None:
@@ -131,6 +135,43 @@ def _apply_inventories(
     for component_name in payload:
         component = components.get(component_name)
         if component is not None:
+            component.graph.sync_visuals()
+
+
+def _apply_discrete_state(
+    conn: sqlite3.Connection, t: float, components: Components
+) -> None:
+    """Restore rotary valve rotor position / solenoid open-closed at *t*.
+
+    These are the only component fields ``apply()`` mutates that aren't
+    otherwise recoverable from continuous data, recorded into
+    ``component_state`` as a JSON blob per component per snapshot. Missing
+    table (an older recording) is treated as "nothing to restore."
+    """
+    try:
+        rows = conn.execute(
+            "SELECT component, state FROM component_state WHERE time = ?", (t,)
+        ).fetchall()
+    except sqlite3.Error:
+        return
+
+    for row in rows:
+        component = components.get(str(row["component"]))
+        if component is None:
+            continue
+        state = json.loads(row["state"])
+        data = component.inf
+        changed = False
+        if "rotor_ports" in state and isinstance(data, RotaryValveData):
+            data.rotor_ports = [tuple(port) for port in state["rotor_ports"]]
+            changed = True
+        elif "opened" in state and isinstance(
+            data, (SolenoidValveData, SolenoidValve2WayData)
+        ):
+            data.opened = bool(state["opened"])
+            changed = True
+        if changed:
+            data.sync_internal_state()
             component.graph.sync_visuals()
 
 
