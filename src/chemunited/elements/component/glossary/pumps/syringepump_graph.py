@@ -86,8 +86,8 @@ class SyringePump(GraphComponent[SyringePumpData]):
         )
         self._syringe_content.update()
 
-        active = self._data.flow_rate_si != 0.0
-        self._overlay.set_status(
-            StatusOverlay.COLOR_ACTIVE if active else StatusOverlay.COLOR_IDLE
-        )
-        self._overlay.setVisible(active)
+        #active = self._data.flow_rate_si != 0.0
+        #self._overlay.set_status(
+        #    StatusOverlay.COLOR_ACTIVE if active else StatusOverlay.COLOR_IDLE
+        #)
+        #self._overlay.setVisible(active)

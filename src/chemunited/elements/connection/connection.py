@@ -1,3 +1,4 @@
+import bisect
 import math
 from dataclasses import asdict
 from typing import override
@@ -19,8 +20,11 @@ QT_ROUND_CAP = getattr(Qt, "RoundCap")
 QT_ROUND_JOIN = getattr(Qt, "RoundJoin")
 QT_SOLID_LINE = getattr(Qt, "SolidLine")
 
-_INNER_PATH_SAMPLE_LENGTH = 0.002  # meters (2 mm) of pocket length per sampled point
-_INNER_PATH_MIN_SAMPLES = 2  # floor so even a sliver-sized pocket still draws a line
+_BLEND_STEP_PX = 2.0  # pixel spacing between fine color samples along the fluid column
+_BLEND_MIN_SAMPLES = 24  # floor so short paths still render a smooth-looking gradient
+_BLEND_MAX_SAMPLES = 400  # cap so very long paths don't trigger excessive draw calls
+_BLEND_WIDTH_FRACTION = 0.03  # base blend-zone half-width, as a fraction of total path length
+_BLEND_ZONE_CAP = 0.5  # a blend zone never eats more than this fraction of either adjacent pocket's span
 
 
 class TemporaryConnectionItem(PathElementItem):
@@ -164,20 +168,57 @@ def _rgba_hex_to_qcolor(hex_str: str) -> QColor:
     return QColor(int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16), int(h[6:8], 16))
 
 
-def _sub_path(path: QPainterPath, t0: float, t1: float, samples: int) -> QPainterPath:
-    """Polyline approximation of `path` between arc-length fractions t0 and t1."""
-    t0 = max(0.0, min(1.0, t0))
-    t1 = max(0.0, min(1.0, t1))
-    samples = max(_INNER_PATH_MIN_SAMPLES, samples)
-    sub = QPainterPath()
-    for i in range(samples):
-        t = t0 + (t1 - t0) * i / (samples - 1)
-        point = path.pointAtPercent(t)
-        if i == 0:
-            sub.moveTo(point)
-        else:
-            sub.lineTo(point)
-    return sub
+def _lerp_color(c1: QColor, c2: QColor, t: float) -> QColor:
+    """Per-channel linear interpolation between two colors, t in [0, 1]."""
+    return QColor(
+        round(c1.red() + (c2.red() - c1.red()) * t),
+        round(c1.green() + (c2.green() - c1.green()) * t),
+        round(c1.blue() + (c2.blue() - c1.blue()) * t),
+        round(c1.alpha() + (c2.alpha() - c1.alpha()) * t),
+    )
+
+
+def _boundary_half_widths(bounds: list[float]) -> list[float]:
+    """Blend half-width for each internal boundary in *bounds*.
+
+    Capped so a blend zone never eats more than half of either pocket it
+    separates - otherwise a tiny pocket between two larger ones could be
+    blended away entirely instead of still showing its own color.
+    """
+    widths = []
+    for i in range(1, len(bounds) - 1):
+        left_span = bounds[i] - bounds[i - 1]
+        right_span = bounds[i + 1] - bounds[i]
+        widths.append(
+            min(
+                _BLEND_WIDTH_FRACTION,
+                left_span * _BLEND_ZONE_CAP,
+                right_span * _BLEND_ZONE_CAP,
+            )
+        )
+    return widths
+
+
+def _color_at_fraction(
+    t: float, bounds: list[float], colors: list[QColor], half_widths: list[float]
+) -> QColor:
+    """Blended color at path fraction *t*, softened near pocket boundaries."""
+    n = len(colors)
+    index = min(n - 1, max(0, bisect.bisect_right(bounds, t) - 1))
+
+    if index > 0:
+        boundary = bounds[index]
+        half_width = half_widths[index - 1]
+        if half_width > 0 and abs(t - boundary) < half_width:
+            weight = 0.5 + (t - boundary) / (2 * half_width)
+            return _lerp_color(colors[index - 1], colors[index], weight)
+    if index < n - 1:
+        boundary = bounds[index + 1]
+        half_width = half_widths[index]
+        if half_width > 0 and abs(t - boundary) < half_width:
+            weight = 0.5 + (t - boundary) / (2 * half_width)
+            return _lerp_color(colors[index], colors[index + 1], weight)
+    return colors[index]
 
 
 def paint_fluid_column(
@@ -188,12 +229,15 @@ def paint_fluid_column(
     default_color: QColor,
     line_width: float,
 ) -> None:
-    """Draw *path* as a fluid column, segmented per pocket in *content*.
+    """Draw *path* as a fluid column, blended per pocket in *content*.
 
     Shared by any tube-shaped item (external connections, internal transport
     tubing inside Loop/FlowReactor) that needs to render recorded fluid
     content along its path. Falls back to a flat *default_color* line when
-    there's no content to segment.
+    there's no content to segment. Colors are softened across pocket
+    boundaries rather than drawn as hard-edged blocks, since recorded pockets
+    can be coarse (e.g. one per 1cm simulation cell) relative to a component's
+    compact on-canvas size.
     """
     total_volume = sum(pocket.volume for pocket in content)
     cross_section_area = math.pi * (diameter_value / 2.0) ** 2
@@ -220,27 +264,46 @@ def paint_fluid_column(
     cumulative = 0.0
     start_fraction = 0.0
     last_index = len(ordered_pockets) - 1
+    bounds = [0.0]
+    colors: list[QColor] = []
     for index, pocket in enumerate(ordered_pockets):
         cumulative += pocket.volume
         end_fraction = 1.0 if index == last_index else cumulative / total_volume
-        span = end_fraction - start_fraction
-        if span > 1e-9:
-            pocket_length = pocket.volume / cross_section_area
-            samples = max(
-                _INNER_PATH_MIN_SAMPLES,
-                round(pocket_length / _INNER_PATH_SAMPLE_LENGTH),
-            )
-            painter.setPen(
-                QPen(
-                    _rgba_hex_to_qcolor(COMPOUNDS.get_color(pocket)),
-                    line_width,
-                    QT_SOLID_LINE,
-                    QT_ROUND_CAP,
-                    QT_ROUND_JOIN,
-                )
-            )
-            painter.drawPath(_sub_path(path, start_fraction, end_fraction, samples))
+        if end_fraction - start_fraction > 1e-9:
+            colors.append(_rgba_hex_to_qcolor(COMPOUNDS.get_color(pocket)))
+            bounds.append(end_fraction)
         start_fraction = end_fraction
+
+    if not colors:
+        return
+    bounds[-1] = 1.0  # guard against float drift so the last boundary reaches the path end
+
+    half_widths = _boundary_half_widths(bounds)
+    n_samples = int(
+        min(
+            _BLEND_MAX_SAMPLES,
+            max(_BLEND_MIN_SAMPLES, round(path.length() / _BLEND_STEP_PX)),
+        )
+    )
+
+    prev_point = path.pointAtPercent(0.0)
+    prev_color = _color_at_fraction(0.0, bounds, colors, half_widths)
+    for step in range(1, n_samples + 1):
+        t = step / n_samples
+        point = path.pointAtPercent(t)
+        color = _color_at_fraction(t, bounds, colors, half_widths)
+        painter.setPen(
+            QPen(
+                _lerp_color(prev_color, color, 0.5),
+                line_width,
+                QT_SOLID_LINE,
+                QT_ROUND_CAP,
+                QT_ROUND_JOIN,
+            )
+        )
+        painter.drawLine(prev_point, point)
+        prev_point = point
+        prev_color = color
 
 
 class HydraulicConnectionItem(BaseConnectionItem):
