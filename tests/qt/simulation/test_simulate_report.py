@@ -8,7 +8,11 @@ from pytestqt.qtbot import QtBot
 
 from chemunited.elements.component.component_parts import StatusOverlay
 from chemunited.setup import SetupWindow
-from chemunited.simulation.simulate_report import ProfilesWidget
+from chemunited.simulation.simulate_report import (
+    _LENGTH_PROFILE_KEY,
+    ProfilesWidget,
+    SimDbReader,
+)
 
 _THROTTLE_WAIT_MS = 80  # comfortably above the 33ms scrub-timer interval
 
@@ -74,6 +78,117 @@ class TestProfilesWidgetScrubBar:
         qtbot.wait(_THROTTLE_WAIT_MS)
 
         assert received == [24.0]
+
+
+class TestSimDbReaderLengthProfile:
+    def test_length_profile_builds_staircase_with_zero_fill(
+        self, tmp_path: Path
+    ) -> None:
+        db_path = tmp_path / "sim.db"
+        conn = _connect(db_path)
+        conn.executemany(
+            "INSERT INTO edge_cells (edge_id, cell_index, position_m, length_m) "
+            "VALUES (?, ?, ?, ?)",
+            [
+                ("e1", 0, 0.0, 0.01),  # origin end, 10mm
+                ("e1", 1, 0.01, 0.02),  # destination end, 20mm
+            ],
+        )
+        conn.executemany(
+            "INSERT INTO cell_state "
+            "(time, edge_id, cell_index, phase, phase_fraction, temperature) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            [
+                (1.0, "e1", 0, "liquid", 1.0, 298.15),
+                (1.0, "e1", 1, "liquid", 1.0, 298.15),
+            ],
+        )
+        conn.executemany(
+            "INSERT INTO cell_content "
+            "(time, edge_id, cell_index, phase, species_id, moles) VALUES (?, ?, ?, ?, ?, ?)",
+            [
+                (1.0, "e1", 0, "liquid", "red_dye", 0.001),
+                (1.0, "e1", 1, "liquid", "blue_dye", 0.002),
+            ],
+        )
+        conn.commit()
+        conn.close()
+
+        reader = SimDbReader(db_path)
+        try:
+            series = reader.length_profile("e1", 1.0)
+        finally:
+            reader.close()
+
+        assert set(series) == {"liquid / red_dye", "liquid / blue_dye"}
+        # red_dye only lives in cell 0 (0-10mm) - must 0-fill across cell 1 (10-30mm)
+        assert series["liquid / red_dye"] == (
+            [0.0, 10.0, 10.0, 30.0],
+            [0.001, 0.001, 0.0, 0.0],
+        )
+        # blue_dye only lives in cell 1 - must 0-fill across cell 0
+        assert series["liquid / blue_dye"] == (
+            [0.0, 10.0, 10.0, 30.0],
+            [0.0, 0.0, 0.002, 0.002],
+        )
+
+    def test_length_profile_returns_empty_for_unknown_or_empty_edge(
+        self, tmp_path: Path
+    ) -> None:
+        db_path = tmp_path / "sim.db"
+        _connect(db_path).close()
+
+        reader = SimDbReader(db_path)
+        try:
+            assert reader.length_profile("missing", 1.0) == {}
+        finally:
+            reader.close()
+
+
+class TestProfilesWidgetLengthProfile:
+    def test_load_edge_profile_none_shows_placeholder(self, qtbot: QtBot) -> None:
+        widget = ProfilesWidget()
+        qtbot.addWidget(widget)
+
+        widget.load_edge_profile(None)
+
+        plot = widget._plots[_LENGTH_PROFILE_KEY]
+        assert len(plot._ax.lines) == 0
+
+    def test_load_edge_profile_plots_series_for_selected_edge(
+        self, qtbot: QtBot, tmp_path: Path
+    ) -> None:
+        db_path = tmp_path / "sim.db"
+        conn = _connect(db_path)
+        conn.executemany(
+            "INSERT INTO edge_cells (edge_id, cell_index, position_m, length_m) "
+            "VALUES (?, ?, ?, ?)",
+            [("e1", 0, 0.0, 0.01)],
+        )
+        conn.executemany(
+            "INSERT INTO cell_state "
+            "(time, edge_id, cell_index, phase, phase_fraction, temperature) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            [(1.0, "e1", 0, "liquid", 1.0, 298.15)],
+        )
+        conn.execute(
+            "INSERT INTO cell_content "
+            "(time, edge_id, cell_index, phase, species_id, moles) VALUES (?, ?, ?, ?, ?, ?)",
+            (1.0, "e1", 0, "liquid", "red_dye", 0.001),
+        )
+        conn.commit()
+        conn.close()
+
+        widget = ProfilesWidget()
+        qtbot.addWidget(widget)
+        widget.set_db(db_path)
+        widget.set_cursor_time(1.0)
+
+        widget.load_edge_profile("e1")
+
+        plot = widget._plots[_LENGTH_PROFILE_KEY]
+        assert len(plot._ax.lines) == 1
+        assert list(plot._ax.lines[0].get_ydata()) == [0.001, 0.001]
 
 
 class TestSimulateWindowReportPlayback:
@@ -215,7 +330,9 @@ class TestSimulateWindowReportPlayback:
 
         overlay = window.orchestrator.components["Sol1"].graph._overlay
         assert overlay.isVisible()
-        assert overlay._color == StatusOverlay.COLOR_ERROR  # closed at t=24 (last frame)
+        assert (
+            overlay._color == StatusOverlay.COLOR_ERROR
+        )  # closed at t=24 (last frame)
 
         window.SimulateWindowReport.widget_profiles._scrub_slider.setValue(0)
         qtbot.wait(_THROTTLE_WAIT_MS)
@@ -244,4 +361,89 @@ class TestSimulateWindowReportPlayback:
         except sqlite3.ProgrammingError:
             pass
         else:
-            raise AssertionError("expected the previous playback connection to be closed")
+            raise AssertionError(
+                "expected the previous playback connection to be closed"
+            )
+
+    def test_selecting_connection_populates_and_rescrubs_length_profile(
+        self, qtbot: QtBot, tmp_path: Path
+    ) -> None:
+        window = self._build_window(qtbot)
+        self._add_platform(window)
+        db_path = tmp_path / "sim.db"
+        self._build_two_frame_db(db_path)
+        window.SimulateWindowReport._on_sim_done(str(db_path))
+
+        report = window.SimulateWindowReport
+        connection = window.orchestrator.connections["PumpA_2_PumpB_1"]
+        connection.setSelected(True)
+
+        assert report.widget_profiles._edge_id == "PumpA_2_PumpB_1"
+        plot = report.widget_profiles._plots[_LENGTH_PROFILE_KEY]
+        assert list(plot._ax.lines[0].get_ydata()) == [0.009, 0.009]  # last frame, t=24
+
+        report.widget_profiles._scrub_slider.setValue(0)
+        qtbot.wait(_THROTTLE_WAIT_MS)
+
+        assert list(plot._ax.lines[0].get_ydata()) == [0.002, 0.002]  # t=0
+
+    def test_selecting_non_plugflow_component_clears_length_profile(
+        self, qtbot: QtBot, tmp_path: Path
+    ) -> None:
+        window = self._build_window(qtbot)
+        self._add_platform(window)
+        db_path = tmp_path / "sim.db"
+        self._build_two_frame_db(db_path)
+        window.SimulateWindowReport._on_sim_done(str(db_path))
+
+        report = window.SimulateWindowReport
+        window.orchestrator.components["BottleA"].graph.setSelected(True)
+
+        assert report.widget_profiles._edge_id is None
+        plot = report.widget_profiles._plots[_LENGTH_PROFILE_KEY]
+        assert len(plot._ax.lines) == 0
+
+    def test_selecting_plugflow_component_derives_internal_edge_id(
+        self, qtbot: QtBot, tmp_path: Path
+    ) -> None:
+        window = self._build_window(qtbot)
+        window.orchestrator.add_component(
+            name="FlowReactor1",
+            figure="FlowReactor",
+            position=(0.0, 0.0),
+            length="10 mm",
+            diameter="1 mm",
+        )
+        db_path = tmp_path / "sim.db"
+        conn = _connect(db_path)
+        conn.execute(
+            "INSERT INTO node_pressure (time, node_id, pressure) VALUES (?, ?, ?)",
+            (0.0, "FlowReactor1.1", 101325.0),
+        )
+        conn.executemany(
+            "INSERT INTO edge_cells (edge_id, cell_index, position_m, length_m) "
+            "VALUES (?, ?, ?, ?)",
+            [("FlowReactor1.1.2", 0, 0.0, 0.01)],
+        )
+        conn.executemany(
+            "INSERT INTO cell_state "
+            "(time, edge_id, cell_index, phase, phase_fraction, temperature) "
+            "VALUES (?, ?, ?, ?, ?, ?)",
+            [(0.0, "FlowReactor1.1.2", 0, "liquid", 1.0, 298.15)],
+        )
+        conn.execute(
+            "INSERT INTO cell_content "
+            "(time, edge_id, cell_index, phase, species_id, moles) VALUES (?, ?, ?, ?, ?, ?)",
+            (0.0, "FlowReactor1.1.2", 0, "liquid", "red_dye", 0.004),
+        )
+        conn.commit()
+        conn.close()
+
+        window.SimulateWindowReport._on_sim_done(str(db_path))
+
+        report = window.SimulateWindowReport
+        window.orchestrator.components["FlowReactor1"].graph.setSelected(True)
+
+        assert report.widget_profiles._edge_id == "FlowReactor1.1.2"
+        plot = report.widget_profiles._plots[_LENGTH_PROFILE_KEY]
+        assert list(plot._ax.lines[0].get_ydata()) == [0.004, 0.004]

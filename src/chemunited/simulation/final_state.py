@@ -7,7 +7,9 @@ platform looked at a given recorded instant. ``apply_final_simulation_state``
 is a one-shot convenience for "the last recorded instant"; the underlying
 ``apply_simulation_state_at`` primitive and ``list_recorded_times`` are also
 used by ``chemunited.simulation.playback.SimulationPlayback`` to scrub to any
-recorded instant.
+recorded instant. ``load_edge_cells`` is likewise reused by
+``chemunited.simulation.simulate_report.SimDbReader`` to build a
+length-resolved content profile plot for the selected edge.
 """
 
 from __future__ import annotations
@@ -19,6 +21,7 @@ from collections import defaultdict
 from pathlib import Path
 
 from chemunited_core.common.enums import PhaseKind
+from chemunited_core.components.plugflow import PlugFlowComponentData
 from chemunited_core.compounds import VolumeContentBase
 from chemunited_core.figure_registry import SolenoidValve2WayData, SolenoidValveData
 from chemunited_core.figure_registry.rotary_valve import RotaryValveData
@@ -72,6 +75,7 @@ def apply_simulation_state_at(
     """
     _apply_inventories(conn, t, components)
     _apply_edge_content(conn, t, connections)
+    _apply_internal_edge_content(conn, t, components)
     _apply_discrete_state(conn, t, components)
 
 
@@ -175,38 +179,70 @@ def _apply_discrete_state(
             component.graph.sync_visuals()
 
 
+def _cells_to_content(
+    cells: dict[int, list[_CellPhase]], cross_section_area: float
+) -> list[VolumeContentBase]:
+    content: list[VolumeContentBase] = []
+    # cell_index 0 = origin end; EdgeData.content[0] must be destination-side,
+    # so walk cells from the destination end (highest index) to the origin.
+    for cell_index in sorted(cells, reverse=True):
+        for phase_kind, phase_fraction, temperature, length_m, species in cells[
+            cell_index
+        ]:
+            if phase_fraction <= 0:
+                continue
+            content.append(
+                VolumeContentBase(
+                    phase_kind=phase_kind,
+                    volume=phase_fraction * length_m * cross_section_area,
+                    initial_species=species,
+                    initial_temperature=temperature,
+                )
+            )
+    return content
+
+
 def _apply_edge_content(
     conn: sqlite3.Connection, t: float, connections: Connections
 ) -> None:
     for edge_id, connection in connections.hydraulic.items():
-        cells = _load_edge_cells(conn, edge_id, t)
+        cells = load_edge_cells(conn, edge_id, t)
         if cells is None:
             continue  # unknown edge: no static cell geometry recorded for it
 
         cross_section_area = math.pi * (connection.inf.diameter_value / 2.0) ** 2
-        content: list[VolumeContentBase] = []
-        # cell_index 0 = origin end; EdgeData.content[0] must be destination-side,
-        # so walk cells from the destination end (highest index) to the origin.
-        for cell_index in sorted(cells, reverse=True):
-            for phase_kind, phase_fraction, temperature, length_m, species in cells[
-                cell_index
-            ]:
-                if phase_fraction <= 0:
-                    continue
-                content.append(
-                    VolumeContentBase(
-                        phase_kind=phase_kind,
-                        volume=phase_fraction * length_m * cross_section_area,
-                        initial_species=species,
-                        initial_temperature=temperature,
-                    )
-                )
-
-        connection.inf.content = content
+        connection.inf.content = _cells_to_content(cells, cross_section_area)
         connection.update()
 
 
-def _load_edge_cells(
+def _apply_internal_edge_content(
+    conn: sqlite3.Connection, t: float, components: Components
+) -> None:
+    """Render composite components' own internal transport tubing (Loop, FlowReactor).
+
+    Their internal edge is compiled by chemunited-sim as ``f"{name}.{origin}.{dest}"``
+    (``compile_plugflow``) and recorded into the same ``edge_cells``/``cell_state``/
+    ``cell_content`` tables as external edges, but it never runs through a
+    ``HydraulicConnectionItem`` — the content is written straight onto the
+    component's own data so its graphics item can paint from it.
+    """
+    for name, component in components.items():
+        data = component.inf
+        if not isinstance(data, PlugFlowComponentData):
+            continue
+
+        cross_section_area = math.pi * (data.diameter_value / 2.0) ** 2
+        for origin, destination in data.internal_edges:
+            edge_id = f"{name}.{origin}.{destination}"
+            cells = load_edge_cells(conn, edge_id, t)
+            if cells is None:
+                continue  # unknown edge: no static cell geometry recorded for it
+
+            data.content = _cells_to_content(cells, cross_section_area)
+            component.graph.sync_visuals()
+
+
+def load_edge_cells(
     conn: sqlite3.Connection, edge_id: str, t: float
 ) -> dict[int, list[_CellPhase]] | None:
     """Return per-cell phase content for *edge_id* at *t*.

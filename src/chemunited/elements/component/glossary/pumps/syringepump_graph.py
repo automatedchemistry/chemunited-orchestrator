@@ -2,12 +2,12 @@ from typing import ClassVar
 
 from chemunited_core.common.constant import PATTERN_DIMENSION
 from chemunited_core.figure_registry import SyringePumpData, get_figure_path
+from PyQt5.QtCore import QRectF, Qt
 
-from chemunited.elements.component.glossary.vessels.common import FlaskContent
 from chemunited.elements.component.component_parts import StatusOverlay
 from chemunited.elements.component.component_parts.svg_layer import SvgLayer
+from chemunited.elements.component.glossary.vessels.common import FlaskContent
 from chemunited.elements.component.graph_item import GraphComponent
-from PyQt5.QtCore import QRectF, Qt
 
 
 def _get_fill_level(component_data: SyringePumpData) -> float:
@@ -15,7 +15,9 @@ def _get_fill_level(component_data: SyringePumpData) -> float:
     inventories = getattr(component_data, "internal_inventories", {})
     inventory = next(iter(inventories.values()), None)
     syringe_volume = getattr(component_data, "syringe_volume", None)
-    capacity = float(syringe_volume.to_base_units().magnitude) if syringe_volume else 0.0
+    capacity = (
+        float(syringe_volume.to_base_units().magnitude) if syringe_volume else 0.0
+    )
     if inventory is not None and capacity > 0:
         fill = inventory.liq_content.volume / capacity
         fill = max(0.0, min(1.0, fill))
@@ -77,7 +79,9 @@ class SyringePump(GraphComponent[SyringePumpData]):
     def sync_visuals(self) -> None:
         fill = _get_fill_level(self._data)
         self._syringe_plunger.setPos(
-            self._plunger_base_pos.x() + self.plunger_x_empty + self.plunger_dx_full * fill,
+            self._plunger_base_pos.x()
+            + self.plunger_x_empty
+            + self.plunger_dx_full * fill,
             self._plunger_base_pos.y() + self.plunger_y,
         )
         self._syringe_content.update()

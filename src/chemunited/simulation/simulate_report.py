@@ -35,6 +35,7 @@ from qfluentwidgets import (
 from chemunited.shared.icon import OrchestratorIcon
 from chemunited.shared.widgets.frame_base import FrameBase
 
+from .final_state import load_edge_cells
 from .graph_simulation import SimGraphicView
 from .playback import SimulationPlayback
 
@@ -211,6 +212,48 @@ class SimDbReader:
                         ys.append(float(row["moles"]))
         except sqlite3.Error as exc:
             logger.warning(f"DB error reading content for '{component}': {exc}")
+        return {k: v for k, v in series.items() if v[0]}
+
+    def length_profile(self, edge_id: str, t: float) -> Series:
+        """Per-(phase, species) moles vs. cumulative position (mm) along
+        *edge_id*'s cells at exactly *t* - a single-time spatial snapshot,
+        not a time series. Unlike the other methods above, *edge_id* is
+        matched exactly (it's the primary key into edge_cells/cell_state/
+        cell_content), not prefix-matched.
+        """
+        series: dict[str, tuple[list, list]] = defaultdict(lambda: ([], []))
+        try:
+            cells = load_edge_cells(self._conn, edge_id, t)
+            if not cells:
+                return {}
+
+            lengths_mm: dict[int, float] = {}
+            moles_by_cell: dict[int, dict[str, float]] = {}
+            for cell_index, phases in cells.items():
+                cell_values: dict[str, float] = {}
+                length_mm = 0.0
+                for phase_kind, _fraction, _temperature, length_m, species in phases:
+                    length_mm = length_m * 1000.0
+                    for species_id, moles in species.items():
+                        key = f"{phase_kind.value} / {species_id}"
+                        cell_values[key] = cell_values.get(key, 0.0) + moles
+                lengths_mm[cell_index] = length_mm
+                moles_by_cell[cell_index] = cell_values
+
+            keys = {k for values in moles_by_cell.values() for k in values}
+            for key in sorted(keys):
+                xs, ys = series[key]
+                position_mm = 0.0
+                for cell_index in sorted(cells):  # 0 = origin end
+                    length_mm = lengths_mm[cell_index]
+                    moles = moles_by_cell[cell_index].get(key, 0.0)
+                    xs.append(position_mm)
+                    ys.append(moles)
+                    position_mm += length_mm
+                    xs.append(position_mm)
+                    ys.append(moles)
+        except sqlite3.Error as exc:
+            logger.warning(f"DB error reading length profile for '{edge_id}': {exc}")
         return {k: v for k, v in series.items() if v[0]}
 
 
@@ -485,11 +528,14 @@ class ProfilePlot(QWidget):
 # ProfilesWidget
 # ---------------------------------------------------------------------------
 
+_LENGTH_PROFILE_KEY = "length_profile"
+
 _SEGMENTS = [
     ("temperature", "Temperature"),
     ("pressure", "Pressure"),
     ("flow", "Flow"),
     ("content", "Content"),
+    (_LENGTH_PROFILE_KEY, "Length Profile"),
 ]
 
 _PLOT_META = {
@@ -497,6 +543,7 @@ _PLOT_META = {
     "pressure": ("Time (s)", "Pressure (bar)", "Pressure"),
     "flow": ("Time (s)", "Flow (mL/min)", "Flow"),
     "content": ("Time (s)", "Moles (mol)", "Content"),
+    _LENGTH_PROFILE_KEY: ("Position (mm)", "Moles (mol)", "Length Profile"),
 }
 
 
@@ -509,6 +556,7 @@ class ProfilesWidget(QWidget):
         super().__init__(parent)
         self._db_path: Path | None = None
         self._component: str = ""
+        self._edge_id: str | None = None
         self._running_process: str = ""
         self._scrub_times: list[float] = []
         self._pending_scrub_index: int | None = None
@@ -565,6 +613,9 @@ class ProfilesWidget(QWidget):
             self._plots[key] = plot
             self._plot_stack.addWidget(plot)
             self._segment.addItem(routeKey=key, text=text)
+        self._time_series_keys = [
+            key for key, _ in _SEGMENTS if key != _LENGTH_PROFILE_KEY
+        ]
 
         self._segment.currentItemChanged.connect(self._switch)
         self._segment.setCurrentItem(_SEGMENTS[0][0])
@@ -611,10 +662,14 @@ class ProfilesWidget(QWidget):
         self._scrub_bar.show()
 
     def set_cursor_time(self, t: float | None) -> None:
-        """Move the vertical cursor marker on every plot to time *t*."""
+        """Move the vertical cursor marker on the time-series plots to *t*,
+        and re-query + redraw the Length Profile snapshot for the new time
+        (it has no time axis to put a cursor on - it must be redrawn instead).
+        """
         self._last_scrub_time = t
-        for plot in self._plots.values():
-            plot.set_cursor(t)
+        for key in self._time_series_keys:
+            self._plots[key].set_cursor(t)
+        self._refresh_length_profile()
 
     def _update_scrub_label(self, index: int) -> None:
         t = self._scrub_times[index]
@@ -683,23 +738,23 @@ class ProfilesWidget(QWidget):
         self._component = name
         if not name:
             self._label.setText("Click a component to see its profiles")
-            for plot in self._plots.values():
-                plot._show_placeholder("Click a component to see data")
+            for key in self._time_series_keys:
+                self._plots[key]._show_placeholder("Click a component to see data")
             return
 
         self._label.setText(name)
 
         if self._db_path is None or not self._db_path.exists():
-            for plot in self._plots.values():
-                plot._show_placeholder("No simulation data loaded")
+            for key in self._time_series_keys:
+                self._plots[key]._show_placeholder("No simulation data loaded")
             return
 
         try:
             reader = SimDbReader(self._db_path)
         except Exception as exc:
             logger.warning(f"Could not open simulation DB: {exc}")
-            for plot in self._plots.values():
-                plot._show_placeholder("Could not open simulation database")
+            for key in self._time_series_keys:
+                self._plots[key]._show_placeholder("Could not open simulation database")
             return
 
         try:
@@ -712,10 +767,50 @@ class ProfilesWidget(QWidget):
         finally:
             reader.close()
 
-        for key, plot in self._plots.items():
+        for key in self._time_series_keys:
+            plot = self._plots[key]
             x_label, y_label, title = _PLOT_META[key]
             plot.update_plot(data[key], x_label, y_label, title, component=name)
             plot.set_cursor(self._last_scrub_time)
+
+    def load_edge_profile(self, edge_id: str | None) -> None:
+        """Select which edge feeds the Length Profile tab.
+
+        Independent of `_component`/`load_component()`: `_component` is a
+        fuzzy, prefix-matched label spanning 4 different tables, while
+        `edge_id` is an exact primary-key match against
+        edge_cells/cell_state/cell_content. Pass None when the current
+        selection has no associated tube (vessel, pump, valve, ...).
+        """
+        self._edge_id = edge_id
+        self._refresh_length_profile()
+
+    def _refresh_length_profile(self) -> None:
+        plot = self._plots[_LENGTH_PROFILE_KEY]
+        if self._edge_id is None:
+            plot._show_placeholder("Not applicable for this selection")
+            return
+        if self._db_path is None or not self._db_path.exists():
+            plot._show_placeholder("No simulation data loaded")
+            return
+        if self._last_scrub_time is None:
+            plot._show_placeholder("No time selected")
+            return
+
+        try:
+            reader = SimDbReader(self._db_path)
+        except Exception as exc:
+            logger.warning(f"Could not open simulation DB: {exc}")
+            plot._show_placeholder("Could not open simulation database")
+            return
+
+        try:
+            series = reader.length_profile(self._edge_id, self._last_scrub_time)
+        finally:
+            reader.close()
+
+        x_label, y_label, title = _PLOT_META[_LENGTH_PROFILE_KEY]
+        plot.update_plot(series, x_label, y_label, title, component=self._edge_id)
 
 
 # ---------------------------------------------------------------------------
@@ -816,7 +911,10 @@ class SimulateWindowReport(QMainWindow):
         super().closeEvent(a0)
 
     def _on_selection_changed(self) -> None:
+        from chemunited_core.components.plugflow import PlugFlowComponentData
+
         from chemunited.elements.component.graph_item import GraphComponent
+        from chemunited.elements.connection.connection import HydraulicConnectionItem
 
         scene = self.central._graph.scene_attribute  # type: ignore
         if sip.isdeleted(scene):
@@ -824,5 +922,15 @@ class SimulateWindowReport(QMainWindow):
         for item in scene.selectedItems():
             if isinstance(item, GraphComponent):
                 self.widget_profiles.load_component(item.inf.name)
+                edge_id = None
+                if isinstance(item.inf, PlugFlowComponentData):
+                    origin, destination = next(iter(item.inf.internal_edges))
+                    edge_id = f"{item.inf.name}.{origin}.{destination}"
+                self.widget_profiles.load_edge_profile(edge_id)
+                return
+            if isinstance(item, HydraulicConnectionItem):
+                self.widget_profiles.load_component(item.inf.name)
+                self.widget_profiles.load_edge_profile(item.inf.name)
                 return
         self.widget_profiles.load_component("")
+        self.widget_profiles.load_edge_profile(None)

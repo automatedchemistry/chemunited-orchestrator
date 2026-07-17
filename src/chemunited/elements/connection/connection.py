@@ -180,6 +180,69 @@ def _sub_path(path: QPainterPath, t0: float, t1: float, samples: int) -> QPainte
     return sub
 
 
+def paint_fluid_column(
+    painter,
+    path: QPainterPath,
+    content: list,
+    diameter_value: float,
+    default_color: QColor,
+    line_width: float,
+) -> None:
+    """Draw *path* as a fluid column, segmented per pocket in *content*.
+
+    Shared by any tube-shaped item (external connections, internal transport
+    tubing inside Loop/FlowReactor) that needs to render recorded fluid
+    content along its path. Falls back to a flat *default_color* line when
+    there's no content to segment.
+    """
+    total_volume = sum(pocket.volume for pocket in content)
+    cross_section_area = math.pi * (diameter_value / 2.0) ** 2
+
+    if (
+        not content
+        or total_volume <= 0
+        or cross_section_area <= 0
+        or path.length() <= 0
+    ):
+        painter.setPen(
+            QPen(
+                default_color,
+                line_width,
+                QT_SOLID_LINE,
+                QT_ROUND_CAP,
+                QT_ROUND_JOIN,
+            )
+        )
+        painter.drawPath(path)
+        return
+
+    ordered_pockets = list(reversed(content))  # content[-1]=origin-side -> path t=0
+    cumulative = 0.0
+    start_fraction = 0.0
+    last_index = len(ordered_pockets) - 1
+    for index, pocket in enumerate(ordered_pockets):
+        cumulative += pocket.volume
+        end_fraction = 1.0 if index == last_index else cumulative / total_volume
+        span = end_fraction - start_fraction
+        if span > 1e-9:
+            pocket_length = pocket.volume / cross_section_area
+            samples = max(
+                _INNER_PATH_MIN_SAMPLES,
+                round(pocket_length / _INNER_PATH_SAMPLE_LENGTH),
+            )
+            painter.setPen(
+                QPen(
+                    _rgba_hex_to_qcolor(COMPOUNDS.get_color(pocket)),
+                    line_width,
+                    QT_SOLID_LINE,
+                    QT_ROUND_CAP,
+                    QT_ROUND_JOIN,
+                )
+            )
+            painter.drawPath(_sub_path(path, start_fraction, end_fraction, samples))
+        start_fraction = end_fraction
+
+
 class HydraulicConnectionItem(BaseConnectionItem):
     """Represents a Hydraulic connection between two components."""
 
@@ -236,55 +299,15 @@ class HydraulicConnectionItem(BaseConnectionItem):
 
     def _draw_inner_path(self, painter) -> None:
         """Draw the fluid column, segmented per pocket when content volumes are known."""
-        path = self.path()
-        content = self.inf.content
-        total_volume = sum(pocket.volume for pocket in content)
-        cross_section_area = math.pi * (self.inf.diameter_value / 2.0) ** 2
-
-        if (
-            self.inf.air_pressure_line
-            or not content
-            or total_volume <= 0
-            or cross_section_area <= 0
-            or path.length() <= 0
-        ):
-            painter.setPen(
-                QPen(
-                    self._inner_color,
-                    self._inner_width,
-                    QT_SOLID_LINE,
-                    QT_ROUND_CAP,
-                    QT_ROUND_JOIN,
-                )
-            )
-            painter.drawPath(path)
-            return
-
-        ordered_pockets = list(reversed(content))  # content[-1]=origin-side -> path t=0
-        cumulative = 0.0
-        start_fraction = 0.0
-        last_index = len(ordered_pockets) - 1
-        for index, pocket in enumerate(ordered_pockets):
-            cumulative += pocket.volume
-            end_fraction = 1.0 if index == last_index else cumulative / total_volume
-            span = end_fraction - start_fraction
-            if span > 1e-9:
-                pocket_length = pocket.volume / cross_section_area
-                samples = max(
-                    _INNER_PATH_MIN_SAMPLES,
-                    round(pocket_length / _INNER_PATH_SAMPLE_LENGTH),
-                )
-                painter.setPen(
-                    QPen(
-                        _rgba_hex_to_qcolor(COMPOUNDS.get_color(pocket)),
-                        self._inner_width,
-                        QT_SOLID_LINE,
-                        QT_ROUND_CAP,
-                        QT_ROUND_JOIN,
-                    )
-                )
-                painter.drawPath(_sub_path(path, start_fraction, end_fraction, samples))
-            start_fraction = end_fraction
+        content = [] if self.inf.air_pressure_line else self.inf.content
+        paint_fluid_column(
+            painter,
+            self.path(),
+            content,
+            self.inf.diameter_value,
+            self._inner_color,
+            self._inner_width,
+        )
 
 
 class HeatConnectionItem(BaseConnectionItem):

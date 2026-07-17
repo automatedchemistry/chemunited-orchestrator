@@ -10,6 +10,7 @@ from PyQt5.QtGui import QColor, QPainterPath, QPolygonF
 
 from chemunited.elements.component.component_parts import SvgLayer
 from chemunited.elements.component.graph_item import GraphComponent
+from chemunited.elements.connection.connection import paint_fluid_column
 from chemunited.shared.graph_objects.custom_path import PathElementItem
 from chemunited.utils.math_functions import build_snake_path
 
@@ -44,6 +45,17 @@ class PathFluid(PathTubing):
     DEFAULT_COLOR = QColor("#E8E8E8")
     DEFAULT_LINE_WIDTH = 2.0
 
+    def paint(self, painter, option, widget=None):
+        data: FlowReactorData = self.parentItem().inf
+        paint_fluid_column(
+            painter,
+            self.path(),
+            data.content,
+            data.diameter_value,
+            self.DEFAULT_COLOR,
+            self.DEFAULT_LINE_WIDTH,
+        )
+
 
 class FlowReactor(GraphComponent[FlowReactorData]):
     FIGURE: ClassVar[str] = "FlowReactor"
@@ -68,6 +80,9 @@ class FlowReactor(GraphComponent[FlowReactorData]):
         self.fluid_path.rebuild_path()
         self.fluid_path.moveBy(-42, -20)
         self.addToGroup(self.fluid_path)
+
+    def sync_visuals(self) -> None:
+        self.fluid_path.update()
 
 
 class PhotoReactor(FlowReactor):

@@ -118,6 +118,7 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
     BASEMODE: ClassVar[type[ComponentMode]] = ComponentMode
     SVG_SCALE: ClassVar[float] = 2.0
     SVG_ROTATION: ClassVar[float] = 0.0
+    STATUS_OVERLAY: TypeVar[StatusOverlay] = StatusOverlay
 
     def __init_subclass__(cls, **kwargs: object) -> None:
         super().__init_subclass__(**kwargs)
@@ -287,7 +288,7 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
         self._warning = WarningDisplay(parent=self)
         self._warning.setVisible(False)
 
-        self._overlay = StatusOverlay(dimension=PATTERN_DIMENSION, parent=self)
+        self._overlay = self.STATUS_OVERLAY(dimension=PATTERN_DIMENSION, parent=self)
         self._overlay.setVisible(False)
         self.addToGroup(self._name)
         self.addToGroup(self._warning)

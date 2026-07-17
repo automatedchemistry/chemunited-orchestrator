@@ -55,7 +55,9 @@ class TestSyncVisualsPlungerPosition:
         base_x = graph._plunger_base_pos.x()
         base_y = graph._plunger_base_pos.y()
 
-        graph._data.internal_inventories.update(_pump_with_fill(0.5).internal_inventories)
+        graph._data.internal_inventories.update(
+            _pump_with_fill(0.5).internal_inventories
+        )
         graph.sync_visuals()
         pos_at_half = graph._syringe_plunger.pos()
         expected_half_x = base_x + graph.plunger_x_empty + graph.plunger_dx_full * 0.5
@@ -64,7 +66,9 @@ class TestSyncVisualsPlungerPosition:
 
         # Regression: moveBy() is a relative move - calling sync_visuals() again
         # must not accumulate on top of the previous position.
-        graph._data.internal_inventories.update(_pump_with_fill(0.2).internal_inventories)
+        graph._data.internal_inventories.update(
+            _pump_with_fill(0.2).internal_inventories
+        )
         graph.sync_visuals()
         pos_at_fifth = graph._syringe_plunger.pos()
         expected_fifth_x = base_x + graph.plunger_x_empty + graph.plunger_dx_full * 0.2

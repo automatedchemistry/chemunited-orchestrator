@@ -8,7 +8,7 @@ from chemunited.elements.component.component_factory import list_components
 from chemunited.elements.component.graph_item import GraphComponent
 from chemunited.shared.graph import GraphCore, SceneCore
 
-FIGURE = "SyringePump"
+FIGURE = "SolenoidValve2Way"
 SPACING_X = 200
 SPACING_Y = 180
 
@@ -18,14 +18,15 @@ def _build_component(
     cls: type[GraphComponent],
     position: tuple[int, int],
 ) -> GraphComponent:
-    mode = cls.BASEMODE.model_validate(
-        {
-            "name": figure,
-            "figure": figure,
-            "position": position,
-            "angle": 0,
-        }
-    )
+    mode_payload = {
+        "name": figure,
+        "figure": figure,
+        "position": position,
+        "angle": 0,
+    }
+    if figure in {"SolenoidValve", "SolenoidValve2Way"}:
+        mode_payload["opened"] = False
+    mode = cls.BASEMODE.model_validate(mode_payload)
     return cls(cls.METADATA.from_mode(mode))
 
 

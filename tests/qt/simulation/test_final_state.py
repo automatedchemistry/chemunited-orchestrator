@@ -6,6 +6,7 @@ from pathlib import Path
 from chemunited_core.common.enums import PhaseKind
 from chemunited_core.components import VesselComponentData, VesselMode
 from chemunited_core.components.internals import DEFAULT_INVENTORY_KEY
+from chemunited_core.components.plugflow import PlugFlowComponentData
 from chemunited_core.figure_registry import SolenoidValve2WayData, SolenoidValveData
 from chemunited_core.figure_registry.rotary_valve import RotaryValveData
 from chemunited_quantities import ChemUnitQuantity
@@ -14,13 +15,14 @@ from chemunited_sim.recorder.schema import create_all_tables
 from chemunited.simulation.final_state import (
     _apply_discrete_state,
     _apply_edge_content,
+    _apply_internal_edge_content,
     _apply_inventories,
     _build_inventory_payload,
     _latest_time,
-    _load_edge_cells,
     apply_final_simulation_state,
     apply_simulation_state_at,
     list_recorded_times,
+    load_edge_cells,
 )
 
 
@@ -170,7 +172,7 @@ def test_load_edge_cells_orders_destination_first_with_species(
     )
     conn.commit()
 
-    cells = _load_edge_cells(conn, "e1", 1.0)
+    cells = load_edge_cells(conn, "e1", 1.0)
 
     assert set(cells) == {0, 1}
     origin_phase, origin_fraction, _, origin_length, origin_species = cells[0][0]
@@ -186,7 +188,7 @@ def test_load_edge_cells_orders_destination_first_with_species(
 
     # unknown/missing edge -> no static geometry -> None (distinct from a
     # known-but-empty-at-t edge, which returns {})
-    assert _load_edge_cells(conn, "missing", 1.0) is None
+    assert load_edge_cells(conn, "missing", 1.0) is None
 
 
 def test_apply_edge_content_builds_destination_first_volume_weighted_slugs(
@@ -272,6 +274,74 @@ def test_apply_edge_content_clears_content_for_known_edge_empty_at_time(
     assert connection.inf.content == []
 
 
+def test_apply_internal_edge_content_updates_plugflow_component_data(
+    tmp_path: Path,
+) -> None:
+    """Loop/FlowReactor's own internal tube (edge id '<name>.1.2') is recorded
+    in the same tables as external edges but never runs through a
+    HydraulicConnectionItem - the content must land straight on the
+    component's own data instead, and trigger a visual sync."""
+    conn = _connect(tmp_path / "sim.db")
+    conn.executemany(
+        "INSERT INTO edge_cells (edge_id, cell_index, position_m, length_m) "
+        "VALUES (?, ?, ?, ?)",
+        [("Loop1.1.2", 0, 0.0, 0.01)],
+    )
+    conn.executemany(
+        "INSERT INTO cell_state "
+        "(time, edge_id, cell_index, phase, phase_fraction, temperature) "
+        "VALUES (?, ?, ?, ?, ?, ?)",
+        [(1.0, "Loop1.1.2", 0, "liquid", 1.0, 298.15)],
+    )
+    conn.execute(
+        "INSERT INTO cell_content "
+        "(time, edge_id, cell_index, phase, species_id, moles) VALUES (?, ?, ?, ?, ?, ?)",
+        (1.0, "Loop1.1.2", 0, "liquid", "red_dye", 0.001),
+    )
+    conn.commit()
+
+    loop = PlugFlowComponentData(name="Loop1", diameter=qty("1 mm"))
+    component = _FakeComponent(inf=loop)
+
+    _apply_internal_edge_content(conn, 1.0, {"Loop1": component})
+
+    assert component.sync_calls == 1
+    assert len(loop.content) == 1
+    assert loop.content[0].initial_species == {"red_dye": 0.001}
+
+
+def test_apply_internal_edge_content_skips_edge_with_no_snapshot_rows(
+    tmp_path: Path,
+) -> None:
+    conn = _connect(tmp_path / "sim.db")
+    conn.commit()
+
+    loop = PlugFlowComponentData(name="Loop1")
+    loop.content = ["untouched"]  # type: ignore[list-item]
+    component = _FakeComponent(inf=loop)
+
+    _apply_internal_edge_content(conn, 1.0, {"Loop1": component})
+
+    assert component.sync_calls == 0
+    assert loop.content == ["untouched"]
+
+
+def test_apply_internal_edge_content_ignores_non_plugflow_components(
+    tmp_path: Path,
+) -> None:
+    conn = _connect(tmp_path / "sim.db")
+    conn.commit()
+
+    vessel = VesselComponentData.from_mode(
+        VesselMode(name="flask1", capacity=qty("10 ml"), top_access=1, bottom_access=1)
+    )
+    component = _FakeComponent(inf=vessel)
+
+    _apply_internal_edge_content(conn, 1.0, {"flask1": component})  # must not raise
+
+    assert component.sync_calls == 0
+
+
 def test_apply_discrete_state_restores_rotor_ports_not_latest(tmp_path: Path) -> None:
     conn = _connect(tmp_path / "sim.db")
     conn.executemany(
@@ -301,7 +371,9 @@ def test_apply_discrete_state_restores_solenoid_opened(tmp_path: Path) -> None:
     conn.commit()
 
     solenoid = SolenoidValveData(name="Sol1")
-    assert solenoid.opened is True  # default, sanity-check the restore actually flips it
+    assert (
+        solenoid.opened is True
+    )  # default, sanity-check the restore actually flips it
     component = _FakeComponent(inf=solenoid)
 
     _apply_discrete_state(conn, 1.0, {"Sol1": component})
