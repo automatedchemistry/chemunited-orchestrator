@@ -23,7 +23,9 @@ QT_SOLID_LINE = getattr(Qt, "SolidLine")
 _BLEND_STEP_PX = 2.0  # pixel spacing between fine color samples along the fluid column
 _BLEND_MIN_SAMPLES = 24  # floor so short paths still render a smooth-looking gradient
 _BLEND_MAX_SAMPLES = 400  # cap so very long paths don't trigger excessive draw calls
-_BLEND_WIDTH_FRACTION = 0.03  # base blend-zone half-width, as a fraction of total path length
+_BLEND_WIDTH_FRACTION = (
+    0.03  # base blend-zone half-width, as a fraction of total path length
+)
 _BLEND_ZONE_CAP = 0.5  # a blend zone never eats more than this fraction of either adjacent pocket's span
 
 
@@ -276,7 +278,9 @@ def paint_fluid_column(
 
     if not colors:
         return
-    bounds[-1] = 1.0  # guard against float drift so the last boundary reaches the path end
+    bounds[-1] = (
+        1.0  # guard against float drift so the last boundary reaches the path end
+    )
 
     half_widths = _boundary_half_widths(bounds)
     n_samples = int(

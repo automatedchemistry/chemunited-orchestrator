@@ -4,13 +4,12 @@ from chemunited_core.common.constant import PATTERN_DIMENSION
 from chemunited_core.figure_registry import SyringePumpData, get_figure_path
 from PyQt5.QtCore import QRectF, Qt
 
-from chemunited.elements.component.component_parts import StatusOverlay
 from chemunited.elements.component.component_parts.svg_layer import SvgLayer
 from chemunited.elements.component.glossary.vessels.common import FlaskContent
 from chemunited.elements.component.graph_item import GraphComponent
 
 
-def _get_fill_level(component_data: SyringePumpData) -> float:
+def _get_fill_level(component_data: SyringePumpData | None) -> float:
     fill = 0.0
     inventories = getattr(component_data, "internal_inventories", {})
     inventory = next(iter(inventories.values()), None)
@@ -86,8 +85,8 @@ class SyringePump(GraphComponent[SyringePumpData]):
         )
         self._syringe_content.update()
 
-        #active = self._data.flow_rate_si != 0.0
-        #self._overlay.set_status(
+        # active = self._data.flow_rate_si != 0.0
+        # self._overlay.set_status(
         #    StatusOverlay.COLOR_ACTIVE if active else StatusOverlay.COLOR_IDLE
-        #)
-        #self._overlay.setVisible(active)
+        # )
+        # self._overlay.setVisible(active)

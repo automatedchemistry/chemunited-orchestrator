@@ -24,8 +24,6 @@ def _build_component(
         "position": position,
         "angle": 0,
     }
-    if figure in {"SolenoidValve", "SolenoidValve2Way"}:
-        mode_payload["opened"] = False
     mode = cls.BASEMODE.model_validate(mode_payload)
     return cls(cls.METADATA.from_mode(mode))
 

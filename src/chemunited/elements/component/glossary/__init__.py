@@ -4,8 +4,9 @@ from .analytics.ircontrol_graph import IRControl
 from .analytics.mscontrol_graph import MSControl
 from .analytics.nmrcontrol_graph import NMRControl
 
-# pipes — kept: custom painted Body item
+# pipes — kept: custom painted Body item / active-state overlay
 from .pipes.distributor_graph import Distributor
+from .pipes.mfc_graph import MFCComponent
 
 # pumps — kept: two-layer SVG (barrel + plunger)
 from .pumps.syringepump_graph import SyringePump
@@ -39,6 +40,7 @@ __all__ = [
     "NMRControl",
     # pipes
     "Distributor",
+    "MFCComponent",
     # pumps
     "SyringePump",
     # technical

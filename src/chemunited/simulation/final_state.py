@@ -135,7 +135,7 @@ def _apply_inventories(
     if not payload:
         return
 
-    apply_inventory_status_payload(components, payload)
+    apply_inventory_status_payload(components, payload)  # type: ignore[arg-type]
     for component_name in payload:
         component = components.get(component_name)
         if component is not None:

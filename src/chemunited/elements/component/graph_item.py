@@ -118,7 +118,7 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
     BASEMODE: ClassVar[type[ComponentMode]] = ComponentMode
     SVG_SCALE: ClassVar[float] = 2.0
     SVG_ROTATION: ClassVar[float] = 0.0
-    STATUS_OVERLAY: TypeVar[StatusOverlay] = StatusOverlay
+    STATUS_OVERLAY: ClassVar[type[StatusOverlay]] = StatusOverlay
 
     def __init_subclass__(cls, **kwargs: object) -> None:
         super().__init_subclass__(**kwargs)

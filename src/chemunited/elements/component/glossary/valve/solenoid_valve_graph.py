@@ -1,5 +1,6 @@
-from typing import ClassVar, cast
+from typing import TYPE_CHECKING, ClassVar, cast
 
+from chemunited_core.components import ComponentData
 from chemunited_core.components.component import PATTERN_DIMENSION
 from chemunited_core.figure_registry import SolenoidValve2WayData, SolenoidValveData
 from PyQt5.QtCore import QLineF
@@ -17,7 +18,7 @@ class StatusOverlaySolenoid(StatusOverlay):
     CLOSED_ICON = "cross"
 
     def __init__(self, dimension: int = PATTERN_DIMENSION, parent=None) -> None:
-        super().__init__(dimension=PATTERN_DIMENSION / 4, parent=parent)
+        super().__init__(dimension=PATTERN_DIMENSION // 4, parent=parent)
 
     def paint(self, painter, option, widget=None):
 
@@ -61,7 +62,7 @@ class StatusOverlaySolenoid2Way(StatusOverlay):
     COLOR_CLOSED: QColor = QColor(255, 152, 0, 255)  # orange
 
     def __init__(self, dimension: int = PATTERN_DIMENSION, parent=None) -> None:
-        super().__init__(dimension=PATTERN_DIMENSION / 4, parent=parent)
+        super().__init__(dimension=PATTERN_DIMENSION // 4, parent=parent)
         self._opened = False
 
     def set_opened(self, opened: bool) -> None:
@@ -97,7 +98,18 @@ class StatusOverlaySolenoid2Way(StatusOverlay):
             )
 
 
-class _SolenoidValveVisuals:
+if TYPE_CHECKING:
+    # Static-typing-only base: gives mypy the real build()/post_layout()/
+    # _overlay/_data members to check super() calls and attribute access
+    # against. Never used as a real base at runtime — the actual GraphComponent
+    # base is supplied by whichever concrete class mixes this in below (see
+    # SolenoidValve / SolenoidValve2Way), via ordinary multiple inheritance.
+    _SolenoidValveHost = GraphComponent[ComponentData]
+else:
+    _SolenoidValveHost = object
+
+
+class _SolenoidValveVisuals(_SolenoidValveHost):
     """Shared open/closed rendering for solenoid valve figures.
 
     Reuses the generic status overlay every GraphComponent already builds
@@ -119,8 +131,9 @@ class _SolenoidValveVisuals:
             self._overlay.setPos(*self.STATUS_OVERLAY_POS)
 
     def sync_visuals(self) -> None:
-        opened = bool(self._data.opened)
-        if self._data.figure == "SolenoidValve2Way":
+        data = cast("SolenoidValveData | SolenoidValve2WayData", self._data)
+        opened = bool(data.opened)
+        if data.figure == "SolenoidValve2Way":
             cast(StatusOverlaySolenoid2Way, self._overlay).set_opened(opened)
         else:
             self._overlay.set_status(
