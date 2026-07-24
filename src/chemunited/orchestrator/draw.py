@@ -2,7 +2,9 @@ import re
 
 from chemunited_core.common.enums import ConnectionType
 from chemunited_core.components.internals import DEFAULT_INVENTORY_KEY
+from chemunited_core.compounds import COMPOUNDS
 from chemunited_core.connections import EdgeData, EdgeMode
+from chemunited_core.figure_registry.vessels import FlowReactorData
 from chemunited_quantities import ChemUnitQuantity
 from loguru import logger
 from pydantic import BaseModel
@@ -20,6 +22,7 @@ from chemunited.elements.connection import (
     HydraulicConnectionItem,
     MovementConnectionItem,
 )
+from chemunited.elements.reactions import ReactionDefinition
 from chemunited.shared.widgets.base_mode_editor import BaseModeDialog
 
 from .core import OrchestratorCore
@@ -129,6 +132,91 @@ class OrchestratorDraw(OrchestratorCore):
         logger.bind(window=self.parent_ref.WINDOW_TYPE).info(
             f"Component {component.inf.COMPONENT_TYPE.name} name '{name}' was successfully created."
         )
+
+    def reaction_target_names(self) -> list[str]:
+        return [
+            name
+            for name, component in self.components.items()
+            if DEFAULT_INVENTORY_KEY
+            in getattr(component.inf, "internal_inventories", {})
+            or isinstance(component.inf, FlowReactorData)
+        ]
+
+    def add_reaction(
+        self,
+        target: str,
+        reaction_type: str,
+        reactant: str,
+        product: str,
+        rate_constant: float,
+        phase: str = "LIQUID",
+        delta_temperature_per_mol_converted: float = 0.0,
+    ) -> ReactionDefinition | None:
+        if target not in self.components:
+            _log_draw_error(self.parent_ref, f"Component '{target}' does not exist.")
+            return None
+        if target not in self.reaction_target_names():
+            _log_draw_error(
+                self.parent_ref,
+                f"Component '{target}' cannot be used as a reaction target.",
+            )
+            return None
+        missing_species = [
+            species for species in (reactant, product) if species not in COMPOUNDS
+        ]
+        if missing_species:
+            _log_draw_error(
+                self.parent_ref,
+                f"Reaction compound '{missing_species[0]}' is not registered.",
+            )
+            return None
+        try:
+            reaction = ReactionDefinition.model_validate(
+                {
+                    "target": target,
+                    "reaction_type": reaction_type,
+                    "reactant": reactant,
+                    "product": product,
+                    "rate_constant": rate_constant,
+                    "phase": phase.upper(),
+                    "delta_temperature_per_mol_converted": (
+                        delta_temperature_per_mol_converted
+                    ),
+                }
+            )
+        except Exception as exc:
+            _log_draw_error(self.parent_ref, f"Invalid reaction: {exc}", exc)
+            return None
+
+        self.reactions.append(reaction)
+        self._sync_reaction_list()
+        logger.bind(window=self.parent_ref.WINDOW_TYPE).info(
+            f"Reaction {reactant} -> {product} added to '{target}'."
+        )
+        return reaction
+
+    def remove_reaction(self, index: int) -> None:
+        if index < 0 or index >= len(self.reactions):
+            _log_draw_error(self.parent_ref, "Reaction does not exist.")
+            return
+        reaction = self.reactions.pop(index)
+        self._sync_reaction_list()
+        logger.bind(window=self.parent_ref.WINDOW_TYPE).info(
+            f"Reaction {reaction.reactant} -> {reaction.product} removed from "
+            f"'{reaction.target}'."
+        )
+
+    def reaction_uses_compound(self, name: str) -> bool:
+        return any(
+            reaction.reactant == name or reaction.product == name
+            for reaction in self.reactions
+        )
+
+    def _sync_reaction_list(self) -> None:
+        widget = getattr(self.parent_ref, "reactions_widget", None)
+        sync = getattr(widget, "sync", None)
+        if callable(sync):
+            sync()
 
     @pyqtSlot(ConnectionPoint, ConnectionPoint)
     def request_add_connection(self, origin: ConnectionPoint, destiny: ConnectionPoint):
@@ -301,6 +389,13 @@ class OrchestratorDraw(OrchestratorCore):
         ]
         for conn_name in attached:
             self.remove_connection(conn_name)
+        reaction_indices = [
+            index
+            for index, reaction in enumerate(self.reactions)
+            if reaction.target == name
+        ]
+        for index in reversed(reaction_indices):
+            self.remove_reaction(index)
         component = self.components.pop(name)
         if component._widget is not None:
             component._widget.close()

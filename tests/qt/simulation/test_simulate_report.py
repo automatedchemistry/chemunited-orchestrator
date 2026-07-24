@@ -3,13 +3,19 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
+import pytest
+from chemunited_core.compounds import COMPOUNDS, ChemicalEntity
 from chemunited_sim.recorder.schema import create_all_tables
+from matplotlib.colors import to_hex
 from pytestqt.qtbot import QtBot
 
-from chemunited.elements.component.component_parts import StatusOverlay
+from chemunited.elements.component.glossary.valve.solenoid_valve_graph import (
+    StatusOverlaySolenoid,
+)
 from chemunited.setup import SetupWindow
 from chemunited.simulation.simulate_report import (
     _LENGTH_PROFILE_KEY,
+    ProfilePlot,
     ProfilesWidget,
     SimDbReader,
 )
@@ -331,13 +337,13 @@ class TestSimulateWindowReportPlayback:
         overlay = window.orchestrator.components["Sol1"].graph._overlay
         assert overlay.isVisible()
         assert (
-            overlay._color == StatusOverlay.COLOR_ERROR
+            overlay._color == StatusOverlaySolenoid.COLOR_CLOSED
         )  # closed at t=24 (last frame)
 
         window.SimulateWindowReport.widget_profiles._scrub_slider.setValue(0)
         qtbot.wait(_THROTTLE_WAIT_MS)
 
-        assert overlay._color == StatusOverlay.COLOR_ACTIVE  # open at t=0
+        assert overlay._color == StatusOverlaySolenoid.COLOR_ACTIVE  # open at t=0
 
     def test_on_sim_done_closes_previous_playback_before_opening_new(
         self, qtbot: QtBot, tmp_path: Path
@@ -447,3 +453,84 @@ class TestSimulateWindowReportPlayback:
         assert report.widget_profiles._edge_id == "FlowReactor1.1.2"
         plot = report.widget_profiles._plots[_LENGTH_PROFILE_KEY]
         assert list(plot._ax.lines[0].get_ydata()) == [0.004, 0.004]
+
+
+class TestProfilePlotCompoundColors:
+    @pytest.fixture(autouse=True)
+    def reset_compounds(self):
+        COMPOUNDS.clear()
+        yield
+        COMPOUNDS.clear()
+
+    def test_content_series_uses_registered_compound_color(self, qtbot: QtBot) -> None:
+        COMPOUNDS.register(
+            ChemicalEntity(name="red_dye", color_red=200, color_green=10, color_blue=10)
+        )
+        plot = ProfilePlot()
+        qtbot.addWidget(plot)
+
+        plot.update_plot(
+            {"BottleA.Inventory / liquid / red_dye": ([0.0, 1.0], [0.01, 0.02])},
+            "Time (s)",
+            "Moles (mol)",
+            "Content",
+            color_by_compound=True,
+        )
+
+        line = plot._ax.lines[0]
+        assert to_hex(line.get_color()).upper() == "#C80A0A"
+        assert line.get_alpha() == 1.0
+
+    def test_gas_phase_series_uses_reduced_opacity(self, qtbot: QtBot) -> None:
+        COMPOUNDS.register(
+            ChemicalEntity(name="n2", color_red=0, color_green=100, color_blue=200)
+        )
+        plot = ProfilePlot()
+        qtbot.addWidget(plot)
+
+        plot.update_plot(
+            {"gas / n2": ([0.0, 10.0], [0.0, 0.0])},
+            "Position (mm)",
+            "Moles (mol)",
+            "Length Profile",
+            color_by_compound=True,
+        )
+
+        line = plot._ax.lines[0]
+        assert to_hex(line.get_color()).upper() == "#0064C8"
+        assert line.get_alpha() == 0.5
+
+    def test_unregistered_species_falls_back_to_default_cycle(
+        self, qtbot: QtBot
+    ) -> None:
+        plot = ProfilePlot()
+        qtbot.addWidget(plot)
+
+        plot.update_plot(
+            {"node / liquid / unknown_species": ([0.0, 1.0], [0.0, 1.0])},
+            "Time (s)",
+            "Moles (mol)",
+            "Content",
+            color_by_compound=True,
+        )
+
+        line = plot._ax.lines[0]
+        assert line.get_alpha() == 1.0  # unregistered species still opaque, not crashed
+
+    def test_non_content_tabs_ignore_compound_colors(self, qtbot: QtBot) -> None:
+        COMPOUNDS.register(
+            ChemicalEntity(name="red_dye", color_red=200, color_green=10, color_blue=10)
+        )
+        plot = ProfilePlot()
+        qtbot.addWidget(plot)
+
+        plot.update_plot(
+            {"BottleA / liquid / red_dye": ([0.0, 1.0], [298.0, 300.0])},
+            "Time (s)",
+            "Temperature (°C)",
+            "Temperature",
+            color_by_compound=False,
+        )
+
+        line = plot._ax.lines[0]
+        assert to_hex(line.get_color()).upper() != "#C80A0A"

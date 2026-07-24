@@ -40,6 +40,7 @@ class OrchestratorIcon(FluentIconBase, Enum):
     MANUAL = "manual"
     MEASURE = "measure"
     MODULE = "module"
+    MOLECULE = "molecule"
     MOVE = "move"
     OFFLINE = "offline"
     ONLINE = "online"

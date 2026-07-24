@@ -4,6 +4,7 @@ from PyQt5.QtCore import QObject, Qt
 from qfluentwidgets import InfoBar, InfoBarPosition
 
 from chemunited.elements.access import Components, Connections
+from chemunited.elements.reactions import ReactionDefinition
 from chemunited.protocols.workflows import ProcessWorkflow
 from chemunited.shared.enums import SetupStepMode, WindowCategory
 from chemunited.shared.logger_queue import LOG_QUEUE
@@ -26,6 +27,9 @@ class OrchestratorCore(QObject):
 
         # Connections used in the platform (hydraulic, heat, electronic, movement)
         self.connections: Connections = Connections()
+
+        # Reactions applied to vessel inventories or flow-reactor channels.
+        self.reactions: list[ReactionDefinition] = []
 
         # Protocols used in the platform
         self.protocols: dict[str, ProcessWorkflow] = {}

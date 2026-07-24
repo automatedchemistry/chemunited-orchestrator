@@ -405,7 +405,7 @@ class InventoryStatusWidget(QWidget):
         return value if value in {_UNIT_MOL, _UNIT_ML} else _UNIT_MOL
 
     def _validate_capacity(self) -> bool:
-        for entry in self._entries:
+        for index, entry in enumerate(self._entries):
             capacity = self._capacity_limit_m3(entry.component_data)
             if capacity is None:
                 continue
@@ -413,11 +413,13 @@ class InventoryStatusWidget(QWidget):
                 entry.draft_inventory.gas_content.volume  # type: ignore[attr-defined]
             )
             if total > capacity + 1e-15:
+                self.inventory_list.setCurrentRow(index)
                 self._show_error(
                     "Invalid inventory volume",
                     (
-                        f"{entry.component_name} inventory volume exceeds "
-                        f"component capacity ({capacity * _VOLUME_M3_TO_ML:g} ml)."
+                        f"'{self._entry_text(entry.component_name, entry.inventory_key)}' "
+                        f"volume ({total * _VOLUME_M3_TO_ML:g} ml) exceeds capacity "
+                        f"({capacity * _VOLUME_M3_TO_ML:g} ml)."
                     ),
                 )
                 return False

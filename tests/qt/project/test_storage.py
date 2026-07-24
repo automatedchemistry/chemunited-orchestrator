@@ -55,6 +55,17 @@ def test_save_draw_writes_python_setup(tmp_path):
                     "inflection_points": [[50.0, 25.0]],
                 }
             ],
+            "reactions": [
+                {
+                    "target": "ReactorA",
+                    "reaction_type": "FirstOrderDecay",
+                    "reactant": "reagent_a",
+                    "product": "product_b",
+                    "rate_constant": 0.3,
+                    "phase": "LIQUID",
+                    "delta_temperature_per_mol_converted": 2.0,
+                }
+            ],
         },
     )
 
@@ -77,11 +88,17 @@ def test_save_draw_writes_python_setup(tmp_path):
     assert "destiny='ReactorA'" in content
     assert "destiny_port=1" in content
     assert "inflection_points=[[50.0, 25.0]]" in content
+    assert "platform.add_reaction(" in content
+    assert "reaction_type='FirstOrderDecay'" in content
+    assert "rate_constant=0.3" in content
     assert content.rindex("platform.add_compound(") < content.rindex(
         "platform.add_component("
     )
     assert content.rindex("platform.add_component(") < content.rindex(
         "platform.add_connection("
+    )
+    assert content.rindex("platform.add_connection(") < content.rindex(
+        "platform.add_reaction("
     )
 
 
@@ -132,6 +149,16 @@ def build_draw(platform):
         destiny_port=1,
         diameter='1 mm',
     )
+
+    platform.add_reaction(
+        target='PumpA',
+        reaction_type='FirstOrderDecay',
+        reactant='reagent_a',
+        product='product_b',
+        rate_constant=0.3,
+        phase='LIQUID',
+        delta_temperature_per_mol_converted=2.0,
+    )
 """.lstrip(),
         encoding="utf-8",
     )
@@ -181,6 +208,17 @@ def build_draw(platform):
                 "diameter": "1 mm",
             }
         ],
+        "reactions": [
+            {
+                "target": "PumpA",
+                "reaction_type": "FirstOrderDecay",
+                "reactant": "reagent_a",
+                "product": "product_b",
+                "rate_constant": 0.3,
+                "phase": "LIQUID",
+                "delta_temperature_per_mol_converted": 2.0,
+            }
+        ],
         "inventory": {},
     }
 
@@ -190,6 +228,7 @@ def test_load_draw_returns_empty_payload_when_setup_is_missing(tmp_path):
         "compounds": [],
         "components": [],
         "connections": [],
+        "reactions": [],
         "canvas": {},
     }
 
@@ -221,6 +260,7 @@ def build_draw(platform):
             }
         ],
         "connections": [],
+        "reactions": [],
         "inventory": {},
     }
 

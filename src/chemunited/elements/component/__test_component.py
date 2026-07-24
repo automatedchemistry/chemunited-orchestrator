@@ -8,7 +8,7 @@ from chemunited.elements.component.component_factory import list_components
 from chemunited.elements.component.graph_item import GraphComponent
 from chemunited.shared.graph import GraphCore, SceneCore
 
-FIGURE = "SolenoidValve2Way"
+FIGURE = "FlowReactor"
 SPACING_X = 200
 SPACING_Y = 180
 
@@ -23,6 +23,7 @@ def _build_component(
         "figure": figure,
         "position": position,
         "angle": 0,
+        "heat_exchange": True,
     }
     mode = cls.BASEMODE.model_validate(mode_payload)
     return cls(cls.METADATA.from_mode(mode))

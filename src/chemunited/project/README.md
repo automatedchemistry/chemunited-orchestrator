@@ -155,6 +155,11 @@ without opening the Qt application.
 The SVG is a companion preview only. Project loading still uses
 `draw/setup.py` as the source of truth.
 
+Reaction definitions are stored in the same setup function with
+`platform.add_reaction(...)`. The target is the component name; the simulator
+resolves vessel targets to their default inventory and FlowReactor/PhotoReactor
+targets to their internal transport channel.
+
 ---
 
 ### `protocols/` — one `.py` file per process

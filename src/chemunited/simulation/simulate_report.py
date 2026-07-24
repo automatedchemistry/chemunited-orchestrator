@@ -12,6 +12,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import requests
+from chemunited_core.common.enums import PhaseKind
+from chemunited_core.compounds import COMPOUNDS
 from loguru import logger
 from PyQt5 import sip
 from PyQt5.QtCore import Qt, QThread, QTimer, pyqtSignal
@@ -257,6 +259,23 @@ class SimDbReader:
         return {k: v for k, v in series.items() if v[0]}
 
 
+def _compound_series_style(label: str) -> tuple[str | None, float]:
+    """Resolve (color, alpha) for a Content/Length-Profile series label so its
+    line matches the compound's canvas color. Labels end in
+    '.../phase/species_id' (see SimDbReader.content/length_profile). Falls
+    back to (None, 1.0) - matplotlib's default color cycle - if the label is
+    unparseable or the species isn't currently registered.
+    """
+    parts = label.split(" / ")
+    if len(parts) < 2:
+        return None, 1.0
+    phase, species_id = parts[-2], parts[-1]
+    if species_id not in COMPOUNDS:
+        return None, 1.0
+    alpha = 0.5 if phase == PhaseKind.GAS.value else 1.0
+    return COMPOUNDS[species_id].rgb_hex, alpha
+
+
 # ---------------------------------------------------------------------------
 # SimRunWorker
 # ---------------------------------------------------------------------------
@@ -479,6 +498,7 @@ class ProfilePlot(QWidget):
         y_label: str,
         title: str,
         component: str = "",
+        color_by_compound: bool = False,
     ) -> None:
         self._ax.clear()
         self._cursor_line = None  # clear() destroys the previous cursor artist too
@@ -499,7 +519,12 @@ class ProfilePlot(QWidget):
             self._ax.set_yticks([])
         else:
             for label, (xs, ys) in series.items():
-                self._ax.plot(xs, ys, label=label, linewidth=1.2)
+                color, alpha = (
+                    _compound_series_style(label) if color_by_compound else (None, 1.0)
+                )
+                self._ax.plot(
+                    xs, ys, label=label, linewidth=1.2, color=color, alpha=alpha
+                )
             self._ax.set_xlabel(x_label, fontsize=8)
             self._ax.set_ylabel(y_label, fontsize=8)
             self._ax.set_title(title, fontsize=9)
@@ -770,7 +795,14 @@ class ProfilesWidget(QWidget):
         for key in self._time_series_keys:
             plot = self._plots[key]
             x_label, y_label, title = _PLOT_META[key]
-            plot.update_plot(data[key], x_label, y_label, title, component=name)
+            plot.update_plot(
+                data[key],
+                x_label,
+                y_label,
+                title,
+                component=name,
+                color_by_compound=(key == "content"),
+            )
             plot.set_cursor(self._last_scrub_time)
 
     def load_edge_profile(self, edge_id: str | None) -> None:
@@ -810,7 +842,14 @@ class ProfilesWidget(QWidget):
             reader.close()
 
         x_label, y_label, title = _PLOT_META[_LENGTH_PROFILE_KEY]
-        plot.update_plot(series, x_label, y_label, title, component=self._edge_id)
+        plot.update_plot(
+            series,
+            x_label,
+            y_label,
+            title,
+            component=self._edge_id,
+            color_by_compound=True,
+        )
 
 
 # ---------------------------------------------------------------------------

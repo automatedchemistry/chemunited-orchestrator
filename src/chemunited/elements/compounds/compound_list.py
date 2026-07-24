@@ -137,6 +137,13 @@ class CompoundList(QWidget):
         if name in _BUILT_IN_COMPOUNDS:
             self._show_warning(f"Built-in compound {name!r} cannot be removed.")
             return
+        orchestrator = getattr(self.window(), "orchestrator", None)
+        reaction_uses_compound = getattr(orchestrator, "reaction_uses_compound", None)
+        if callable(reaction_uses_compound) and reaction_uses_compound(name):
+            self._show_warning(
+                f"Compound {name!r} is used by a reaction. Remove the reaction first."
+            )
+            return
 
         remaining = [entity for entity in COMPOUNDS.entities if entity.name != name]
         if len(remaining) == len(COMPOUNDS.entities):

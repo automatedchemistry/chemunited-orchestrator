@@ -655,6 +655,7 @@ class TestAddComponent:
             "compounds": [],
             "components": [],
             "connections": [],
+            "reactions": [],
             "inventory": {},
         }
         assert session.export_destination == source_file

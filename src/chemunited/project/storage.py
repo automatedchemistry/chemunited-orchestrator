@@ -76,7 +76,13 @@ def save_draw(working_dir: Path, draw_data: dict) -> None:
 def load_draw(working_dir: Path) -> dict:
     path = working_dir / "draw" / "setup.py"
     if not path.exists():
-        return {"compounds": [], "components": [], "connections": [], "canvas": {}}
+        return {
+            "compounds": [],
+            "components": [],
+            "connections": [],
+            "reactions": [],
+            "canvas": {},
+        }
     build_draw = load_attribute(
         path,
         "build_draw",
@@ -100,6 +106,7 @@ class _DrawRecorder:
         self.compounds: list[dict] = []
         self.components: list[dict] = []
         self.connections: list[dict] = []
+        self.reactions: list[dict] = []
         self.inventory: dict[str, dict] = {}
 
     def add_compound(self, **payload) -> None:
@@ -107,6 +114,30 @@ class _DrawRecorder:
 
     def add_component(self, **payload) -> None:
         self.components.append(dict(payload))
+
+    def add_reaction(
+        self,
+        target: str,
+        reaction_type: str,
+        reactant: str,
+        product: str,
+        rate_constant: float,
+        phase: str = "LIQUID",
+        delta_temperature_per_mol_converted: float = 0.0,
+    ) -> None:
+        self.reactions.append(
+            {
+                "target": target,
+                "reaction_type": reaction_type,
+                "reactant": reactant,
+                "product": product,
+                "rate_constant": rate_constant,
+                "phase": phase,
+                "delta_temperature_per_mol_converted": (
+                    delta_temperature_per_mol_converted
+                ),
+            }
+        )
 
     def add_connection(
         self,
@@ -153,6 +184,7 @@ class _DrawRecorder:
             "compounds": self.compounds,
             "components": self.components,
             "connections": self.connections,
+            "reactions": self.reactions,
             "inventory": self.inventory,
         }
 
@@ -183,6 +215,9 @@ def _render_draw_body(draw_data: dict) -> str:
 
     for connection in draw_data.get("connections", []):
         calls.append(_render_call("platform.add_connection", connection, "connection"))
+
+    for reaction in draw_data.get("reactions", []):
+        calls.append(_render_call("platform.add_reaction", reaction, "reaction"))
 
     for comp_name, inv_data in draw_data.get("inventory", {}).items():
         for inv_key, phases in inv_data.items():
@@ -254,6 +289,15 @@ def _ordered_payload(payload: dict, payload_type: str) -> dict:
         ),
         "component": ("name", "figure", "position", "angle"),
         "connection": ("origin", "destiny", "origin_port", "destiny_port"),
+        "reaction": (
+            "target",
+            "reaction_type",
+            "reactant",
+            "product",
+            "rate_constant",
+            "phase",
+            "delta_temperature_per_mol_converted",
+        ),
     }[payload_type]
     ordered = {key: normalized.pop(key) for key in preferred if key in normalized}
     ordered.update({key: normalized[key] for key in sorted(normalized)})

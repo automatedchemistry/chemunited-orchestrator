@@ -757,9 +757,11 @@ class OrchestratorProjectFile(OrchestratorExecution):
 
         self.connections.clear()
         self.components.clear()
+        self.reactions.clear()
         self.clear_protocols()
         COMPOUNDS.clear()
         self._sync_compound_list()
+        self._sync_reaction_list()
 
     def _restart_pool_tailer(self) -> None:
         if self._pool_tailer is not None:
@@ -795,6 +797,14 @@ class OrchestratorProjectFile(OrchestratorExecution):
                 name = dict(component).get("name", "unknown")
                 logger.bind(window=WindowCategory.SETUP).opt(exception=exc).warning(
                     f"Skipped component '{name}': {exc}"
+                )
+
+        for reaction in draw_data.get("reactions", []):
+            try:
+                self.add_reaction(**dict(reaction))
+            except Exception as exc:
+                logger.bind(window=WindowCategory.SETUP).opt(exception=exc).warning(
+                    f"Skipped reaction: {exc}"
                 )
 
         for connection in draw_data.get("connections", []):
@@ -1063,11 +1073,13 @@ class OrchestratorProjectFile(OrchestratorExecution):
             conn.base_mode_instance.model_dump(mode="json")
             for conn in self.connections.values()
         ]
+        reactions = [reaction.model_dump(mode="json") for reaction in self.reactions]
         inventory = build_inventory_status_payload(self.components.values())
         return {
             "compounds": compounds,
             "components": components,
             "connections": connections,
+            "reactions": reactions,
             "inventory": inventory,
         }
 

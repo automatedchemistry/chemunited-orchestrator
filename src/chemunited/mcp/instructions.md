@@ -56,6 +56,15 @@ user saves the canvas, but it can also be edited while the project is closed.
 def build_draw(platform):
     platform.add_component(name=..., figure=..., position=(...), ...)
     platform.add_connection(origin=..., destiny=..., origin_port=N, destiny_port=N, ...)
+    platform.add_reaction(
+        target=...,
+        reaction_type="FirstOrderDecay",
+        reactant=...,
+        product=...,
+        rate_constant=...,
+        phase="LIQUID",
+        delta_temperature_per_mol_converted=0.0,
+    )
 ```
 
 **`add_component` kwargs (common):**

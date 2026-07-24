@@ -454,3 +454,51 @@ def test_inventory_status_dialog_rejects_volume_over_capacity(
     assert inventory.liq_content.volume == 0
     assert inventory.liq_content.initial_species == {}
     assert sync_visuals_calls == 0
+
+
+def test_inventory_status_dialog_names_and_focuses_offending_entry(
+    qtbot: QtBot,
+    monkeypatch,
+):
+    COMPOUNDS.register(ChemicalEntity(name="water", molecular_weight=18.015))
+    bottle_a = create_component(
+        figure="GlassBottle", name="BottleA", position=(0.0, 0.0)
+    )
+    bottle_b = create_component(
+        figure="GlassBottle", name="BottleB", position=(100.0, 0.0)
+    )
+
+    dialog = InventoryStatusDialog(
+        component_provider=lambda: [("BottleA", bottle_a), ("BottleB", bottle_b)]
+    )
+    qtbot.addWidget(dialog)
+    dialog.show()
+    qtbot.waitExposed(dialog)
+
+    widget = dialog.inventory_widget
+    assert widget.inventory_list.currentRow() == 0
+
+    # Overfill BottleB, then switch focus back to BottleA without saving -
+    # mirrors a user editing one inventory, navigating away, and clicking
+    # Save while a *different* entry is the one on screen.
+    widget.inventory_list.setCurrentRow(1)
+    widget.volume_spin.setValue(2.0)
+    widget._amount_spins["water"].setValue(0.125)
+    widget.inventory_list.setCurrentRow(0)
+
+    messages: list[tuple[str, str]] = []
+    monkeypatch.setattr(
+        widget, "_show_error", lambda title, content: messages.append((title, content))
+    )
+
+    result = widget.commit()
+
+    assert result is False
+    assert messages == [
+        (
+            "Invalid inventory volume",
+            "'BottleB / Inventory' volume (3 ml) exceeds capacity (1 ml).",
+        )
+    ]
+    assert widget.inventory_list.currentRow() == 1
+    assert widget.title_label.text() == "BottleB / Inventory"

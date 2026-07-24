@@ -15,6 +15,7 @@ from .connectivity.online_list import OnlineComponent
 from .draw.graph import DrawGraphicView
 from .draw.tree_add import TreeAddItem
 from .elements.compounds import CompoundsWidget
+from .elements.reactions import ReactionsWidget
 from .mcp import ProjectMcpService
 from .orchestrator import Orchestrator
 from .pre_run.pre_run_frame import PreRunFrame
@@ -72,6 +73,9 @@ class SetupWindow(MainWindowBase):
         # Compounds frame (not a main segment tab, but used in the protocols editor)
         self.compounds_widget = CompoundsWidget(self)
         self.compound_list = self.compounds_widget
+
+        # Project reaction definitions used by the simulator.
+        self.reactions_widget = ReactionsWidget(self)
 
         # Simulation Report Window
         self.SimGraphicView = SimGraphicView(self.scene_attribute, self)
@@ -320,6 +324,11 @@ class SetupWindow(MainWindowBase):
             self.compounds_widget,
             OrchestratorIcon.CHEMICAL,
             "Compounds",
+        )
+        self.addSubInterface(
+            self.reactions_widget,
+            OrchestratorIcon.MOLECULE,
+            "Reactions",
         )
         self.switchTo(self.SegmentWindow)
 

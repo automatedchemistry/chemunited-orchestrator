@@ -30,4 +30,14 @@ def build_draw(platform):
     #     origin_port=2,
     #     destiny_port=1,
     # )
+    #
+    # Reaction reference:
+    # platform.add_reaction(
+    #     target="ReactorA",
+    #     reaction_type="FirstOrderDecay",
+    #     reactant="reagent_a",
+    #     product="product_b",
+    #     rate_constant=0.3,
+    #     phase="LIQUID",
+    # )
     ---DRAW---
