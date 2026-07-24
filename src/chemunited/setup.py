@@ -78,7 +78,9 @@ class SetupWindow(MainWindowBase):
         self.reactions_widget = ReactionsWidget(self)
 
         # Simulation Report Window
-        self.SimGraphicView = SimGraphicView(self.scene_attribute, self)
+        # Own SceneCore, not self.scene_attribute: the simulation window must not
+        # share live components/connections with the design canvas.
+        self.SimGraphicView = SimGraphicView(SceneCore(), self)
         self.SimulateWindowReport = SimulateWindowReport(self.SimGraphicView, self)
 
         # Main Orchestrator Object

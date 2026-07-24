@@ -34,6 +34,10 @@ from qfluentwidgets import (
     isDarkTheme,
 )
 
+from chemunited.monitoring.pool_log_tailer import PoolLogTailer
+from chemunited.orchestrator import Orchestrator
+from chemunited.orchestrator.execution import is_run_active_for
+from chemunited.shared.enums import WindowCategory
 from chemunited.shared.icon import OrchestratorIcon
 from chemunited.shared.widgets.frame_base import FrameBase
 
@@ -865,6 +869,16 @@ class SimulateWindowReport(QMainWindow):
         self._process: str = ""
         self._worker: SimRunWorker | None = None
         self._playback: SimulationPlayback | None = None
+        self._pool_tailer: PoolLogTailer | None = None
+
+        # Own Orchestrator over the independent scene `graph` was built with
+        # (see setup.py) - the simulation window must render and mutate its own
+        # components/connections, not the design canvas's.
+        self.WINDOW_TYPE = WindowCategory.SIMULATION
+        self.scene_attribute = graph.scene_attribute
+        self.drain_bus_timer = parent.drain_bus_timer
+        self.orchestrator = Orchestrator(self)
+        self.orchestrator.exposed_logs_class = WindowCategory.SIMULATION
 
         self.widget_profiles = ProfilesWidget()
         self.central = FrameBase(
@@ -878,6 +892,13 @@ class SimulateWindowReport(QMainWindow):
         scene = graph.scene_attribute
         scene.selectionChanged.connect(self._on_selection_changed)
         self.widget_profiles.scrub_requested.connect(self._on_scrub_requested)
+
+    @property
+    def FrameLoggings(self):
+        # Resolved lazily via the setup window: at __init__ time (setup.py
+        # constructs us before calling buildUi()) SetupWindow.FrameLoggings
+        # doesn't exist yet.
+        return self._setup_window.FrameLoggings
 
     def initNavigation(self) -> None:
         self.central.addNavigationAction(
@@ -898,6 +919,10 @@ class SimulateWindowReport(QMainWindow):
         self._process = process
         project_path = Path(project_path)
 
+        draw_data = self._setup_window.orchestrator.snapshot_draw_data()
+        self.orchestrator.load_draw_data(draw_data)
+        self._start_pool_tailer(project_path)
+
         self.widget_profiles.show_running(process)
 
         self._worker = SimRunWorker(process, project_path, parent=self)
@@ -910,7 +935,29 @@ class SimulateWindowReport(QMainWindow):
     def recenter_views(self) -> None:
         self.central._graph.recenter_view()  # type: ignore
 
+    def _start_pool_tailer(self, project_path: Path) -> None:
+        """Tail this run's `log/pool/*.jsonl` onto this window's own components.
+
+        Mirrors the SetupWindow-scoped PoolLogTailer this replaced, but scoped
+        to the simulation window's independent copy - so a standalone Simulate
+        run's command activity flashes here, never on the design canvas.
+        """
+        self._stop_pool_tailer()
+        self._pool_tailer = PoolLogTailer(
+            project_path,
+            self.orchestrator.components,
+            lambda: is_run_active_for(project_path),
+            parent=self,
+        )
+        self._pool_tailer.start()
+
+    def _stop_pool_tailer(self) -> None:
+        if self._pool_tailer is not None:
+            self._pool_tailer.stop()
+            self._pool_tailer = None
+
     def _on_sim_done(self, db_path: str) -> None:
+        self._stop_pool_tailer()
         self.widget_profiles.on_sim_done()
         self.widget_profiles.set_db(Path(db_path))
         if self.widget_profiles._component:
@@ -924,6 +971,7 @@ class SimulateWindowReport(QMainWindow):
             self._apply_scrub(times[-1])
 
     def _on_sim_failed(self, message: str) -> None:
+        self._stop_pool_tailer()
         logger.error(f"Simulation failed: {message}")
         self.widget_profiles.show_sim_error(message)
 
@@ -940,12 +988,13 @@ class SimulateWindowReport(QMainWindow):
             return
         self._playback.apply_at_time(
             t,
-            self._setup_window.orchestrator.components,
-            self._setup_window.orchestrator.connections,
+            self.orchestrator.components,
+            self.orchestrator.connections,
         )
         self.widget_profiles.set_cursor_time(t)
 
     def closeEvent(self, a0) -> None:
+        self._stop_pool_tailer()
         self._close_playback()
         super().closeEvent(a0)
 

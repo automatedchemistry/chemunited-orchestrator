@@ -13,7 +13,6 @@ from PyQt5.QtCore import QThread, QTimer, pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import QFileDialog, QInputDialog, QMessageBox
 
 from chemunited.connectivity.openapi_commands import reset_protocol_to_default
-from chemunited.monitoring.pool_log_tailer import PoolLogTailer
 from chemunited.project.manifest import ProjectManifest
 from chemunited.project.platform_svg import (
     PLATFORM_DEVICES_RELATIVE_PATH,
@@ -30,7 +29,7 @@ from chemunited.shared.enums.protocols_enum import ProtocolBlock
 from chemunited.utils.flowchem_listener import FLOWCHEM_SERVERS, access_url
 
 from .draw import call_component_model
-from .execution import OrchestratorExecution, is_run_active_for
+from .execution import OrchestratorExecution
 from .inventory_state import (
     apply_inventory_status_payload,
     build_inventory_status_payload,
@@ -188,7 +187,6 @@ class OrchestratorProjectFile(OrchestratorExecution):
         self.recent_projects = RecentProjectsStore()
         self.recent_projects.prune_missing()
         self._project_load_thread: ProjectLoadThread | None = None
-        self._pool_tailer: PoolLogTailer | None = None
 
     @property
     def is_project_operation_running(self) -> bool:
@@ -230,7 +228,6 @@ class OrchestratorProjectFile(OrchestratorExecution):
             f"Project added at {self._session.source_file}"
         )
         self._record_recent_project(chemunited_path)
-        self._restart_pool_tailer()
 
     def open_project(self, path: Path, overwrite: bool = False) -> None:
         """Open a project file or manifest-backed project directory.
@@ -698,7 +695,6 @@ class OrchestratorProjectFile(OrchestratorExecution):
         self._restore_draw_data(payload.draw_data)
         self._restore_connectivity_data(payload.connectivity_data)
         self._restore_protocols(payload.process_classes)
-        self._restart_pool_tailer()
 
     def _show_busy_status(self, title: str, message: str) -> None:
         show_busy_status = getattr(self.parent_ref, "show_busy_status", None)
@@ -728,10 +724,6 @@ class OrchestratorProjectFile(OrchestratorExecution):
         return _open_project_session(path, overwrite=overwrite)
 
     def _reset_project_state(self) -> None:
-        if self._pool_tailer is not None:
-            self._pool_tailer.stop()
-            self._pool_tailer = None
-
         close_main_parameters_editor = getattr(
             self.parent_ref,
             "close_main_parameters_editor",
@@ -763,21 +755,23 @@ class OrchestratorProjectFile(OrchestratorExecution):
         self._sync_compound_list()
         self._sync_reaction_list()
 
-    def _restart_pool_tailer(self) -> None:
-        if self._pool_tailer is not None:
-            self._pool_tailer.stop()
-            self._pool_tailer = None
+    def load_draw_data(self, draw_data: dict) -> None:
+        """Clear this orchestrator's own components/connections/scene and
+        repopulate them from *draw_data*.
 
-        if self.working_dir is None:
-            return
-
-        self._pool_tailer = PoolLogTailer(
-            self.working_dir,
-            self.components,
-            lambda: is_run_active_for(self.working_dir),
-            parent=self,
-        )
-        self._pool_tailer.start()
+        Unlike `_apply_loaded_project`, this has none of the SetupWindow-specific
+        side effects of `_reset_project_state()` (drawGraph cleanup, protocols,
+        COMPOUNDS.clear(), widget closing) - it's meant for windows (e.g. the
+        simulation report) that want an independent copy of the current design
+        without adopting the full project-lifecycle behavior.
+        """
+        self.components.clear()
+        self.connections.clear()
+        self.reactions.clear()
+        scene = self.parent_ref.scene_attribute
+        scene.clearSelection()
+        scene.clear()
+        self._restore_draw_data(draw_data)
 
     def _restore_draw_data(self, draw_data: dict) -> None:
         for compound in draw_data.get("compounds", []):
@@ -1059,6 +1053,15 @@ class OrchestratorProjectFile(OrchestratorExecution):
                     }
                 )
         return {"server_url": server_url, "associations": associations}
+
+    def snapshot_draw_data(self) -> dict:
+        """Independent, JSON-safe copy of the current design (components,
+        connections, inventory, reactions, compounds).
+
+        Safe to hand to another orchestrator's `load_draw_data()` - the
+        payload is plain dicts/lists, not references to live objects.
+        """
+        return self._build_draw_data()
 
     def _build_draw_data(self) -> dict:
         compounds = [

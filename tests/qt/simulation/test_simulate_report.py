@@ -233,6 +233,12 @@ class TestSimulateWindowReportPlayback:
             figure="SolenoidValve",
             position=(600.0, 0.0),
         )
+        # Mirrors what SimulateWindowReport.simulate() does before starting a
+        # run: give the simulation window its own independent copy of the
+        # current design.
+        window.SimulateWindowReport.orchestrator.load_draw_data(
+            window.orchestrator.snapshot_draw_data()
+        )
 
     def _build_two_frame_db(self, db_path: Path) -> None:
         conn = _connect(db_path)
@@ -294,14 +300,14 @@ class TestSimulateWindowReportPlayback:
         assert report.widget_profiles._scrub_times == [0.0, 24.0]
         assert report.widget_profiles._scrub_slider.value() == 1
 
-        bottle = window.orchestrator.components["BottleA"].inf.internal_inventory
+        bottle = report.orchestrator.components["BottleA"].inf.internal_inventory
         assert bottle.liq_content.initial_species == {"red_dye": 0.05}
 
-        edge = window.orchestrator.connections["PumpA_2_PumpB_1"].inf
+        edge = report.orchestrator.connections["PumpA_2_PumpB_1"].inf
         assert len(edge.content) == 1
         assert edge.content[0].initial_species == {"blue_dye": 0.009}
 
-        solenoid = window.orchestrator.components["Sol1"].inf
+        solenoid = report.orchestrator.components["Sol1"].inf
         assert solenoid.opened is False  # last frame (t=24)
 
     def test_scrubbing_updates_canvas_to_selected_frame(
@@ -316,13 +322,14 @@ class TestSimulateWindowReportPlayback:
         window.SimulateWindowReport.widget_profiles._scrub_slider.setValue(0)
         qtbot.wait(_THROTTLE_WAIT_MS)
 
-        bottle = window.orchestrator.components["BottleA"].inf.internal_inventory
+        report_orchestrator = window.SimulateWindowReport.orchestrator
+        bottle = report_orchestrator.components["BottleA"].inf.internal_inventory
         assert bottle.liq_content.initial_species == {"red_dye": 0.01}
 
-        edge = window.orchestrator.connections["PumpA_2_PumpB_1"].inf
+        edge = report_orchestrator.connections["PumpA_2_PumpB_1"].inf
         assert edge.content[0].initial_species == {"blue_dye": 0.002}
 
-        solenoid = window.orchestrator.components["Sol1"].inf
+        solenoid = report_orchestrator.components["Sol1"].inf
         assert solenoid.opened is True  # first frame (t=0)
 
     def test_scrubbing_updates_solenoid_valve_overlay(
@@ -334,7 +341,9 @@ class TestSimulateWindowReportPlayback:
         self._build_two_frame_db(db_path)
         window.SimulateWindowReport._on_sim_done(str(db_path))
 
-        overlay = window.orchestrator.components["Sol1"].graph._overlay
+        overlay = window.SimulateWindowReport.orchestrator.components[
+            "Sol1"
+        ].graph._overlay
         assert overlay.isVisible()
         assert (
             overlay._color == StatusOverlaySolenoid.COLOR_CLOSED
@@ -381,7 +390,7 @@ class TestSimulateWindowReportPlayback:
         window.SimulateWindowReport._on_sim_done(str(db_path))
 
         report = window.SimulateWindowReport
-        connection = window.orchestrator.connections["PumpA_2_PumpB_1"]
+        connection = report.orchestrator.connections["PumpA_2_PumpB_1"]
         connection.setSelected(True)
 
         assert report.widget_profiles._edge_id == "PumpA_2_PumpB_1"
@@ -403,7 +412,7 @@ class TestSimulateWindowReportPlayback:
         window.SimulateWindowReport._on_sim_done(str(db_path))
 
         report = window.SimulateWindowReport
-        window.orchestrator.components["BottleA"].graph.setSelected(True)
+        report.orchestrator.components["BottleA"].graph.setSelected(True)
 
         assert report.widget_profiles._edge_id is None
         plot = report.widget_profiles._plots[_LENGTH_PROFILE_KEY]
@@ -419,6 +428,9 @@ class TestSimulateWindowReportPlayback:
             position=(0.0, 0.0),
             length="10 mm",
             diameter="1 mm",
+        )
+        window.SimulateWindowReport.orchestrator.load_draw_data(
+            window.orchestrator.snapshot_draw_data()
         )
         db_path = tmp_path / "sim.db"
         conn = _connect(db_path)
@@ -448,11 +460,51 @@ class TestSimulateWindowReportPlayback:
         window.SimulateWindowReport._on_sim_done(str(db_path))
 
         report = window.SimulateWindowReport
-        window.orchestrator.components["FlowReactor1"].graph.setSelected(True)
+        report.orchestrator.components["FlowReactor1"].graph.setSelected(True)
 
         assert report.widget_profiles._edge_id == "FlowReactor1.1.2"
         plot = report.widget_profiles._plots[_LENGTH_PROFILE_KEY]
         assert list(plot._ax.lines[0].get_ydata()) == [0.004, 0.004]
+
+    def test_snapshot_is_independent_of_design_canvas(self, qtbot: QtBot) -> None:
+        window = self._build_window(qtbot)
+        self._add_platform(window)
+
+        report_orchestrator = window.SimulateWindowReport.orchestrator
+        assert report_orchestrator.components["BottleA"] is not (
+            window.orchestrator.components["BottleA"]
+        )
+        assert report_orchestrator.connections["PumpA_2_PumpB_1"] is not (
+            window.orchestrator.connections["PumpA_2_PumpB_1"]
+        )
+        assert window.SimulateWindowReport.scene_attribute is not window.scene_attribute
+
+    def test_scrubbing_does_not_mutate_design_canvas(
+        self, qtbot: QtBot, tmp_path: Path
+    ) -> None:
+        window = self._build_window(qtbot)
+        self._add_platform(window)
+
+        bottle = window.orchestrator.components["BottleA"].inf.internal_inventory
+        edge = window.orchestrator.connections["PumpA_2_PumpB_1"].inf
+        solenoid = window.orchestrator.components["Sol1"].inf
+        species_before = dict(bottle.liq_content.initial_species)
+        edge_content_before = list(edge.content)
+        solenoid_opened_before = solenoid.opened
+        design_snapshot_before = window.orchestrator.snapshot_draw_data()
+
+        db_path = tmp_path / "sim.db"
+        self._build_two_frame_db(db_path)
+        window.SimulateWindowReport._on_sim_done(str(db_path))
+        window.SimulateWindowReport.widget_profiles._scrub_slider.setValue(0)
+        qtbot.wait(_THROTTLE_WAIT_MS)
+
+        assert bottle.liq_content.initial_species == species_before
+        assert edge.content == edge_content_before
+        assert solenoid.opened == solenoid_opened_before
+
+        # What Save would persist is untouched by the completed/scrubbed run.
+        assert window.orchestrator.snapshot_draw_data() == design_snapshot_before
 
 
 class TestProfilePlotCompoundColors:
