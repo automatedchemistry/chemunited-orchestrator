@@ -15,6 +15,7 @@ from .connectivity.online_list import OnlineComponent
 from .draw.graph import DrawGraphicView
 from .draw.tree_add import TreeAddItem
 from .elements.compounds import CompoundsWidget
+from .elements.inventory import InventoryWorkspace
 from .elements.reactions import ReactionsWidget
 from .mcp import ProjectMcpService
 from .orchestrator import Orchestrator
@@ -74,6 +75,12 @@ class SetupWindow(MainWindowBase):
         self.compounds_widget = CompoundsWidget(self)
         self.compound_list = self.compounds_widget
 
+        # Uses a lazy provider because the orchestrator is constructed below.
+        self.inventory_widget = InventoryWorkspace(
+            component_provider=self._inventory_component_items,
+            parent=self,
+        )
+
         # Project reaction definitions used by the simulator.
         self.reactions_widget = ReactionsWidget(self)
 
@@ -98,6 +105,14 @@ class SetupWindow(MainWindowBase):
         self.SegmentWindow.current_widget_changed.connect(  # type: ignore[attr-defined]
             self._on_current_widget_changed
         )
+        self.compounds_widget.compound_list.compounds_changed.connect(  # type: ignore[attr-defined]
+            self.inventory_widget.sync_compounds
+        )
+
+    def _inventory_component_items(self):
+        orchestrator = getattr(self, "orchestrator", None)
+        components = getattr(orchestrator, "components", None)
+        return [] if components is None else components.items()
 
     def initProjectMenu(self) -> None:
         self.project_menu = RoundMenu(parent=self)
@@ -326,6 +341,11 @@ class SetupWindow(MainWindowBase):
             self.compounds_widget,
             OrchestratorIcon.CHEMICAL,
             "Compounds",
+        )
+        self.addSubInterface(
+            self.inventory_widget,
+            FluentIcon.LIBRARY,
+            "Inventory",
         )
         self.addSubInterface(
             self.reactions_widget,

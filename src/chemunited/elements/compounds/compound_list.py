@@ -21,6 +21,7 @@ from qfluentwidgets import (
     StrongBodyLabel,
 )
 
+from chemunited.orchestrator.inventory_state import inventory_uses_compound
 from chemunited.orchestrator.protocols import is_valid_name
 
 from .compound_dialog import CompoundDialog
@@ -142,6 +143,16 @@ class CompoundList(QWidget):
         if callable(reaction_uses_compound) and reaction_uses_compound(name):
             self._show_warning(
                 f"Compound {name!r} is used by a reaction. Remove the reaction first."
+            )
+            return
+        components = getattr(orchestrator, "components", {})
+        inventory_widget = getattr(self.window(), "inventory_widget", None)
+        draft_uses_compound = getattr(inventory_widget, "draft_uses_compound", None)
+        used_by_draft = callable(draft_uses_compound) and draft_uses_compound(name)
+        if inventory_uses_compound(components.values(), name) or used_by_draft:
+            self._show_warning(
+                f"Compound {name!r} is used by an initial inventory. "
+                "Remove it from the inventory first."
             )
             return
 

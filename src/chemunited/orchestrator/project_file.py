@@ -753,6 +753,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
         self.clear_protocols()
         COMPOUNDS.clear()
         self._sync_compound_list()
+        self._sync_inventory_workspace(force=True)
         self._sync_reaction_list()
 
     def load_draw_data(self, draw_data: dict) -> None:
@@ -813,6 +814,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
         for comp in self.components.values():
             comp.graph.sync_visuals()
         self._sync_compound_list()
+        self._sync_inventory_workspace(force=True)
 
     def _restore_connectivity_data(self, connectivity_data: dict) -> None:
         server_url = connectivity_data.get("server_url", "").rstrip("/")
@@ -1091,6 +1093,12 @@ class OrchestratorProjectFile(OrchestratorExecution):
         sync = getattr(compound_list, "sync", None)
         if callable(sync):
             sync()
+
+    def _sync_inventory_workspace(self, force: bool = False) -> None:
+        inventory_widget = getattr(self.parent_ref, "inventory_widget", None)
+        sync = getattr(inventory_widget, "sync", None)
+        if callable(sync):
+            sync(force=force)
 
     @staticmethod
     def _compound_payload(entity: ChemicalEntity) -> dict:

@@ -20,6 +20,20 @@ def ensure_air_defaults_for_components(components: Iterable[Any]) -> None:
         ensure_air_defaults(component_data)
 
 
+def inventory_uses_compound(components: Iterable[Any], name: str) -> bool:
+    """Return whether a compound occurs in any initial inventory phase."""
+
+    for component in components:
+        component_data = getattr(component, "inf", component)
+        for inventory in getattr(component_data, "internal_inventories", {}).values():
+            if (
+                name in inventory.liq_content.initial_species
+                or name in inventory.gas_content.initial_species
+            ):
+                return True
+    return False
+
+
 def ensure_air_defaults(component_data: Any) -> None:
     apply_air_defaults = getattr(component_data, "apply_air_defaults", None)
     if callable(apply_air_defaults):
