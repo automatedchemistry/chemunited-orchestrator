@@ -466,7 +466,7 @@ def save_connectivity(working_dir: Path, data: dict) -> None:
 def load_connectivity(working_dir: Path) -> dict:
     path = working_dir / "connectivity" / "associations.json"
     if not path.exists():
-        return {"server_url": "", "associations": []}
+        return {"associations": []}
     return json.loads(path.read_text(encoding="utf-8"))
 
 

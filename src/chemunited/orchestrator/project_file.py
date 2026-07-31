@@ -2,10 +2,12 @@ from __future__ import annotations
 
 import json
 import re
+from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Callable
+from urllib.parse import urlsplit
 
 from chemunited_core.compounds import COMPOUNDS, ChemicalEntity
 from loguru import logger
@@ -107,6 +109,22 @@ def _coerce_inflection_points(value: object) -> list[tuple[float, float]]:
     return points
 
 
+def _passthrough_association_address(association: dict) -> str:
+    """Human-readable address for a non-flowchem association block, mirroring
+    (by convention/value, not import — sila2 isn't a dependency here)
+    chemunited_workflow's SilaComponentClient/OpcUaComponentClient.base_url."""
+    protocol = association.get("protocol", "")
+    if protocol == "sila2":
+        host = association.get("sila_host", "")
+        port = association.get("sila_port", "")
+        return f"sila2://{host}:{port}" if host else ""
+    if protocol == "opcua":
+        endpoint = association.get("opcua_endpoint", "")
+        node_id = association.get("opcua_node_id", "")
+        return f"{endpoint}/{node_id}" if endpoint else ""
+    return ""
+
+
 def _quantity_magnitude(value, unit: str) -> float:
     return float(value.to(unit).magnitude)
 
@@ -187,6 +205,9 @@ class OrchestratorProjectFile(OrchestratorExecution):
         self.recent_projects = RecentProjectsStore()
         self.recent_projects.prune_missing()
         self._project_load_thread: ProjectLoadThread | None = None
+        # Association blocks the canvas doesn't model (e.g. protocol: "sila2"
+        # / "opcua") — kept verbatim so save() doesn't clobber them.
+        self._passthrough_associations: dict[str, dict] = {}
 
     @property
     def is_project_operation_running(self) -> bool:
@@ -269,6 +290,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
         self._session = other._session
         self.components = other.components
         self.connections = other.connections
+        self._passthrough_associations = other._passthrough_associations
 
         # protocols is mutated in place, not reassigned: MonitorProcessesWidget
         # captures a reference to it at construction time (before adopt_from() can
@@ -750,6 +772,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
         self.connections.clear()
         self.components.clear()
         self.reactions.clear()
+        self._passthrough_associations.clear()
         self.clear_protocols()
         COMPOUNDS.clear()
         self._sync_compound_list()
@@ -817,12 +840,25 @@ class OrchestratorProjectFile(OrchestratorExecution):
         self._sync_inventory_workspace(force=True)
 
     def _restore_connectivity_data(self, connectivity_data: dict) -> None:
-        server_url = connectivity_data.get("server_url", "").rstrip("/")
+        # top_level_server_url present (old format): component_url is relative
+        # to it. Absent (new format): component_url is already a full
+        # absolute URL, used as-is.
+        top_level_server_url = (connectivity_data.get("server_url") or "").rstrip("/")
 
-        pairs: list[tuple[str, str]] = []
+        pairs: list[tuple[str, str]] = []  # (component_name, full absolute url)
         for association in connectivity_data.get("associations", []):
             component_name = association.get("component", "")
-            component_url = (
+            protocol = association.get("protocol", "flowchem")
+
+            if protocol != "flowchem":
+                # Not modeled by the canvas (sila2/opcua/...) — keep it verbatim
+                # for save(), and just surface its address on the badge.
+                if component_name:
+                    self._passthrough_associations[component_name] = dict(association)
+                    self._show_passthrough_badge(component_name, association)
+                continue
+
+            raw_component_url = (
                 association.get(
                     "component_url",
                     association.get("device_url", ""),
@@ -835,47 +871,75 @@ class OrchestratorProjectFile(OrchestratorExecution):
             component = self.components[component_name]
             if not component.inf.is_electronic:
                 continue
-            if server_url and component_url:
-                pairs.append((component_name, component_url))
+            if not raw_component_url:
+                continue
+
+            full_url = (
+                f"{top_level_server_url}/{raw_component_url}"
+                if top_level_server_url
+                else raw_component_url
+            )
+            pairs.append((component_name, full_url))
 
         if not pairs:
             return
 
-        # All associations share a single FlowChem server, so probe it once
-        # instead of letting every component pay its own connect timeout.
-        # Reuse an already-cached openapi doc (e.g. from Zeroconf discovery)
-        # before hitting the network again.
-        data = FLOWCHEM_SERVERS.get_openapi(server_url)
-        if data is None:
-            ok, fetched = access_url(f"{server_url}/openapi.json", timeout=1)
-            if (
-                ok
-                and isinstance(fetched, dict)
-                and isinstance(fetched.get("paths"), dict)
-            ):
-                data = fetched
-        if data is not None:
-            FLOWCHEM_SERVERS.register_openapi(server_url, data)
-            for component_name, component_url in pairs:
-                self._apply_component_connectivity(
-                    component_name,
-                    f"{server_url}/{component_url}",
-                    known_online=True,
-                )
-        else:
-            logger.warning(
-                f"FlowChem server '{server_url}' is unreachable; marking "
-                f"{len(pairs)} component(s) offline with default commands."
+        # Group by server root so each distinct FlowChem server is probed
+        # once, instead of letting every component pay its own connect
+        # timeout. Reuse an already-cached openapi doc (e.g. from Zeroconf
+        # discovery) before hitting the network again. Old-format files
+        # naturally collapse to a single group here, same as before; the new
+        # format can legitimately span several distinct servers.
+        groups: dict[str, list[tuple[str, str]]] = defaultdict(list)
+        for component_name, full_url in pairs:
+            parts = urlsplit(full_url)
+            groups[f"{parts.scheme}://{parts.netloc}"].append(
+                (component_name, full_url)
             )
-            for component_name, component_url in pairs:
-                self._apply_component_connectivity(
-                    component_name,
-                    f"{server_url}/{component_url}",
-                    inspect_commands=False,
-                    known_online=False,
+
+        for root, group_pairs in groups.items():
+            data = FLOWCHEM_SERVERS.get_openapi(root)
+            if data is None:
+                ok, fetched = access_url(f"{root}/openapi.json", timeout=1)
+                if (
+                    ok
+                    and isinstance(fetched, dict)
+                    and isinstance(fetched.get("paths"), dict)
+                ):
+                    data = fetched
+            if data is not None:
+                FLOWCHEM_SERVERS.register_openapi(root, data)
+                for component_name, full_url in group_pairs:
+                    self._apply_component_connectivity(
+                        component_name,
+                        full_url,
+                        known_online=True,
+                    )
+            else:
+                logger.warning(
+                    f"FlowChem server '{root}' is unreachable; marking "
+                    f"{len(group_pairs)} component(s) offline with default commands."
                 )
-                reset_protocol_to_default(self.components[component_name])
-            self._refresh_command_list()
+                for component_name, full_url in group_pairs:
+                    self._apply_component_connectivity(
+                        component_name,
+                        full_url,
+                        inspect_commands=False,
+                        known_online=False,
+                    )
+                    reset_protocol_to_default(self.components[component_name])
+                self._refresh_command_list()
+
+    def _show_passthrough_badge(self, component_name: str, association: dict) -> None:
+        """Surface a non-flowchem association's address on the component's
+        existing connectivity badge — read-only, never verified online, so
+        it always renders in the grey/offline style."""
+        component = self.components.get(component_name)
+        if component is None or not component.inf.is_electronic:
+            return
+        address = _passthrough_association_address(association)
+        if address:
+            component.graph.set_online(False, address)
 
     def _validated_component_payload(self, payload: dict) -> dict:
         payload.pop("type", None)
@@ -1037,24 +1101,35 @@ class OrchestratorProjectFile(OrchestratorExecution):
         )
 
     def _build_connectivity_data(self) -> dict:
-        server_url = ""
         associations: list[dict] = []
+        written_passthrough: set[str] = set()
         if self._session is not None:
             # Inspect all electronic component
             for component in self.components.values():
                 if not component.inf.is_electronic:
                     continue
 
+                passthrough = self._passthrough_associations.get(component.name)
+                if passthrough is not None:
+                    associations.append(dict(passthrough))
+                    written_passthrough.add(component.name)
+                    continue
+
                 component_url = component.url_component
-                if component_url:
-                    server_url = component.connectivity.base_url.rstrip("/")
                 associations.append(
                     {
                         "component": component.name,
-                        "component_url": component_url,
+                        "component_url": (
+                            str(component.connectivity.url) if component_url else ""
+                        ),
                     }
                 )
-        return {"server_url": server_url, "associations": associations}
+            # Components with a hand-written block that aren't currently drawn
+            # on canvas would otherwise be dropped outright — keep those too.
+            for name, passthrough in self._passthrough_associations.items():
+                if name not in written_passthrough:
+                    associations.append(dict(passthrough))
+        return {"associations": associations}
 
     def snapshot_draw_data(self) -> dict:
         """Independent, JSON-safe copy of the current design (components,

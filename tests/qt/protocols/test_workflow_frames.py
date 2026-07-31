@@ -114,8 +114,6 @@ def test_command_editor_dialog_is_form_only(qtbot: QtBot) -> None:
                 "component": "ValveA",
                 "command": "position",
                 "method": "PUT",
-                "wait_time": 1.25,
-                "wait_feedback_status": True,
                 "connect": "[[0, 1]]",
             }
         )
@@ -131,16 +129,14 @@ def test_command_editor_dialog_is_form_only(qtbot: QtBot) -> None:
     assert not hasattr(dialog, "convert_to_script")
     assert not hasattr(dialog, "_convert_button")
     assert not hasattr(dialog, "_code_preview_widget")
-    assert "wait_time" in cards
-    assert "wait_feedback_status" in cards
-    assert not cards["wait_time"].isHidden()
-    assert not cards["wait_feedback_status"].isHidden()
+    assert "connect" in cards
+    assert not cards["connect"].isHidden()
     assert cards["component"].isHidden()
     assert cards["command"].isHidden()
     assert cards["method"].isHidden()
 
 
-def test_command_editor_dialog_saves_execution_fields(qtbot: QtBot) -> None:
+def test_command_editor_dialog_saves_field_changes(qtbot: QtBot) -> None:
     command = (
         ThreePortTwoPositionValveProtocols("ValveA")
         .commands["position"]
@@ -149,8 +145,6 @@ def test_command_editor_dialog_saves_execution_fields(qtbot: QtBot) -> None:
                 "component": "ValveA",
                 "command": "position",
                 "method": "PUT",
-                "wait_time": 0.0,
-                "wait_feedback_status": False,
                 "connect": "[[1, 2]]",
             }
         )
@@ -163,14 +157,12 @@ def test_command_editor_dialog_saves_execution_fields(qtbot: QtBot) -> None:
     captured = []
     dialog.saved.connect(captured.append)
 
-    dialog._editor._cards["wait_time"].set_value(2.5)
-    dialog._editor._cards["wait_feedback_status"].set_value(True)
+    dialog._editor._cards["connect"].set_value("[[2, 3]]")
     dialog._on_save()
 
     assert len(captured) == 1
     result = captured[0]
-    assert result.wait_time == 2.5
-    assert result.wait_feedback_status is True
+    assert result.connect == "[[2, 3]]"
     assert result.component == "ValveA"
     assert result.command == "position"
 
@@ -795,6 +787,47 @@ class CustomProcess:
     assert command.volume == "1 ml"
 
 
+def test_build_command_model_ignores_legacy_execution_option_kwargs() -> None:
+    """Old saved projects generated before wait_time/wait_feedback_status/
+    feedback_status_command/feedback_answer were removed from CommandSignature
+    must still load cleanly — Pydantic's default extra="ignore" behavior on
+    model_validate silently drops the unknown kwargs instead of raising."""
+    from chemunited_core.protocols.pumps import InfuseParameter
+    from chemunited_quantities import ChemUnitQuantity
+
+    source = """
+class CustomProcess:
+    def command_1(self, ctx: NodeExecutionContext) -> bool:
+        self.platform["PumpA"].put(
+            "infuse",
+            rate="1.0 milliliter / minute",
+            volume="1.0 milliliter",
+            wait_time=12.0,
+            wait_feedback_status=True,
+            feedback_status_command="is-pumping",
+            feedback_answer="false",
+        )
+        return True
+"""
+
+    command = _build_command_model(
+        source,
+        "command_1",
+        "CustomProcess",
+        sig_cls=InfuseParameter,
+    )
+
+    assert command is not None
+    assert command.component == "PumpA"
+    assert command.command == "infuse"
+    assert command.rate == ChemUnitQuantity("1.0 milliliter / minute")
+    assert command.volume == ChemUnitQuantity("1.0 milliliter")
+    assert not hasattr(command, "wait_time")
+    assert not hasattr(command, "wait_feedback_status")
+    assert not hasattr(command, "feedback_status_command")
+    assert not hasattr(command, "feedback_answer")
+
+
 def test_update_command_script_formats_saved_protocol(
     tmp_path: Path,
     qtbot: QtBot,
@@ -816,17 +849,15 @@ def test_update_command_script_formats_saved_protocol(
         component="PumpA",
         command="infuse",
         method="PUT",
-        wait_time=1.5,
-        wait_feedback_status=True,
     )
 
     graph._update_command_script("command_1", command)
     graph._update_command_script("command_1", command)
 
     source = process_file.read_text(encoding="utf-8")
-    assert 'self.platform["PumpA"].put(' in source
-    assert '            "infuse",' in source
-    assert "wait_feedback_status=True," in source
+    assert 'self.platform["PumpA"].put("infuse", description="")' in source
+    assert "wait_time" not in source
+    assert "wait_feedback_status" not in source
     assert source.count("\n        return True\n") == 1
     assert source.count(COMMAND_BLOCK_GUIDANCE) == 1
     assert source.index('self.platform["PumpA"].put(') < source.index(
@@ -859,7 +890,7 @@ def test_new_command_block_replaces_generated_status_stub(
 
 def test_command_block_validation_accepts_comments_get_and_put() -> None:
     for command_call, expected_method in (
-        ('self.platform["PumpA"].put("infuse", wait_time=0.0)', "PUT"),
+        ('self.platform["PumpA"].put("infuse", rate="1 ml/min")', "PUT"),
         ('self.platform["PumpA"].get("status")', "GET"),
     ):
         source = f"""

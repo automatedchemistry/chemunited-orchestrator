@@ -293,6 +293,36 @@ class TestAddComponent:
         assert "prime" not in commands
         assert {"is-pumping", "infuse", "stop"} <= set(commands)
 
+    def test_build_connectivity_data_writes_new_format(self, window: SetupWindow):
+        window.orchestrator._session = ProjectSession()
+        window.orchestrator.add_component(
+            name="PumpA",
+            figure="HPLCPump",
+            position=(0.0, 0.0),
+        )
+        window.orchestrator.add_component(
+            name="PumpB",
+            figure="HPLCPump",
+            position=(100.0, 0.0),
+        )
+        FLOWCHEM_SERVERS.register_openapi(
+            "http://127.0.0.1:9", {"paths": {"/Pump/device/prime": {"put": {}}}}
+        )
+        window.orchestrator.associate_component(
+            "PumpA",
+            "http://127.0.0.1:9/Pump/device",
+            validate_object=False,
+        )
+
+        data = window.orchestrator._build_connectivity_data()
+
+        assert "server_url" not in data
+        associations = {
+            a["component"]: a["component_url"] for a in data["associations"]
+        }
+        assert associations["PumpA"] == "http://127.0.0.1:9/Pump/device"
+        assert associations["PumpB"] == ""
+
     def test_project_open_restores_dynamic_flowchem_commands(
         self, window: SetupWindow, tmp_path
     ):
@@ -330,6 +360,127 @@ class TestAddComponent:
 
         commands = window.orchestrator.components["PumpA"].protocols.commands
         assert "prime" in commands
+
+    def test_project_open_restores_dynamic_flowchem_commands_new_format(
+        self, window: SetupWindow, tmp_path
+    ):
+        """New associations.json format: no top-level server_url,
+        component_url is already a full absolute URL."""
+        session = ProjectSession()
+        session.new(name="demo", location=tmp_path, init_git=False)
+        session.save_draw(
+            {
+                "components": [
+                    {
+                        "name": "PumpA",
+                        "figure": "HPLCPump",
+                        "position": [0.0, 0.0],
+                    }
+                ],
+                "connections": [],
+            }
+        )
+        session.save_connectivity(
+            {
+                "associations": [
+                    {
+                        "component": "PumpA",
+                        "component_url": "http://127.0.0.1:9/Pump/device",
+                    }
+                ],
+            }
+        )
+        FLOWCHEM_SERVERS.register_openapi(
+            "http://127.0.0.1:9",
+            {"paths": {"/Pump/device/prime": {"put": {}}}},
+        )
+
+        window.orchestrator.open_project(tmp_path / "demo")
+
+        commands = window.orchestrator.components["PumpA"].protocols.commands
+        assert "prime" in commands
+
+    def test_save_preserves_hand_written_sila_association(
+        self, window: SetupWindow, tmp_path
+    ):
+        """A hand-written protocol: sila2 block must round-trip untouched
+        through open -> (unrelated save) -> rebuild, not get clobbered by
+        the flowchem-only connectivity writer."""
+        session = ProjectSession()
+        session.new(name="demo", location=tmp_path, init_git=False)
+        session.save_draw(
+            {
+                "components": [
+                    {"name": "PumpA", "figure": "HPLCPump", "position": [0.0, 0.0]}
+                ],
+                "connections": [],
+            }
+        )
+        sila_association = {
+            "component": "PumpA",
+            "protocol": "sila2",
+            "sila_host": "localhost",
+            "sila_port": 50052,
+            "sila_insecure": True,
+        }
+        session.save_connectivity({"associations": [sila_association]})
+
+        window.orchestrator.open_project(tmp_path / "demo")
+
+        data = window.orchestrator._build_connectivity_data()
+        assert data["associations"] == [sila_association]
+
+    def test_save_preserves_association_for_component_not_on_canvas(
+        self, window: SetupWindow, tmp_path
+    ):
+        session = ProjectSession()
+        session.new(name="demo", location=tmp_path, init_git=False)
+        session.save_draw({"components": [], "connections": []})
+        opcua_association = {
+            "component": "Valve16",
+            "protocol": "opcua",
+            "opcua_endpoint": "opc.tcp://localhost:4841/runze/valve/lads/",
+            "opcua_node_id": "ns=6;i=101",
+        }
+        session.save_connectivity({"associations": [opcua_association]})
+
+        window.orchestrator.open_project(tmp_path / "demo")
+
+        data = window.orchestrator._build_connectivity_data()
+        assert data["associations"] == [opcua_association]
+
+    def test_opcua_association_sets_offline_badge_with_address(
+        self, window: SetupWindow, tmp_path
+    ):
+        session = ProjectSession()
+        session.new(name="demo", location=tmp_path, init_git=False)
+        session.save_draw(
+            {
+                "components": [
+                    {"name": "Valve16", "figure": "RotaryValve", "position": [0.0, 0.0]}
+                ],
+                "connections": [],
+            }
+        )
+        session.save_connectivity(
+            {
+                "associations": [
+                    {
+                        "component": "Valve16",
+                        "protocol": "opcua",
+                        "opcua_endpoint": "opc.tcp://localhost:4841/runze/valve/lads/",
+                        "opcua_node_id": "ns=6;i=101",
+                    }
+                ],
+            }
+        )
+
+        window.orchestrator.open_project(tmp_path / "demo")
+
+        badge = window.orchestrator.components["Valve16"].graph._badge
+        assert badge is not None
+        assert badge._status is False
+        assert badge._api == "opc.tcp://localhost:4841/runze/valve/lads//ns=6;i=101"
 
     def test_refresh_project_action_is_disabled_without_project(
         self, window: SetupWindow

@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import Mapping
 
 from chemunited_core.protocols import CommandSignature
-from PyQt5.QtCore import Qt, pyqtSignal, pyqtSlot
+from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 from qfluentwidgets import PrimaryPushButton, PushButton, SmoothScrollArea, isDarkTheme
 from qframelesswindow import FramelessDialog
@@ -61,7 +61,6 @@ class CommandEditorDialog(FramelessDialog):
         self._setup_param_refs(
             command_model, config_fields or [], main_params_fields or []
         )
-        self.custom_signal()
 
         self.setObjectName("commandEditorDialog")
         self.setWindowTitle(function_name or "Command editor")
@@ -118,18 +117,6 @@ class CommandEditorDialog(FramelessDialog):
         for name, ref in (command_model.param_refs or {}).items():
             if name in self._editor.cards:
                 self._editor.cards[name].set_reference(ref)
-
-    def custom_signal(self) -> None:
-        cards = self._editor.cards
-        cards["wait_feedback_status"].value_changed.connect(
-            self._trigger_feedback_signal
-        )
-
-    @pyqtSlot()
-    def _trigger_feedback_signal(self):
-        value = self._editor.cards["wait_feedback_status"].get_value()
-        self._editor.cards["feedback_status_command"].setEnabled(value)
-        self._editor.cards["feedback_answer"].setEnabled(value)
 
     def _build_header(self) -> QHBoxLayout:
         layout = QHBoxLayout()
@@ -295,9 +282,7 @@ if __name__ == "__main__":
     command = SetTemperatureParameter(
         component="Pump",
         temp=ChemUnitQuantity("10 degC"),
-        wait_feedback_status=True,
     )
-    command.wait_time = 0.0
 
     dialog = CommandEditorDialog(
         function_name="withdraw",
