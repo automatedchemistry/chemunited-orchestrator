@@ -213,7 +213,7 @@ def test_workflow_node_displays_and_updates_metadata(
     graph = _make_graph(working_dir=tmp_path, workflow=workflow, qtbot=qtbot)
     node = graph._nodes["script_1"]
 
-    assert node.title_item.toPlainText() == "Prepare sample (script_1)"
+    assert node.title == "Prepare sample (script_1)"
     assert node.subtitle_item.toPlainText() == "Module"
     assert node.description_item.toPlainText() == "Mix the starting materials"
     assert "Label: Prepare sample" in node.body.toolTip()
@@ -225,7 +225,7 @@ def test_workflow_node_displays_and_updates_metadata(
         "Updated description",
     )
 
-    assert node.title_item.toPlainText() == "script_1"
+    assert node.title == "script_1"
     assert node.description_item.toPlainText() == "Updated description"
     assert workflow.get_block("script_1").label == "script_1"
 
@@ -292,9 +292,7 @@ def test_script_editor_saves_metadata_for_focused_block(
     assert block is not None
     assert block.label == "Prepare sample"
     assert block.description == "Mix the starting materials"
-    assert graph._nodes["script_1"].title_item.toPlainText() == (
-        "Prepare sample (script_1)"
-    )
+    assert graph._nodes["script_1"].title == "Prepare sample (script_1)"
 
     graph._script_editor.close()
 
