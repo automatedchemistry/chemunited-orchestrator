@@ -10,11 +10,19 @@ from typing import Any, Callable
 from urllib.parse import urlsplit
 
 from chemunited_core.compounds import COMPOUNDS, ChemicalEntity
+from chemunited_core.figure_registry import COMPONENTS, is_project_component
+from chemunited_core.figure_registry.project_loader import load_project_components
 from loguru import logger
 from PyQt5.QtCore import QThread, QTimer, pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import QFileDialog, QInputDialog, QMessageBox
 
 from chemunited.connectivity.openapi_commands import reset_protocol_to_default
+from chemunited.elements.component.component_factory import (
+    set_project_graph_components,
+)
+from chemunited.elements.component.project_glossary import (
+    load_project_graph_components,
+)
 from chemunited.project.manifest import ProjectManifest
 from chemunited.project.platform_svg import (
     PLATFORM_DEVICES_RELATIVE_PATH,
@@ -189,6 +197,13 @@ def _load_project_payload(
     session = _open_project_session(path, overwrite=overwrite)
     if source_file is not None:
         session.source_file = source_file
+
+    if session.working_dir is not None:
+        custom_figures = load_project_components(session.working_dir)
+        if custom_figures:
+            logger.info("Custom components registered: {}", custom_figures)
+        set_project_graph_components(load_project_graph_components(session.working_dir))
+
     return ProjectLoadPayload(
         session=session,
         draw_data=session.load_draw(),
@@ -240,6 +255,11 @@ class OrchestratorProjectFile(OrchestratorExecution):
         self.working_dir = chemunited_path.parent / chemunited_path.stem
         self._session = ProjectSession()
         self._session.new(name=self.working_dir.name, location=self.working_dir.parent)
+        custom_figures = load_project_components(self.working_dir)
+        if custom_figures:
+            logger.info("Custom components registered: {}", custom_figures)
+        set_project_graph_components(load_project_graph_components(self.working_dir))
+        self._refresh_component_palette()
         self._save_platform_svg()
         self._session.save_draw(self._build_draw_data())
         self._ensure_main_parameters_script()
@@ -717,6 +737,30 @@ class OrchestratorProjectFile(OrchestratorExecution):
         self._restore_draw_data(payload.draw_data)
         self._restore_connectivity_data(payload.connectivity_data)
         self._restore_protocols(payload.process_classes)
+        self._refresh_component_palette()
+
+    def _refresh_component_palette(self) -> None:
+        """Rebuild the Draw tab's component tree, if the "Custom" set changed.
+
+        TreeAddItem only fetches list_components() once, in its own __init__ —
+        which runs at app startup, before any project (and its custom
+        components) is loaded — so without this, a project's custom
+        components never appear. But reload_components() recreates every
+        built-in icon/card from scratch (no caching in _component_icon()),
+        so only pay that cost when the set of project-local components
+        actually differs from what the tree currently shows — most project
+        loads have no custom components at all, and calling
+        reload_components() unconditionally on every load/refresh exhausts
+        Windows GDI handles over a long-running session.
+        """
+        tree_add = getattr(self.parent_ref, "tree_add", None)
+        if tree_add is None:
+            return
+
+        shown_custom = set(tree_add._categories.get("Custom", []))
+        current_custom = {name for name in COMPONENTS if is_project_component(name)}
+        if shown_custom != current_custom:
+            tree_add.reload_components()
 
     def _show_busy_status(self, title: str, message: str) -> None:
         show_busy_status = getattr(self.parent_ref, "show_busy_status", None)
@@ -835,7 +879,12 @@ class OrchestratorProjectFile(OrchestratorExecution):
 
         apply_inventory_status_payload(self.components, draw_data.get("inventory", {}))  # type: ignore[arg-type]
         for comp in self.components.values():
-            comp.graph.sync_visuals()
+            try:
+                comp.graph.sync_visuals()
+            except Exception as exc:
+                logger.bind(window=WindowCategory.SETUP).opt(exception=exc).warning(
+                    f"sync_visuals failed for component '{comp.name}': {exc}"
+                )
         self._sync_compound_list()
         self._sync_inventory_workspace(force=True)
 

@@ -1,9 +1,8 @@
 from typing import Union
 
-import chemunited_core.protocols as protocol_module
 from chemunited_core.components import ComponentData
-from chemunited_core.figure_registry import COMPONENTS
-from chemunited_core.protocols import ComponentProtocol
+from chemunited_core.figure_registry import COMPONENTS, is_project_component
+from chemunited_core.protocols import ComponentProtocol, get_protocol_class
 from loguru import logger
 from pydantic import AnyHttpUrl
 
@@ -64,14 +63,35 @@ class ElectronicManager(UtensilManager):
 # Cache for dynamically-created classes so __init_subclass__ only runs once per figure.
 _dynamic_class_cache: dict[str, type[GraphComponent]] = {}
 
+# Project-local GraphComponent subclasses for the currently loaded project (see
+# chemunited.elements.component.project_glossary.load_project_graph_components).
+_project_graph_components: dict[str, type[GraphComponent]] = {}
+
+
+def set_project_graph_components(components: dict[str, type[GraphComponent]]) -> None:
+    """Register the current project's GraphComponent subclasses.
+
+    Call once per project load, even with an empty dict, so switching
+    projects doesn't leak a previous project's custom rendering into the new
+    one.
+    """
+    _project_graph_components.clear()
+    _project_graph_components.update(components)
+
 
 def _build_explicit_map() -> dict[str, type[GraphComponent]]:
-    """Return {figure_key: cls} for every explicit GraphComponent subclass in the glossary."""
+    """Return {figure_key: cls} for every explicit GraphComponent subclass.
+
+    Built-in subclasses come from the glossary package; project-local ones
+    (loaded from the current project's components/graph.py) take priority on
+    a figure-name collision.
+    """
     result: dict[str, type[GraphComponent]] = {}
     for name in getattr(glossary, "__all__", []):
         cls = getattr(glossary, name, None)
         if isinstance(cls, type) and issubclass(cls, GraphComponent) and cls.FIGURE:
             result[cls.FIGURE] = cls
+    result.update(_project_graph_components)
     return result
 
 
@@ -110,9 +130,13 @@ def list_components() -> tuple[dict[str, list[str]], dict[str, type[GraphCompone
       components: dict[figure_name, GraphComponent subclass]
 
     The component list is driven by core's COMPONENTS registry. Explicit orchestrator
-    subclasses (those in glossary/__all__ with a FIGURE declaration) are used when
-    available; everything else gets a dynamically-created subclass wired via
-    __init_subclass__.
+    subclasses (those in glossary/__all__ with a FIGURE declaration, or loaded from the
+    current project's components/graph.py) are used when available; everything else gets
+    a dynamically-created subclass wired via __init_subclass__.
+
+    Project-local custom components (registered via
+    chemunited_core.figure_registry.register_component) are grouped under a single
+    reserved "Custom" category, regardless of the category their definition declares.
     """
     explicit = _build_explicit_map()
     categories: dict[str, list[str]] = {}
@@ -121,7 +145,9 @@ def list_components() -> tuple[dict[str, list[str]], dict[str, type[GraphCompone
     for figure_name, defn in COMPONENTS.items():
         cls = _get_component_class(figure_name, explicit)
         components[figure_name] = cls
-        category = defn.category or "other"
+        category = (
+            "Custom" if is_project_component(figure_name) else defn.category or "other"
+        )
         categories.setdefault(category, []).append(figure_name)
 
     return {k: sorted(v) for k, v in sorted(categories.items())}, components
@@ -146,11 +172,7 @@ def create_component(figure: str, **kwargs) -> Union[UtensilManager, ElectronicM
     if mdata.is_electronic:
         electronic_component = ElectronicManager()
         electronic_component.graph = components[figure](mdata)
-        protocol_cls = getattr(
-            protocol_module,
-            f"{mdata.figure}Protocols",
-            ComponentProtocol,
-        )
+        protocol_cls = get_protocol_class(mdata.figure)
         electronic_component.protocols = protocol_cls(electronic_component.name)
         return electronic_component
 

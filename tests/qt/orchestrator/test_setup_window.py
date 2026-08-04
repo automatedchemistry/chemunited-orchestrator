@@ -13,10 +13,12 @@ from types import SimpleNamespace
 import pytest
 from chemunited_core.common.enums import ConnectionType
 from chemunited_core.compounds import COMPOUNDS, ChemicalEntity
+from chemunited_core.figure_registry import clear_project_components
 from PyQt5.QtGui import QKeySequence
 from pytestqt.qtbot import QtBot
 from qfluentwidgets import NavigationTreeWidget
 
+from chemunited.elements.component.component_parts.svg_layer import SvgLayer
 from chemunited.mcp import McpServiceResult
 from chemunited.orchestrator import project_file as project_file_module
 from chemunited.project.recent import RecentProjectsStore
@@ -1381,3 +1383,185 @@ class CustomProcess(Process[ProcessConfig]):
             for port_num, label in component._port_labels.items()
         } == expected_port_visibility
         assert all(handle.isVisible() for handle in connection._handles)
+
+    def test_custom_component_shows_in_draw_tree_after_project_open(
+        self, window: SetupWindow, tmp_path
+    ):
+        """Regression test: TreeAddItem only fetches list_components() once, at
+        SetupWindow construction time — before any project (and its custom
+        components) is loaded. Opening a project with a components/ folder
+        must refresh the tree so the "Custom" category actually appears."""
+        session = ProjectSession()
+        session.new(name="demo", location=tmp_path, init_git=False)
+        session.save_draw({"components": [], "connections": []})
+
+        working_dir = tmp_path / "demo"
+        components_dir = working_dir / "components"
+        components_dir.mkdir()
+        (components_dir / "__init__.py").write_text(
+            "from . import my_valve\n", encoding="utf-8"
+        )
+        (components_dir / "my_valve.py").write_text(
+            "from chemunited_core.components import ComponentData, ComponentMode\n"
+            "from chemunited_core.figure_registry import (\n"
+            "    ComponentDefinition,\n"
+            "    register_component,\n"
+            ")\n"
+            "\n"
+            "class MyValveMode(ComponentMode):\n"
+            "    pass\n"
+            "\n"
+            "class MyValveData(ComponentData):\n"
+            "    pass\n"
+            "\n"
+            "register_component("
+            "'MyValve', ComponentDefinition(MyValveData, MyValveMode))\n",
+            encoding="utf-8",
+        )
+
+        try:
+            window.orchestrator.open_project(working_dir)
+
+            assert "Custom" in window.tree_add._categories
+            assert "MyValve" in window.tree_add._categories["Custom"]
+        finally:
+            clear_project_components()
+
+    def test_broken_custom_component_sync_visuals_does_not_crash_project_load(
+        self, window: SetupWindow, tmp_path
+    ):
+        """Regression test: a custom GraphComponent.sync_visuals() that raises
+        (e.g. referencing a *Data field that doesn't actually exist) must not
+        prevent the rest of the project from loading. _restore_draw_data
+        already catches per-item errors for compounds/components/reactions/
+        connections; the sync_visuals() reconciliation loop must too."""
+        session = ProjectSession()
+        session.new(name="demo", location=tmp_path, init_git=False)
+
+        working_dir = tmp_path / "demo"
+        components_dir = working_dir / "components"
+        components_dir.mkdir()
+        (components_dir / "__init__.py").write_text(
+            "from . import my_valve\n", encoding="utf-8"
+        )
+        (components_dir / "my_valve.py").write_text(
+            "from chemunited_core.components import ComponentData, ComponentMode\n"
+            "from chemunited_core.figure_registry import (\n"
+            "    ComponentDefinition,\n"
+            "    register_component,\n"
+            ")\n"
+            "\n"
+            "class MyValveMode(ComponentMode):\n"
+            "    pass\n"
+            "\n"
+            "class MyValveData(ComponentData):\n"
+            "    pass\n"
+            "\n"
+            "register_component("
+            "'MyValve', ComponentDefinition(MyValveData, MyValveMode))\n",
+            encoding="utf-8",
+        )
+        (components_dir / "graph.py").write_text(
+            "from chemunited.elements.component.graph_item import GraphComponent\n"
+            "from .my_valve import MyValveData\n"
+            "\n"
+            "class MyValveGraph(GraphComponent[MyValveData]):\n"
+            "    FIGURE = 'MyValve'\n"
+            "\n"
+            "    def sync_visuals(self) -> None:\n"
+            "        raise AttributeError("
+            "\"'MyValveData' object has no attribute 'is_open'\")\n",
+            encoding="utf-8",
+        )
+
+        session.save_draw(
+            {
+                "components": [
+                    {"name": "PumpA", "figure": "HPLCPump", "position": [0.0, 0.0]},
+                    {
+                        "name": "brokenvalve",
+                        "figure": "MyValve",
+                        "position": [100.0, 0.0],
+                    },
+                ],
+                "connections": [],
+            }
+        )
+
+        try:
+            window.orchestrator.open_project(working_dir)
+
+            assert "PumpA" in window.orchestrator.components
+            assert "brokenvalve" in window.orchestrator.components
+        finally:
+            clear_project_components()
+
+    def test_custom_component_composited_layer_svg_is_discoverable(
+        self, window: SetupWindow, tmp_path
+    ):
+        """Regression test: an SVG referenced from a custom GraphComponent.build()
+        via self._build_svg("ExtraLayer") — with no register_component() call
+        of its own — must resolve to a real SvgLayer, not the placeholder
+        rectangle fallback (see figure_registry.project_loader's auxiliary-SVG
+        auto-discovery)."""
+        session = ProjectSession()
+        session.new(name="demo", location=tmp_path, init_git=False)
+
+        working_dir = tmp_path / "demo"
+        components_dir = working_dir / "components"
+        components_dir.mkdir()
+        (components_dir / "__init__.py").write_text(
+            "from . import my_valve\n", encoding="utf-8"
+        )
+        (components_dir / "my_valve.py").write_text(
+            "from chemunited_core.components import ComponentData, ComponentMode\n"
+            "from chemunited_core.figure_registry import (\n"
+            "    ComponentDefinition,\n"
+            "    register_component,\n"
+            ")\n"
+            "\n"
+            "class MyValveMode(ComponentMode):\n"
+            "    pass\n"
+            "\n"
+            "class MyValveData(ComponentData):\n"
+            "    pass\n"
+            "\n"
+            "register_component("
+            "'MyValve', ComponentDefinition(MyValveData, MyValveMode))\n",
+            encoding="utf-8",
+        )
+        minimal_svg = (
+            "<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'>"
+            "<rect width='10' height='10'/></svg>"
+        )
+        (components_dir / "MyValve.svg").write_text(minimal_svg, encoding="utf-8")
+        (components_dir / "ExtraLayer.svg").write_text(minimal_svg, encoding="utf-8")
+        (components_dir / "graph.py").write_text(
+            "from chemunited.elements.component.graph_item import GraphComponent\n"
+            "from .my_valve import MyValveData\n"
+            "\n"
+            "class MyValveGraph(GraphComponent[MyValveData]):\n"
+            "    FIGURE = 'MyValve'\n"
+            "\n"
+            "    def build(self) -> None:\n"
+            "        super().build()\n"
+            "        self._build_svg('ExtraLayer')\n",
+            encoding="utf-8",
+        )
+
+        session.save_draw(
+            {
+                "components": [
+                    {"name": "myvalve", "figure": "MyValve", "position": [0.0, 0.0]},
+                ],
+                "connections": [],
+            }
+        )
+
+        try:
+            window.orchestrator.open_project(working_dir)
+
+            component = window.orchestrator.components["myvalve"]
+            assert isinstance(component.graph._svg, SvgLayer)
+        finally:
+            clear_project_components()
