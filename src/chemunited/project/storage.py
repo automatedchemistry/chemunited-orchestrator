@@ -82,6 +82,7 @@ def load_draw(working_dir: Path) -> dict:
             "connections": [],
             "reactions": [],
             "canvas": {},
+            "port_closures": {},
         }
     build_draw = load_attribute(
         path,
@@ -108,6 +109,7 @@ class _DrawRecorder:
         self.connections: list[dict] = []
         self.reactions: list[dict] = []
         self.inventory: dict[str, dict] = {}
+        self.port_closures: dict[str, dict[str, bool]] = {}
 
     def add_compound(self, **payload) -> None:
         self.compounds.append(dict(payload))
@@ -179,6 +181,12 @@ class _DrawRecorder:
             dict(content)
         )
 
+    def set_port_closed(self, component: str, port: int, closed: bool = True) -> None:
+        if closed:
+            self.port_closures.setdefault(component, {})[str(port)] = True
+        else:
+            self.port_closures.get(component, {}).pop(str(port), None)
+
     def data(self) -> dict:
         return {
             "compounds": self.compounds,
@@ -186,6 +194,7 @@ class _DrawRecorder:
             "connections": self.connections,
             "reactions": self.reactions,
             "inventory": self.inventory,
+            "port_closures": self.port_closures,
         }
 
 
@@ -229,6 +238,10 @@ def _render_draw_body(draw_data: dict) -> str:
                     _render_fill_inventory(comp_name, inv_key, phase_arg, phase_data)
                 )
 
+    for comp_name, port_payload in draw_data.get("port_closures", {}).items():
+        for port_num_str in port_payload:
+            calls.append(_render_port_closure(comp_name, port_num_str))
+
     if not calls:
         return "    pass\n"
     return "\n\n".join(calls) + "\n"
@@ -254,6 +267,15 @@ def _render_fill_inventory(
         "    )",
     ]
     return "\n".join(lines)
+
+
+def _render_port_closure(component: str, port: str) -> str:
+    return (
+        "    platform.set_port_closed(\n"
+        f"        component={component!r},\n"
+        f"        port={int(port)!r},\n"
+        "    )"
+    )
 
 
 def _render_call(function_name: str, payload: dict, payload_type: str) -> str:

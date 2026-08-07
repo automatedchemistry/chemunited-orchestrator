@@ -25,6 +25,7 @@ from typing import ClassVar, Generic, TypeVar
 from chemunited_core.common.constant import PATTERN_DIMENSION
 from chemunited_core.common.enums import ConnectionType as CoreConnectionType
 from chemunited_core.components import ComponentData, ComponentMode
+from chemunited_core.components.enums import PortClosure
 from chemunited_core.figure_registry import COMPONENTS, get_figure_path
 from loguru import logger
 from pydantic import BaseModel
@@ -256,6 +257,7 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
                     id_connection=str(port_num),
                     parent=self,
                 )
+                point.set_capped(port.closure == PortClosure.CAPPED)
             else:
                 point = cls(
                     position=port.relative_position,
@@ -454,6 +456,20 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
             raise KeyError(
                 f"Port {port_num} not found on component '{self._data.name}'"
             )
+
+    def set_port_closed(self, port_num: int, closed: bool) -> None:
+        """Cap or open a hydraulic port at design time.
+
+        Mutates the core Port.closure (persisted source of truth) and the
+        ConnectionPoint's visual state together so they cannot drift apart.
+        """
+        port = self._data.ports_by_number.get(port_num)
+        if port is None:
+            return
+        port.block(closed)
+        point = self._points.get(port_num)
+        if isinstance(point, FlowConnectionPoint):
+            point.set_capped(closed)
 
     def highlight(self, active: bool) -> None:
         """Apply or remove a drop-shadow highlight on the SVG and connection points.

@@ -220,7 +220,60 @@ def build_draw(platform):
             }
         ],
         "inventory": {},
+        "port_closures": {},
     }
+
+
+def test_save_draw_writes_port_closure_calls(tmp_path):
+    save_draw(
+        tmp_path,
+        {
+            "components": [
+                {
+                    "name": "PumpA",
+                    "figure": "HPLCPump",
+                    "position": [0.0, 0.0],
+                    "angle": 0,
+                }
+            ],
+            "port_closures": {"PumpA": {"2": True}},
+        },
+    )
+
+    content = (tmp_path / "draw" / "setup.py").read_text(encoding="utf-8")
+
+    assert "platform.set_port_closed(" in content
+    assert "component='PumpA'" in content
+    assert "port=2" in content
+    assert content.rindex("platform.add_component(") < content.rindex(
+        "platform.set_port_closed("
+    )
+
+
+def test_load_draw_executes_port_closure_calls(tmp_path):
+    setup_path = tmp_path / "draw" / "setup.py"
+    setup_path.parent.mkdir(parents=True)
+    setup_path.write_text(
+        """
+def build_draw(platform):
+    platform.add_component(
+        name='PumpA',
+        figure='HPLCPump',
+        position=(0.0, 0.0),
+        angle=0,
+    )
+
+    platform.set_port_closed(
+        component='PumpA',
+        port=2,
+    )
+""".lstrip(),
+        encoding="utf-8",
+    )
+
+    draw_data = load_draw(tmp_path)
+
+    assert draw_data["port_closures"] == {"PumpA": {"2": True}}
 
 
 def test_load_draw_returns_empty_payload_when_setup_is_missing(tmp_path):
@@ -230,6 +283,7 @@ def test_load_draw_returns_empty_payload_when_setup_is_missing(tmp_path):
         "connections": [],
         "reactions": [],
         "canvas": {},
+        "port_closures": {},
     }
 
 
@@ -262,6 +316,7 @@ def build_draw(platform):
         "connections": [],
         "reactions": [],
         "inventory": {},
+        "port_closures": {},
     }
 
 

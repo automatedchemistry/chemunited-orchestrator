@@ -44,6 +44,10 @@ from .inventory_state import (
     apply_inventory_status_payload,
     build_inventory_status_payload,
 )
+from .port_closure_state import (
+    apply_port_closure_payload,
+    build_port_closure_payload,
+)
 from .protocols import is_valid_name
 
 
@@ -878,6 +882,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
                 )
 
         apply_inventory_status_payload(self.components, draw_data.get("inventory", {}))  # type: ignore[arg-type]
+        apply_port_closure_payload(self.components, draw_data.get("port_closures", {}))  # type: ignore[arg-type]
         for comp in self.components.values():
             try:
                 comp.graph.sync_visuals()
@@ -1204,12 +1209,14 @@ class OrchestratorProjectFile(OrchestratorExecution):
         ]
         reactions = [reaction.model_dump(mode="json") for reaction in self.reactions]
         inventory = build_inventory_status_payload(self.components.values())
+        port_closures = build_port_closure_payload(self.components.values())
         return {
             "compounds": compounds,
             "components": components,
             "connections": connections,
             "reactions": reactions,
             "inventory": inventory,
+            "port_closures": port_closures,
         }
 
     def _sync_compound_list(self) -> None:

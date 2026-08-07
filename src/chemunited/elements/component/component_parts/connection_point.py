@@ -83,6 +83,7 @@ class ConnectionPoint(SceneItem):
 
 class FlowConnectionPoint(ConnectionPoint):
     CONNECTION_TYPE = ConnectionType.FLOW
+    CAPPED_COLOR: ClassVar[QColor] = QColor(229, 57, 53)
 
     def __init__(
         self,
@@ -98,6 +99,23 @@ class FlowConnectionPoint(ConnectionPoint):
         )
         self._angle = angle
         self.arc_length = arc_length
+        self._capped: bool = False
+
+    @property
+    def is_capped(self) -> bool:
+        return self._capped
+
+    def set_capped(self, value: bool) -> None:
+        value = bool(value)
+        if self._capped == value:
+            return
+        self._capped = value
+        self.update()
+
+    def _current_color(self) -> QColor:
+        if self._capped:
+            return self.CAPPED_COLOR
+        return super()._current_color()
 
     def _on_timer(self) -> None:  # override the hook, not stop_animation
         self._angle = (self._angle + np.pi / 180) % (2 * np.pi)

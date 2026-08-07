@@ -1,12 +1,14 @@
 from functools import partial
 from typing import TYPE_CHECKING, cast, override
 
+from chemunited_core.components.enums import PortClosure
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PyQt5.QtWidgets import QGraphicsItem
 from qfluentwidgets import Action, FluentIcon, RoundMenu
 
 from chemunited.elements.component.component_parts.connection_point import (
     ConnectionPoint,
+    FlowConnectionPoint,
 )
 from chemunited.elements.component.graph_item import GraphComponent
 from chemunited.elements.connection.connection import (
@@ -160,6 +162,9 @@ class DrawGraphicView(GraphCore):
     @override
     def mousePressEvent(self, event):
         self.setFocus()
+        if event.button() != Qt.LeftButton:
+            super().mousePressEvent(event)
+            return
         scene_pos = self.mapToScene(event.pos())
         port = self._port_at(scene_pos)
         if port is not None:
@@ -247,7 +252,30 @@ class DrawGraphicView(GraphCore):
             super().contextMenuEvent(event)
             return
 
-        target = self._resolve_context_target(self.itemAt(event.pos()))
+        clicked_item = self.itemAt(event.pos())
+        if isinstance(clicked_item, FlowConnectionPoint):
+            component = clicked_item.parent_ref
+            port_num = int(clicked_item.id_connection)
+            core_port = component.inf.ports_by_number.get(port_num)
+            if core_port is not None:
+                is_capped = core_port.closure == PortClosure.CAPPED
+                menu = RoundMenu(parent=self)
+                toggle_action = Action(menu)
+                toggle_action.setText("Open Port" if is_capped else "Close Port (Cap)")
+                toggle_action.setIcon(
+                    FluentIcon.LINK.icon() if is_capped else FluentIcon.CANCEL.icon()
+                )
+                toggle_action.triggered.connect(
+                    lambda checked=False, c=component, n=port_num, closed=not is_capped: QTimer.singleShot(
+                        0, lambda: c.set_port_closed(n, closed)
+                    )
+                )
+                menu.addAction(toggle_action)
+                menu.exec_(event.globalPos())
+            event.accept()
+            return
+
+        target = self._resolve_context_target(clicked_item)
         if target is None:
             super().contextMenuEvent(event)
             return

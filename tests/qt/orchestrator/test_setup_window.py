@@ -810,6 +810,7 @@ class TestAddComponent:
             "connections": [],
             "reactions": [],
             "inventory": {},
+            "port_closures": {},
         }
         assert session.export_destination == source_file
         assert store.list() == [source_file.resolve()]
