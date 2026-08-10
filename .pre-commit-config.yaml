@@ -43,10 +43,10 @@ repos:
         args: [--config-file, pyproject.toml]
         pass_filenames: false
         additional_dependencies:
-          - chemunited-core
-          - chemunited-quantities
-          - packaging
-          - pydantic
-          - pint
-          - scipy
-          - types-PyYAML
+          - chemunited-core==0.0.5
+          - chemunited-quantities==0.0.3
+          - packaging==26.3
+          - pydantic==2.13.4
+          - pint==0.25.3
+          - scipy==1.18.0
+          - types-PyYAML==6.0.12.20260724
