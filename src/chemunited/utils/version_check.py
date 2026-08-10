@@ -6,7 +6,7 @@ from urllib.request import Request, urlopen
 from packaging.version import Version
 from PyQt5.QtCore import QThread, pyqtSignal
 
-TRACKED = ["chemunited-core", "chemunited-workflow"]
+TRACKED = ["chemunited-core", "chemunited-workflow", "chemunited-sim", "chemunited"]
 
 
 @dataclass
