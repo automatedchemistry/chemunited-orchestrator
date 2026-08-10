@@ -120,7 +120,7 @@
         <file>components/FlowReactorBase.svg</file>
         <file>components/FourPortDistributionValve.svg</file>
         <file>components/FourPortFivePositionValve.svg</file>
-        <file>components/Gantry3D.svg</file>
+        <file>components/Gantry.svg</file>
         <file>components/GlassBottle.svg</file>
         <file>components/HPLC.svg</file>
         <file>components/HPLCControl.svg</file>

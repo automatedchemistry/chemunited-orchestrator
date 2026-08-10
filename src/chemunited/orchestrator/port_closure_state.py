@@ -32,7 +32,9 @@ def apply_port_closure_payload(components: Mapping[str, Any], payload: object) -
         component = components.get(str(component_name))
         if component is None or not isinstance(port_payload, dict):
             continue
-        set_port_closed = getattr(getattr(component, "graph", None), "set_port_closed", None)
+        set_port_closed = getattr(
+            getattr(component, "graph", None), "set_port_closed", None
+        )
         if not callable(set_port_closed):
             continue
         for port_num_str, closed in port_payload.items():

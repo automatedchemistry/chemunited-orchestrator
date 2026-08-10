@@ -4,6 +4,9 @@ from .analytics.ircontrol_graph import IRControl
 from .analytics.mscontrol_graph import MSControl
 from .analytics.nmrcontrol_graph import NMRControl
 
+# assembly — kept: gantry characteristic label
+from .assembly.gantry_graph import Gantry1D, Gantry3D
+
 # pipes — kept: custom painted Body item / active-state overlay
 from .pipes.distributor_graph import Distributor
 from .pipes.mfc_graph import MFCComponent
@@ -41,6 +44,9 @@ __all__ = [
     # pipes
     "Distributor",
     "MFCComponent",
+    # assembly
+    "Gantry1D",
+    "Gantry3D",
     # pumps
     "SyringePump",
     # technical
