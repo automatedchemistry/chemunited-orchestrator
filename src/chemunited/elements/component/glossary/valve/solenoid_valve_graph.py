@@ -87,7 +87,6 @@ class StatusOverlaySolenoid2Way(StatusOverlay):
             )
         else:
             # draw a small vertical line inside the overlay to indicate the solenoid is closed
-            print("drawing vertical line for closed solenoid")
             painter.drawLine(
                 QLineF(
                     self.boundingRect().center().x(),
