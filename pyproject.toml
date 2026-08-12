@@ -4,8 +4,8 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "chemunited"
-version = "0.0.1"
-description = "Visual interface for designing and executing chemistry automation workflows on top of FlowChem."
+version = "0.0.2"
+description = "Desktop app for designing, simulating, and executing chemical process workflows on real automated hardware via device APIs."
 readme = "README.md"
 requires-python = ">=3.13"
 license =  { text = "MIT" }
@@ -22,9 +22,9 @@ classifiers = [
 dependencies = [
     # sub-packages (provide the entire runtime engine)
     "chemunited-quantities>=0.0.3",
-    "chemunited-core>=0.0.5",
-    "chemunited-workflow>=0.0.2",
-    "chemunited-sim[tray]>=0.0.2",
+    "chemunited-core>=0.0.6",
+    "chemunited-workflow>=0.0.6",
+    "chemunited-sim[tray]>=0.0.3",
     "PyQt-Fluent-Widgets>=1.7.0,<2.0",  # Qt UI
     "QScintilla>=2.14.0",
     "platformdirs>=4.0",
