@@ -1,8 +1,10 @@
+import sys
 from pathlib import Path
 from typing import Any, override
 
-from PyQt5.QtCore import QTimer, pyqtSlot
+from PyQt5.QtCore import QStandardPaths, QTimer, pyqtSlot
 from PyQt5.QtGui import QKeySequence
+from PyQt5.QtWidgets import QFileDialog, QMessageBox
 from qfluentwidgets import (
     Action,
     FluentIcon,
@@ -32,6 +34,17 @@ from .shared.widgets.frame_base import FrameBase
 from .shared.widgets.main_window import MainWindowBase
 from .shared.widgets.segment_widget import SegmentWindow
 from .simulation import SimGraphicView, SimulateWindowReport
+from .windows_launcher import (
+    ICON_PATH,
+    PROJECT_ROOT,
+    SHORTCUT_NAME,
+    LauncherBuildError,
+    ShortcutBuildError,
+    build_launcher,
+    create_windows_shortcut,
+)
+
+IS_WINDOWS = sys.platform == "win32"
 
 
 class SetupWindow(MainWindowBase):
@@ -172,6 +185,16 @@ class SetupWindow(MainWindowBase):
         self.save_project_action.triggered.connect(self.save)
         self.project_menu.addAction(self.save_project_action)
         self.addAction(self.save_project_action)
+
+        self.project_menu.addSeparator()
+
+        self.create_shortcut_action = Action(
+            FluentIcon.APPLICATION, "Create Desktop Shortcut...", self
+        )
+        self.create_shortcut_action.triggered.connect(self.create_desktop_shortcut)
+        self.create_shortcut_action.setVisible(IS_WINDOWS)
+        self.project_menu.addAction(self.create_shortcut_action)
+
         self.update_project_actions()
 
     def _show_project_menu(self) -> None:
@@ -396,6 +419,58 @@ class SetupWindow(MainWindowBase):
         self.update_project_actions()
         if self.orchestrator.refresh_project():
             self.refresh_project_action.setEnabled(False)
+
+    def create_desktop_shortcut(self) -> None:
+        desktop = QStandardPaths.writableLocation(QStandardPaths.DesktopLocation)
+        if not desktop or not Path(desktop).is_dir():
+            desktop = str(Path.home())
+        destination = QFileDialog.getExistingDirectory(
+            self,
+            "Choose shortcut location",
+            desktop,
+            QFileDialog.ShowDirsOnly,
+        )
+        if not destination:
+            return
+
+        shortcut_path = Path(destination) / SHORTCUT_NAME
+        if shortcut_path.exists():
+            answer = QMessageBox.question(
+                self,
+                "Replace shortcut?",
+                f"{shortcut_path.name} already exists. Replace it?",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No,
+            )
+            if answer != QMessageBox.Yes:
+                return
+
+        self.create_shortcut_action.setEnabled(False)
+        try:
+            launcher_path = build_launcher(PROJECT_ROOT, Path(sys.prefix))
+            create_windows_shortcut(
+                shortcut_path,
+                launcher_path,
+                ICON_PATH,
+                working_directory=PROJECT_ROOT,
+            )
+        except LauncherBuildError as error:
+            missing = "\n".join(f"  - {path}" for path in error.missing_paths)
+            QMessageBox.critical(
+                self,
+                "Shortcut creation failed",
+                f"Could not build the launcher. Required files are missing:\n{missing}",
+            )
+        except (ShortcutBuildError, OSError) as error:
+            QMessageBox.critical(self, "Shortcut creation failed", str(error))
+        else:
+            QMessageBox.information(
+                self,
+                "Shortcut created",
+                f"Created:\n{shortcut_path}",
+            )
+        finally:
+            self.create_shortcut_action.setEnabled(True)
 
     def update_project_actions(self) -> None:
         if not hasattr(self, "refresh_project_action"):

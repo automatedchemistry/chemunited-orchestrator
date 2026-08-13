@@ -6,8 +6,10 @@ What is tested:
 - duplicate name raises ValueError
 """
 
+import sys
 import threading
 import zipfile
+from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
@@ -15,9 +17,11 @@ from chemunited_core.common.enums import ConnectionType
 from chemunited_core.compounds import COMPOUNDS, ChemicalEntity
 from chemunited_core.figure_registry import clear_project_components
 from PyQt5.QtGui import QKeySequence
+from PyQt5.QtWidgets import QFileDialog, QMessageBox
 from pytestqt.qtbot import QtBot
 from qfluentwidgets import NavigationTreeWidget
 
+import chemunited.setup as chemunited_setup
 from chemunited.elements.component.component_parts.svg_layer import SvgLayer
 from chemunited.mcp import McpServiceResult
 from chemunited.orchestrator import project_file as project_file_module
@@ -26,6 +30,7 @@ from chemunited.project.session import ProjectSession
 from chemunited.setup import SetupWindow
 from chemunited.shared.enums import SetupStepMode
 from chemunited.utils.flowchem_listener import FLOWCHEM_SERVERS
+from chemunited.windows_launcher import SHORTCUT_NAME, LauncherBuildError
 
 
 def _magnitude(value, unit: str) -> float:
@@ -44,6 +49,24 @@ def reset_flowchem_servers():
     FLOWCHEM_SERVERS.servers = original_servers
     FLOWCHEM_SERVERS.openapi = original_openapi
     FLOWCHEM_SERVERS.correspondent = original_correspondent
+
+
+def test_create_shortcut_action_visible_on_windows(monkeypatch, qtbot: QtBot):
+    monkeypatch.setattr(chemunited_setup, "IS_WINDOWS", True)
+
+    window = SetupWindow()
+    qtbot.addWidget(window)
+
+    assert window.create_shortcut_action.isVisible()
+
+
+def test_create_shortcut_action_hidden_outside_windows(monkeypatch, qtbot: QtBot):
+    monkeypatch.setattr(chemunited_setup, "IS_WINDOWS", False)
+
+    window = SetupWindow()
+    qtbot.addWidget(window)
+
+    assert not window.create_shortcut_action.isVisible()
 
 
 class TestAddComponent:
@@ -178,6 +201,104 @@ class TestAddComponent:
         assert window.mcp_project_action.text() == "Enable MCP"
         assert not window.mcp_project_action.isEnabled()
         assert window.save_project_action.shortcut() == QKeySequence.Save
+
+    def test_shortcut_dialog_cancellation_does_nothing(
+        self, window: SetupWindow, monkeypatch
+    ):
+        monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *_args: "")
+
+        def unexpected_build(*_args):
+            raise AssertionError("BAT builder should not run after cancellation")
+
+        monkeypatch.setattr(chemunited_setup, "build_launcher", unexpected_build)
+
+        window.create_shortcut_action.trigger()
+
+        assert window.create_shortcut_action.isEnabled()
+
+    def test_existing_shortcut_is_not_replaced_without_confirmation(
+        self, window: SetupWindow, tmp_path, monkeypatch
+    ):
+        shortcut_path = tmp_path / SHORTCUT_NAME
+        shortcut_path.write_bytes(b"existing")
+        monkeypatch.setattr(
+            QFileDialog, "getExistingDirectory", lambda *_args: str(tmp_path)
+        )
+        monkeypatch.setattr(QMessageBox, "question", lambda *_args: QMessageBox.No)
+
+        def unexpected_build(*_args):
+            raise AssertionError("BAT builder should not run after overwrite rejection")
+
+        monkeypatch.setattr(chemunited_setup, "build_launcher", unexpected_build)
+
+        window.create_shortcut_action.trigger()
+
+        assert shortcut_path.read_bytes() == b"existing"
+
+    def test_create_desktop_shortcut_builds_with_running_environment_and_icon(
+        self, window: SetupWindow, tmp_path, monkeypatch
+    ):
+        shortcut_path = tmp_path / SHORTCUT_NAME
+        shortcut_path.write_bytes(b"existing")
+        launcher_path = tmp_path / "chemunited.bat"
+        calls = {}
+        messages = []
+
+        monkeypatch.setattr(
+            QFileDialog, "getExistingDirectory", lambda *_args: str(tmp_path)
+        )
+        monkeypatch.setattr(QMessageBox, "question", lambda *_args: QMessageBox.Yes)
+        monkeypatch.setattr(
+            QMessageBox, "information", lambda *_args: messages.append(_args)
+        )
+
+        def fake_build(project_root, venv_dir):
+            calls["build"] = (project_root, venv_dir)
+            return launcher_path
+
+        def fake_create(shortcut, launcher, icon, *, working_directory):
+            calls["shortcut"] = (shortcut, launcher, icon, working_directory)
+            shortcut.write_bytes(b"new shortcut")
+            return shortcut
+
+        monkeypatch.setattr(chemunited_setup, "build_launcher", fake_build)
+        monkeypatch.setattr(chemunited_setup, "create_windows_shortcut", fake_create)
+
+        window.create_shortcut_action.trigger()
+
+        assert calls["build"] == (chemunited_setup.PROJECT_ROOT, Path(sys.prefix))
+        assert calls["shortcut"] == (
+            shortcut_path,
+            launcher_path,
+            chemunited_setup.ICON_PATH,
+            chemunited_setup.PROJECT_ROOT,
+        )
+        assert shortcut_path.read_bytes() == b"new shortcut"
+        assert messages
+        assert window.create_shortcut_action.isEnabled()
+
+    def test_shortcut_build_error_is_shown_and_action_is_reenabled(
+        self, window: SetupWindow, tmp_path, monkeypatch
+    ):
+        missing_path = tmp_path / "missing" / "chemunited.exe"
+        errors = []
+        monkeypatch.setattr(
+            QFileDialog, "getExistingDirectory", lambda *_args: str(tmp_path)
+        )
+
+        def fake_build(*_args):
+            raise LauncherBuildError([missing_path])
+
+        monkeypatch.setattr(chemunited_setup, "build_launcher", fake_build)
+        monkeypatch.setattr(
+            QMessageBox, "critical", lambda *_args: errors.append(_args)
+        )
+
+        window.create_shortcut_action.trigger()
+
+        assert errors
+        assert str(missing_path) in errors[0][-1]
+        assert window.create_shortcut_action.isEnabled()
 
     def test_setup_step_mode_accepts_enum_and_name_strings(self):
         assert (

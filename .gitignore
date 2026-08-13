@@ -235,3 +235,6 @@ example/test_sim/
 # Test Temporal files
 .flowchem-sim/
 .pre-commit-cache*
+
+# Batch files
+chemunited.bat
