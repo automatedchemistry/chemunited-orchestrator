@@ -127,8 +127,8 @@ def create_shortcut_inputs(tmp_path: Path) -> tuple[Path, Path, Path, Path]:
 def test_create_windows_shortcut_passes_fields_safely_via_environment(
     tmp_path, monkeypatch
 ):
-    shortcut_path, launcher_path, icon_path, working_directory = (
-        create_shortcut_inputs(tmp_path)
+    shortcut_path, launcher_path, icon_path, working_directory = create_shortcut_inputs(
+        tmp_path
     )
     captured = {}
 
@@ -170,8 +170,8 @@ def test_create_windows_shortcut_passes_fields_safely_via_environment(
 
 
 def test_create_windows_shortcut_reports_powershell_failure(tmp_path, monkeypatch):
-    shortcut_path, launcher_path, icon_path, working_directory = (
-        create_shortcut_inputs(tmp_path)
+    shortcut_path, launcher_path, icon_path, working_directory = create_shortcut_inputs(
+        tmp_path
     )
 
     def fake_run(command, **_kwargs):
@@ -194,8 +194,8 @@ def test_create_windows_shortcut_reports_powershell_failure(tmp_path, monkeypatc
 
 
 def test_create_windows_shortcut_requires_created_output(tmp_path, monkeypatch):
-    shortcut_path, launcher_path, icon_path, working_directory = (
-        create_shortcut_inputs(tmp_path)
+    shortcut_path, launcher_path, icon_path, working_directory = create_shortcut_inputs(
+        tmp_path
     )
 
     def fake_run(command, **_kwargs):

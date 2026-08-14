@@ -8,7 +8,13 @@ PROJECT_ROOT = Path(__file__).resolve().parents[2]
 LAUNCHER_NAME = "chemunited.bat"
 SHORTCUT_NAME = "ChemUnited.lnk"
 ICON_PATH = (
-    PROJECT_ROOT / "src" / "chemunited" / "shared" / "resources" / "icons" / "chemunited.ico"
+    PROJECT_ROOT
+    / "src"
+    / "chemunited"
+    / "shared"
+    / "resources"
+    / "icons"
+    / "chemunited.ico"
 )
 COMMAND_EXECUTABLES = ("chemunited.exe",)
 REQUIRED_EXECUTABLES = (
