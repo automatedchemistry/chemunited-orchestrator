@@ -3,10 +3,27 @@ from __future__ import annotations
 import re
 from pathlib import Path
 
-import git  # type: ignore[import-not-found]  # gitpython
 from loguru import logger
 
 from chemunited.shared.enums import WindowCategory
+
+try:
+    import git  # type: ignore[import-not-found]  # gitpython
+except ImportError:
+    git = None  # type: ignore[assignment]
+
+GIT_AVAILABLE = git is not None
+
+_UNAVAILABLE_MESSAGE = (
+    "Git is not installed (or not on PATH) on this machine — project "
+    "versioning (auto-commit, snapshot, history) is disabled for this "
+    "session. Install Git and ensure it's on PATH to enable it."
+)
+
+
+def is_git_available() -> bool:
+    return GIT_AVAILABLE
+
 
 _GITIGNORE = """\
 # Python
@@ -53,8 +70,11 @@ class GitManager:
     # ── Setup ──────────────────────────────────────────────────────────────────
 
     @classmethod
-    def init(cls, working_dir: Path) -> GitManager:
+    def init(cls, working_dir: Path) -> GitManager | None:
         """Initialize a fresh Git repo for a new project."""
+        if not GIT_AVAILABLE:
+            logger.bind(window=WindowCategory.SETUP).warning(_UNAVAILABLE_MESSAGE)
+            return None
         repo = git.Repo.init(working_dir)
         ensure_gitignore(working_dir)
         repo.index.add([".gitignore"])
@@ -62,8 +82,11 @@ class GitManager:
         return cls(repo)
 
     @classmethod
-    def init_from_import(cls, working_dir: Path, source_name: str) -> GitManager:
+    def init_from_import(cls, working_dir: Path, source_name: str) -> GitManager | None:
         """Initialize a fresh Git repo after unpacking a .chemunited file."""
+        if not GIT_AVAILABLE:
+            logger.bind(window=WindowCategory.SETUP).warning(_UNAVAILABLE_MESSAGE)
+            return None
         repo = git.Repo.init(working_dir)
         ensure_gitignore(working_dir)
         repo.index.add(["*"])
@@ -73,6 +96,9 @@ class GitManager:
     @classmethod
     def open(cls, working_dir: Path) -> GitManager | None:
         """Open existing repo, return None if not a Git project."""
+        if not GIT_AVAILABLE:
+            logger.bind(window=WindowCategory.SETUP).warning(_UNAVAILABLE_MESSAGE)
+            return None
         try:
             repo = git.Repo(working_dir)
         except git.InvalidGitRepositoryError:
