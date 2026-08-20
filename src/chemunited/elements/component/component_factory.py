@@ -83,8 +83,8 @@ def _build_explicit_map() -> dict[str, type[GraphComponent]]:
     """Return {figure_key: cls} for every explicit GraphComponent subclass.
 
     Built-in subclasses come from the glossary package; project-local ones
-    (loaded from the current project's components/graph.py) take priority on
-    a figure-name collision.
+    (loaded from the current project's customizations/components/graph.py) take
+    priority on a figure-name collision.
     """
     result: dict[str, type[GraphComponent]] = {}
     for name in getattr(glossary, "__all__", []):
@@ -131,8 +131,8 @@ def list_components() -> tuple[dict[str, list[str]], dict[str, type[GraphCompone
 
     The component list is driven by core's COMPONENTS registry. Explicit orchestrator
     subclasses (those in glossary/__all__ with a FIGURE declaration, or loaded from the
-    current project's components/graph.py) are used when available; everything else gets
-    a dynamically-created subclass wired via __init_subclass__.
+    current project's customizations/components/graph.py) are used when available;
+    everything else gets a dynamically-created subclass wired via __init_subclass__.
 
     Project-local custom components (registered via
     chemunited_core.figure_registry.register_component) are grouped under a single

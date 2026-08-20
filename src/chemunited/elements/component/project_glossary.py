@@ -1,4 +1,4 @@
-"""Loads project-local GraphComponent subclasses from components/graph.py.
+"""Loads project-local GraphComponent subclasses from customizations/components/graph.py.
 
 Must run strictly after chemunited_core.figure_registry.project_loader's
 load_project_components() has registered the project's custom figures, since
@@ -35,13 +35,13 @@ def _import_module_from_path(module_name: str, file_path: Path) -> ModuleType:
 
 
 def load_project_graph_components(project_dir: Path) -> dict[str, type[GraphComponent]]:
-    """Import ``{project_dir}/components/graph.py`` if present.
+    """Import ``{project_dir}/customizations/components/graph.py`` if present.
 
     Returns {figure_name: GraphComponent subclass} for every GraphComponent
     subclass defined in that module (identified by its FIGURE attribute).
-    Returns an empty dict if the project has no components/graph.py.
+    Returns an empty dict if the project has no customizations/components/graph.py.
     """
-    graph_path = project_dir / "components" / "graph.py"
+    graph_path = project_dir / "customizations" / "components" / "graph.py"
     if not graph_path.exists():
         return {}
 

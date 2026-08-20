@@ -1511,15 +1511,16 @@ class CustomProcess(Process[ProcessConfig]):
     ):
         """Regression test: TreeAddItem only fetches list_components() once, at
         SetupWindow construction time — before any project (and its custom
-        components) is loaded. Opening a project with a components/ folder
-        must refresh the tree so the "Custom" category actually appears."""
+        components) is loaded. Opening a project with a
+        customizations/components/ folder must refresh the tree so the
+        "Custom" category actually appears."""
         session = ProjectSession()
         session.new(name="demo", location=tmp_path, init_git=False)
         session.save_draw({"components": [], "connections": []})
 
         working_dir = tmp_path / "demo"
-        components_dir = working_dir / "components"
-        components_dir.mkdir()
+        components_dir = working_dir / "customizations" / "components"
+        components_dir.mkdir(parents=True)
         (components_dir / "__init__.py").write_text(
             "from . import my_valve\n", encoding="utf-8"
         )
@@ -1561,8 +1562,8 @@ class CustomProcess(Process[ProcessConfig]):
         session.new(name="demo", location=tmp_path, init_git=False)
 
         working_dir = tmp_path / "demo"
-        components_dir = working_dir / "components"
-        components_dir.mkdir()
+        components_dir = working_dir / "customizations" / "components"
+        components_dir.mkdir(parents=True)
         (components_dir / "__init__.py").write_text(
             "from . import my_valve\n", encoding="utf-8"
         )
@@ -1630,8 +1631,8 @@ class CustomProcess(Process[ProcessConfig]):
         session.new(name="demo", location=tmp_path, init_git=False)
 
         working_dir = tmp_path / "demo"
-        components_dir = working_dir / "components"
-        components_dir.mkdir()
+        components_dir = working_dir / "customizations" / "components"
+        components_dir.mkdir(parents=True)
         (components_dir / "__init__.py").write_text(
             "from . import my_valve\n", encoding="utf-8"
         )

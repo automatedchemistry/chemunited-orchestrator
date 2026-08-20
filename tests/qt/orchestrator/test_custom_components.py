@@ -3,16 +3,17 @@
 Exercises the "build a custom component from your own project folder"
 feature end to end at the orchestrator level: register a component and a
 custom GraphComponent subclass the same way a project's
-components/__init__.py + components/graph.py would (see
-chemunited_core.figure_registry.register_component and
+customizations/components/__init__.py + customizations/components/graph.py
+would (see chemunited_core.figure_registry.register_component and
 chemunited.elements.component.project_glossary.load_project_graph_components),
 then confirm it shows up under a "Custom" palette group and renders using the
 custom subclass when added to the scene.
 
 Registration must happen at import time, in this order — component first,
 then the GraphComponent subclass — exactly like a real project's
-components/__init__.py is loaded before components/graph.py, since
-GraphComponent.__init_subclass__ requires FIGURE to already be in COMPONENTS.
+customizations/components/__init__.py is loaded before
+customizations/components/graph.py, since GraphComponent.__init_subclass__
+requires FIGURE to already be in COMPONENTS.
 """
 
 import pytest
