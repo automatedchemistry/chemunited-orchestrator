@@ -23,7 +23,7 @@ dependencies = [
     # sub-packages (provide the entire runtime engine)
     "chemunited-quantities>=0.0.3",
     "chemunited-core>=0.0.6",
-    "chemunited-workflow>=0.0.6",
+    "chemunited-workflow>=0.0.8",
     "chemunited-sim[tray]>=0.0.3",
     "PyQt-Fluent-Widgets>=1.7.0,<2.0",  # Qt UI
     "QScintilla>=2.14.0",
