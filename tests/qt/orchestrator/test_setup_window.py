@@ -205,6 +205,7 @@ class TestAddComponent:
     def test_shortcut_dialog_cancellation_does_nothing(
         self, window: SetupWindow, monkeypatch
     ):
+        window.create_shortcut_action.setVisible(True)
         monkeypatch.setattr(QFileDialog, "getExistingDirectory", lambda *_args: "")
 
         def unexpected_build(*_args):
@@ -238,6 +239,7 @@ class TestAddComponent:
     def test_create_desktop_shortcut_builds_with_running_environment_and_icon(
         self, window: SetupWindow, tmp_path, monkeypatch
     ):
+        window.create_shortcut_action.setVisible(True)
         shortcut_path = tmp_path / SHORTCUT_NAME
         shortcut_path.write_bytes(b"existing")
         launcher_path = tmp_path / "chemunited.bat"
@@ -280,6 +282,7 @@ class TestAddComponent:
     def test_shortcut_build_error_is_shown_and_action_is_reenabled(
         self, window: SetupWindow, tmp_path, monkeypatch
     ):
+        window.create_shortcut_action.setVisible(True)
         missing_path = tmp_path / "missing" / "chemunited.exe"
         errors = []
         monkeypatch.setattr(
