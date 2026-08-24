@@ -218,6 +218,7 @@ def test_execute_starts_run_with_protocol_history_file_name(tmp_path) -> None:
                 "dry_run": False,
                 "timeout_commands": "10 s",
                 "error_resilient": False,
+                "record_monitoring": False,
             },
         ),
     ]
