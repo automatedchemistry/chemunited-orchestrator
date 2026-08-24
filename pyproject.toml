@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "chemunited"
-version = "0.0.2"
+version = "0.0.3"
 description = "Desktop app for designing, simulating, and executing chemical process workflows on real automated hardware via device APIs."
 readme = "README.md"
 requires-python = ">=3.13"
