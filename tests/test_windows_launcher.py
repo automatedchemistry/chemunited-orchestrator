@@ -1,3 +1,4 @@
+import sys
 from pathlib import Path
 from subprocess import CompletedProcess
 
@@ -233,3 +234,20 @@ def test_create_windows_shortcut_validates_required_paths(tmp_path):
 def test_icon_path_points_at_bundled_chemunited_icon():
     assert windows_launcher.ICON_PATH.is_file()
     assert windows_launcher.ICON_PATH.name == "chemunited.ico"
+
+
+def test_icon_path_is_resolved_relative_to_the_installed_package():
+    # Must not depend on a "src" checkout layout, so it also works for a
+    # non-editable pip install (package sits directly in site-packages).
+    expected = (
+        Path(windows_launcher.__file__).resolve().parent
+        / "shared"
+        / "resources"
+        / "icons"
+        / "chemunited.ico"
+    )
+    assert windows_launcher.ICON_PATH == expected
+
+
+def test_project_root_is_resolved_relative_to_the_running_venv():
+    assert windows_launcher.PROJECT_ROOT == Path(sys.prefix).parent

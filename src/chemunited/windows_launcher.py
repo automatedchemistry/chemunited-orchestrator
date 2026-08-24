@@ -2,15 +2,21 @@ from __future__ import annotations
 
 import os
 import subprocess  # nosec B404 - used only to run a fixed, hardcoded PowerShell command below
+import sys
 from pathlib import Path
 
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
+# The deployment folder expected to hold the venv (e.g. a "PythonData" folder),
+# not the source checkout root. Derived from sys.prefix rather than this
+# file's location so it works whether chemunited is installed editable (from
+# a src/ checkout) or as a regular, non-editable pip package.
+PROJECT_ROOT = Path(sys.prefix).parent
 LAUNCHER_NAME = "chemunited.bat"
 SHORTCUT_NAME = "ChemUnited.lnk"
+# Resolved relative to this module's own location (inside the installed
+# "chemunited" package) rather than PROJECT_ROOT, so it is correct for both
+# editable and non-editable installs.
 ICON_PATH = (
-    PROJECT_ROOT
-    / "src"
-    / "chemunited"
+    Path(__file__).resolve().parent
     / "shared"
     / "resources"
     / "icons"
