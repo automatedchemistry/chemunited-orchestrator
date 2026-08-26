@@ -1,0 +1,48 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<!-- Creator: CorelDRAW -->
+<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="2.39583in" height="3.02083in" version="1.1" style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
+viewBox="0 0 2395.83 3020.83"
+ xmlns:xlink="http://www.w3.org/1999/xlink"
+ xmlns:xodm="http://www.corel.com/coreldraw/odm/2003">
+ <defs>
+  <style type="text/css">
+   <![CDATA[
+    .str0 {stroke:black;stroke-width:10.41;stroke-miterlimit:2.61313}
+    .str1 {stroke:#2A2AA8;stroke-width:10.41;stroke-miterlimit:2.61313}
+    .str2 {stroke:#A8302A;stroke-width:10.41;stroke-miterlimit:2.61313}
+    .fil5 {fill:black}
+    .fil3 {fill:#2A2AA8}
+    .fil2 {fill:#3D497A}
+    .fil4 {fill:#A8302A}
+    .fil1 {fill:#D9D5D5}
+    .fil0 {fill:url(#id0)}
+   ]]>
+  </style>
+  <linearGradient id="id0" gradientUnits="userSpaceOnUse" x1="137.61" y1="1781.18" x2="2220.94" y2="1781.18">
+   <stop offset="0" style="stop-opacity:1; stop-color:#EBE8E8"/>
+   <stop offset="0.2" style="stop-opacity:1; stop-color:#F5F3F3"/>
+   <stop offset="1" style="stop-opacity:1; stop-color:white"/>
+  </linearGradient>
+ </defs>
+ <g id="Layer_x0020_1">
+  <metadata id="CorelCorpID_0Corel-Layer"/>
+  <rect class="fil0 str0" x="137.61" y="901.32" width="2083.33" height="1759.71"/>
+  <rect class="fil1 str0" x="582.55" y="20.51" width="197.71" height="565.21"/>
+  <rect class="fil1 str0" x="1075.65" y="141.46" width="127.93" height="400.06"/>
+  <rect class="fil1 str0" x="1512.93" y="15.86" width="197.71" height="565.21"/>
+  <path class="fil1 str0" d="M1178.05 901.32l-1041.67 0c0,-254.17 466.37,-460.21 1041.67,-460.21 575.3,0 1041.67,206.04 1041.67,460.21l-1041.67 0z"/>
+  <path class="fil2 str0" d="M161.12 1697.91l219.25 0c80.21,0 145.83,65.62 145.83,145.83l0 1090.25 -510.91 0 0 -1090.25c0,-80.21 65.62,-145.83 145.83,-145.83z"/>
+  <path class="fil2 str0" d="M2017.96 1691.17l219.25 0c80.21,0 145.83,65.62 145.83,145.83l0 1090.25 -510.91 0 0 -1090.25c0,-80.21 65.62,-145.83 145.83,-145.83z"/>
+  <circle class="fil3 str1" cx="932.74" cy="1567.44" r="130.21"/>
+  <polygon class="fil3 str1" points="1252.72,1246.15 1229.47,1340.89 1206.22,1435.63 1134.73,1364.15 1063.24,1292.66 1157.98,1269.4 "/>
+  <rect class="fil3 str1" transform="matrix(0.707107 0.707107 -0.707107 0.707107 1157.91 1289.34)" width="63.18" height="626.28"/>
+  <circle class="fil4 str2" cx="1557.73" cy="1567.44" r="130.21"/>
+  <polygon class="fil4 str2" points="1255.85,1866.11 1279.11,1771.37 1302.36,1676.63 1373.85,1748.12 1445.33,1819.61 1350.6,1842.86 "/>
+  <rect class="fil4 str2" transform="matrix(0.707107 0.707107 -0.707107 0.707107 1782.91 1289.34)" width="63.18" height="626.28"/>
+  <rect class="fil5 str0" x="60.89" y="2932.22" width="66.46" height="62.31"/>
+  <rect class="fil5 str0" x="373.38" y="2932.22" width="66.46" height="62.31"/>
+  <rect class="fil5 str0" x="1935.86" y="2932.22" width="66.46" height="62.31"/>
+  <rect class="fil5 str0" x="2248.36" y="2932.22" width="66.46" height="62.31"/>
+ </g>
+</svg>
