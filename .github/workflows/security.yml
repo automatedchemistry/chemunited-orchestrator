@@ -1,0 +1,38 @@
+name: Security Analysis
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+  schedule:
+    - cron: "17 3 * * 1"
+
+permissions:
+  contents: read
+
+jobs:
+  package-security:
+    name: Dependency and static security scan
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: actions/setup-python@v6
+        with:
+          python-version: "3.13"
+          cache: pip
+
+      - name: Install package and security tools
+        run: |
+          pip install --upgrade pip
+          pip install -e ".[dev]" pip-audit bandit[toml] uv
+
+      - name: Audit Python dependencies
+        run: |
+          uv export --no-dev --format requirements-txt \
+            | grep -v '^-e ' > requirements.lock
+          pip-audit --requirement requirements.lock
+
+      - name: Run Bandit
+        run: bandit -r src/chemunited_quantities --severity-level medium --confidence-level medium
