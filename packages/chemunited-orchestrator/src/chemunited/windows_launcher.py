@@ -216,3 +216,38 @@ def create_windows_shortcut(
         )
 
     return shortcut_path
+
+
+def main() -> int:
+    """Build the launcher .bat and a Desktop shortcut for the current install.
+
+    Intended to run once, right after `chemunited` is pip-installed into a
+    fresh venv (see install.bat), using the same running interpreter's own
+    venv as both PROJECT_ROOT's anchor and the launcher target — so it needs
+    no arguments and works the same whether invoked by install.bat or by hand.
+    """
+    if sys.platform != "win32":
+        print("chemunited-install-launcher only supports Windows.")
+        return 1
+
+    venv_dir = Path(sys.prefix)
+    try:
+        launcher_path = build_launcher(PROJECT_ROOT, venv_dir)
+    except LauncherBuildError as error:
+        missing = "\n".join(f"  - {path}" for path in error.missing_paths)
+        print(f"Could not build launcher, missing required files:\n{missing}")
+        return 1
+
+    shortcut_path = Path.home() / "Desktop" / SHORTCUT_NAME
+    try:
+        create_windows_shortcut(shortcut_path, launcher_path, ICON_PATH, PROJECT_ROOT)
+    except ShortcutBuildError as error:
+        print(f"Launcher created at {launcher_path}, but the shortcut failed:\n{error}")
+        return 1
+
+    print(f"Desktop shortcut created: {shortcut_path}")
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())

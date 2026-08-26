@@ -231,6 +231,75 @@ def test_create_windows_shortcut_validates_required_paths(tmp_path):
     assert "missing project" in message
 
 
+def create_main_environment(tmp_path: Path, monkeypatch) -> tuple[Path, Path]:
+    """Wire up main()'s module-level globals to point inside tmp_path, so a
+    test run never touches the real Desktop, venv, or installed icon."""
+    project_root = tmp_path / "install"
+    venv_dir = project_root / ".venv"
+    create_project(project_root, venv_dir)
+
+    home = tmp_path / "home"
+    (home / "Desktop").mkdir(parents=True)
+    icon_path = tmp_path / "chemunited.ico"
+    icon_path.write_bytes(b"icon")
+
+    monkeypatch.setattr(windows_launcher, "PROJECT_ROOT", project_root)
+    monkeypatch.setattr(windows_launcher, "ICON_PATH", icon_path)
+    monkeypatch.setattr(windows_launcher.sys, "prefix", str(venv_dir))
+    monkeypatch.setattr(windows_launcher.Path, "home", staticmethod(lambda: home))
+    return project_root, home
+
+
+def test_main_builds_launcher_and_desktop_shortcut(tmp_path, monkeypatch):
+    project_root, home = create_main_environment(tmp_path, monkeypatch)
+
+    def fake_run(command, **kwargs):
+        Path(kwargs["env"]["CHEMUNITED_SHORTCUT_PATH"]).write_bytes(b"shortcut")
+        return CompletedProcess(command, 0, stdout="", stderr="")
+
+    monkeypatch.setattr(windows_launcher.subprocess, "run", fake_run)
+
+    exit_code = windows_launcher.main()
+
+    assert exit_code == 0
+    assert (project_root / LAUNCHER_NAME).is_file()
+    assert (home / "Desktop" / windows_launcher.SHORTCUT_NAME).is_file()
+
+
+def test_main_rejects_non_windows(monkeypatch):
+    monkeypatch.setattr(windows_launcher.sys, "platform", "linux")
+
+    assert windows_launcher.main() == 1
+
+
+def test_main_reports_missing_launcher_files(tmp_path, monkeypatch):
+    project_root = tmp_path / "install"
+    project_root.mkdir()
+    venv_dir = project_root / ".venv"
+    venv_dir.mkdir()
+    # No executables written under venv_dir/Scripts, so build_launcher fails.
+
+    monkeypatch.setattr(windows_launcher, "PROJECT_ROOT", project_root)
+    monkeypatch.setattr(windows_launcher.sys, "prefix", str(venv_dir))
+
+    assert windows_launcher.main() == 1
+    assert not (project_root / LAUNCHER_NAME).exists()
+
+
+def test_main_reports_shortcut_failure(tmp_path, monkeypatch):
+    project_root, home = create_main_environment(tmp_path, monkeypatch)
+
+    def fake_run(command, **_kwargs):
+        return CompletedProcess(command, 1, stdout="", stderr="WScript.Shell failed")
+
+    monkeypatch.setattr(windows_launcher.subprocess, "run", fake_run)
+
+    assert windows_launcher.main() == 1
+    # The launcher itself is still built even if the shortcut step fails.
+    assert (project_root / LAUNCHER_NAME).is_file()
+    assert not (home / "Desktop" / windows_launcher.SHORTCUT_NAME).exists()
+
+
 def test_icon_path_points_at_bundled_chemunited_icon():
     assert windows_launcher.ICON_PATH.is_file()
     assert windows_launcher.ICON_PATH.name == "chemunited.ico"

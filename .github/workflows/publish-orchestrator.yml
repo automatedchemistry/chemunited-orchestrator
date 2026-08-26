@@ -82,6 +82,9 @@ jobs:
       contents: write
 
     steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
       - name: Download distributions
         uses: actions/download-artifact@v4
         with:
@@ -92,12 +95,13 @@ jobs:
         env:
           GH_TOKEN: ${{ github.token }}
         run: |
+          assets=(dist/* packages/chemunited-orchestrator/scripts/install.bat)
           if gh release view "$GITHUB_REF_NAME" --repo "${{ github.repository }}" >/dev/null 2>&1; then
-            gh release upload "$GITHUB_REF_NAME" dist/* \
+            gh release upload "$GITHUB_REF_NAME" "${assets[@]}" \
               --repo "${{ github.repository }}" \
               --clobber
           else
-            gh release create "$GITHUB_REF_NAME" dist/* \
+            gh release create "$GITHUB_REF_NAME" "${assets[@]}" \
               --repo "${{ github.repository }}" \
               --title "$GITHUB_REF_NAME" \
               --generate-notes \

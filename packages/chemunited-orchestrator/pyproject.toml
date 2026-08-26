@@ -39,6 +39,7 @@ dependencies = [
 
 [project.scripts]
 chemunited = "chemunited.__main__:main"
+chemunited-install-launcher = "chemunited.windows_launcher:main"
 
 [project.optional-dependencies]
 compound-lookup = [
