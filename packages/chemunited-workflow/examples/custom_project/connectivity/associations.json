@@ -1,0 +1,137 @@
+{
+  "server_url": "http://localhost:8000",
+  "associations": [
+    {
+      "component": "AS injection",
+      "component_url": "sim-AS-injection/injection-valve"
+    },
+    {
+      "component": "AS SP valve",
+      "component_url": "sim-ml600-AS/right_valve"
+    },
+    {
+      "component": "AS Distribution valve",
+      "component_url": "sim-knauer-autosampler/syringe_valve"
+    },
+    {
+      "component": "Reagent Valve",
+      "component_url": "sim-knauer-valve-Reagent/distribution-valve"
+    },
+    {
+      "component": "Disposal valve",
+      "component_url": "sim-Disposal/injection-valve"
+    },
+    {
+      "component": "S valve",
+      "component_url": "sim-solenoid/valve"
+    },
+    {
+      "component": "S2way",
+      "component_url": "sim-solenoid-2way/valve"
+    },
+    {
+      "component": "Quencher valve",
+      "component_url": "sim-knauer-valve-Quencher/distribution-valve"
+    },
+    {
+      "component": "gantry",
+      "component_url": "sim-knauer-autosampler/gantry3D"
+    },
+    {
+      "component": "AS pump",
+      "component_url": "sim-ml600-AS/right_pump"
+    },
+    {
+      "component": "Reagent pump",
+      "component_url": "sim-elite11-Reagent/pump"
+    },
+    {
+      "component": "Quencher pump",
+      "component_url": "sim-elite11-Quencher/pump"
+    },
+    {
+      "component": "chiller",
+      "component_url": "sim-huber/temperature-control"
+    },
+    {
+      "component": "photo reactor",
+      "component_url": "sim-r2/PhotoReactor"
+    },
+    {
+      "component": "flowmeter",
+      "component_url": "sim-mfc/MFC"
+    },
+    {
+      "component": "Pressure Sensor",
+      "component_url": "sim-epc/EPC"
+    },
+    {
+      "component": "photo sensor",
+      "component_url": "sim-knauer-dad/channel1"
+    },
+    {
+      "component": "bubble",
+      "component_url": "sim-phidget-bubble/bubble-sensor"
+    },
+    {
+      "component": "peltier",
+      "component_url": "sim-peltier/temperature_control"
+    },
+    {
+      "component": "IR",
+      "component_url": "sim-icir/ir-control"
+    },
+    {
+      "component": "NMR",
+      "component_url": "sim-spinsolve/nmr-control"
+    },
+    {
+      "component": "HPLC",
+      "component_url": "sim-clarity/clarity"
+    },
+    {
+      "component": "MS",
+      "component_url": "sim-waters-ms/mass_spectrometer"
+    },
+    {
+      "component": "HPLCpump",
+      "component_url": "sim-azura-HPLC/pump"
+    },
+    {
+      "component": "Relay",
+      "component_url": "sim-switchbox/relay-A"
+    },
+    {
+      "component": "Swicth",
+      "component_url": "sim-r2/Power"
+    },
+    {
+      "component": "Control",
+      "component_url": "sim-manson/power-control"
+    },
+    {
+      "component": "BubblePower",
+      "component_url": "sim-phidget-5v/5V"
+    },
+    {
+      "component": "PressureControl",
+      "component_url": "sim-cvc3000/pressure-control"
+    },
+    {
+      "component": "MSPump",
+      "component_url": "sim-azura-MS/pump"
+    },
+    {
+      "component": "NMRPump",
+      "component_url": "sim-azura-NMR/pump"
+    },
+    {
+      "component": "StirringControl",
+      "component_url": "sim-heidolph/stirring-control"
+    },
+    {
+      "component": "pt100",
+      "component_url": "sim-heidolph/temperature-control"
+    }
+  ]
+}

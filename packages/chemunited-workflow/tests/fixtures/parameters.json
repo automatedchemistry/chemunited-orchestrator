@@ -1,0 +1,12 @@
+{
+  "main_parameter": {
+    "reagent_volume_ml": 9.0,
+    "target_temperature_c": 60.0
+  },
+  "my_process_0": {
+    "value": 2.5
+  },
+  "my_process_1": {
+    "value": 0.8
+  }
+}

@@ -1,0 +1,123 @@
+:root {
+  color-scheme: light;
+  --color-background: #f3f7fb;
+  --color-background-soft: #ffffff;
+  --color-background-mute: #eaf1f7;
+  --color-surface-raised: #ffffff;
+  --color-sidebar: #071525;
+  --color-sidebar-muted: #8fa5ba;
+  --color-heading: #102a43;
+  --color-text: #334e68;
+  --color-text-muted: #6b8196;
+  --color-border: #d8e4ee;
+  --color-border-hover: #b7cadb;
+  --color-primary: #1264a3;
+  --color-primary-hover: #0d4f82;
+  --color-primary-soft: #e5f2fb;
+  --color-accent: #18a7b5;
+  --color-success: #16805b;
+  --color-success-soft: #e5f5ee;
+  --color-warning: #a26110;
+  --color-warning-soft: #fff3dc;
+  --color-danger: #b43c47;
+  --color-danger-soft: #fcebee;
+  --shadow-sm: 0 1px 2px rgba(15, 42, 67, 0.05);
+  --shadow-md: 0 12px 32px rgba(15, 42, 67, 0.08);
+  --radius-sm: 8px;
+  --radius-md: 12px;
+  --radius-lg: 18px;
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --color-background: #08131f;
+  --color-background-soft: #0d1c2b;
+  --color-background-mute: #142638;
+  --color-surface-raised: #102233;
+  --color-heading: #e8f2fa;
+  --color-text: #bfd0df;
+  --color-text-muted: #829bb0;
+  --color-border: #223b50;
+  --color-border-hover: #36566f;
+  --color-primary: #4da7e8;
+  --color-primary-hover: #75baf0;
+  --color-primary-soft: #123755;
+  --color-accent: #34c2ce;
+  --color-success: #4fd2a1;
+  --color-success-soft: #103c34;
+  --color-warning: #f2b958;
+  --color-warning-soft: #3c2d13;
+  --color-danger: #ff8893;
+  --color-danger-soft: #43212a;
+  --shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
+  --shadow-md: 0 18px 40px rgba(0, 0, 0, 0.22);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  min-width: 320px;
+  background: var(--color-background);
+}
+
+body {
+  min-height: 100vh;
+  margin: 0;
+  color: var(--color-text);
+  background: var(--color-background);
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    'Segoe UI',
+    Roboto,
+    Oxygen,
+    Ubuntu,
+    Cantarell,
+    'Helvetica Neue',
+    sans-serif;
+  font-size: 14px;
+  line-height: 1.5;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+
+button,
+a,
+input,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+
+button:focus-visible,
+a:focus-visible,
+input:focus-visible,
+select:focus-visible {
+  outline: 3px solid color-mix(in srgb, var(--color-primary) 30%, transparent);
+  outline-offset: 2px;
+}
+
+::selection {
+  color: #ffffff;
+  background: var(--color-primary);
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: smooth;
+  }
+}
