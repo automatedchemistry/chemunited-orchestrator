@@ -29,7 +29,7 @@ from chemunited_sim.cli.clock import SimClock
 from chemunited_sim.cli.server import SimStatus, SimulationState, app
 from chemunited_sim.worker import SimConfig
 
-PROJECT_PATH = Path("tests") / "flow_platform"
+PROJECT_PATH = Path(__file__).parent / "flow_platform"
 
 REQUIRED_COMPONENTS = {
     "liquidpump",

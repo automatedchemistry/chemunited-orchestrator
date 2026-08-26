@@ -24,7 +24,7 @@ from chemunited_sim.cli.server import SimStatus, SimulationState
 from chemunited_sim.mcp import create_mcp_server
 from chemunited_sim.worker import SimConfig
 
-PROJECT_PATH = Path("tests") / "flow_platform"
+PROJECT_PATH = Path(__file__).parent / "flow_platform"
 
 REQUIRED_COMPONENTS = {
     "liquidpump",

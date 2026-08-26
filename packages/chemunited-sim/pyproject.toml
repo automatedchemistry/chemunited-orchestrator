@@ -38,6 +38,10 @@ tray = [
     "pillow>=10",
 ]
 
+[tool.uv.sources]
+chemunited-core = { workspace = true }
+chemunited-workflow = { workspace = true }
+
 [tool.hatch.metadata]
 allow-direct-references = true
 

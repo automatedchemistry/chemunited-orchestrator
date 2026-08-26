@@ -28,7 +28,7 @@ from chemunited_sim.inventory.source_map import build_source_map
 from chemunited_sim.transport.models import Pocket
 from chemunited_sim.worker import SimConfig, Worker
 
-PROJECT_PATH = Path("tests") / "flow_platform"
+PROJECT_PATH = Path(__file__).parent / "flow_platform"
 
 
 @pytest.fixture

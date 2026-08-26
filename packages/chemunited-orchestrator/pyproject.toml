@@ -53,6 +53,12 @@ dev = [
     "pytest-qt>=4.4",
 ]
 
+[tool.uv.sources]
+chemunited-quantities = { workspace = true }
+chemunited-core = { workspace = true }
+chemunited-workflow = { workspace = true }
+chemunited-sim = { workspace = true }
+
 [tool.pytest.ini_options]
 qt_api = "pyqt5"
 testpaths = ["tests"]

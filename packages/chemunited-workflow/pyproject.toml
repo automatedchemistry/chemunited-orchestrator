@@ -40,6 +40,9 @@ opcua = ["asyncua>=2.0,<3"]
 [project.scripts]
 chemunited-workflow = "chemunited_workflow.cli:main"
 
+[tool.uv.sources]
+chemunited-quantities = { workspace = true }
+
 [tool.pytest.ini_options]
 pythonpath = ["."]
 norecursedirs = ["pytest-tmp-cli", ".pytest_cache", ".venv", "build", "dist"]

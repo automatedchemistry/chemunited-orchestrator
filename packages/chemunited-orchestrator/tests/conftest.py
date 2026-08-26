@@ -13,9 +13,14 @@ _TMP_ROOT = Path(__file__).resolve().parent.parent / ".tmp_pytest_paths"
 
 
 def _safe_node_name(nodeid: str) -> str:
-    """Convert a pytest node id into a filesystem-friendly directory name."""
+    """Convert a pytest node id into a filesystem-friendly directory name.
+
+    Truncated to the tail (where the actual test name lives, not the shared
+    module-path prefix) to stay well under Windows' MAX_PATH once combined
+    with the repo root and whatever subdirectories the test itself creates.
+    """
     sanitized = re.sub(r"[^A-Za-z0-9_.-]+", "_", nodeid).strip("._")
-    return sanitized or "test"
+    return (sanitized or "test")[-60:]
 
 
 @pytest.fixture
