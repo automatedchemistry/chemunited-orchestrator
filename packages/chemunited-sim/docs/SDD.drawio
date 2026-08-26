@@ -1,0 +1,157 @@
+<mxfile host="Electron" agent="Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) draw.io/24.7.17 Chrome/128.0.6613.36 Electron/32.0.1 Safari/537.36" version="24.7.17">
+  <diagram name="Page-1" id="6wwW28nFsyj2XeltJ7AT">
+    <mxGraphModel dx="2074" dy="1197" grid="0" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="0" pageScale="1" pageWidth="850" pageHeight="1100" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="histfile" value="historical_file.json" style="shape=note;size=15;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;fontSize=10;" parent="1" vertex="1">
+          <mxGeometry x="27" y="30" width="155" height="65" as="geometry" />
+        </mxCell>
+        <mxCell id="ws" value="&lt;b&gt;work-server / UI&lt;/b&gt;&lt;br&gt;POST /project/load&lt;br&gt;POST /start&lt;br&gt;POST /stop&lt;br&gt;&lt;i&gt;POST /command  [mode 2]&lt;/i&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" parent="1" vertex="1">
+          <mxGeometry x="27" y="228" width="155" height="108" as="geometry" />
+        </mxCell>
+        <mxCell id="dbfile" value="&lt;execution_id&gt;.db&lt;br&gt;SQLite WAL" style="shape=cylinder3;whiteSpace=wrap;html=1;fillColor=#fff2cc;strokeColor=#d6b656;" parent="1" vertex="1">
+          <mxGeometry x="1056" y="193" width="130" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="qtgui" value="&lt;b&gt;Qt GUI&lt;/b&gt;&lt;br&gt;reads .db directly" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;" parent="1" vertex="1">
+          <mxGeometry x="1056" y="346" width="130" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="leg1" value="&lt;b&gt;Mode 1&lt;/b&gt;  (real_time=False)&lt;br&gt;&lt;font style=&#39;font-size:9px&#39;&gt;• historical_file resolved at /start&lt;br&gt;• Workflow Thread runs process sequence&lt;br&gt;• Commands from run_workflow()&lt;br&gt;• Clock runs at CPU speed&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;align=left;spacingLeft=8;" parent="1" vertex="1">
+          <mxGeometry x="1059" y="421" width="175" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="leg2" value="&lt;b&gt;Mode 2&lt;/b&gt;  (real_time=True)&lt;br&gt;&lt;font style=&#39;font-size:9px&#39;&gt;• historical_file not used&lt;br&gt;• No Workflow Thread&lt;br&gt;• Commands via POST /command&lt;br&gt;• Clock throttled to wall clock&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff0e6;strokeColor=#d6a35c;align=left;spacingLeft=8;" parent="1" vertex="1">
+          <mxGeometry x="1062" y="524" width="175" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="leg3" value="&lt;b&gt;Server states&lt;/b&gt;&lt;br&gt;&lt;font style=&#39;font-size:9px&#39;&gt;NO_PROJECT&lt;br&gt;  → /project/load → IDLE&lt;br&gt;  IDLE → /start → RUNNING&lt;br&gt;  RUNNING → /stop → IDLE&lt;br&gt;  RUNNING → /project/load → 409&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;align=left;spacingLeft=8;" parent="1" vertex="1">
+          <mxGeometry x="1059" y="624" width="175" height="95" as="geometry" />
+        </mxCell>
+        <mxCell id="proc" value="&lt;b&gt;chemunited-sim&lt;/b&gt;  —  single OS process" style="swimlane;startSize=32;fillColor=#EEF3FF;strokeColor=#4A6FA5;fontStyle=1;fontSize=12;html=1;" parent="1" vertex="1">
+          <mxGeometry x="225" y="30" width="810" height="650" as="geometry" />
+        </mxCell>
+        <mxCell id="fastapi" value="&lt;b&gt;FastAPI / uvicorn&lt;/b&gt;&lt;br&gt;&lt;font style=&#39;font-size:9px&#39;&gt;main thread&lt;br&gt;&lt;br&gt;POST /project/load&lt;br&gt;GET /project&lt;br&gt;&lt;br&gt;POST /start&lt;br&gt;  dt, t_end, real_time&lt;br&gt;  historical_file [mode 1]&lt;br&gt;&lt;br&gt;POST /stop&lt;br&gt;POST /command  [mode 2]&lt;br&gt;GET /status&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#dae8fc;strokeColor=#6c8ebf;" parent="proc" vertex="1">
+          <mxGeometry x="20" y="45" width="165" height="210" as="geometry" />
+        </mxCell>
+        <mxCell id="projstate" value="&lt;b&gt;ProjectState&lt;/b&gt;&lt;br&gt;&lt;font style=&#39;font-size:9px&#39;&gt;project_path&lt;br&gt;processes: dict[ ]&lt;br&gt;ComponentData[ ]&lt;br&gt;HydraulicGraph&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#ffe6cc;strokeColor=#d79b00;" parent="proc" vertex="1">
+          <mxGeometry x="20" y="280" width="165" height="90" as="geometry" />
+        </mxCell>
+        <mxCell id="wt" value="&lt;b&gt;Worker Thread&lt;/b&gt;  (loop — always active in both modes)" style="swimlane;startSize=28;fillColor=#d5e8d4;strokeColor=#82b366;html=1;" parent="proc" vertex="1">
+          <mxGeometry x="205" y="40" width="585" height="155" as="geometry" />
+        </mxCell>
+        <mxCell id="wt1" value="① drain Queue&lt;br&gt;&lt;font style=&#39;font-size:9px&#39;&gt;component.apply(cmd)&lt;br&gt;graph.resync(name)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="wt" vertex="1">
+          <mxGeometry x="15" y="38" width="160" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="wt2" value="② Worker.step()&lt;br&gt;&lt;font style=&#39;font-size:9px&#39;&gt;solve hydraulics ODE&lt;br&gt;Recorder.record()&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="wt" vertex="1">
+          <mxGeometry x="205" y="38" width="160" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="wt3" value="③ clock.advance(dt)&lt;br&gt;&lt;font style=&#39;font-size:9px&#39;&gt;mode 1: CPU speed&lt;br&gt;mode 2: throttle to&lt;br&gt;  wall clock&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;fontSize=10;" parent="wt" vertex="1">
+          <mxGeometry x="395" y="38" width="175" height="85" as="geometry" />
+        </mxCell>
+        <mxCell id="ew12" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#82b366;" parent="wt" source="wt1" target="wt2" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ew23" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#82b366;" parent="wt" source="wt2" target="wt3" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="wft" value="&lt;b&gt;Workflow Thread(s)&lt;/b&gt;  —  &lt;u&gt;mode 1 only&lt;/u&gt;  —  ThreadPoolExecutor, one per parallel branch" style="swimlane;startSize=28;fillColor=#fff0e6;strokeColor=#d6a35c;dashed=1;strokeWidth=2;html=1;" parent="proc" vertex="1">
+          <mxGeometry x="205" y="240" width="585" height="150" as="geometry" />
+        </mxCell>
+        <mxCell id="wft1" value="Process.run_workflow()&lt;br&gt;&lt;font style=&#39;font-size:9px&#39;&gt;iterates process_sequence&lt;br&gt;(from historical_file)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff0e6;strokeColor=#d6a35c;fontSize=10;" parent="wft" vertex="1">
+          <mxGeometry x="15" y="38" width="160" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="wft2" value="SimClient.put(cmd)&lt;br&gt;&lt;font style=&#39;font-size:9px&#39;&gt;→ queue.put(SimCmd)&lt;br&gt;records t0 = clock.now()&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff0e6;strokeColor=#d6a35c;fontSize=10;" parent="wft" vertex="1">
+          <mxGeometry x="205" y="38" width="165" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="wft3" value="busy-wait&lt;br&gt;&lt;font style=&#39;font-size:9px&#39;&gt;while clock.now()&lt;br&gt;  &lt; t0 + wait_time:&lt;br&gt;  sleep(0.0001)&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#fff0e6;strokeColor=#d6a35c;fontSize=10;" parent="wft" vertex="1">
+          <mxGeometry x="400" y="38" width="165" height="80" as="geometry" />
+        </mxCell>
+        <mxCell id="ewf12" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#d6a35c;" parent="wft" source="wft1" target="wft2" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ewf23" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#d6a35c;" parent="wft" source="wft2" target="wft3" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="recorder" value="&lt;b&gt;Recorder&lt;/b&gt;&lt;br&gt;&lt;font style=&#39;font-size:10px&#39;&gt;record_interval = 2 s&lt;/font&gt;" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#d5e8d4;strokeColor=#82b366;" parent="proc" vertex="1">
+          <mxGeometry x="20" y="400" width="165" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="shared" value="&lt;b&gt;Shared In-Process Memory&lt;/b&gt;" style="swimlane;startSize=28;fillColor=#F5EEFF;strokeColor=#9673a6;dashed=1;strokeWidth=2;html=1;" parent="proc" vertex="1">
+          <mxGeometry x="20" y="490" width="770" height="120" as="geometry" />
+        </mxCell>
+        <mxCell id="simclock" value="&lt;b&gt;SimClock&lt;/b&gt;&lt;br&gt;t: float + Lock" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" parent="shared" vertex="1">
+          <mxGeometry x="15" y="33" width="120" height="58" as="geometry" />
+        </mxCell>
+        <mxCell id="cmdqueue" value="&lt;b&gt;Command Queue&lt;/b&gt;&lt;br&gt;queue.Queue()" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" parent="shared" vertex="1">
+          <mxGeometry x="155" y="33" width="135" height="58" as="geometry" />
+        </mxCell>
+        <mxCell id="compdata" value="&lt;b&gt;ComponentData[ ]&lt;/b&gt;&lt;br&gt;Worker owns writes" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" parent="shared" vertex="1">
+          <mxGeometry x="310" y="33" width="145" height="58" as="geometry" />
+        </mxCell>
+        <mxCell id="hydgraph" value="&lt;b&gt;HydraulicGraph&lt;/b&gt;&lt;br&gt;Worker owns writes" style="rounded=1;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" parent="shared" vertex="1">
+          <mxGeometry x="475" y="33" width="145" height="58" as="geometry" />
+        </mxCell>
+        <mxCell id="stopev" value="&lt;b&gt;stop_event&lt;/b&gt;&lt;br&gt;threading.Event" style="ellipse;whiteSpace=wrap;html=1;fillColor=#e1d5e7;strokeColor=#9673a6;" parent="shared" vertex="1">
+          <mxGeometry x="640" y="33" width="115" height="58" as="geometry" />
+        </mxCell>
+        <mxCell id="e_hf" value="on /start  [mode 1]" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;strokeColor=#6c8ebf;" parent="1" source="histfile" target="fastapi" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" value="HTTP" style="edgeStyle=orthogonalEdgeStyle;html=1;rounded=1;" parent="1" source="ws" target="fastapi" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ep_load" value="POST /project/load" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#d79b00;" parent="1" source="fastapi" target="projstate" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ep_cd" value="provides" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;strokeColor=#d79b00;endArrow=open;endFill=0;" parent="1" source="projstate" target="compdata" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="ep_hg" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;strokeColor=#d79b00;endArrow=open;endFill=0;" parent="1" source="projstate" target="hydgraph" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" value="spawns  [both modes]" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;endArrow=open;endFill=0;strokeColor=#4A6FA5;" parent="1" source="fastapi" target="wt" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e3" value="spawns  [mode 1 only]" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;endArrow=open;endFill=0;strokeColor=#d6a35c;" parent="1" source="fastapi" target="wft" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e_cmd" value="POST /command  [mode 2]" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#d6a35c;fontStyle=2;" parent="1" source="fastapi" target="cmdqueue" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e4" value="set() on /stop" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;strokeColor=#9673a6;" parent="1" source="fastapi" target="stopev" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e5" value="checked each iter" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;strokeColor=#9673a6;endArrow=open;endFill=0;" parent="1" source="stopev" target="wt" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e6" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;dashed=1;strokeColor=#9673a6;endArrow=open;endFill=0;" parent="1" source="stopev" target="wft" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e7" value="queue.put()  [mode 1]" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#d6a35c;" parent="1" source="wft2" target="cmdqueue" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e8" value="drain" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#82b366;" parent="1" source="wt1" target="cmdqueue" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e9" value="advance(dt)  [write]" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#82b366;" parent="1" source="wt3" target="simclock" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e10" value="clock.now()  [read]" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#d6a35c;" parent="1" source="wft3" target="simclock" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e11" value="apply()" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#82b366;" parent="1" source="wt1" target="compdata" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e12" value="resync()" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#82b366;" parent="1" source="wt1" target="hydgraph" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e13" value="record()" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#82b366;" parent="1" source="wt2" target="recorder" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e14" value="WAL write" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="recorder" target="dbfile" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e15" value="read-only" style="edgeStyle=orthogonalEdgeStyle;html=1;" parent="1" source="qtgui" target="dbfile" edge="1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

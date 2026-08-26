@@ -1,0 +1,182 @@
+<mxfile>
+  <diagram name="full_platform">
+    <mxGraphModel dx="1400" dy="900" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1400" pageHeight="1000" background="#FBFAF7" math="0" shadow="0">
+      <root>
+        <mxCell id="0"/>
+        <mxCell id="1" parent="0"/>
+
+        <!-- Title -->
+        <mxCell id="title" value="Gas-Liquid Pressurised Reactor Platform — full_platform.py" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=18;fontStyle=1;fontColor=#1F2D3D;" vertex="1" parent="1">
+          <mxGeometry x="200" y="20" width="800" height="32" as="geometry"/>
+        </mxCell>
+        <mxCell id="subtitle" value="All 7 component types · BPR · valve switch at t = 20 s · reaction: reagent_a → product_b (k = 0.05 s⁻¹)" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;fontSize=12;fontColor=#5F5E5A;" vertex="1" parent="1">
+          <mxGeometry x="200" y="52" width="800" height="20" as="geometry"/>
+        </mxCell>
+
+        <!-- ══ gassupply (PressureControl, 3 bar) ══ -->
+        <mxCell id="gassupply" value="&lt;b&gt;gassupply&lt;/b&gt;&lt;br/&gt;PressureControl · 3 bar" style="rounded=1;html=1;fillColor=#E6F1FB;strokeColor=#185FA5;fontSize=12;fontColor=#0C447C;align=center;" vertex="1" parent="1">
+          <mxGeometry x="100" y="100" width="180" height="52" as="geometry"/>
+        </mxCell>
+
+        <!-- ══ liquidpump (FlowSource, 3 mL/min) ══ -->
+        <mxCell id="liquidpump" value="&lt;b&gt;liquidpump&lt;/b&gt;&lt;br/&gt;FlowSource · 3 mL/min" style="rounded=1;html=1;fillColor=#EEEDFE;strokeColor=#534AB7;fontSize=12;fontColor=#3C3489;align=center;" vertex="1" parent="1">
+          <mxGeometry x="380" y="100" width="180" height="52" as="geometry"/>
+        </mxCell>
+
+        <!-- ══ gastube (PlugFlow) ══ -->
+        <mxCell id="gastube" value="&lt;b&gt;gastube&lt;/b&gt;&lt;br/&gt;PlugFlow · D=1 mm" style="rounded=1;html=1;fillColor=#F1EFE8;strokeColor=#5F5E5A;fontSize=12;fontColor=#444441;align=center;" vertex="1" parent="1">
+          <mxGeometry x="100" y="212" width="180" height="48" as="geometry"/>
+        </mxCell>
+
+        <!-- ══ liquidtube (PlugFlow) ══ -->
+        <mxCell id="liquidtube" value="&lt;b&gt;liquidtube&lt;/b&gt;&lt;br/&gt;PlugFlow · D=1 mm" style="rounded=1;html=1;fillColor=#F1EFE8;strokeColor=#5F5E5A;fontSize=12;fontColor=#444441;align=center;" vertex="1" parent="1">
+          <mxGeometry x="380" y="212" width="180" height="48" as="geometry"/>
+        </mxCell>
+
+        <!-- ══ tmixer (Junction) ══ -->
+        <mxCell id="tmixer" value="&lt;b&gt;tmixer&lt;/b&gt;&lt;br/&gt;Junction · 3 ports (hub port 0)" style="rounded=1;html=1;fillColor=#FAEEDA;strokeColor=#854F0B;fontSize=12;fontColor=#633806;align=center;" vertex="1" parent="1">
+          <mxGeometry x="240" y="330" width="220" height="52" as="geometry"/>
+        </mxCell>
+
+        <!-- ══ reactortube (PlugFlow) ══ -->
+        <mxCell id="reactortube" value="&lt;b&gt;reactortube&lt;/b&gt;&lt;br/&gt;PlugFlow · D=2 mm · 5 cm" style="rounded=1;html=1;fillColor=#F1EFE8;strokeColor=#5F5E5A;fontSize=12;fontColor=#444441;align=center;" vertex="1" parent="1">
+          <mxGeometry x="240" y="452" width="220" height="48" as="geometry"/>
+        </mxCell>
+
+        <!-- ══ reactor (Vessel, 10 mL) ══ -->
+        <mxCell id="reactor" value="&lt;b&gt;reactor&lt;/b&gt;&lt;br/&gt;Vessel · 10 mL&lt;br/&gt;port 1 TOP (gas in) · port 2 BOTTOM (liq out)&lt;br/&gt;&lt;i&gt;reagent_a → product_b  k = 0.05 s⁻¹&lt;/i&gt;&lt;br/&gt;&lt;font color=&quot;#993C1D&quot;&gt;P ≈ 2.45 bar · 95 % conv. at t=60 s&lt;/font&gt;" style="rounded=1;html=1;fillColor=#FAECE7;strokeColor=#993C1D;fontSize=12;fontColor=#712B13;align=center;verticalAlign=middle;" vertex="1" parent="1">
+          <mxGeometry x="210" y="570" width="280" height="96" as="geometry"/>
+        </mxCell>
+
+        <!-- ══ bpr (BackPressureRegulator, 2 bar) ══ -->
+        <mxCell id="bpr" value="&lt;b&gt;bpr&lt;/b&gt;&lt;br/&gt;BackPressureRegulator · setpoint 2 bar&lt;br/&gt;&lt;i&gt;opens when P_upstream ≥ 2 bar&lt;/i&gt;" style="rounded=1;html=1;fillColor=#FCEBEB;strokeColor=#A32D2D;fontSize=12;fontColor=#791F1F;align=center;" vertex="1" parent="1">
+          <mxGeometry x="225" y="736" width="250" height="60" as="geometry"/>
+        </mxCell>
+
+        <!-- ══ outlettube (PlugFlow) ══ -->
+        <mxCell id="outlettube" value="&lt;b&gt;outlettube&lt;/b&gt;&lt;br/&gt;PlugFlow · D=1.5 mm" style="rounded=1;html=1;fillColor=#F1EFE8;strokeColor=#5F5E5A;fontSize=12;fontColor=#444441;align=center;" vertex="1" parent="1">
+          <mxGeometry x="225" y="860" width="250" height="48" as="geometry"/>
+        </mxCell>
+
+        <!-- ══ divertvalve (RotaryValve, 2 positions) ══ -->
+        <mxCell id="divertvalve" value="&lt;b&gt;divertvalve&lt;/b&gt;&lt;br/&gt;RotaryValve · 2 positions&lt;br/&gt;COLLECT (0↔1) → WASTE (0↔2) at t=20 s" style="rounded=1;html=1;fillColor=#E1F5EE;strokeColor=#0F6E56;fontSize=12;fontColor=#085041;align=center;" vertex="1" parent="1">
+          <mxGeometry x="540" y="850" width="260" height="68" as="geometry"/>
+        </mxCell>
+
+        <!-- ══ collecttube (PlugFlow) ══ -->
+        <mxCell id="collecttube" value="&lt;b&gt;collecttube&lt;/b&gt;&lt;br/&gt;PlugFlow · D=1 mm" style="rounded=1;html=1;fillColor=#F1EFE8;strokeColor=#5F5E5A;fontSize=12;fontColor=#444441;align=center;" vertex="1" parent="1">
+          <mxGeometry x="540" y="730" width="180" height="48" as="geometry"/>
+        </mxCell>
+
+        <!-- ══ wastetube (PlugFlow) ══ -->
+        <mxCell id="wastetube" value="&lt;b&gt;wastetube&lt;/b&gt;&lt;br/&gt;PlugFlow · D=1 mm" style="rounded=1;html=1;fillColor=#F1EFE8;strokeColor=#5F5E5A;fontSize=12;fontColor=#444441;align=center;" vertex="1" parent="1">
+          <mxGeometry x="760" y="730" width="180" height="48" as="geometry"/>
+        </mxCell>
+
+        <!-- ══ productsink (PressureControl, 1 bar) ══ -->
+        <mxCell id="productsink" value="&lt;b&gt;productsink&lt;/b&gt;&lt;br/&gt;PressureControl · 1 bar" style="rounded=1;html=1;fillColor=#E6F1FB;strokeColor=#185FA5;fontSize=12;fontColor=#0C447C;align=center;" vertex="1" parent="1">
+          <mxGeometry x="540" y="620" width="180" height="52" as="geometry"/>
+        </mxCell>
+
+        <!-- ══ wastesink (PressureControl, 1 bar) ══ -->
+        <mxCell id="wastesink" value="&lt;b&gt;wastesink&lt;/b&gt;&lt;br/&gt;PressureControl · 1 bar" style="rounded=1;html=1;fillColor=#E6F1FB;strokeColor=#185FA5;fontSize=12;fontColor=#0C447C;align=center;" vertex="1" parent="1">
+          <mxGeometry x="760" y="620" width="180" height="52" as="geometry"/>
+        </mxCell>
+
+        <!-- ══ EDGES ══ -->
+
+        <!-- gassupply → gastube -->
+        <mxCell id="e1" value="N₂ gas" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;strokeColor=#185FA5;fontColor=#0C447C;fontSize=11;labelBackgroundColor=#FBFAF7;" edge="1" parent="1" source="gassupply" target="gastube">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- liquidpump → liquidtube -->
+        <mxCell id="e2" value="liquid" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;strokeColor=#534AB7;fontColor=#3C3489;fontSize=11;labelBackgroundColor=#FBFAF7;" edge="1" parent="1" source="liquidpump" target="liquidtube">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- gastube → tmixer -->
+        <mxCell id="e3" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;strokeColor=#185FA5;exitX=0.5;exitY=1;entryX=0.25;entryY=0;" edge="1" parent="1" source="gastube" target="tmixer">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- liquidtube → tmixer -->
+        <mxCell id="e4" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;strokeColor=#534AB7;exitX=0.5;exitY=1;entryX=0.75;entryY=0;" edge="1" parent="1" source="liquidtube" target="tmixer">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- tmixer → reactortube -->
+        <mxCell id="e5" value="mixed stream" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;strokeColor=#854F0B;fontColor=#633806;fontSize=11;labelBackgroundColor=#FBFAF7;" edge="1" parent="1" source="tmixer" target="reactortube">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- reactortube → reactor (port 1, TOP) -->
+        <mxCell id="e6" value="port 1 (TOP)" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;strokeColor=#993C1D;fontColor=#712B13;fontSize=11;labelBackgroundColor=#FBFAF7;" edge="1" parent="1" source="reactortube" target="reactor">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- reactor (port 2, BOTTOM) → bpr -->
+        <mxCell id="e7" value="port 2 (BOTTOM)" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;strokeColor=#A32D2D;fontColor=#791F1F;fontSize=11;labelBackgroundColor=#FBFAF7;" edge="1" parent="1" source="reactor" target="bpr">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- bpr → outlettube -->
+        <mxCell id="e8" value="opens: P ≥ 2 bar" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;strokeColor=#A32D2D;fontColor=#791F1F;fontSize=11;labelBackgroundColor=#FBFAF7;" edge="1" parent="1" source="bpr" target="outlettube">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- outlettube → divertvalve -->
+        <mxCell id="e9" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;strokeColor=#5F5E5A;exitX=1;exitY=0.5;entryX=0;entryY=0.5;" edge="1" parent="1" source="outlettube" target="divertvalve">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- divertvalve → collecttube (t=0–20s) -->
+        <mxCell id="e10" value="t = 0–20 s (COLLECT)" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;strokeColor=#0F6E56;fontColor=#085041;fontSize=11;labelBackgroundColor=#FBFAF7;exitX=0.3;exitY=0;entryX=0.5;entryY=1;" edge="1" parent="1" source="divertvalve" target="collecttube">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- divertvalve → wastetube (t>20s) -->
+        <mxCell id="e11" value="t &gt; 20 s (WASTE)" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;strokeColor=#993C1D;fontColor=#712B13;fontSize=11;labelBackgroundColor=#FBFAF7;exitX=0.7;exitY=0;entryX=0.5;entryY=1;" edge="1" parent="1" source="divertvalve" target="wastetube">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- collecttube → productsink -->
+        <mxCell id="e12" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;strokeColor=#0F6E56;" edge="1" parent="1" source="collecttube" target="productsink">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- wastetube → wastesink -->
+        <mxCell id="e13" value="" style="edgeStyle=orthogonalEdgeStyle;html=1;endArrow=block;endFill=1;strokeColor=#993C1D;" edge="1" parent="1" source="wastetube" target="wastesink">
+          <mxGeometry relative="1" as="geometry"/>
+        </mxCell>
+
+        <!-- ══ LEGEND ══ -->
+        <mxCell id="leg-box" value="" style="rounded=1;html=1;fillColor=#F1EFE8;strokeColor=#5F5E5A;dashed=1;dashPattern=4 3;" vertex="1" parent="1">
+          <mxGeometry x="60" y="580" width="130" height="190" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg-title" value="Legend" style="text;html=1;strokeColor=none;fillColor=none;fontSize=12;fontStyle=1;fontColor=#1F2D3D;" vertex="1" parent="1">
+          <mxGeometry x="72" y="588" width="80" height="20" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg1" value="PressureControl" style="rounded=1;html=1;fillColor=#E6F1FB;strokeColor=#185FA5;fontSize=10;fontColor=#0C447C;" vertex="1" parent="1">
+          <mxGeometry x="72" y="614" width="106" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg2" value="FlowSource" style="rounded=1;html=1;fillColor=#EEEDFE;strokeColor=#534AB7;fontSize=10;fontColor=#3C3489;" vertex="1" parent="1">
+          <mxGeometry x="72" y="642" width="106" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg3" value="PlugFlow tube" style="rounded=1;html=1;fillColor=#F1EFE8;strokeColor=#5F5E5A;fontSize=10;fontColor=#444441;" vertex="1" parent="1">
+          <mxGeometry x="72" y="670" width="106" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg4" value="Vessel" style="rounded=1;html=1;fillColor=#FAECE7;strokeColor=#993C1D;fontSize=10;fontColor=#712B13;" vertex="1" parent="1">
+          <mxGeometry x="72" y="698" width="106" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg5" value="Junction" style="rounded=1;html=1;fillColor=#FAEEDA;strokeColor=#854F0B;fontSize=10;fontColor=#633806;" vertex="1" parent="1">
+          <mxGeometry x="72" y="726" width="106" height="22" as="geometry"/>
+        </mxCell>
+        <mxCell id="leg6" value="BPR" style="rounded=1;html=1;fillColor=#FCEBEB;strokeColor=#A32D2D;fontSize=10;fontColor=#791F1F;" vertex="1" parent="1">
+          <mxGeometry x="72" y="754" width="106" height="22" as="geometry"/>
+        </mxCell>
+
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>
