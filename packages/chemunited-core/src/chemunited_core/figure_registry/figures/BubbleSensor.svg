@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
+<!-- Creator: CorelDRAW -->
+<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="0.989583in" height="0.333331in" version="1.1" style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
+viewBox="0 0 989.58 333.33"
+ xmlns:xlink="http://www.w3.org/1999/xlink"
+ xmlns:xodm="http://www.corel.com/coreldraw/odm/2003">
+ <defs>
+  <style type="text/css">
+   <![CDATA[
+    .str0 {stroke:black;stroke-width:10.41;stroke-miterlimit:2.61313}
+    .fil4 {fill:black}
+    .fil3 {fill:#00FF0D}
+    .fil5 {fill:#3150BF}
+    .fil1 {fill:#542D00}
+    .fil0 {fill:#666666}
+    .fil2 {fill:#F50808}
+   ]]>
+  </style>
+ </defs>
+ <g id="Layer_x0020_1">
+  <metadata id="CorelCorpID_0Corel-Layer"/>
+  <rect class="fil0 str0" x="29.71" y="155.35" width="925.2" height="169.72" rx="41.67" ry="48.16"/>
+  <path class="fil1 str0" d="M185.74 4.18l164.57 0 0 151.18 -247.9 0 0 -67.85c0,-45.83 37.5,-83.33 83.33,-83.33z"/>
+  <path class="fil1 str0" d="M623.24 4.18l164.57 0c45.83,0 83.33,37.5 83.33,83.33l0 67.85 -247.9 0 0 -151.18z"/>
+  <ellipse class="fil2 str0" cx="677.09" cy="76.43" rx="33.66" ry="31.25"/>
+  <ellipse class="fil3 str0" cx="768.85" cy="75.58" rx="33.66" ry="31.25"/>
+  <ellipse class="fil2 str0" cx="192.77" cy="76.43" rx="33.66" ry="31.25"/>
+  <ellipse class="fil3 str0" cx="284.53" cy="75.58" rx="33.66" ry="31.25"/>
+  <rect class="fil4 str0" x="4.83" y="200.1" width="23.13" height="80.24"/>
+  <rect class="fil4 str0" x="956.92" y="195.04" width="23.13" height="80.24"/>
+  <ellipse class="fil5" cx="407.75" cy="210.34" rx="20.78" ry="21.51"/>
+  <ellipse class="fil5" cx="444.54" cy="245.47" rx="20.78" ry="21.51"/>
+  <ellipse class="fil5" cx="507.08" cy="214.74" rx="20.78" ry="21.51"/>
+  <ellipse class="fil5" cx="597.81" cy="270.77" rx="20.78" ry="21.51"/>
+  <ellipse class="fil5" cx="650.22" cy="202.45" rx="20.78" ry="21.51"/>
+  <ellipse class="fil5" cx="332.49" cy="208.23" rx="20.78" ry="21.51"/>
+  <ellipse class="fil5" cx="317.31" cy="257.76" rx="20.78" ry="21.51"/>
+  <ellipse class="fil5" cx="198.2" cy="195.76" rx="20.78" ry="21.51"/>
+  <ellipse class="fil5" cx="96.44" cy="252.33" rx="20.78" ry="21.51"/>
+  <ellipse class="fil5" cx="705.71" cy="253.24" rx="20.78" ry="21.51"/>
+  <ellipse class="fil5" cx="789.75" cy="204.62" rx="20.78" ry="21.51"/>
+  <ellipse class="fil5" cx="853.74" cy="258.12" rx="20.78" ry="21.51"/>
+  <ellipse class="fil5" cx="252.24" cy="256.31" rx="20.78" ry="21.51"/>
+ </g>
+</svg>
