@@ -36,37 +36,9 @@ chemunited-quantities = { workspace = true }
 [tool.hatch.build.targets.wheel]
 packages = ["src/chemunited_core"]
 
-[tool.black]
-line-length = 88
-target-version = ["py311"]
-
 [tool.pytest.ini_options]
 testpaths = ["tests"]
 pythonpath = ["src"]
-
-[tool.ruff]
-line-length = 88
-src = ["src", "tests"]
-target-version = "py311"
-
-[tool.ruff.lint]
-fixable = ["I"]
-select = ["E", "F", "I"]
-
-[tool.ruff.lint.isort]
-known-first-party = ["chemunited_core"]
-
-[tool.mypy]
-explicit_package_bases = true
-files = ["src/chemunited_core"]
-ignore_missing_imports = true
-mypy_path = "src"
-no_implicit_reexport = true
-pretty = true
-python_version = "3.12"
-show_error_codes = true
-warn_return_any = true
-warn_unused_ignores = true
 
 [tool.coverage.run]
 source = ["src/chemunited_core"]

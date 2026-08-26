@@ -48,33 +48,8 @@ allow-direct-references = true
 [tool.hatch.build.targets.wheel]
 packages = ["src/chemunited_sim"]
 
-[tool.black]
-line-length = 88
-target-version = ["py311"]
-
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-
-[tool.ruff]
-line-length = 88
-src = ["src", "tests"]
-target-version = "py311"
-
-[tool.ruff.lint]
-fixable = ["I"]
-select = ["E", "F", "I"]
-
-[tool.ruff.lint.isort]
-known-first-party = ["chemunited_sim"]
-
-[tool.mypy]
-explicit_package_bases = true
-files = ["src/chemunited_sim"]
-ignore_missing_imports = true
-mypy_path = "src"
-pretty = true
-python_version = "3.11"
-show_error_codes = true
 
 [tool.coverage.run]
 source = ["src/chemunited_sim"]

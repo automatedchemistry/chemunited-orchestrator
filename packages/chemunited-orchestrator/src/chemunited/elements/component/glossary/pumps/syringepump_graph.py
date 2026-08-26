@@ -1,12 +1,12 @@
 from typing import ClassVar
 
-from chemunited_core.common.constant import PATTERN_DIMENSION
-from chemunited_core.figure_registry import SyringePumpData, get_figure_path
 from PyQt5.QtCore import QRectF, Qt
 
 from chemunited.elements.component.component_parts.svg_layer import SvgLayer
 from chemunited.elements.component.glossary.vessels.common import FlaskContent
 from chemunited.elements.component.graph_item import GraphComponent
+from chemunited_core.common.constant import PATTERN_DIMENSION
+from chemunited_core.figure_registry import SyringePumpData, get_figure_path
 
 
 def _get_fill_level(component_data: SyringePumpData | None) -> float:

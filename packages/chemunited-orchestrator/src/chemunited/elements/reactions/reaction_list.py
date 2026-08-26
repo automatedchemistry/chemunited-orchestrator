@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from chemunited_core.compounds import COMPOUNDS
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import QVBoxLayout, QWidget
 from qfluentwidgets import (
@@ -12,6 +11,8 @@ from qfluentwidgets import (
     PushButton,
     StrongBodyLabel,
 )
+
+from chemunited_core.compounds import COMPOUNDS
 
 from .model import ReactionDefinition
 from .reaction_dialog import ReactionDialog

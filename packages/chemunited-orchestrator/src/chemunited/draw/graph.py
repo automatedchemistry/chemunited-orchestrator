@@ -1,7 +1,6 @@
 from functools import partial
 from typing import TYPE_CHECKING, cast, override
 
-from chemunited_core.components.enums import PortClosure
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PyQt5.QtWidgets import QGraphicsItem
 from qfluentwidgets import Action, FluentIcon, RoundMenu
@@ -20,6 +19,7 @@ from chemunited.shared.enums import SetupStepMode
 from chemunited.shared.graph import GraphCore, SceneCore
 from chemunited.shared.graph_objects.custom_path import DraggablePoint
 from chemunited.shared.icon import OrchestratorIcon
+from chemunited_core.components.enums import PortClosure
 
 from .tree_add import TreeAddItem
 

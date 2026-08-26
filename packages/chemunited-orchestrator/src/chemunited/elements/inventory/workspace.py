@@ -8,9 +8,6 @@ from dataclasses import dataclass
 from math import isfinite
 from typing import TYPE_CHECKING
 
-from chemunited_core.common.enums import PhaseKind
-from chemunited_core.components.internals import InventoryNode
-from chemunited_core.compounds import COMPOUNDS, VolumeContentBase
 from PyQt5.QtCore import QItemSelectionModel, Qt, pyqtSignal
 from PyQt5.QtGui import QColor, QPainter, QPen
 from PyQt5.QtWidgets import (
@@ -44,6 +41,9 @@ from qfluentwidgets import (
 )
 
 from chemunited.orchestrator.inventory_state import ensure_air_defaults
+from chemunited_core.common.enums import PhaseKind
+from chemunited_core.components.internals import InventoryNode
+from chemunited_core.compounds import COMPOUNDS, VolumeContentBase
 
 if TYPE_CHECKING:
     from chemunited.elements.component import ElectronicManager, UtensilManager

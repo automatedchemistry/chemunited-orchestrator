@@ -12,6 +12,8 @@ from importlib import import_module
 
 from .base import (
     DeviceClientMixin,
+)
+from .base import (
     _pop_thread_resilient_errors as _pop_thread_resilient_errors,
 )
 from .envelope import CommandResponse

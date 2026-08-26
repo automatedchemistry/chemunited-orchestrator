@@ -1,7 +1,7 @@
 """Shared fixtures for the chemunited-workflow test suite."""
 
-import pytest
 import networkx as nx
+import pytest
 from pydantic import BaseModel
 
 from chemunited_workflow import (

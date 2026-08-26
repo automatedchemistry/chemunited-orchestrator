@@ -20,11 +20,11 @@ from __future__ import annotations
 import sys
 from typing import Annotated
 
-from chemunited_quantities import ChemQuantityValidator, ChemUnitQuantity
 from pydantic import BaseModel, Field
 from PyQt5.QtWidgets import QApplication
 
 from chemunited.shared.widgets.base_mode_editor import BaseModeEditorWidget
+from chemunited_quantities import ChemQuantityValidator, ChemUnitQuantity
 
 # ---------------------------------------------------------------------------
 # Comprehensive Pydantic model — one field per card type

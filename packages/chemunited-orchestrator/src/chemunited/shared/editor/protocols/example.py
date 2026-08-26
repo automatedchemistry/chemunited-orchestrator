@@ -3,6 +3,8 @@ from __future__ import annotations
 from time import sleep
 
 import networkx as nx
+from pydantic import BaseModel, ConfigDict
+
 from chemunited_workflow import (
     NodeConfig,
     NodeExecutionContext,
@@ -10,7 +12,6 @@ from chemunited_workflow import (
     WorkflowEdgeSpec,
     WorkflowNodeSpec,
 )
-from pydantic import BaseModel, ConfigDict
 
 
 class ProcessConfig(BaseModel):

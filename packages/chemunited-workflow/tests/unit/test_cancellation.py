@@ -14,7 +14,6 @@ from chemunited_workflow.cancellation import (
 )
 from chemunited_workflow.exceptions import OperatorInputTimeoutError, RunCancelledError
 
-
 # ── wait_while_paused ────────────────────────────────────────────────────────
 
 

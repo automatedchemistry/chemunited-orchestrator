@@ -1,11 +1,11 @@
 from typing import ClassVar
 
-from chemunited_core.figure_registry.technical import MultiChannelData
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QBrush, QColor, QPen
 
 from chemunited.elements.component.component_parts import SceneItem
 from chemunited.elements.component.graph_item import GraphComponent
+from chemunited_core.figure_registry.technical import MultiChannelData
 
 
 class MultiChannelBory(SceneItem):

@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from typing import Mapping
 
-from chemunited_core.protocols import CommandSignature
 from PyQt5.QtCore import Qt, pyqtSignal
 from PyQt5.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 from qfluentwidgets import PrimaryPushButton, PushButton, SmoothScrollArea, isDarkTheme
@@ -11,6 +10,7 @@ from qframelesswindow import FramelessDialog
 from chemunited.shared.editor.protocols.node_metadata import NodeMetadataEditor
 from chemunited.shared.editor.protocols.param_ref_card import ParamRefCard
 from chemunited.shared.widgets.base_mode_editor import BaseModeEditorWidget
+from chemunited_core.protocols import CommandSignature
 
 QT_ALIGN_LEFT = getattr(Qt, "AlignLeft")
 
@@ -273,9 +273,10 @@ class CommandEditorDialog(FramelessDialog):
 if __name__ == "__main__":
     import sys
 
+    from PyQt5.QtWidgets import QApplication, QDialog
+
     from chemunited_core.protocols.technical import SetTemperatureParameter
     from chemunited_quantities import ChemUnitQuantity
-    from PyQt5.QtWidgets import QApplication, QDialog
 
     app = QApplication(sys.argv)
 

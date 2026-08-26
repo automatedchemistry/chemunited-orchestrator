@@ -3,8 +3,6 @@ import math
 from dataclasses import asdict
 from typing import override
 
-from chemunited_core.compounds import COMPOUNDS
-from chemunited_core.connections import ConnectionType, EdgeData, EdgeMode
 from PyQt5.QtCore import QPointF, Qt
 from PyQt5.QtGui import QColor, QPainterPath, QPen
 from PyQt5.QtWidgets import QGraphicsItem
@@ -14,6 +12,8 @@ from chemunited.elements.component.component_parts.connection_point import (
 )
 from chemunited.shared.enums import SetupStepMode
 from chemunited.shared.graph_objects import MovablePathItem, PathElementItem
+from chemunited_core.compounds import COMPOUNDS
+from chemunited_core.connections import ConnectionType, EdgeData, EdgeMode
 
 QT_DASH_LINE = getattr(Qt, "DashLine")
 QT_ROUND_CAP = getattr(Qt, "RoundCap")

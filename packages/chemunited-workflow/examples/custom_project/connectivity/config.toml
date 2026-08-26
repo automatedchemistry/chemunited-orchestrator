@@ -127,4 +127,3 @@ type = "R2"
 
 [device.sim-heidolph]
 type = "HeiConnect"
-

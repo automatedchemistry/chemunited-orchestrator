@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from loguru import logger
+
 from chemunited_core.common.enums import ConnectionType, PhaseKind
 from chemunited_core.components import ComponentData, NeutralComponentData
 from chemunited_core.components.internals import DEFAULT_INVENTORY_KEY
@@ -10,7 +12,6 @@ from chemunited_core.connections.edge import EdgeData, EdgeMode
 from chemunited_core.figure_registry import COMPONENTS
 from chemunited_core.figure_registry.vessels import FlowReactorData
 from chemunited_quantities import ChemUnitQuantity
-from loguru import logger
 
 from ..reactions import FirstOrderDecay, ReactionsMap
 

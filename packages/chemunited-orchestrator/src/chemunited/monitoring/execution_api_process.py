@@ -6,7 +6,6 @@ from pathlib import Path
 from typing import Any
 
 import requests
-from chemunited_workflow.api.schemas import RunRequest
 from loguru import logger as _logger
 from pydantic import (
     AnyHttpUrl,
@@ -22,6 +21,7 @@ from qfluentwidgets import TextBrowser
 from chemunited.shared.enums import WindowCategory
 from chemunited.shared.widgets.base_mode_editor.dialog import BaseModeDialog
 from chemunited.utils.flowchem_listener import access_url
+from chemunited_workflow.api.schemas import RunRequest
 
 logger = _logger.bind(window=WindowCategory.EXECUTION)
 
@@ -54,6 +54,7 @@ class ApiClient:
         timeout: int = 10,
     ) -> Any:
         url = _api_url(self.url, endpoint)
+        response: requests.Response | None
         try:
             response = self.session.request(
                 method,

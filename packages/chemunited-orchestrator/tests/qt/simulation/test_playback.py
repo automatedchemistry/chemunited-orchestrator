@@ -4,12 +4,12 @@ import sqlite3
 from pathlib import Path
 
 import pytest
+
+from chemunited.simulation.playback import SimulationPlayback
 from chemunited_core.components import VesselComponentData, VesselMode
 from chemunited_core.components.internals import DEFAULT_INVENTORY_KEY
 from chemunited_quantities import ChemUnitQuantity
 from chemunited_sim.recorder.schema import create_all_tables
-
-from chemunited.simulation.playback import SimulationPlayback
 
 
 def qty(value: str) -> ChemUnitQuantity:

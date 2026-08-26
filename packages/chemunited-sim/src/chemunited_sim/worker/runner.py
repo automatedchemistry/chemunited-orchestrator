@@ -20,6 +20,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from dataclasses import dataclass
 
+from loguru import logger
+
 from chemunited_core.common.constant import R_MAX_HYDRAULIC
 from chemunited_core.common.enums import PhaseKind
 from chemunited_core.components import (
@@ -32,7 +34,6 @@ from chemunited_core.components import (
     VesselComponentData,
 )
 from chemunited_core.figure_registry.pumps import SyringePumpData
-from loguru import logger
 
 from ..adapter.models import HydraulicEdge, HydraulicGraph
 from ..hydraulics.models import HydraulicState

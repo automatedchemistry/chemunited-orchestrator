@@ -2,16 +2,16 @@ from __future__ import annotations
 
 import sys
 
-from chemunited_core.common.enums import ConnectionType, PhaseKind
-from chemunited_core.components import ComponentData
-from chemunited_core.compounds import COMPOUNDS, ChemicalEntity, VolumeContentBase
-from chemunited_core.connections import EdgeData
-from chemunited_quantities import ChemUnitQuantity
 from PyQt5.QtWidgets import QApplication
 
 from chemunited.elements.component.graph_item import GraphComponent
 from chemunited.elements.connection.connection import HydraulicConnectionItem
 from chemunited.shared.graph import GraphCore, SceneCore
+from chemunited_core.common.enums import ConnectionType, PhaseKind
+from chemunited_core.components import ComponentData
+from chemunited_core.compounds import COMPOUNDS, ChemicalEntity, VolumeContentBase
+from chemunited_core.connections import EdgeData
+from chemunited_quantities import ChemUnitQuantity
 
 
 def _register_demo_compounds() -> None:

@@ -2,11 +2,6 @@ from __future__ import annotations
 
 from dataclasses import dataclass
 
-import chemunited_core.protocols as protocol_module
-from chemunited_core.protocols import (
-    CommandSignature,
-    ComponentProtocol,
-)
 from loguru import logger
 from PyQt5.QtCore import QMimeData, QSize, Qt, pyqtSignal
 from PyQt5.QtGui import QDrag, QIcon
@@ -22,7 +17,12 @@ from PyQt5.QtWidgets import (
 )
 from qfluentwidgets import LineEdit, TreeWidget, isDarkTheme
 
+import chemunited_core.protocols as protocol_module
 from chemunited.shared.icon import OrchestratorIcon
+from chemunited_core.protocols import (
+    CommandSignature,
+    ComponentProtocol,
+)
 
 QT_COPY_ACTION = getattr(Qt, "CopyAction")
 QT_DISPLAY_ROLE = getattr(Qt, "DisplayRole")

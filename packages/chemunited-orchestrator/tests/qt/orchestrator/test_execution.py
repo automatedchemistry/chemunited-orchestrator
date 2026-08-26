@@ -4,9 +4,6 @@ import json
 from types import SimpleNamespace
 
 import pytest
-from chemunited_core.components.internals import InventoryNode
-from chemunited_workflow.api.schemas import RunRequest, RunStatus
-from chemunited_workflow.enums import NodeState
 from loguru import logger
 
 from chemunited.orchestrator.execution import (
@@ -20,6 +17,9 @@ from chemunited.orchestrator.execution import (
     _validate_model,
 )
 from chemunited.shared.enums import WindowCategory
+from chemunited_core.components.internals import InventoryNode
+from chemunited_workflow.api.schemas import RunRequest, RunStatus
+from chemunited_workflow.enums import NodeState
 
 
 def test_process_name_from_protocol_key_uses_file_stem() -> None:

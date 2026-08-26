@@ -16,11 +16,12 @@ import sqlite3
 from collections import defaultdict
 from datetime import datetime, timezone
 
+from loguru import logger
+
 from chemunited_core.common.enums import PhaseKind
 from chemunited_core.components import ComponentData
 from chemunited_core.figure_registry import SolenoidValve2WayData, SolenoidValveData
 from chemunited_core.figure_registry.rotary_valve import RotaryValveData
-from loguru import logger
 
 from ..adapter.models import HydraulicGraph
 from ..common.constant import RECORDER_CELL_LENGTH_M, RECORDER_INTERVAL_DEFAULT

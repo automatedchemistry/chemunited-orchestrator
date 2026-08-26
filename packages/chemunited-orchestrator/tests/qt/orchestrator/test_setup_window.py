@@ -13,9 +13,6 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-from chemunited_core.common.enums import ConnectionType
-from chemunited_core.compounds import COMPOUNDS, ChemicalEntity
-from chemunited_core.figure_registry import clear_project_components
 from PyQt5.QtGui import QKeySequence
 from PyQt5.QtWidgets import QFileDialog, QMessageBox
 from pytestqt.qtbot import QtBot
@@ -31,6 +28,9 @@ from chemunited.setup import SetupWindow
 from chemunited.shared.enums import SetupStepMode
 from chemunited.utils.flowchem_listener import FLOWCHEM_SERVERS
 from chemunited.windows_launcher import SHORTCUT_NAME, LauncherBuildError
+from chemunited_core.common.enums import ConnectionType
+from chemunited_core.compounds import COMPOUNDS, ChemicalEntity
+from chemunited_core.figure_registry import clear_project_components
 
 
 def _magnitude(value, unit: str) -> float:

@@ -12,10 +12,10 @@ from pathlib import Path
 from types import SimpleNamespace
 
 import pytest
-from chemunited_core.common.enums import PhaseKind
-from chemunited_core.components.enums import InternalEdgeRole
 from fastapi.testclient import TestClient
 
+from chemunited_core.common.enums import PhaseKind
+from chemunited_core.components.enums import InternalEdgeRole
 from chemunited_sim.adapter.models import HydraulicEdge, HydraulicGraph, HydraulicNode
 from chemunited_sim.cli import server
 from chemunited_sim.cli.clock import SimClock
@@ -297,7 +297,8 @@ def test_render_dashboard_html_hides_flat_traces_by_default(workspace_tmp):
 def test_render_dashboard_html_includes_pipe_cell_profiles(workspace_tmp):
     db_path = workspace_tmp / "cells.db"
     conn = sqlite3.connect(db_path)
-    conn.executescript("""
+    conn.executescript(
+        """
         CREATE TABLE meta (key TEXT NOT NULL PRIMARY KEY, value TEXT NOT NULL);
         CREATE TABLE node_pressure (
             time REAL NOT NULL,
@@ -343,7 +344,8 @@ def test_render_dashboard_html_includes_pipe_cell_profiles(workspace_tmp):
         INSERT INTO cell_content VALUES (0.0, 'e0', 1, 'liquid', 'water', 0.5);
         INSERT INTO cell_content VALUES (0.0, 'e0', 1, 'gas', 'nitrogen', 0.25);
         INSERT INTO cell_content VALUES (1.0, 'e0', 0, 'liquid', 'water', 1.0);
-        """)
+        """
+    )
     conn.close()
 
     html = render_dashboard_html(db_path)
@@ -393,7 +395,8 @@ def test_render_dashboard_html_includes_pipe_cell_profiles(workspace_tmp):
 def test_render_dashboard_html_averages_cell_content_without_geometry(workspace_tmp):
     db_path = workspace_tmp / "content_without_geometry.db"
     conn = sqlite3.connect(db_path)
-    conn.executescript("""
+    conn.executescript(
+        """
         CREATE TABLE meta (key TEXT NOT NULL PRIMARY KEY, value TEXT NOT NULL);
         CREATE TABLE node_pressure (
             time REAL NOT NULL,
@@ -419,7 +422,8 @@ def test_render_dashboard_html_averages_cell_content_without_geometry(workspace_
         INSERT INTO cell_content VALUES (0.0, 'e0', 0, 'liquid', 'solvent', 2.0);
         INSERT INTO cell_content VALUES (1.0, 'e0', 0, 'liquid', 'solvent', 1.0);
         INSERT INTO cell_content VALUES (1.0, 'e0', 1, 'liquid', 'solvent', 3.0);
-        """)
+        """
+    )
     conn.close()
 
     payload = _dashboard_payload(render_dashboard_html(db_path))
@@ -463,7 +467,8 @@ def test_render_dashboard_html_escapes_metadata(workspace_tmp):
 def test_render_dashboard_html_handles_missing_optional_tables(workspace_tmp):
     db_path = workspace_tmp / "minimal.db"
     conn = sqlite3.connect(db_path)
-    conn.executescript("""
+    conn.executescript(
+        """
         CREATE TABLE meta (key TEXT NOT NULL PRIMARY KEY, value TEXT NOT NULL);
         CREATE TABLE node_pressure (
             time REAL NOT NULL,
@@ -478,7 +483,8 @@ def test_render_dashboard_html_handles_missing_optional_tables(workspace_tmp):
         INSERT INTO meta VALUES ('platform_name', 'minimal');
         INSERT INTO node_pressure VALUES (0.0, 'n0', 101325.0);
         INSERT INTO edge_flow VALUES (0.0, 'e0', 0.0);
-        """)
+        """
+    )
     conn.close()
 
     html = render_dashboard_html(db_path)

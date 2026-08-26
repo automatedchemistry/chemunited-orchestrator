@@ -19,10 +19,9 @@ import time
 from chemunited_core.components import PutResult, ScheduledCommand
 from chemunited_core.figure_registry import COMPONENTS
 from chemunited_core.figure_registry.rotary_valve import RotaryValveData
-from chemunited_workflow import RunCancelledError
-
 from chemunited_sim.cli.clock import SimClock
 from chemunited_sim.cli.sim_client import SimClient, iter_apply_kwargs
+from chemunited_workflow import RunCancelledError
 
 
 class TestIterApplyKwargs:

@@ -2,15 +2,16 @@
 # See https://pre-commit.com/hooks.html for more hooks
 # The name of this file must be .pre-commit-config.yaml
 # Run pre-commit: pre-commit run --all-files
-# Run mypy: mypy ./src
-# Run ruff: ruff check src/chemunited
+# Run mypy: uv run mypy
+# Run ruff: uv run ruff check .
 fail_fast: false
 exclude: |
   (?x)^(
     .*\.drawio|
     .*\.qss|
     .*\.qrc|
-    src/chemunited/qt/shared/resources/resources_rc\.py
+    .*\.svg|
+    packages/chemunited-orchestrator/src/chemunited/shared/resources/resources_rc\.py
   )$
 
 repos:
@@ -36,17 +37,17 @@ repos:
       - id: ruff
         args: [--fix]
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.15.0
+  - repo: local
     hooks:
+      # Runs against the real uv workspace venv (via `uv run`) rather than an
+      # isolated pre-commit-managed env, since mypy needs to resolve the five
+      # local packages' own types — an isolated env only knows about whatever
+      # is pinned in additional_dependencies, which would mean re-pinning
+      # published PyPI versions of our own packages on every change instead
+      # of checking against the workspace's local, editable code.
       - id: mypy
-        args: [--config-file, pyproject.toml]
+        name: mypy
+        entry: uv run mypy
+        language: system
         pass_filenames: false
-        additional_dependencies:
-          - chemunited-core==0.0.5
-          - chemunited-quantities==0.0.3
-          - packaging==26.3
-          - pydantic==2.13.4
-          - pint==0.25.3
-          - scipy==1.18.0
-          - types-PyYAML==6.0.12.20260724
+        types: [python]

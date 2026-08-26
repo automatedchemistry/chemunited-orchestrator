@@ -5,10 +5,10 @@ from __future__ import annotations
 import math
 
 import pytest
+
 from chemunited_core.common.constant import ATMOSPHERE_PRESSURE_PA
 from chemunited_core.components.enums import BoundaryConditionKind, InternalEdgeRole
 from chemunited_core.components.internals import PortBoundaryCondition
-
 from chemunited_sim.adapter.models import HydraulicEdge, HydraulicGraph, HydraulicNode
 from chemunited_sim.common.constant import PRESSURE_SANITY_THRESHOLD_PA
 from chemunited_sim.hydraulics import solve

@@ -12,11 +12,12 @@ from __future__ import annotations
 import math
 from dataclasses import dataclass
 
+from loguru import logger
+
 from chemunited_core.common.enums import PhaseKind
 from chemunited_core.components.enums import PortAccess
 from chemunited_core.compounds import COMPOUNDS
 from chemunited_core.compounds.entity import IDEAL_GAS_CONSTANT
-from loguru import logger
 
 from ..adapter.models import HydraulicGraph
 from ..common.constant import (

@@ -11,11 +11,12 @@ from dataclasses import dataclass
 from pathlib import Path
 from types import ModuleType
 
+from loguru import logger
+
 from chemunited_core.components import ComponentData
 from chemunited_core.compounds import COMPOUNDS
 from chemunited_core.figure_registry.project_loader import load_project_components
 from chemunited_workflow.process import Process
-from loguru import logger
 
 from ..adapter.graph import compile_graph
 from ..adapter.models import HydraulicGraph

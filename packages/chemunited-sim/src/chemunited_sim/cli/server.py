@@ -11,12 +11,13 @@ from pathlib import Path
 from threading import Event, Thread
 from typing import Any
 
-from chemunited_workflow.platform import Platform
-from chemunited_workflow.process import Process
 from fastapi import FastAPI, HTTPException
 from fastapi.responses import RedirectResponse
 from loguru import logger
 from pydantic import BaseModel, Field
+
+from chemunited_workflow.platform import Platform
+from chemunited_workflow.process import Process
 
 from ..adapter.graph import propagate_power_links, resync_component
 from ..recorder.writer import Recorder

@@ -12,8 +12,6 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import requests
-from chemunited_core.common.enums import PhaseKind
-from chemunited_core.compounds import COMPOUNDS
 from loguru import logger
 from PyQt5 import sip
 from PyQt5.QtCore import Qt, QThread, QTimer, pyqtSignal
@@ -40,6 +38,8 @@ from chemunited.orchestrator.execution import is_run_active_for
 from chemunited.shared.enums import WindowCategory
 from chemunited.shared.icon import OrchestratorIcon
 from chemunited.shared.widgets.frame_base import FrameBase
+from chemunited_core.common.enums import PhaseKind
+from chemunited_core.compounds import COMPOUNDS
 
 from .final_state import load_edge_cells
 from .graph_simulation import SimGraphicView
@@ -451,11 +451,12 @@ class ProfilePlot(QWidget):
         super().__init__(parent)
         from matplotlib.backends.backend_qtagg import FigureCanvasQTAgg
         from matplotlib.figure import Figure
+        from matplotlib.lines import Line2D
 
         self._fig = Figure(figsize=(4, 2.5), layout="constrained")
         self._canvas = FigureCanvasQTAgg(self._fig)
         self._ax = self._fig.add_subplot(111)
-        self._cursor_line = None
+        self._cursor_line: Line2D | None = None
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -617,7 +618,7 @@ class ProfilesWidget(QWidget):
         _scrub_layout = QHBoxLayout(self._scrub_bar)
         _scrub_layout.setContentsMargins(0, 0, 0, 4)
         _scrub_layout.setSpacing(8)
-        self._scrub_slider = Slider(Qt.Horizontal, self._scrub_bar)
+        self._scrub_slider = Slider(Qt.Horizontal, self._scrub_bar)  # type: ignore[attr-defined]
         self._scrub_slider.setRange(0, 0)
         self._scrub_time_label = CaptionLabel("t = 0.0s / 0.0s", self._scrub_bar)
         _scrub_layout.addWidget(self._scrub_slider, 1)
@@ -999,10 +1000,9 @@ class SimulateWindowReport(QMainWindow):
         super().closeEvent(a0)
 
     def _on_selection_changed(self) -> None:
-        from chemunited_core.components.plugflow import PlugFlowComponentData
-
         from chemunited.elements.component.graph_item import GraphComponent
         from chemunited.elements.connection.connection import HydraulicConnectionItem
+        from chemunited_core.components.plugflow import PlugFlowComponentData
 
         scene = self.central._graph.scene_attribute  # type: ignore
         if sip.isdeleted(scene):

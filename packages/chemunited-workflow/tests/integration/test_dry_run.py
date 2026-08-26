@@ -9,11 +9,11 @@ from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+from fastapi.testclient import TestClient
 
+from chemunited_workflow.api import create_api
 from chemunited_workflow.clients import BaseClient, ComponentClient
 from chemunited_workflow.platform import Platform
-from chemunited_workflow.api import create_api
-from fastapi.testclient import TestClient
 from tests.helpers import make_project_tree
 
 FIXTURES = Path(__file__).parent.parent / "fixtures"

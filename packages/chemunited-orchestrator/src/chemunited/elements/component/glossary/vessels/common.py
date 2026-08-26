@@ -1,12 +1,12 @@
+from PyQt5.QtCore import QRectF, Qt
+from PyQt5.QtGui import QColor
+
+from chemunited.elements.component.component_parts.scene_item import SceneItem
 from chemunited_core.components.internals import (
     DEFAULT_INVENTORY_KEY,
     VolumeContentBase,
 )
 from chemunited_core.compounds.registry import COMPOUNDS
-from PyQt5.QtCore import QRectF, Qt
-from PyQt5.QtGui import QColor
-
-from chemunited.elements.component.component_parts.scene_item import SceneItem
 
 
 def _rgba_hex_to_qcolor(hex_str: str) -> QColor:

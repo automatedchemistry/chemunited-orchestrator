@@ -1,12 +1,12 @@
 from typing import Union
 
-from chemunited_core.components import ComponentData
-from chemunited_core.figure_registry import COMPONENTS, is_project_component
-from chemunited_core.protocols import ComponentProtocol, get_protocol_class
 from loguru import logger
 from pydantic import AnyHttpUrl
 
 from chemunited.elements.component.connectivity import ComponentConnnectivity
+from chemunited_core.components import ComponentData
+from chemunited_core.figure_registry import COMPONENTS, is_project_component
+from chemunited_core.protocols import ComponentProtocol, get_protocol_class
 
 from . import glossary
 from .graph_item import GraphComponent

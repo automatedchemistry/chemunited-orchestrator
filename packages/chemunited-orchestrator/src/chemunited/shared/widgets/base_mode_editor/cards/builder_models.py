@@ -1,7 +1,8 @@
 from typing import Any, Literal
 
-from chemunited_quantities import ChemUnitQuantity
 from pydantic import BaseModel, Field, field_validator, model_validator
+
+from chemunited_quantities import ChemUnitQuantity
 
 
 class BasicVariableBuildMode(BaseModel):

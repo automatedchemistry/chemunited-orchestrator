@@ -5,13 +5,13 @@ from __future__ import annotations
 import math
 
 import pytest
+
 from chemunited_core.common.enums import ConnectionType, PhaseKind
 from chemunited_core.components.enums import PortAccess
 from chemunited_core.compounds import COMPOUNDS
 from chemunited_core.compounds.entity import IDEAL_GAS_CONSTANT
 from chemunited_core.connections import EdgeData, EdgeMode
 from chemunited_core.figure_registry import COMPONENTS
-
 from chemunited_sim.adapter import compile_graph
 from chemunited_sim.hydraulics.models import HydraulicState
 from chemunited_sim.inventory.engine import (

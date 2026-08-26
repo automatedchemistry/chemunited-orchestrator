@@ -11,11 +11,11 @@ import time
 from pathlib import Path
 
 import pytest
-from chemunited_core.common.enums import PhaseKind
-from chemunited_core.components.enums import InternalEdgeRole, PortAccess
 from fastapi.testclient import TestClient
 from loguru import logger
 
+from chemunited_core.common.enums import PhaseKind
+from chemunited_core.components.enums import InternalEdgeRole, PortAccess
 from chemunited_sim.cli import server
 from chemunited_sim.cli.clock import SimClock
 from chemunited_sim.cli.loader import load_project

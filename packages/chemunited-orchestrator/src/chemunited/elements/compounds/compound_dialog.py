@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from chemunited_core.compounds import ChemicalEntity
 from PyQt5.QtCore import QStringListModel, Qt
 from PyQt5.QtWidgets import QCompleter, QHBoxLayout
 from qfluentwidgets import FluentIcon, InfoBar, InfoBarPosition, PushButton
 
 from chemunited.shared.widgets.base_mode_editor import BaseModeDialog
+from chemunited_core.compounds import ChemicalEntity
 
 from . import coolprop_lookup
 

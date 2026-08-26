@@ -20,14 +20,14 @@ MassFlowController — allows flow up to a setpoint by varying the junction-edge
 from dataclasses import dataclass
 from typing import Annotated, ClassVar
 
-from chemunited_quantities import (
-    ChemQuantityValidator,
-    ChemUnitQuantity,
-)
 from pydantic import Field
 from typing_extensions import override
 
 from chemunited_core.common.enums import GroupParameterCategory
+from chemunited_quantities import (
+    ChemQuantityValidator,
+    ChemUnitQuantity,
+)
 
 from .component import ComponentData, ComponentMode
 from .enums import ComponentType, InternalEdgeRole

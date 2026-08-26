@@ -9,9 +9,6 @@ from pathlib import Path
 from typing import Any, Callable
 from urllib.parse import urlsplit
 
-from chemunited_core.compounds import COMPOUNDS, ChemicalEntity
-from chemunited_core.figure_registry import COMPONENTS, is_project_component
-from chemunited_core.figure_registry.project_loader import load_project_components
 from loguru import logger
 from PyQt5.QtCore import QThread, QTimer, pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import QFileDialog, QInputDialog, QMessageBox
@@ -37,6 +34,9 @@ from chemunited.protocols.workflows import ProcessWorkflow
 from chemunited.shared.enums import WindowCategory
 from chemunited.shared.enums.protocols_enum import ProtocolBlock
 from chemunited.utils.flowchem_listener import FLOWCHEM_SERVERS, access_url
+from chemunited_core.compounds import COMPOUNDS, ChemicalEntity
+from chemunited_core.figure_registry import COMPONENTS, is_project_component
+from chemunited_core.figure_registry.project_loader import load_project_components
 
 from .draw import call_component_model
 from .execution import OrchestratorExecution

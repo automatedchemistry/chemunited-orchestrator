@@ -16,15 +16,15 @@ Sim: _inventory_bc.value (m³/s) is read by the hydraulic solver as a Neumann BC
 from dataclasses import dataclass
 from typing import Annotated
 
-from chemunited_quantities import (
-    ChemQuantityValidator,
-    ChemUnitQuantity,
-)
 from pydantic import Field
 from typing_extensions import override
 
 from chemunited_core.common.enums import GroupParameterCategory, PhaseKind
 from chemunited_core.compounds import VolumeContentBase
+from chemunited_quantities import (
+    ChemQuantityValidator,
+    ChemUnitQuantity,
+)
 
 from .component import ComponentData, ComponentMode
 from .enums import BoundaryConditionKind, InternalEdgeRole

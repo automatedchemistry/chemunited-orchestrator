@@ -1,9 +1,9 @@
 from dataclasses import dataclass
 
-from chemunited_quantities import ChemUnitQuantity
 from typing_extensions import override
 
 from chemunited_core.components import MassFlowControllerData, PutResult
+from chemunited_quantities import ChemUnitQuantity
 
 
 @dataclass

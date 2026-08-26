@@ -3,8 +3,9 @@ from __future__ import annotations
 from typing import Annotated
 
 import pytest
-from chemunited_quantities import ChemQuantityValidator, ChemUnitQuantity
 from pydantic import BaseModel
+
+from chemunited_quantities import ChemQuantityValidator, ChemUnitQuantity
 
 
 @pytest.mark.parametrize(

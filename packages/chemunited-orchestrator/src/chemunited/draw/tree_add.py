@@ -2,7 +2,6 @@ from __future__ import annotations
 
 from pathlib import Path
 
-from chemunited_core.components.enums import ComponentType
 from PyQt5.QtCore import QFile, QMimeData, QSize, Qt
 from PyQt5.QtGui import QDrag, QIcon
 from PyQt5.QtWidgets import (
@@ -19,6 +18,7 @@ from qfluentwidgets import TreeWidget
 
 from chemunited.elements.component import list_components
 from chemunited.shared.icon import OrchestratorIcon
+from chemunited_core.components.enums import ComponentType
 
 _COMPONENTS_DIR = (
     Path(__file__).resolve().parents[1] / "shared" / "resources" / "components"

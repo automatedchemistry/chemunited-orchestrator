@@ -11,10 +11,10 @@ from unittest.mock import MagicMock, patch
 import pytest
 import requests
 import responses as resp_lib
-from chemunited_quantities import ChemQuantityValidator, ChemUnitQuantity
 from pydantic import AliasChoices, BaseModel, Field
 from pydantic.json_schema import PydanticJsonSchemaWarning
 
+from chemunited_quantities import ChemQuantityValidator, ChemUnitQuantity
 from chemunited_workflow.api.services.protocol import ProtocolService
 
 _MODULE = "chemunited_workflow.api.services.protocol._requests"

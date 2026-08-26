@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from chemunited_workflow.enums import NodeState
 from PyQt5.QtCore import Qt, QTimer, pyqtSignal
 from PyQt5.QtGui import QColor, QPainter
 from PyQt5.QtWidgets import QHBoxLayout, QSizePolicy, QStackedWidget, QWidget
@@ -12,6 +11,8 @@ from qfluentwidgets import (
     RoundMenu,
     ToolButton,
 )
+
+from chemunited_workflow.enums import NodeState
 
 QT_KEY_ESCAPE = getattr(Qt, "Key_Escape")
 QT_NO_PEN = getattr(Qt, "NoPen")

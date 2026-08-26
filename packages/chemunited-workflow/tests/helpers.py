@@ -2,7 +2,6 @@
 
 from pathlib import Path
 
-
 MINIMAL_PROCESS_SRC = """
 from typing import Annotated
 

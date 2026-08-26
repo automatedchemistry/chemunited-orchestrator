@@ -1,10 +1,6 @@
 from dataclasses import dataclass
 from typing import Annotated, ClassVar
 
-from chemunited_quantities import (
-    ChemQuantityValidator,
-    ChemUnitQuantity,
-)
 from pydantic import Field
 
 from chemunited_core.common.enums import GroupParameterCategory
@@ -16,6 +12,10 @@ from chemunited_core.components import (
     VesselMode,
 )
 from chemunited_core.components.enums import ComponentType
+from chemunited_quantities import (
+    ChemQuantityValidator,
+    ChemUnitQuantity,
+)
 
 
 class SourceMode(ComponentMode):

@@ -1,13 +1,14 @@
 from __future__ import annotations
 
 import networkx as nx
+from pydantic import BaseModel, ConfigDict, Field
+
 from chemunited_workflow import (
     NodeExecutionContext,
     Process,
     WorkflowEdgeSpec,
     WorkflowNodeSpec,
 )
-from pydantic import BaseModel, ConfigDict, Field
 
 
 class ProcessConfig(BaseModel):

@@ -4,11 +4,12 @@ import re
 from typing import Any, Literal, cast
 from urllib.parse import urlsplit
 
-import chemunited_core.protocols as protocol_module
-from chemunited_core.protocols import CommandSignature, ComponentProtocol
 from loguru import logger
 from pydantic import Field, create_model
 from pydantic.config import JsonDict
+
+import chemunited_core.protocols as protocol_module
+from chemunited_core.protocols import CommandSignature, ComponentProtocol
 
 HttpMethod = Literal["GET", "PUT"]
 

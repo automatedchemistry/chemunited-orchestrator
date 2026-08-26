@@ -1,10 +1,6 @@
 from dataclasses import dataclass
 from typing import Annotated
 
-from chemunited_quantities import (
-    ChemQuantityValidator,
-    ChemUnitQuantity,
-)
 from pydantic import Field, model_validator
 from typing_extensions import Self, override
 
@@ -15,6 +11,10 @@ from chemunited_core.components import (
     PumpData,
     PutResult,
     ScheduledCommand,
+)
+from chemunited_quantities import (
+    ChemQuantityValidator,
+    ChemUnitQuantity,
 )
 
 

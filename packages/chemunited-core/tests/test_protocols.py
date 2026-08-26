@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import pytest
-from chemunited_quantities import ChemUnitQuantity
 
 from chemunited_core.protocols import (
     CommandSignature,
@@ -19,6 +18,7 @@ from chemunited_core.protocols import (
     SyringePumpProtocols,
     TemperatureControlProtocols,
 )
+from chemunited_quantities import ChemUnitQuantity
 
 
 class TestCommandSignature:

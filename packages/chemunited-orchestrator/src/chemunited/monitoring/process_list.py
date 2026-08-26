@@ -1,11 +1,11 @@
 from typing import TYPE_CHECKING
 
-from chemunited_workflow.enums import NodeState
 from PyQt5.QtWidgets import QAbstractItemView
 
 from chemunited.pre_run.process_list import ActiveProcessList, AvailableProcessList
 from chemunited.shared.icon import OrchestratorIcon
 from chemunited.shared.prcess_list import ProcessWidget
+from chemunited_workflow.enums import NodeState
 
 if TYPE_CHECKING:
     from chemunited.monitor import MonitorWindow

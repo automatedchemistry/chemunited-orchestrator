@@ -1,7 +1,6 @@
+from chemunited.connectivity.openapi_commands import merge_openapi_commands
 from chemunited_core.protocols import CommandSignature, ComponentProtocol
 from chemunited_core.protocols.pumps import HPLCPumpProtocols
-
-from chemunited.connectivity.openapi_commands import merge_openapi_commands
 
 
 def test_openapi_routes_create_plain_string_command_signatures() -> None:

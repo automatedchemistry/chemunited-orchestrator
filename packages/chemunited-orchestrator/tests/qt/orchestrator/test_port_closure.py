@@ -11,10 +11,10 @@ What is tested:
 """
 
 import pytest
-from chemunited_core.components.enums import PortClosure
 from pytestqt.qtbot import QtBot
 
 from chemunited.setup import SetupWindow
+from chemunited_core.components.enums import PortClosure
 
 PORT_NUM = 2
 

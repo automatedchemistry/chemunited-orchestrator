@@ -2,12 +2,12 @@
 # Updated/Created on: 2026-04-24T16:15:02.029103+00:00
 # Project name: complete
 
-from typing import Annotated, Literal, TYPE_CHECKING
+from typing import TYPE_CHECKING, Annotated, Literal
 
 import networkx as nx
-from chemunited_quantities import ChemQuantityValidator, ChemUnitQuantity
 from pydantic import BaseModel, ConfigDict, Field
 
+from chemunited_quantities import ChemQuantityValidator, ChemUnitQuantity
 from chemunited_workflow import (
     NodeExecutionContext,
     Process,

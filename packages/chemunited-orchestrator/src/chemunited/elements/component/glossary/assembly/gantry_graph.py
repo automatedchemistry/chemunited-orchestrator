@@ -1,12 +1,12 @@
 import re
 from typing import ClassVar
 
-from chemunited_core.common.constant import PATTERN_DIMENSION
-from chemunited_core.figure_registry import Gantry1DData
 from PyQt5.QtGui import QFont
 
 from chemunited.elements.component.component_parts import TextElement
 from chemunited.elements.component.graph_item import GraphComponent
+from chemunited_core.common.constant import PATTERN_DIMENSION
+from chemunited_core.figure_registry import Gantry1DData
 
 
 class GantryGraph(GraphComponent[Gantry1DData]):

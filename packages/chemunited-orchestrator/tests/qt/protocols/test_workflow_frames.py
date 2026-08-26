@@ -1,8 +1,6 @@
 from pathlib import Path
 from types import SimpleNamespace
 
-from chemunited_core.protocols import CommandSignature
-from chemunited_workflow.enums import NodeState
 from PyQt5.QtCore import QPointF, Qt
 from PyQt5.QtWidgets import QWidget
 from pytestqt.qtbot import QtBot
@@ -23,6 +21,8 @@ from chemunited.protocols.workflows.workflow_frames import (
 from chemunited.shared.editor.protocols.command import CommandEditorDialog
 from chemunited.shared.enums import WindowCategory
 from chemunited.shared.enums.protocols_enum import ProtocolBlock
+from chemunited_core.protocols import CommandSignature
+from chemunited_workflow.enums import NodeState
 
 
 class _WorkflowHost(QWidget):

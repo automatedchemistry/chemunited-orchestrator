@@ -4,8 +4,6 @@ import sqlite3
 from pathlib import Path
 
 import pytest
-from chemunited_core.compounds import COMPOUNDS, ChemicalEntity
-from chemunited_sim.recorder.schema import create_all_tables
 from matplotlib.colors import to_hex
 from pytestqt.qtbot import QtBot
 
@@ -19,6 +17,8 @@ from chemunited.simulation.simulate_report import (
     ProfilesWidget,
     SimDbReader,
 )
+from chemunited_core.compounds import COMPOUNDS, ChemicalEntity
+from chemunited_sim.recorder.schema import create_all_tables
 
 _THROTTLE_WAIT_MS = 80  # comfortably above the 33ms scrub-timer interval
 

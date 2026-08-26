@@ -1,12 +1,16 @@
-name: Publish
+name: Publish chemunited-sim
 
 on:
   push:
     tags:
-      - "v*"
+      - "chemunited-sim-v*"
 
 permissions:
   contents: read
+
+defaults:
+  run:
+    working-directory: packages/chemunited-sim
 
 jobs:
   build:
@@ -20,7 +24,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.13"
+          python-version: "3.14"
           cache: pip
 
       - name: Install package and build tools
@@ -36,11 +40,12 @@ jobs:
           import tomllib
           from pathlib import Path
 
+          prefix = "chemunited-sim-v"
           tag = os.environ["GITHUB_REF_NAME"]
-          if not tag.startswith("v"):
-              raise SystemExit(f"Expected a v-prefixed release tag, got {tag!r}")
+          if not tag.startswith(prefix):
+              raise SystemExit(f"Expected a {prefix!r}-prefixed release tag, got {tag!r}")
 
-          tag_version = tag[1:]
+          tag_version = tag[len(prefix):]
           with Path("pyproject.toml").open("rb") as pyproject:
               package_version = tomllib.load(pyproject)["project"]["version"]
 
@@ -53,8 +58,6 @@ jobs:
 
       - name: Run tests
         run: python -m pytest --tb=short -q
-        env:
-          QT_QPA_PLATFORM: offscreen
 
       - name: Build distributions
         run: python -m build
@@ -66,33 +69,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: python-package-distributions
-          path: dist/
+          path: packages/chemunited-sim/dist/
           if-no-files-found: error
-
-  publish-testpypi:
-    name: Publish to TestPyPI
-    needs: build
-    runs-on: ubuntu-latest
-    environment: testpypi
-    permissions:
-      contents: read
-      id-token: write
-
-    steps:
-      - name: Download distributions
-        uses: actions/download-artifact@v4
-        with:
-          name: python-package-distributions
-          path: dist/
-
-      - name: Publish distributions to TestPyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          repository-url: https://test.pypi.org/legacy/
 
   github-release:
     name: Create GitHub Release
-    needs: publish-testpypi
+    needs: build
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -120,9 +102,31 @@ jobs:
               --verify-tag
           fi
 
+  publish-testpypi:
+    name: Publish to TestPyPI
+    needs: github-release
+    runs-on: ubuntu-latest
+    environment: testpypi
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Download distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+
+      - name: Publish distributions to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
+
   publish-pypi:
     name: Publish to PyPI
-    needs: github-release
+    needs: publish-testpypi
     runs-on: ubuntu-latest
     environment: pypi
     permissions:
@@ -138,3 +142,5 @@ jobs:
 
       - name: Publish distributions to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          skip-existing: true

@@ -13,11 +13,12 @@ import math
 from collections import defaultdict, deque
 from dataclasses import dataclass
 
+from loguru import logger
+
 from chemunited_core.common.enums import PhaseKind
 from chemunited_core.components.enums import InternalEdgeRole
 from chemunited_core.compounds import COMPOUNDS
 from chemunited_core.compounds.entity import IDEAL_GAS_CONSTANT
-from loguru import logger
 
 from ..adapter.models import HydraulicEdge, HydraulicGraph
 from ..common.constant import (

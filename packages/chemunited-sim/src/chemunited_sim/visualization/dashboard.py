@@ -190,12 +190,14 @@ def _read_species_moles(conn: sqlite3.Connection) -> dict[str, dict[str, list]]:
     series: dict[str, dict[str, list]] = defaultdict(lambda: defaultdict(list))
     if not _table_exists(conn, "inventory_content"):
         return {}
-    for row in conn.execute("""
+    for row in conn.execute(
+        """
         SELECT time, node_id, phase, species_id, moles
         FROM inventory_content
         WHERE species_id != '__carrier__'
         ORDER BY time
-        """):
+        """
+    ):
         key = f"{row['node_id']} / {row['phase']}"
         series[key][row["species_id"]].append((float(row["time"]), float(row["moles"])))
     return {k: dict(v) for k, v in series.items()}
@@ -206,12 +208,14 @@ def _read_cell_temperatures(conn: sqlite3.Connection) -> dict[str, list]:
     series: dict[str, list] = defaultdict(list)
     if not _table_exists(conn, "cell_state"):
         return {}
-    for row in conn.execute("""
+    for row in conn.execute(
+        """
         SELECT time, edge_id, AVG(temperature) AS avg_temp
         FROM cell_state
         GROUP BY time, edge_id
         ORDER BY time
-        """):
+        """
+    ):
         if row["avg_temp"] is not None:
             series[row["edge_id"]].append((float(row["time"]), float(row["avg_temp"])))
     return dict(series)
@@ -234,11 +238,13 @@ def _read_cell_profiles(conn: sqlite3.Connection) -> dict[str, Any]:
     content_values: dict[tuple[str, str, str, str, int], float] = {}
 
     if has_state:
-        for row in conn.execute("""
+        for row in conn.execute(
+            """
             SELECT time, edge_id, cell_index, phase, phase_fraction, temperature
             FROM cell_state
             ORDER BY time, edge_id, cell_index, phase
-            """):
+            """
+        ):
             time_value = _round_time(float(row["time"]))
             time_key = _time_key(time_value)
             edge_id = str(row["edge_id"])
@@ -254,11 +260,13 @@ def _read_cell_profiles(conn: sqlite3.Connection) -> dict[str, Any]:
             )
 
     if has_content:
-        for row in conn.execute("""
+        for row in conn.execute(
+            """
             SELECT time, edge_id, cell_index, phase, species_id, moles
             FROM cell_content
             ORDER BY time, edge_id, cell_index, phase, species_id
-            """):
+            """
+        ):
             time_value = _round_time(float(row["time"]))
             time_key = _time_key(time_value)
             edge_id = str(row["edge_id"])
@@ -364,11 +372,13 @@ def _read_cell_geometry(conn: sqlite3.Connection) -> dict[str, list[dict[str, fl
     if not _table_exists(conn, "edge_cells"):
         return {}
     geometry: dict[str, list[dict[str, float]]] = defaultdict(list)
-    for row in conn.execute("""
+    for row in conn.execute(
+        """
         SELECT edge_id, cell_index, position_m, length_m
         FROM edge_cells
         ORDER BY edge_id, cell_index
-        """):
+        """
+    ):
         position = float(row["position_m"])
         length = float(row["length_m"])
         geometry[str(row["edge_id"])].append(

@@ -22,11 +22,6 @@ from math import ceil
 from pathlib import Path
 from typing import ClassVar, Generic, TypeVar
 
-from chemunited_core.common.constant import PATTERN_DIMENSION
-from chemunited_core.common.enums import ConnectionType as CoreConnectionType
-from chemunited_core.components import ComponentData, ComponentMode
-from chemunited_core.components.enums import PortClosure
-from chemunited_core.figure_registry import COMPONENTS, get_figure_path
 from loguru import logger
 from pydantic import BaseModel
 from PyQt5 import sip
@@ -54,6 +49,11 @@ from chemunited.elements.component.component_parts import (
     WarningDisplay,
 )
 from chemunited.shared.enums import SetupStepMode
+from chemunited_core.common.constant import PATTERN_DIMENSION
+from chemunited_core.common.enums import ConnectionType as CoreConnectionType
+from chemunited_core.components import ComponentData, ComponentMode
+from chemunited_core.components.enums import PortClosure
+from chemunited_core.figure_registry import COMPONENTS, get_figure_path
 
 QGRAPHICS_ITEM_POSITION_HAS_CHANGED = getattr(QGraphicsItem, "ItemPositionHasChanged")
 QGRAPHICS_ITEM_ROTATION_HAS_CHANGED = getattr(
@@ -257,7 +257,8 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
                     id_connection=str(port_num),
                     parent=self,
                 )
-                point.set_capped(port.closure == PortClosure.CAPPED)
+                if isinstance(point, FlowConnectionPoint):
+                    point.set_capped(port.closure == PortClosure.CAPPED)
             else:
                 point = cls(
                     position=port.relative_position,

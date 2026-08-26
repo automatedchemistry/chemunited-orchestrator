@@ -3,13 +3,12 @@ from __future__ import annotations
 from dataclasses import dataclass
 from itertools import pairwise
 
-from chemunited_quantities import ChemUnitQuantity
-
 from chemunited_core.common.constant import R_MAX_HYDRAULIC
 from chemunited_core.common.enums import ConnectionType
 from chemunited_core.components import ComponentData
 from chemunited_core.connections import EdgeData, EdgeMode
 from chemunited_core.figure_registry import COMPONENTS
+from chemunited_quantities import ChemUnitQuantity
 
 
 @dataclass

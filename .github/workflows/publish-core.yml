@@ -1,12 +1,16 @@
-name: Publish
+name: Publish chemunited-core
 
 on:
   push:
     tags:
-      - "v*"
+      - "chemunited-core-v*"
 
 permissions:
   contents: read
+
+defaults:
+  run:
+    working-directory: packages/chemunited-core
 
 jobs:
   build:
@@ -20,7 +24,7 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.14"
+          python-version: "3.11"
           cache: pip
 
       - name: Install package and build tools
@@ -36,11 +40,12 @@ jobs:
           import tomllib
           from pathlib import Path
 
+          prefix = "chemunited-core-v"
           tag = os.environ["GITHUB_REF_NAME"]
-          if not tag.startswith("v"):
-              raise SystemExit(f"Expected a v-prefixed release tag, got {tag!r}")
+          if not tag.startswith(prefix):
+              raise SystemExit(f"Expected a {prefix!r}-prefixed release tag, got {tag!r}")
 
-          tag_version = tag[1:]
+          tag_version = tag[len(prefix):]
           with Path("pyproject.toml").open("rb") as pyproject:
               package_version = tomllib.load(pyproject)["project"]["version"]
 
@@ -64,30 +69,8 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: python-package-distributions
-          path: dist/
+          path: packages/chemunited-core/dist/
           if-no-files-found: error
-
-  publish-testpypi:
-    name: Publish to TestPyPI
-    needs: github-release
-    runs-on: ubuntu-latest
-    environment: testpypi
-    permissions:
-      contents: read
-      id-token: write
-
-    steps:
-      - name: Download distributions
-        uses: actions/download-artifact@v4
-        with:
-          name: python-package-distributions
-          path: dist/
-
-      - name: Publish distributions to TestPyPI
-        uses: pypa/gh-action-pypi-publish@release/v1
-        with:
-          repository-url: https://test.pypi.org/legacy/
-          skip-existing: true
 
   github-release:
     name: Create GitHub Release
@@ -118,6 +101,28 @@ jobs:
               --generate-notes \
               --verify-tag
           fi
+
+  publish-testpypi:
+    name: Publish to TestPyPI
+    needs: github-release
+    runs-on: ubuntu-latest
+    environment: testpypi
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Download distributions
+        uses: actions/download-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+
+      - name: Publish distributions to TestPyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        with:
+          repository-url: https://test.pypi.org/legacy/
+          skip-existing: true
 
   publish-pypi:
     name: Publish to PyPI

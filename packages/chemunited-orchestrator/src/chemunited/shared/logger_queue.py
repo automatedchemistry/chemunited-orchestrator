@@ -32,7 +32,7 @@ def setup_logging_once():
     def sink(message):
         LOG_QUEUE.push(message.record)
 
-    _sink_id = logger.add(sink, level="TRACE")  # type:ignore[assignment]
+    _sink_id = logger.add(sink, level="TRACE")  # type: ignore[assignment]
 
 
 def remove_sink():

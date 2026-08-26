@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from chemunited_workflow.enums import NodeState
 from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QColor, QPainter
 from PyQt5.QtWidgets import QWidget
+
+from chemunited_workflow.enums import NodeState
 
 _STATUS_WAITING_COLOR = QColor(229, 171, 0)
 _STATUS_RUNNING_COLOR = QColor(38, 166, 91)

@@ -8,7 +8,6 @@ from functools import partial
 from pathlib import Path
 from typing import Annotated, Any, get_args, get_origin
 
-from chemunited_quantities import ChemQuantityValidator, ChemUnitQuantity
 from loguru import logger
 from pydantic.config import JsonDict
 from pydantic.fields import FieldInfo
@@ -37,6 +36,7 @@ from chemunited.shared.widgets.base_mode_editor.cards.builder_models import (
     StringVariableBuildMode,
 )
 from chemunited.utils.files import load_class
+from chemunited_quantities import ChemQuantityValidator, ChemUnitQuantity
 
 QIODEVICE_TEXT = getattr(QIODevice, "Text")
 QIODEVICE_WRITE_ONLY = getattr(QIODevice, "WriteOnly")

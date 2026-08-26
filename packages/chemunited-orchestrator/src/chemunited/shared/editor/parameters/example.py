@@ -2,8 +2,9 @@
 
 from typing import Annotated
 
-from chemunited_quantities import ChemQuantityValidator, ChemUnitQuantity
 from pydantic import BaseModel, ConfigDict, Field, field_validator
+
+from chemunited_quantities import ChemQuantityValidator, ChemUnitQuantity
 
 
 def some_method(): ...

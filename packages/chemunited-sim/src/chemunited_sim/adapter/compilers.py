@@ -16,6 +16,8 @@ from __future__ import annotations
 
 from typing import Callable
 
+from loguru import logger
+
 from chemunited_core.common.enums import ConnectionType
 from chemunited_core.components import (
     ComponentData,
@@ -28,7 +30,6 @@ from chemunited_core.components import (
 )
 from chemunited_core.components.enums import InternalEdgeRole, PortClosure
 from chemunited_core.figure_registry import Gantry3DData, VialData
-from loguru import logger
 
 from .models import HydraulicEdge, HydraulicNode
 

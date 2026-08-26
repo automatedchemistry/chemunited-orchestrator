@@ -12,13 +12,13 @@ Used by:
 
 from typing import Annotated
 
+from pydantic import BaseModel, Field, PrivateAttr, field_validator
+
+from chemunited_core.common.enums import GroupParameterCategory
 from chemunited_quantities import (
     ChemQuantityValidator,
     ChemUnitQuantity,
 )
-from pydantic import BaseModel, Field, PrivateAttr, field_validator
-
-from chemunited_core.common.enums import GroupParameterCategory
 
 IDEAL_GAS_CONSTANT = 8.314  # J/(mol*K)
 

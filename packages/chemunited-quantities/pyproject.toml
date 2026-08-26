@@ -41,33 +41,5 @@ packages = ["src/chemunited_quantities"]
 testpaths = ["tests"]
 pythonpath = ["src"]
 
-[tool.black]
-line-length = 88
-target-version = ["py311"]
-
-[tool.ruff]
-line-length = 88
-src = ["src", "tests"]
-target-version = "py311"
-
-[tool.ruff.lint]
-fixable = ["I"]
-select = ["E", "F", "I"]
-
-[tool.ruff.lint.isort]
-known-first-party = ["chemunited_quantities"]
-
-[tool.mypy]
-explicit_package_bases = true
-files = ["src/chemunited_quantities"]
-ignore_missing_imports = true
-mypy_path = "src"
-no_implicit_reexport = true
-pretty = true
-python_version = "3.11"
-show_error_codes = true
-warn_return_any = true
-warn_unused_ignores = true
-
 [tool.coverage.run]
 source = ["src/chemunited_quantities"]

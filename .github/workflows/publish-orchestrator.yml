@@ -1,12 +1,16 @@
-name: Publish
+name: Publish chemunited-orchestrator
 
 on:
   push:
     tags:
-      - "v*"
+      - "chemunited-orchestrator-v*"
 
 permissions:
   contents: read
+
+defaults:
+  run:
+    working-directory: packages/chemunited-orchestrator
 
 jobs:
   build:
@@ -20,13 +24,13 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v5
         with:
-          python-version: "3.14"
+          python-version: "3.13"
           cache: pip
 
       - name: Install package and build tools
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e ".[test,sila2,opcua]"
+          python -m pip install -e ".[dev]"
           python -m pip install build twine
 
       - name: Verify tag matches package version
@@ -36,11 +40,12 @@ jobs:
           import tomllib
           from pathlib import Path
 
+          prefix = "chemunited-orchestrator-v"
           tag = os.environ["GITHUB_REF_NAME"]
-          if not tag.startswith("v"):
-              raise SystemExit(f"Expected a v-prefixed release tag, got {tag!r}")
+          if not tag.startswith(prefix):
+              raise SystemExit(f"Expected a {prefix!r}-prefixed release tag, got {tag!r}")
 
-          tag_version = tag[1:]
+          tag_version = tag[len(prefix):]
           with Path("pyproject.toml").open("rb") as pyproject:
               package_version = tomllib.load(pyproject)["project"]["version"]
 
@@ -53,6 +58,8 @@ jobs:
 
       - name: Run tests
         run: python -m pytest --tb=short -q
+        env:
+          QT_QPA_PLATFORM: offscreen
 
       - name: Build distributions
         run: python -m build
@@ -64,7 +71,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: python-package-distributions
-          path: dist/
+          path: packages/chemunited-orchestrator/dist/
           if-no-files-found: error
 
   github-release:

@@ -1,9 +1,9 @@
-from chemunited_core.common.constant import PATTERN_DIMENSION
 from pytest import approx
 
 from chemunited.elements.component.component_parts.scene_item import (
     ConnectivityBadge,
 )
+from chemunited_core.common.constant import PATTERN_DIMENSION
 
 
 def _mapped_icon_center(badge: ConnectivityBadge):

@@ -11,6 +11,8 @@ from __future__ import annotations
 import copy
 from dataclasses import replace
 
+from loguru import logger
+
 from chemunited_core.common.enums import ConnectionType
 from chemunited_core.components import ComponentData, NeutralComponentData
 from chemunited_core.components.enums import InternalEdgeRole
@@ -23,7 +25,6 @@ from chemunited_core.figure_registry import (
     MultiChannelRelayData,
     VialData,
 )
-from loguru import logger
 
 from .compilers import _COMPILERS, compile_component
 from .models import HeatLink, HydraulicEdge, HydraulicGraph, HydraulicNode, PowerLink

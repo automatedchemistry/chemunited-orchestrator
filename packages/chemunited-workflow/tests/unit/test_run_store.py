@@ -4,10 +4,9 @@ from __future__ import annotations
 
 import threading
 
-
 from chemunited_workflow.api.run_store import RunState, RunStore
-from chemunited_workflow.models import WorkflowExecutionEvent
 from chemunited_workflow.enums import WorkflowEventType
+from chemunited_workflow.models import WorkflowExecutionEvent
 
 
 def _make_event(msg: str = "test") -> WorkflowExecutionEvent:

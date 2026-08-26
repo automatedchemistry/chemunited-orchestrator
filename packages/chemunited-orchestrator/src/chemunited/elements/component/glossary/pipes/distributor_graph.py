@@ -1,11 +1,11 @@
 from typing import ClassVar
 
-from chemunited_core.components import JunctionData
 from PyQt5.QtCore import QPointF, Qt
 from PyQt5.QtGui import QPen
 
 from chemunited.elements.component.component_parts import SceneItem
 from chemunited.elements.component.graph_item import GraphComponent
+from chemunited_core.components import JunctionData
 
 
 class Body(SceneItem):

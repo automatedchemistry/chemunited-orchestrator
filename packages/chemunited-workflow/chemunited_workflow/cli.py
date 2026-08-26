@@ -416,14 +416,16 @@ def serve(
         finally:
             server.should_exit = True
             if zc is not None:
-                zc.unregister_service(zc_info)
+                if zc_info is not None:
+                    zc.unregister_service(zc_info)
                 zc.close()
     else:
         try:
             uvicorn.run(app, host=host, port=resolved_port, reload=reload)
         finally:
             if zc is not None:
-                zc.unregister_service(zc_info)
+                if zc_info is not None:
+                    zc.unregister_service(zc_info)
                 zc.close()
 
 

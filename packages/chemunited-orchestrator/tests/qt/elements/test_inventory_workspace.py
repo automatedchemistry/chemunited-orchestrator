@@ -3,7 +3,6 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pytest
-from chemunited_core.compounds import COMPOUNDS, ChemicalEntity
 from PyQt5.QtCore import QItemSelectionModel
 from PyQt5.QtWidgets import QWidget
 from pytestqt.qtbot import QtBot
@@ -13,6 +12,7 @@ from chemunited.elements.component import create_component
 from chemunited.elements.compounds import CompoundList
 from chemunited.elements.inventory import InventoryWorkspace, inventory_capacity_m3
 from chemunited.orchestrator.inventory_state import inventory_uses_compound
+from chemunited_core.compounds import COMPOUNDS, ChemicalEntity
 
 
 @pytest.fixture(autouse=True)

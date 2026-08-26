@@ -1,13 +1,13 @@
 from typing import ClassVar
 
-from chemunited_core.figure_registry import get_figure_path
-from chemunited_core.figure_registry.vessels import VialData, _well_key
 from PyQt5.QtCore import QPointF, QRectF, Qt
 from PyQt5.QtGui import QColor, QFont, QPen
 
 from chemunited.elements.component.component_parts import SceneItem, SvgLayer
 from chemunited.elements.component.graph_item import GraphComponent
 from chemunited.utils.math_functions import position_to_letter
+from chemunited_core.figure_registry import get_figure_path
+from chemunited_core.figure_registry.vessels import VialData, _well_key
 
 from .common import FlaskContent
 

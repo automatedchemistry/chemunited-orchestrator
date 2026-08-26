@@ -79,6 +79,15 @@ class BaseClient:
                 req_body = req_body.decode()
             except UnicodeDecodeError:
                 req_body = f"<binary {len(req_body)} bytes>"
+        elif req_body is not None and not isinstance(req_body, str):
+            # This client only ever sends json= payloads (never data=/files=),
+            # so requests never hands back a stream/iterable body in practice —
+            # this branch just keeps the type honest for _log()'s signature.
+            req_body = f"<{type(req_body).__name__}>"
+
+        req_content_type = response.request.headers.get("Content-Type")
+        if isinstance(req_content_type, bytes):
+            req_content_type = req_content_type.decode(errors="replace")
 
         resp_content = response.content
         resp_size = len(resp_content)
@@ -94,7 +103,7 @@ class BaseClient:
             method=response.request.method or "",
             url=response.request.url or "",
             req_body=req_body,
-            req_content_type=response.request.headers.get("Content-Type"),
+            req_content_type=req_content_type,
             status_code=response.status_code,
             resp_content_type=response.headers.get("Content-Type"),
             resp_size=resp_size,
@@ -306,6 +315,7 @@ class ComponentClient(DeviceClientMixin, BaseClient):
                 if deadline is not None:
                     deadline += time.monotonic() - paused_at
             self._raise_if_cancelled()
+            response: requests.Response | None
             try:
                 response = BaseClient.get(self, _IS_IDLE_PATH)
             except requests.HTTPError as exc:

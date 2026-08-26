@@ -1,10 +1,10 @@
 import numpy as np
-from chemunited_core.common.constant import PATTERN_DIMENSION
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QPainterPath
 
 from chemunited.elements.component.component_parts import SceneItem
 from chemunited.utils.math_functions import multi_peak
+from chemunited_core.common.constant import PATTERN_DIMENSION
 
 
 class Spectrum(SceneItem):

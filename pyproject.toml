@@ -5,3 +5,73 @@ members = ["packages/*"]
 required-environments = [
     "sys_platform == 'win32' and platform_machine == 'AMD64'",
 ]
+
+[tool.black]
+line-length = 88
+target-version = ["py311"]
+extend-exclude = '''
+(
+    ^/\.venv
+  | ^/build
+  | ^/packages/chemunited-orchestrator/src/chemunited/shared/resources
+)
+'''
+
+[tool.ruff]
+line-length = 88
+target-version = "py311"
+extend-exclude = [
+    ".venv",
+    "build",
+    "packages/chemunited-orchestrator/src/chemunited/shared/resources",
+]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+fixable = ["I"]
+
+[tool.ruff.lint.per-file-ignores]
+# chemunited-workflow and chemunited-orchestrator predate the unified lint
+# config and were never checked against an 88-char line limit (workflow had
+# no ruff config at all; orchestrator's config omitted "E" from `select`).
+# TODO remove once each is cleaned up deliberately.
+"packages/chemunited-workflow/**" = ["E501"]
+"packages/chemunited-orchestrator/**" = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = [
+    "chemunited_quantities",
+    "chemunited_core",
+    "chemunited_workflow",
+    "chemunited_sim",
+    "chemunited",
+]
+
+[tool.mypy]
+# numpy's bundled stubs use PEP 695 `type` statements (3.12+ syntax) that mypy
+# can't even parse below 3.12, regardless of packages' actual requires-python floor.
+python_version = "3.12"
+files = [
+    "packages/chemunited-quantities/src",
+    "packages/chemunited-core/src",
+    "packages/chemunited-workflow/chemunited_workflow",
+    "packages/chemunited-sim/src",
+    "packages/chemunited-orchestrator/src",
+]
+mypy_path = [
+    "packages/chemunited-quantities/src",
+    "packages/chemunited-core/src",
+    "packages/chemunited-workflow",
+    "packages/chemunited-sim/src",
+    "packages/chemunited-orchestrator/src",
+]
+exclude = '(^\.venv/|^build/|packages/chemunited-orchestrator/src/chemunited/shared/resources/)'
+explicit_package_bases = true
+namespace_packages = true
+ignore_missing_imports = true
+pretty = true
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = ["chemunited.shared.resources.resources_rc"]
+ignore_errors = true

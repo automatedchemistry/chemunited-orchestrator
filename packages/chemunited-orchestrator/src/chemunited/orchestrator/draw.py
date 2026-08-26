@@ -1,11 +1,5 @@
 import re
 
-from chemunited_core.common.enums import ConnectionType
-from chemunited_core.components.internals import DEFAULT_INVENTORY_KEY
-from chemunited_core.compounds import COMPOUNDS
-from chemunited_core.connections import EdgeData, EdgeMode
-from chemunited_core.figure_registry.vessels import FlowReactorData
-from chemunited_quantities import ChemUnitQuantity
 from loguru import logger
 from pydantic import BaseModel
 from PyQt5.QtCore import pyqtSlot
@@ -24,6 +18,12 @@ from chemunited.elements.connection import (
 )
 from chemunited.elements.reactions import ReactionDefinition
 from chemunited.shared.widgets.base_mode_editor import BaseModeDialog
+from chemunited_core.common.enums import ConnectionType
+from chemunited_core.components.internals import DEFAULT_INVENTORY_KEY
+from chemunited_core.compounds import COMPOUNDS
+from chemunited_core.connections import EdgeData, EdgeMode
+from chemunited_core.figure_registry.vessels import FlowReactorData
+from chemunited_quantities import ChemUnitQuantity
 
 from .core import OrchestratorCore
 

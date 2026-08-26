@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from chemunited_workflow.enums import NodeState
-
 from chemunited.protocols.workflows.elements.status_bar import (
     _STATUS_COMPLETED_COLOR,
     _STATUS_FAILED_COLOR,
@@ -9,6 +7,7 @@ from chemunited.protocols.workflows.elements.status_bar import (
     _STATUS_WAITING_COLOR,
     WorkflowStatusBar,
 )
+from chemunited_workflow.enums import NodeState
 
 
 def test_workflow_status_bar_hides_for_inactive_states(qtbot) -> None:

@@ -5,11 +5,10 @@ from __future__ import annotations
 import asyncio
 import mimetypes
 from pathlib import Path
+from typing import Any
 
 from fastapi import APIRouter, Depends, HTTPException
 from fastapi.responses import FileResponse, HTMLResponse, Response
-
-from typing import Any
 
 from ..dependencies import get_project_holder
 from ..project_holder import ProjectHolder

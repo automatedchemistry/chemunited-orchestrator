@@ -1,12 +1,12 @@
 from typing import Generic, TypeVar
 
 import numpy as np
-from chemunited_core.components.valve import ValveComponentData
 from PyQt5.QtCore import QPointF, QRectF, Qt
 from PyQt5.QtGui import QPainterPath, QPen
 from PyQt5.QtWidgets import QGraphicsObject, QGraphicsPathItem
 
 from chemunited.elements.component.graph_item import GraphComponent
+from chemunited_core.components.valve import ValveComponentData
 
 ValveT = TypeVar("ValveT", bound=ValveComponentData)
 

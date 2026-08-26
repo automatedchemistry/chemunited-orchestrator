@@ -11,13 +11,13 @@ import pytest
 import requests
 import responses as resp_lib
 
+from chemunited_quantities import ChemUnitQuantity
 from chemunited_workflow.clients import BaseClient, ComponentClient
 from chemunited_workflow.durations import parse_timeout_commands
 from chemunited_workflow.exceptions import (
     ConcurrentClientAccessError,
     RunCancelledError,
 )
-from chemunited_quantities import ChemUnitQuantity
 
 BASE_URL = "http://device-server:8000"
 

@@ -1,9 +1,10 @@
 from __future__ import annotations
 
-from chemunited_core.common.constant import PATTERN_DIMENSION
 from PyQt5.QtCore import QByteArray
 from PyQt5.QtSvg import QGraphicsSvgItem, QSvgRenderer
 from PyQt5.QtWidgets import QGraphicsItem
+
+from chemunited_core.common.constant import PATTERN_DIMENSION
 
 
 class SvgLayer(QGraphicsSvgItem):

@@ -1,14 +1,14 @@
 from typing import ClassVar
 
+from PyQt5.QtCore import QRectF, Qt
+
+from chemunited.elements.component.component_parts import SvgLayer
+from chemunited.elements.component.graph_item import GraphComponent
 from chemunited_core.common.constant import PATTERN_DIMENSION
 from chemunited_core.common.enums import ConnectionType
 from chemunited_core.components import VesselComponentData
 from chemunited_core.components.enums import PortAccess
 from chemunited_core.figure_registry import get_figure_path
-from PyQt5.QtCore import QRectF, Qt
-
-from chemunited.elements.component.component_parts import SvgLayer
-from chemunited.elements.component.graph_item import GraphComponent
 
 from .common import FlaskContent as BaseFlaskContent
 

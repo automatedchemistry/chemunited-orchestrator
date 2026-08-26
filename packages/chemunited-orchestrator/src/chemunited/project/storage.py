@@ -10,7 +10,6 @@ import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
 
-from chemunited_core.components.internals import DEFAULT_INVENTORY_KEY
 from loguru import logger
 
 from chemunited.project.writer import render_python_script
@@ -21,6 +20,7 @@ from chemunited.protocols.workflows.naming import (
 )
 from chemunited.shared.enums import WindowCategory
 from chemunited.utils.files import load_attribute
+from chemunited_core.components.internals import DEFAULT_INVENTORY_KEY
 
 _PACK_EXCLUDE = {".git", ".gitignore", ".chemunited_session", "__pycache__", "log"}
 _PROTOCOLS_SKIP = {"__init__", "main_parameters"}

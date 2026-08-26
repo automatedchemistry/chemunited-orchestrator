@@ -6,11 +6,11 @@ import math
 from collections import deque
 
 import pytest
+
 from chemunited_core.common.constant import R_MAX_HYDRAULIC
 from chemunited_core.common.enums import PhaseKind
 from chemunited_core.components.enums import InternalEdgeRole
 from chemunited_core.compounds import COMPOUNDS
-
 from chemunited_sim.adapter.models import HydraulicEdge, HydraulicGraph, HydraulicNode
 from chemunited_sim.hydraulics.models import HydraulicState
 from chemunited_sim.transport.engine import (

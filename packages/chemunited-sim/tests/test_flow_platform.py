@@ -15,12 +15,6 @@ from pathlib import Path
 
 import networkx as nx
 import pytest
-from chemunited_workflow import (
-    NodeExecutionContext,
-    Process,
-    WorkflowEdgeSpec,
-    WorkflowNodeSpec,
-)
 from fastapi.testclient import TestClient
 from pydantic import BaseModel, ConfigDict
 
@@ -28,6 +22,12 @@ from chemunited_sim.cli import server
 from chemunited_sim.cli.clock import SimClock
 from chemunited_sim.cli.server import SimStatus, SimulationState, app
 from chemunited_sim.worker import SimConfig
+from chemunited_workflow import (
+    NodeExecutionContext,
+    Process,
+    WorkflowEdgeSpec,
+    WorkflowNodeSpec,
+)
 
 PROJECT_PATH = Path(__file__).parent / "flow_platform"
 

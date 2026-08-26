@@ -5,9 +5,9 @@ from __future__ import annotations
 from collections import deque
 
 import pytest
+
 from chemunited_core.common.enums import PhaseKind
 from chemunited_core.figure_registry import COMPONENTS
-
 from chemunited_sim.cli.builder import PlatformBuilder
 from chemunited_sim.inventory.models import InventoryState
 from chemunited_sim.reactions import FirstOrderDecay, apply, apply_transport

@@ -8,8 +8,6 @@ from pathlib import Path
 from typing import override
 
 import black  # type: ignore[import-not-found]
-from chemunited_core.protocols import CommandSignature
-from chemunited_workflow.enums import NodeState
 from loguru import logger
 from PyQt5 import sip
 from PyQt5.QtCore import QPointF, QRectF, Qt
@@ -36,6 +34,8 @@ from chemunited.shared.enums import SetupStepMode, WindowCategory
 from chemunited.shared.enums.protocols_enum import ProtocolBlock
 from chemunited.shared.graph import GraphCore, SceneCore
 from chemunited.shared.icon import OrchestratorIcon
+from chemunited_core.protocols import CommandSignature
+from chemunited_workflow.enums import NodeState
 
 from .controller import WorkflowController
 from .editor import ProcessScriptEditorWindow

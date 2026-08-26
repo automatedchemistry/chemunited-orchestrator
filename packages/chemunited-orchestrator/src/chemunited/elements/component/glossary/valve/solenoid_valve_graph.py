@@ -1,13 +1,13 @@
 from typing import TYPE_CHECKING, ClassVar, cast
 
-from chemunited_core.components import ComponentData
-from chemunited_core.components.component import PATTERN_DIMENSION
-from chemunited_core.figure_registry import SolenoidValve2WayData, SolenoidValveData
 from PyQt5.QtCore import QLineF
 from PyQt5.QtGui import QColor
 
 from chemunited.elements.component.component_parts import StatusOverlay
 from chemunited.elements.component.graph_item import GraphComponent
+from chemunited_core.components import ComponentData
+from chemunited_core.components.component import PATTERN_DIMENSION
+from chemunited_core.figure_registry import SolenoidValve2WayData, SolenoidValveData
 
 
 class StatusOverlaySolenoid(StatusOverlay):

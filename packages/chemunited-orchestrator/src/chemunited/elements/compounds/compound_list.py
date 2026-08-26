@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-from chemunited_core.compounds import COMPOUNDS, ChemicalEntity
 from PyQt5.QtCore import QSize, Qt, pyqtSignal
 from PyQt5.QtGui import QColor
 from PyQt5.QtWidgets import (
@@ -23,6 +22,7 @@ from qfluentwidgets import (
 
 from chemunited.orchestrator.inventory_state import inventory_uses_compound
 from chemunited.orchestrator.protocols import is_valid_name
+from chemunited_core.compounds import COMPOUNDS, ChemicalEntity
 
 from .compound_dialog import CompoundDialog
 

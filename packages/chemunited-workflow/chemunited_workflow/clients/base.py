@@ -10,7 +10,6 @@ from dataclasses import asdict, is_dataclass
 from pathlib import Path
 from typing import Any
 
-
 from ..cancellation import raise_if_cancelled, sleep_interruptibly, wait_while_paused
 from ..durations import parse_timeout_commands
 from ..exceptions import ConcurrentClientAccessError

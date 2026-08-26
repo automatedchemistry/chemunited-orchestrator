@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 import networkx as nx
-from pydantic import BaseModel
 import pytest
+from pydantic import BaseModel
 
 from chemunited_workflow import (
     NodeExecutionContext,

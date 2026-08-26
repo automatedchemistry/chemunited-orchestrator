@@ -26,7 +26,8 @@ def _write_custom_component(project_dir: Path) -> None:
         "from . import my_valve\n", encoding="utf-8"
     )
     (components_dir / "my_valve.py").write_text(
-        textwrap.dedent("""
+        textwrap.dedent(
+            """
             from chemunited_core.components import ComponentData, ComponentMode
             from chemunited_core.figure_registry import (
                 ComponentDefinition,
@@ -43,7 +44,8 @@ def _write_custom_component(project_dir: Path) -> None:
 
 
             register_component("MyValve", ComponentDefinition(MyValveData, MyValveMode))
-            """),
+            """
+        ),
         encoding="utf-8",
     )
 

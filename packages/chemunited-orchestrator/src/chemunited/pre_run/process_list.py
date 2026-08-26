@@ -3,7 +3,6 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from chemunited_workflow.enums import NodeState
 from loguru import logger
 from pydantic import BaseModel, ValidationError
 from PyQt5.QtCore import Qt, pyqtSignal
@@ -21,6 +20,7 @@ from chemunited.shared.icon import OrchestratorIcon
 from chemunited.shared.prcess_list import ProcessItem, ProcessList
 from chemunited.shared.widgets.base_mode_editor.dialog import BaseModeDialog
 from chemunited.utils.files import load_class
+from chemunited_workflow.enums import NodeState
 
 if TYPE_CHECKING:
     from chemunited.protocols.workflows import ProcessWorkflow

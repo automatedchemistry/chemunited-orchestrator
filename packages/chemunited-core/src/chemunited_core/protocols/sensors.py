@@ -1,10 +1,11 @@
 from typing import Annotated, Literal
 
+from pydantic import Field, field_validator
+
 from chemunited_quantities import (
     ChemQuantityValidator,
     ChemUnitQuantity,
 )
-from pydantic import Field, field_validator
 
 from .models import CommandSignature, ComponentProtocol
 

@@ -7,14 +7,12 @@ import networkx as nx
 from pydantic import BaseModel, ConfigDict
 
 # from chemunited_quantities import ChemQuantityValidator, ChemUnitQuantity
-
 from chemunited_workflow import (
     NodeExecutionContext,
     Process,
     WorkflowEdgeSpec,
     WorkflowNodeSpec,
 )
-
 
 # ── Process configuration ──────────────────────────────────────────────────────
 

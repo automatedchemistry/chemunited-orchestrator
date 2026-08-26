@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import pytest
-from chemunited_core.compounds import COMPOUNDS, ChemicalEntity
 from PyQt5.QtCore import Qt
 from PyQt5.QtWidgets import QFrame
 from pytestqt.qtbot import QtBot
@@ -10,6 +9,7 @@ from chemunited.elements.compounds import CompoundDialog, CompoundList, Compound
 from chemunited.elements.compounds.compound_list import _swatch_stylesheet
 from chemunited.elements.inventory import InventoryWorkspace
 from chemunited.setup import SetupWindow
+from chemunited_core.compounds import COMPOUNDS, ChemicalEntity
 
 
 def _magnitude(value, unit: str) -> float:

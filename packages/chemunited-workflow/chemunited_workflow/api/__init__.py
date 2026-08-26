@@ -15,9 +15,9 @@ from .routers.logs import router as logs_router
 from .routers.monitoring import router as monitoring_router
 from .routers.processes import router as processes_router
 from .routers.project import router as project_router
-from .routers.runner import router as runner_router
 from .routers.protocols import read_router as protocols_read_router
 from .routers.protocols import write_router as protocols_write_router
+from .routers.runner import router as runner_router
 from .routers.ui import router as ui_router
 
 _WEB_DIR = Path(__file__).parent.parent / "web"

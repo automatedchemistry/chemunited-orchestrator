@@ -1,9 +1,8 @@
 from typing import ClassVar
 
-from chemunited_core.figure_registry import MFCComponentData
-
 from chemunited.elements.component.component_parts import StatusOverlay
 from chemunited.elements.component.graph_item import GraphComponent
+from chemunited_core.figure_registry import MFCComponentData
 
 
 class MFCComponent(GraphComponent[MFCComponentData]):

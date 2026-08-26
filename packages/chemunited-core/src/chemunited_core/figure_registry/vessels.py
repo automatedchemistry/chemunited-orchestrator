@@ -1,7 +1,6 @@
 from dataclasses import dataclass
 from typing import Annotated, ClassVar
 
-from chemunited_quantities import ChemQuantityValidator, ChemUnitQuantity
 from pydantic import Field
 from typing_extensions import override
 
@@ -30,6 +29,7 @@ from chemunited_core.components.internals import (
     PortBoundaryCondition,
 )
 from chemunited_core.compounds import VolumeContentBase
+from chemunited_quantities import ChemQuantityValidator, ChemUnitQuantity
 
 CELL_SIZE = 40
 ROW_HEADER_WIDTH = 12

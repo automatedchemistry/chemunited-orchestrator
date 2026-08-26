@@ -1,11 +1,11 @@
 from __future__ import annotations
 
-from chemunited_workflow.enums import NodeState
 from PyQt5.QtCore import QObject, pyqtSignal
 from PyQt5.QtWidgets import QWidget
 from pytestqt.qtbot import QtBot
 
 from chemunited.monitoring.process_list import MonitorProcessesWidget
+from chemunited_workflow.enums import NodeState
 
 
 class DummyOrchestrator(QObject):

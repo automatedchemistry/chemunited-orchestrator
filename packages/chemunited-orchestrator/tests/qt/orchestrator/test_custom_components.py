@@ -17,12 +17,6 @@ requires FIGURE to already be in COMPONENTS.
 """
 
 import pytest
-from chemunited_core.components import ComponentData, ComponentMode
-from chemunited_core.figure_registry import (
-    ComponentDefinition,
-    clear_project_components,
-    register_component,
-)
 from pytestqt.qtbot import QtBot
 
 from chemunited.elements.component.component_factory import (
@@ -31,6 +25,12 @@ from chemunited.elements.component.component_factory import (
 )
 from chemunited.elements.component.graph_item import GraphComponent
 from chemunited.setup import SetupWindow
+from chemunited_core.components import ComponentData, ComponentMode
+from chemunited_core.figure_registry import (
+    ComponentDefinition,
+    clear_project_components,
+    register_component,
+)
 
 FIGURE_NAME = "TestCustomComponent"
 

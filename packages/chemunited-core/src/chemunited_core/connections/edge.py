@@ -3,8 +3,9 @@ from dataclasses import dataclass, field
 from typing import Annotated
 
 import numpy as np
-from chemunited_quantities import ChemQuantityValidator, ChemUnitQuantity
 from pydantic import AliasChoices, BaseModel, Field, model_validator
+
+from chemunited_quantities import ChemQuantityValidator, ChemUnitQuantity
 
 from ..common.constant import AMBIENT_TEMPERATURE_K, ATMOSPHERE_PRESSURE_PA
 from ..common.enums import ConnectionType, GroupParameterCategory, PhaseKind

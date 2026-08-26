@@ -17,13 +17,13 @@ import sqlite3
 from collections import deque
 
 import pytest
+from loguru import logger
+
 from chemunited_core.common.enums import PhaseKind
 from chemunited_core.components import ComponentData
 from chemunited_core.components.enums import InternalEdgeRole
 from chemunited_core.figure_registry import SolenoidValve2WayData, SolenoidValveData
 from chemunited_core.figure_registry.rotary_valve import RotaryValveData
-from loguru import logger
-
 from chemunited_sim.adapter.models import HydraulicEdge, HydraulicGraph, HydraulicNode
 from chemunited_sim.hydraulics.models import HydraulicState
 from chemunited_sim.inventory.models import InventoryState

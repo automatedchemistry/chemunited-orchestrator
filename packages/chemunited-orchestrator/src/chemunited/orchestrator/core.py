@@ -65,7 +65,7 @@ class OrchestratorCore(QObject):
     def _build_infor_flyout(self, r: dict[str, Any]):
         message = self._format_infor_flyout_content(r)
         self.last_log = message
-        level = str(r.get("level").name).lower()  # type:ignore[union-attr]
+        level = str(r.get("level").name).lower()  # type: ignore[union-attr]
         duration = r.get("extra", {}).get("duration", 4000)
 
         if level == "success":

@@ -14,9 +14,10 @@ import numpy as np
 import scipy.sparse
 import scipy.sparse.csgraph
 import scipy.sparse.linalg
+from loguru import logger
+
 from chemunited_core.common.constant import ATMOSPHERE_PRESSURE_PA
 from chemunited_core.components.enums import BoundaryConditionKind, InternalEdgeRole
-from loguru import logger
 
 from ..adapter.models import HydraulicEdge, HydraulicGraph
 from ..common.constant import ETA_WATER_25C, PRESSURE_SANITY_THRESHOLD_PA, R_JUNCTION

@@ -16,6 +16,7 @@ import sqlite3
 from collections import deque
 
 import pytest
+
 from chemunited_core.common.constant import R_MAX_HYDRAULIC
 from chemunited_core.common.enums import ConnectionType, PhaseKind
 from chemunited_core.components import (
@@ -29,7 +30,6 @@ from chemunited_core.components import (
 from chemunited_core.connections import EdgeData, EdgeMode
 from chemunited_core.figure_registry import COMPONENTS
 from chemunited_quantities import ChemUnitQuantity
-
 from chemunited_sim.adapter import compile_graph, resync_component
 from chemunited_sim.reactions import FirstOrderDecay
 from chemunited_sim.recorder import Recorder

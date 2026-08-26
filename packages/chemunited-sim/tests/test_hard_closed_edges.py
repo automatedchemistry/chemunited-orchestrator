@@ -6,6 +6,7 @@ from collections import deque
 from dataclasses import replace
 
 import pytest
+
 from chemunited_core.common.constant import (
     ATMOSPHERE_PRESSURE_PA,
     R_MAX_HYDRAULIC,
@@ -17,7 +18,6 @@ from chemunited_core.figure_registry import (
     SixPortTwoPositionValveData,
     SixPortTwoPositionValveMode,
 )
-
 from chemunited_sim.adapter.graph import compile_graph
 from chemunited_sim.adapter.models import HydraulicEdge, HydraulicGraph, HydraulicNode
 from chemunited_sim.hydraulics import solve

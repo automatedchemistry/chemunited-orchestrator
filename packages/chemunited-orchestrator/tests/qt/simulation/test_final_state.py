@@ -3,15 +3,6 @@ from __future__ import annotations
 import sqlite3
 from pathlib import Path
 
-from chemunited_core.common.enums import PhaseKind
-from chemunited_core.components import VesselComponentData, VesselMode
-from chemunited_core.components.internals import DEFAULT_INVENTORY_KEY
-from chemunited_core.components.plugflow import PlugFlowComponentData
-from chemunited_core.figure_registry import SolenoidValve2WayData, SolenoidValveData
-from chemunited_core.figure_registry.rotary_valve import RotaryValveData
-from chemunited_quantities import ChemUnitQuantity
-from chemunited_sim.recorder.schema import create_all_tables
-
 from chemunited.simulation.final_state import (
     _apply_discrete_state,
     _apply_edge_content,
@@ -24,6 +15,14 @@ from chemunited.simulation.final_state import (
     list_recorded_times,
     load_edge_cells,
 )
+from chemunited_core.common.enums import PhaseKind
+from chemunited_core.components import VesselComponentData, VesselMode
+from chemunited_core.components.internals import DEFAULT_INVENTORY_KEY
+from chemunited_core.components.plugflow import PlugFlowComponentData
+from chemunited_core.figure_registry import SolenoidValve2WayData, SolenoidValveData
+from chemunited_core.figure_registry.rotary_valve import RotaryValveData
+from chemunited_quantities import ChemUnitQuantity
+from chemunited_sim.recorder.schema import create_all_tables
 
 
 def qty(value: str) -> ChemUnitQuantity:

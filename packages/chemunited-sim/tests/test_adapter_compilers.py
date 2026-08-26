@@ -3,12 +3,12 @@
 from __future__ import annotations
 
 import pytest
+
 from chemunited_core.common.constant import ATMOSPHERE_PRESSURE_PA
 from chemunited_core.common.enums import ConnectionType
 from chemunited_core.components.enums import BoundaryConditionKind
 from chemunited_core.connections import EdgeData, EdgeMode
 from chemunited_core.figure_registry import COMPONENTS
-
 from chemunited_sim.adapter import (
     compile_graph,
     propagate_power_links,

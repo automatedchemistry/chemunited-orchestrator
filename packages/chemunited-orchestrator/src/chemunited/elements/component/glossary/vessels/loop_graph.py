@@ -1,7 +1,5 @@
 from typing import ClassVar
 
-from chemunited_core.common.constant import PATTERN_DIMENSION
-from chemunited_core.components import PlugFlowComponentData
 from PyQt5.QtCore import QPointF
 from PyQt5.QtGui import QColor, QPainterPath, QPolygonF
 
@@ -9,6 +7,8 @@ from chemunited.elements.component.graph_item import GraphComponent
 from chemunited.elements.connection.connection import paint_fluid_column
 from chemunited.shared.graph_objects.custom_path import PathElementItem
 from chemunited.utils.math_functions import spring
+from chemunited_core.common.constant import PATTERN_DIMENSION
+from chemunited_core.components import PlugFlowComponentData
 
 
 class PathSpring(PathElementItem):

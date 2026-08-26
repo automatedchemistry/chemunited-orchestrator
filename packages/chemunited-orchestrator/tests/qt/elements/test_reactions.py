@@ -1,11 +1,11 @@
 from __future__ import annotations
 
 import pytest
-from chemunited_core.compounds import COMPOUNDS, ChemicalEntity
 from pytestqt.qtbot import QtBot
 
 from chemunited.elements.reactions import ReactionDialog
 from chemunited.setup import SetupWindow
+from chemunited_core.compounds import COMPOUNDS, ChemicalEntity
 
 
 @pytest.fixture

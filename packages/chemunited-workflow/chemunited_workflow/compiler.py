@@ -64,11 +64,15 @@ def compile_workflow(user_graph: nx.DiGraph) -> CompiledWorkflow:
 
 
 def _validate_node(node_id: str, attrs: dict[str, Any]) -> None:
+    method = attrs.get("method")
+    if method is None:
+        raise ValueError(f"Node {node_id!r} is missing a required 'method' attribute.")
+
     WorkflowNodeSpec(
         node_id=node_id,
-        method=attrs.get("method"),
-        label=attrs.get("label"),
-        description=attrs.get("description"),
+        method=method,
+        label=attrs.get("label", ""),
+        description=attrs.get("description", ""),
         position=attrs.get("position"),
     )
 

@@ -4,11 +4,11 @@ from dataclasses import dataclass, field, replace
 from pathlib import Path
 from typing import Any, Iterator
 
-from chemunited_workflow import WorkflowNodeSpec
 from networkx import DiGraph
 from pydantic import ConfigDict, Field
 
 from chemunited.shared.enums.protocols_enum import ProtocolBlock
+from chemunited_workflow import WorkflowNodeSpec
 
 from .exceptions import WorkflowRuleViolation
 from .workflow_rules import default_terminal_block_specs

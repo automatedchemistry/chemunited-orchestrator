@@ -1,10 +1,6 @@
 from __future__ import annotations
 
 import pytest
-from chemunited_core.common.enums import PhaseKind
-from chemunited_core.components.internals import InventoryNode
-from chemunited_core.compounds import VolumeContentBase
-from chemunited_core.figure_registry.pumps import SyringePumpData
 from pytestqt.qtbot import QtBot
 
 from chemunited.elements.component.component_factory import create_component
@@ -12,6 +8,10 @@ from chemunited.elements.component.glossary.pumps.syringepump_graph import (
     SyringePump,
     _get_fill_level,
 )
+from chemunited_core.common.enums import PhaseKind
+from chemunited_core.components.internals import InventoryNode
+from chemunited_core.compounds import VolumeContentBase
+from chemunited_core.figure_registry.pumps import SyringePumpData
 
 
 def _pump_with_fill(fraction: float) -> SyringePumpData:

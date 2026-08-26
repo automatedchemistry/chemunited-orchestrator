@@ -85,88 +85,9 @@ namespaces = true
     "scripts/*.txt",
 ]
 
-[tool.black]
-line-length = 88
-target-version = ["py310"]
-extend-exclude = '''
-(
-    ^/.venv
-  | ^/build
-  | ^/src/chemunited/shared/resources
-)
-'''
-
-[tool.ruff]
-line-length = 88
-target-version = "py310"
-extend-exclude = [
-    ".venv",
-    "build",
-    "src/chemunited/shared/resources",
-]
-
-[tool.ruff.lint]
-extend-select = ["I"]
-
 [tool.bandit]
 # B101 (assert_used): style nit, not a vulnerability check — we use asserts as
 # internal invariants after a preceding guard already rules out the failing case.
 # B404 (import subprocess): blacklists the import itself with zero signal; the
 # meaningful check is B603 on each call site, reviewed individually below.
 skips = ["B101", "B404"]
-
-[tool.mypy]
-python_version = "3.13"
-files = ["src/chemunited"]
-exclude = '(^\.venv/|^build/|^src/chemunited/shared/resources/)'
-mypy_path = "src"
-namespace_packages = true
-pretty = true
-show_error_codes = true
-warn_redundant_casts = true
-warn_unused_ignores = false
-explicit_package_bases = true
-
-[[tool.mypy.overrides]]
-module = [
-    "PyQt5",
-    "PyQt5.*",
-    "black",
-    "chemunited_workflow",
-    "chemunited_workflow.*",
-    "git",
-    "mcp",
-    "mcp.*",
-    "qfluentwidgets",
-    "qframelesswindow",
-    "networkx",
-    "numpy",
-    "scipy",
-    "scipy.*",
-    "loguru",
-    "pyvis",
-    "pyvis.*",
-    "requests",
-    "requests.*",
-    "rich",
-    "rich.*",
-    "rich_click",
-    "uvicorn",
-    "uvicorn.*",
-    "zeroconf",
-    "pydantic_pint",
-]
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = [
-    "matplotlib",
-    "matplotlib.*",
-    "CoolProp",
-    "CoolProp.*",
-]
-ignore_missing_imports = true
-
-[[tool.mypy.overrides]]
-module = ["chemunited.shared.resources.resources_rc"]
-ignore_errors = true

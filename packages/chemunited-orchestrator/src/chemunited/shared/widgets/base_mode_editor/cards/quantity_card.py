@@ -2,14 +2,15 @@ from __future__ import annotations
 
 import math
 
+from PyQt5.QtWidgets import QHBoxLayout, QWidget
+from qfluentwidgets import ComboBox, DoubleSpinBox
+
 from chemunited_quantities import (
     ChemQuantityValidator,
     ChemUnitQuantity,
     units_for_dimension,
     ureg,
 )
-from PyQt5.QtWidgets import QHBoxLayout, QWidget
-from qfluentwidgets import ComboBox, DoubleSpinBox
 
 from .base_card import BaseFieldCard
 

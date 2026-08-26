@@ -1,7 +1,5 @@
 from __future__ import annotations
 
-from chemunited_workflow.enums import NodeState
-
 from chemunited.shared.prcess_list.item import (
     _STATUS_COMPLETED_COLOR,
     _STATUS_DEFAULT_COLOR,
@@ -9,6 +7,7 @@ from chemunited.shared.prcess_list.item import (
     _STATUS_RUNNING_COLOR,
     ProcessItem,
 )
+from chemunited_workflow.enums import NodeState
 
 
 def test_process_item_static_node_states_keep_default_status_color(qtbot) -> None:

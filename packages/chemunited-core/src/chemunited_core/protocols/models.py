@@ -1,8 +1,9 @@
 import uuid
 from typing import Any, Literal, Self, Type
 
-from chemunited_quantities import ChemUnitQuantity
 from pydantic import BaseModel, Field
+
+from chemunited_quantities import ChemUnitQuantity
 
 
 class CommandSignature(BaseModel):
