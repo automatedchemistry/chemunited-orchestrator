@@ -1,0 +1,7 @@
+{
+  "server_url": "http://device-server:8000",
+  "associations": [
+    {"component": "pump",   "component_url": "sim-ml600/pump"},
+    {"component": "sensor", "component_url": ""}
+  ]
+}

@@ -2,25 +2,19 @@
 # See https://pre-commit.com/hooks.html for more hooks
 # The name of this file must be .pre-commit-config.yaml
 # Run pre-commit: pre-commit run --all-files
-# Run mypy: mypy ./src
-# Run ruff: ruff check src/chemunited
+# Run mypy: uv run mypy
+# Run ruff: uv run ruff check .
 fail_fast: false
 exclude: |
   (?x)^(
     .*\.drawio|
     .*\.qss|
     .*\.qrc|
-    src/chemunited/qt/shared/resources/resources_rc\.py
+    .*\.svg|
+    packages/chemunited-orchestrator/src/chemunited/shared/resources/resources_rc\.py
   )$
 
 repos:
-  - repo: https://github.com/psf/black
-    rev: 25.1.0
-    hooks:
-      - id: black
-        language_version: python3
-        exclude: '.*\.svg$'
-
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
@@ -29,24 +23,36 @@ repos:
       - id: check-yaml
       - id: check-added-large-files
 
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    rev: v0.11.2
+  - repo: local
     hooks:
-      # Lint + auto-fix
-      - id: ruff
-        args: [--fix]
+      # black, ruff, and mypy all run via `uv run` against the real workspace
+      # venv rather than pre-commit's own isolated, separately-versioned
+      # hook environments. Two concrete reasons this matters, not just
+      # tidiness: (1) mypy needs to resolve the five local packages' own
+      # types — an isolated env only knows what's pinned in
+      # additional_dependencies, meaning re-pinning published PyPI versions
+      # of our own packages on every change instead of checking against the
+      # workspace's local, editable code; (2) black/ruff previously had
+      # isolated-hook pins (25.1.0 / v0.11.2) that drifted out of sync with
+      # whatever the workspace's open-ended `black>=25.1.0`/`ruff>=0.15.7`
+      # constraints actually resolved to (26.5.1 / 0.16.4 at time of writing)
+      # — two differently-versioned formatters with different opinions on
+      # the same file caused an infinite reformat-disagree loop.
+      - id: black
+        name: black
+        entry: uv run black
+        language: system
+        types: [python]
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
-    rev: v1.15.0
-    hooks:
+      - id: ruff
+        name: ruff
+        entry: uv run ruff check --fix
+        language: system
+        types: [python]
+
       - id: mypy
-        args: [--config-file, pyproject.toml]
+        name: mypy
+        entry: uv run mypy
+        language: system
         pass_filenames: false
-        additional_dependencies:
-          - chemunited-core==0.0.5
-          - chemunited-quantities==0.0.3
-          - packaging==26.3
-          - pydantic==2.13.4
-          - pint==0.25.3
-          - scipy==1.18.0
-          - types-PyYAML==6.0.12.20260724
+        types: [python]

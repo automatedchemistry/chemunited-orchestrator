@@ -1,0 +1,94 @@
+[build-system]
+requires = ["setuptools>=64", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "chemunited"
+version = "0.0.3"
+description = "Desktop app for designing, simulating, and executing chemical process workflows on real automated hardware via device APIs."
+readme = "README.md"
+requires-python = ">=3.13"
+license =  { text = "MIT" }
+keywords = ["control", "automation", "process"]
+authors = [
+    { name = "Samuel Vitor Saraiva", email = "samuel.saraiva@mpikg.mpg.de" }
+]
+maintainers = [
+  { name = "Samuel Vitor Saraiva", email = "samuel.saraiva@mpikg.mpg.de" }
+]
+classifiers = [
+    "License :: OSI Approved :: MIT License"
+]
+dependencies = [
+    # sub-packages (provide the entire runtime engine)
+    "chemunited-quantities>=0.0.3",
+    "chemunited-core>=0.0.6",
+    "chemunited-workflow>=0.0.8",
+    "chemunited-sim[tray]>=0.0.3",
+    "PyQt-Fluent-Widgets>=1.7.0,<2.0",  # Qt UI
+    "QScintilla>=2.14.0",
+    "platformdirs>=4.0",
+    "gitpython>=3.1.41",
+    "zeroconf>=0.131.0",
+    "rich-click>=1.7",
+    "black>=25.1.0,<27.0", # used programmatically to format user protocol
+    "loguru>=0.7",  # explicitly re-declared
+    "packaging>=23.0",
+    "matplotlib"
+]
+
+[project.scripts]
+chemunited = "chemunited.__main__:main"
+chemunited-install-launcher = "chemunited.windows_launcher:main"
+
+[project.optional-dependencies]
+compound-lookup = [
+    "CoolProp>=7,<8",
+]
+dev = [
+    "black>=25.1.0",
+    "mypy>=1.19.1",
+    "pre-commit>=4.0.0",
+    "ruff>=0.11.2",
+    "pytest>=8.0",
+    "pytest-qt>=4.4",
+]
+
+[tool.uv.sources]
+chemunited-quantities = { workspace = true }
+chemunited-core = { workspace = true }
+chemunited-workflow = { workspace = true }
+chemunited-sim = { workspace = true }
+
+[tool.pytest.ini_options]
+qt_api = "pyqt5"
+testpaths = ["tests"]
+
+[tool.setuptools]
+package-dir = {"" = "src"}
+
+[tool.setuptools.packages.find]
+where = ["src"]
+include = ["chemunited*"]
+namespaces = true
+
+[tool.setuptools.package-data]
+"chemunited.mcp" = ["*.md"]
+"chemunited.shared.resources" = [
+    "*.md",
+    "*.qrc",
+    "components/*.svg",
+    "icons/*.ico",
+    "icons/*.svg",
+    "lexer/*.json",
+    "qss/dark/*.qss",
+    "qss/light/*.qss",
+    "scripts/*.txt",
+]
+
+[tool.bandit]
+# B101 (assert_used): style nit, not a vulnerability check — we use asserts as
+# internal invariants after a preceding guard already rules out the failing case.
+# B404 (import subprocess): blacklists the import itself with zero signal; the
+# meaningful check is B603 on each call site, reviewed individually below.
+skips = ["B101", "B404"]

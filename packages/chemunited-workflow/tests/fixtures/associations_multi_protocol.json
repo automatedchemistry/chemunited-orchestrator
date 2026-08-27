@@ -1,0 +1,25 @@
+{
+  "server_url": "http://device-server:8000",
+  "associations": [
+    {"component": "pump", "component_url": "sim-ml600/pump"},
+    {
+      "component": "sila-pump",
+      "protocol": "sila2",
+      "sila_host": "192.168.1.50",
+      "sila_port": 50052,
+      "sila_insecure": true
+    },
+    {
+      "component": "opc-reactor",
+      "protocol": "opcua",
+      "opcua_endpoint": "opc.tcp://192.168.1.60:4840",
+      "opcua_node_id": "ns=2;s=Reactor1",
+      "opcua_idle_path": "2:Diagnostics/2:IsBusy",
+      "opcua_idle_value": false
+    },
+    {
+      "component": "unconfigured-sila",
+      "protocol": "sila2"
+    }
+  ]
+}

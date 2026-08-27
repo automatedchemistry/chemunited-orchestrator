@@ -1,0 +1,44 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "chemunited-core"
+version = "0.0.7"
+description = "Core data models for orchestration, execution, and simulation of protocols in automated chemistry laboratory platforms."
+readme = "README.md"
+license = { file = "LICENSE" }
+authors = [
+    { name = "Samuel Vitor Saraiva" },
+]
+requires-python = ">=3.11"
+dependencies = [
+    "chemunited-quantities>=0.0.2",
+    "pydantic>=2.0",
+    "pint>=0.23",
+    "numpy>=1.26",
+    "loguru>=0.7",
+]
+
+[project.optional-dependencies]
+dev = [
+    "black>=25.1.0",
+    "mypy>=1.19.1",
+    "pre-commit>=4.0",
+    "pytest>=8.0",
+    "pytest-cov>=5.0",
+    "ruff>=0.15.7",
+]
+
+[tool.uv.sources]
+chemunited-quantities = { workspace = true }
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/chemunited_core"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.coverage.run]
+source = ["src/chemunited_core"]

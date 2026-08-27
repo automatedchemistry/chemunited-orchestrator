@@ -1,0 +1,11 @@
+{
+  "sample_time": 1.0,
+  "request_timeout": 5.0,
+  "variables": [
+    {
+      "component": "custom",
+      "command": "room_humidity_pct",
+      "kwargs": {}
+    }
+  ]
+}

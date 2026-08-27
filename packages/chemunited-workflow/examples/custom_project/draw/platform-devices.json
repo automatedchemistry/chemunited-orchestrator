@@ -1,0 +1,534 @@
+{
+  "devices": [
+    {
+      "id": "AS waste",
+      "label": "AS waste",
+      "figure": "Sink",
+      "is_electronic": false,
+      "x": 248.86440827336577,
+      "y": 2036.1051719734937,
+      "w": 100.03135181233047,
+      "h": 156.04587772028634
+    },
+    {
+      "id": "Waste",
+      "label": "Waste",
+      "figure": "Sink",
+      "is_electronic": false,
+      "x": 2422.5154895367177,
+      "y": 1126.2485352079977,
+      "w": 128.040130319783,
+      "h": 100.02940879505535
+    },
+    {
+      "id": "A",
+      "label": "A",
+      "figure": "GlassBottle",
+      "is_electronic": false,
+      "x": 1153.2173693118962,
+      "y": 258.93772955175973,
+      "w": 138.44801663551684,
+      "h": 288.0846973297594
+    },
+    {
+      "id": "B",
+      "label": "B",
+      "figure": "GlassBottle",
+      "is_electronic": false,
+      "x": 1350.0769924444176,
+      "y": 265.24568693379416,
+      "w": 138.44801663551684,
+      "h": 288.0846973297594
+    },
+    {
+      "id": "C",
+      "label": "C",
+      "figure": "GlassBottle",
+      "is_electronic": false,
+      "x": 1525.8290612223516,
+      "y": 260.63034494578505,
+      "w": 138.44801663551684,
+      "h": 288.0846973297594
+    },
+    {
+      "id": "D",
+      "label": "D",
+      "figure": "GlassBottle",
+      "is_electronic": false,
+      "x": 1699.0827936325088,
+      "y": 259.0835563477714,
+      "w": 138.44801663551684,
+      "h": 288.0846973297594
+    },
+    {
+      "id": "Quencher",
+      "label": "Quencher",
+      "figure": "GlassBottle",
+      "is_electronic": false,
+      "x": 2019.482301851389,
+      "y": 667.3011105225571,
+      "w": 170.45804921546258,
+      "h": 288.0846973297594
+    },
+    {
+      "id": "Tray",
+      "label": "Tray",
+      "figure": "Vial",
+      "is_electronic": false,
+      "x": 672.8944953788289,
+      "y": 2283.9170671979437,
+      "w": 320.1003257994575,
+      "h": 184.05411218290186
+    },
+    {
+      "id": "solvent",
+      "label": "solvent",
+      "figure": "GlassBottle",
+      "is_electronic": false,
+      "x": 2555.3836083788856,
+      "y": 1337.272454803431,
+      "w": 146.45052478050326,
+      "h": 288.0846973297594
+    },
+    {
+      "id": "BathReactor",
+      "label": "BathReactor",
+      "figure": "CustomFlask",
+      "is_electronic": false,
+      "x": 2355.9637521967275,
+      "y": 1300.273425047782,
+      "w": 208.13419890882832,
+      "h": 262.077051043045
+    },
+    {
+      "id": "Collector",
+      "label": "Collector",
+      "figure": "GlassBottle",
+      "is_electronic": false,
+      "x": 2729.097251649233,
+      "y": 2057.3779668495686,
+      "w": 160.45491403422952,
+      "h": 262.077051043045
+    },
+    {
+      "id": "Reactor D",
+      "label": "Reactor D",
+      "figure": "Distributor",
+      "is_electronic": false,
+      "x": 688.7524902361549,
+      "y": 1022.318225530998,
+      "w": 174.01606431766922,
+      "h": 142.04176048897864
+    },
+    {
+      "id": "Quencher D",
+      "label": "Quencher D",
+      "figure": "Distributor",
+      "is_electronic": false,
+      "x": 1203.3398690463039,
+      "y": 1022.5097989282402,
+      "w": 192.0217076438887,
+      "h": 142.04176048897864
+    },
+    {
+      "id": "AS loop",
+      "label": "AS loop",
+      "figure": "Loop",
+      "is_electronic": false,
+      "x": 515.102862144233,
+      "y": 1468.14608769919,
+      "w": 238.07461731334652,
+      "h": 265.0774386932241
+    },
+    {
+      "id": "Reagent loop",
+      "label": "Reagent loop",
+      "figure": "Loop",
+      "is_electronic": false,
+      "x": 408.4810995124026,
+      "y": 196.0475142633296,
+      "w": 254.0796336033194,
+      "h": 265.0774386932241
+    },
+    {
+      "id": "Pressure D",
+      "label": "Pressure D",
+      "figure": "Distributor",
+      "is_electronic": false,
+      "x": 1844.4629440389172,
+      "y": 141.0671899998016,
+      "w": 188.5547715411021,
+      "h": 166.10696776987956
+    },
+    {
+      "id": "back pressure",
+      "label": "back pressure",
+      "figure": "BackPressureRegulator",
+      "is_electronic": false,
+      "x": 1633.1818356949552,
+      "y": 995.0296101553757,
+      "w": 260.08151471205923,
+      "h": 169.22622334975247
+    },
+    {
+      "id": "CollectorD",
+      "label": "CollectorD",
+      "figure": "Distributor",
+      "is_electronic": false,
+      "x": 2540.6179879288056,
+      "y": 1997.7629801325502,
+      "w": 184.05768733468807,
+      "h": 172.0505831274952
+    },
+    {
+      "id": "air",
+      "label": "air",
+      "figure": "Source",
+      "is_electronic": false,
+      "x": 2318.42212008559,
+      "y": 946.1311253400428,
+      "w": 118.03699513854995,
+      "h": 100.02940879505535
+    },
+    {
+      "id": "quencher reactor",
+      "label": "quencher reactor",
+      "figure": "FlowReactor",
+      "is_electronic": false,
+      "x": 1375.9007333145692,
+      "y": 1091.5350997034661,
+      "w": 282.0884121107719,
+      "h": 144.1803202632177
+    },
+    {
+      "id": "AS injection",
+      "label": "AS injection",
+      "figure": "SixPortTwoPositionValve",
+      "is_electronic": true,
+      "x": 771.3277412734737,
+      "y": 1434.9870702132475,
+      "w": 400.1254072493219,
+      "h": 369.2382774569531
+    },
+    {
+      "id": "AS SP valve",
+      "label": "AS SP valve",
+      "figure": "ThreePortFourPositionValve",
+      "is_electronic": true,
+      "x": 103.13196339124443,
+      "y": 1100.2934196609303,
+      "w": 400.1254072493219,
+      "h": 369.2382774569531
+    },
+    {
+      "id": "AS Distribution valve",
+      "label": "AS Distribution valve",
+      "figure": "FourPortDistributionValve",
+      "is_electronic": true,
+      "x": 98.03072477608386,
+      "y": 1588.7088306605067,
+      "w": 414.12979650304817,
+      "h": 369.2382774569531
+    },
+    {
+      "id": "Reagent Valve",
+      "label": "Reagent Valve",
+      "figure": "SixPortDistributionValve",
+      "is_electronic": true,
+      "x": 638.085989168503,
+      "y": 310.45222595650205,
+      "w": 400.1254072493219,
+      "h": 369.2382774569531
+    },
+    {
+      "id": "Disposal valve",
+      "label": "Disposal valve",
+      "figure": "SixPortTwoPositionValve",
+      "is_electronic": true,
+      "x": 1862.7899979957963,
+      "y": 1103.1789901214113,
+      "w": 400.1254072493219,
+      "h": 369.2382774569531
+    },
+    {
+      "id": "S valve",
+      "label": "S valve",
+      "figure": "SolenoidValve",
+      "is_electronic": true,
+      "x": 2079.9180337668577,
+      "y": 152.24874410288044,
+      "w": 141.04420605538596,
+      "h": 117.03440829021476
+    },
+    {
+      "id": "S2way",
+      "label": "S2way",
+      "figure": "SolenoidValve2Way",
+      "is_electronic": true,
+      "x": 2270.1626491074276,
+      "y": 1118.2170400183475,
+      "w": 130.04075735602962,
+      "h": 122.03587872996754
+    },
+    {
+      "id": "Quencher valve",
+      "label": "Quencher valve",
+      "figure": "SixPortDistributionValve",
+      "is_electronic": true,
+      "x": 1332.3639583178133,
+      "y": 607.0010893578908,
+      "w": 400.1254072493219,
+      "h": 369.2382774569531
+    },
+    {
+      "id": "gantry",
+      "label": "gantry",
+      "figure": "Gantry3D",
+      "is_electronic": true,
+      "x": 765.8631813064039,
+      "y": 1879.7155796346178,
+      "w": 578.1812134752702,
+      "h": 378.0778914294938
+    },
+    {
+      "id": "AS pump",
+      "label": "AS pump",
+      "figure": "SyringePump",
+      "is_electronic": true,
+      "x": 516.3852883779255,
+      "y": 1309.4636256108445,
+      "w": 210.065838805894,
+      "h": 115.03382011431366
+    },
+    {
+      "id": "Reagent pump",
+      "label": "Reagent pump",
+      "figure": "SyringePump",
+      "is_electronic": true,
+      "x": 109.68890853459955,
+      "y": 329.5453249103975,
+      "w": 266.08339582079907,
+      "h": 115.03382011431366
+    },
+    {
+      "id": "Quencher pump",
+      "label": "Quencher pump",
+      "figure": "SyringePump",
+      "is_electronic": true,
+      "x": 1025.3416233993833,
+      "y": 620.6455026390094,
+      "w": 278.0871580382787,
+      "h": 115.03382011431366
+    },
+    {
+      "id": "chiller",
+      "label": "chiller",
+      "figure": "TemperatureControl",
+      "is_electronic": true,
+      "x": 1064.598852360352,
+      "y": 817.8856170794255,
+      "w": 144.59336113570245,
+      "h": 200.0588175901107
+    },
+    {
+      "id": "photo reactor",
+      "label": "photo reactor",
+      "figure": "PhotoReactor",
+      "is_electronic": true,
+      "x": 906.590961153723,
+      "y": 1066.2734321492112,
+      "w": 248.07775249457956,
+      "h": 168.14893590579177
+    },
+    {
+      "id": "flowmeter",
+      "label": "flowmeter",
+      "figure": "MFCComponent",
+      "is_electronic": true,
+      "x": 1750.8457694426982,
+      "y": 671.0352420437804,
+      "w": 218.06834695088043,
+      "h": 212.06234664551735
+    },
+    {
+      "id": "Pressure Sensor",
+      "label": "Pressure Sensor",
+      "figure": "PressureSensor",
+      "is_electronic": true,
+      "x": 2459.095226164892,
+      "y": 824.3950006096089,
+      "w": 278.0871580382787,
+      "h": 212.06234664551735
+    },
+    {
+      "id": "photo sensor",
+      "label": "photo sensor",
+      "figure": "PhotoSensor",
+      "is_electronic": true,
+      "x": 1423.8287332472685,
+      "y": 1258.7077699466604,
+      "w": 192.06019547967452,
+      "h": 100.02940879505535
+    },
+    {
+      "id": "bubble",
+      "label": "bubble",
+      "figure": "PhidgetBubbleSensorComponent",
+      "is_electronic": true,
+      "x": 706.766245748585,
+      "y": 710.4913939039749,
+      "w": 106.0332329210703,
+      "h": 230.0676402286273
+    },
+    {
+      "id": "peltier",
+      "label": "peltier",
+      "figure": "PeltierCoolerTemperatureControl",
+      "is_electronic": true,
+      "x": 829.1462047370709,
+      "y": 832.1913171014256,
+      "w": 228.0714821321135,
+      "h": 169.6554473995022
+    },
+    {
+      "id": "IR",
+      "label": "IR",
+      "figure": "IRControl",
+      "is_electronic": true,
+      "x": 1979.7420646171788,
+      "y": 1531.8495897942578,
+      "w": 200.06270362466094,
+      "h": 220.66890383177648
+    },
+    {
+      "id": "NMR",
+      "label": "NMR",
+      "figure": "NMRControl",
+      "is_electronic": true,
+      "x": 2715.1531438411826,
+      "y": 1700.284813008015,
+      "w": 184.05768733468807,
+      "h": 230.0676402286273
+    },
+    {
+      "id": "HPLC",
+      "label": "HPLC",
+      "figure": "HPLCControl",
+      "is_electronic": true,
+      "x": 1319.1211441762537,
+      "y": 1440.7584073764817,
+      "w": 298.0934284007448,
+      "h": 442.12998687414466
+    },
+    {
+      "id": "MS",
+      "label": "MS",
+      "figure": "MSControl",
+      "is_electronic": true,
+      "x": 1763.4518635654276,
+      "y": 2169.985250264766,
+      "w": 200.06270362466094,
+      "h": 227.0179631312171
+    },
+    {
+      "id": "HPLCpump",
+      "label": "HPLCpump",
+      "figure": "HPLCPump",
+      "is_electronic": true,
+      "x": 1655.3022921270708,
+      "y": 1949.4400624873722,
+      "w": 218.06834695088043,
+      "h": 182.182915282059
+    },
+    {
+      "id": "Relay",
+      "label": "Relay",
+      "figure": "MultiChannelRelay",
+      "is_electronic": true,
+      "x": 2369.5193329240988,
+      "y": 474.8122493999191,
+      "w": 120.03762217479657,
+      "h": 282.0829328020561
+    },
+    {
+      "id": "Swicth",
+      "label": "Swicth",
+      "figure": "PowerSwitch",
+      "is_electronic": true,
+      "x": 479.4562608777088,
+      "y": 669.3534513154946,
+      "w": 128.040130319783,
+      "h": 100.02940879505535
+    },
+    {
+      "id": "Control",
+      "label": "Control",
+      "figure": "PowerControl",
+      "is_electronic": true,
+      "x": 480.0475287313343,
+      "y": 982.8263921293897,
+      "w": 136.04263846476945,
+      "h": 100.02940879505535
+    },
+    {
+      "id": "BubblePower",
+      "label": "BubblePower",
+      "figure": "PhidgetBubbleSensorPowerComponent",
+      "is_electronic": true,
+      "x": 480.96225114847033,
+      "y": 828.0185770916299,
+      "w": 190.0595684434279,
+      "h": 100.02940879505535
+    },
+    {
+      "id": "PressureControl",
+      "label": "PressureControl",
+      "figure": "PressureControl",
+      "is_electronic": true,
+      "x": 2148.168719106929,
+      "y": 88.02587973964872,
+      "w": 270.0846498932923,
+      "h": 180.63847383380238
+    },
+    {
+      "id": "MSPump",
+      "label": "MSPump",
+      "figure": "HPLCPump",
+      "is_electronic": true,
+      "x": 1650.3461891149427,
+      "y": 1699.890706758387,
+      "w": 200.06270362466094,
+      "h": 182.182915282059
+    },
+    {
+      "id": "NMRPump",
+      "label": "NMRPump",
+      "figure": "HPLCPump",
+      "is_electronic": true,
+      "x": 2517.4355369415935,
+      "y": 1671.1350576255966,
+      "w": 212.0664658421406,
+      "h": 182.182915282059
+    },
+    {
+      "id": "StirringControl",
+      "label": "StirringControl",
+      "figure": "StirringControl",
+      "is_electronic": true,
+      "x": 1974.7393788827774,
+      "y": 987.9082554890634,
+      "w": 254.0796336033194,
+      "h": 100.02940879505535
+    },
+    {
+      "id": "pt100",
+      "label": "pt100",
+      "figure": "HeiConnectTemperatureControl",
+      "is_electronic": true,
+      "x": 1992.8838322673275,
+      "y": 616.5316329470559,
+      "w": 128.040130319783,
+      "h": 200.0588175901107
+    }
+  ]
+}
