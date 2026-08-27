@@ -4,7 +4,7 @@ Desktop app for building chemical process workflows as visual flowsheets, simula
 
 ## Install
 
-**Windows only.** Download `install.bat` from the [latest release](https://github.com/automatedchemistry/chemunited-orchestrator/releases/latest) and double-click it. It installs Python and ChemUnited into your own user folder (no admin rights needed) and adds a "ChemUnited" shortcut to your Desktop. Re-running it later upgrades to the latest release.
+**Windows only.** Download `windows_installer.bat` from the [latest release](https://github.com/automatedchemistry/chemunited-orchestrator/releases/latest) and double-click it. It installs Python and ChemUnited into your own user folder (no admin rights needed) and adds a "ChemUnited" shortcut to your Desktop. Re-running it later upgrades to the latest release.
 
 ## Documentation
 
