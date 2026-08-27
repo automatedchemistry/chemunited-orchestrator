@@ -29,7 +29,7 @@ def _parse_quantity_string(value: str) -> Quantity:
         unit = _CELSIUS_ALIASES.get(unit, unit)
         try:
             return ureg.Quantity(magnitude, unit)
-        except Exception:
+        except Exception:  # nosec B110 - falls through to pint's own parser below
             pass
     return ureg(value)
 
@@ -116,7 +116,7 @@ def units_for_dimension(dimensions, ureg: UnitRegistry) -> list[str]:
                 try:
                     ureg(unit)
                     valid.append(unit)
-                except Exception:
+                except Exception:  # nosec B110 - skip curated units this registry doesn't recognize
                     pass
             return valid
 
