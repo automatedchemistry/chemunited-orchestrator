@@ -1,7 +1,7 @@
 # chemunited-workflow
 
-[![Pre-commit](https://github.com/automatedchemistry/chemunited-workflow/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/automatedchemistry/chemunited-workflow/actions/workflows/pre-commit.yml)
-[![Security Analysis](https://github.com/automatedchemistry/chemunited-workflow/actions/workflows/security.yml/badge.svg)](https://github.com/automatedchemistry/chemunited-workflow/actions/workflows/security.yml)
+[![Pre-commit](https://github.com/automatedchemistry/chemunited-orchestrator/actions/workflows/pre-commit.yml/badge.svg)](https://github.com/automatedchemistry/chemunited-orchestrator/actions/workflows/pre-commit.yml)
+[![Security Analysis](https://github.com/automatedchemistry/chemunited-orchestrator/actions/workflows/security.yml/badge.svg)](https://github.com/automatedchemistry/chemunited-orchestrator/actions/workflows/security.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![PyPI](https://img.shields.io/pypi/v/chemunited-workflow.svg)](https://pypi.org/project/chemunited-workflow/)
 
