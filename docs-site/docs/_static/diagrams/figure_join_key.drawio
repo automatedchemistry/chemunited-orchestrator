@@ -1,0 +1,31 @@
+<mxfile host="65bd71144e">
+    <diagram name="figure join key" id="figure-join-key">
+        <mxGraphModel dx="1191" dy="839" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="650" pageHeight="175" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="figure" value="figure = &quot;SolenoidValve&quot;" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#ECECFF;strokeColor=#9370DB;fontFamily=Trebuchet MS;fontSize=14;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="181" y="10" width="280" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="def" value="figure_registry.COMPONENTS[&#39;SolenoidValve&#39;]&lt;br&gt;ComponentDefinition(data_class, mode_class, category, ...)" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#ECECFF;strokeColor=#9370DB;fontFamily=Trebuchet MS;fontSize=11;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="21" y="85" width="230" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="svg" value="SolenoidValve.svg&lt;br&gt;(canvas icon)" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#ECECFF;strokeColor=#9370DB;fontFamily=Trebuchet MS;fontSize=13;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="261" y="85" width="120" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="proto" value="protocols.get_protocol_class(&#39;SolenoidValve&#39;)&lt;br&gt;ComponentProtocol → {command: CommandSignature}" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#ECECFF;strokeColor=#9370DB;fontFamily=Trebuchet MS;fontSize=11;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="391" y="85" width="230" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" style="edgeStyle=none;html=1;strokeColor=#333333;strokeWidth=1.5;endArrow=block;endFill=1;endSize=8;" parent="1" source="figure" target="def" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" style="edgeStyle=none;html=1;strokeColor=#333333;strokeWidth=1.5;endArrow=block;endFill=1;endSize=8;" parent="1" source="figure" target="svg" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" style="edgeStyle=none;html=1;strokeColor=#333333;strokeWidth=1.5;endArrow=block;endFill=1;endSize=8;" parent="1" source="figure" target="proto" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

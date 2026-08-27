@@ -1,0 +1,142 @@
+.logo-container {
+  position: relative;
+  display: inline-block;
+  margin: 2rem auto;
+}
+
+.logo-main {
+  width: 400px;
+  transition: opacity 0.4s ease;
+}
+
+.logo-container:hover .logo-main {
+  opacity: 0.25;
+}
+
+/* Overlay positioning */
+.logo-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 14px;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+  text-align: center;
+}
+
+.logo-container:hover .logo-overlay {
+  opacity: 1;
+}
+
+/* Button base */
+.logo-btn {
+  background: rgba(0, 115, 230, 0.9);
+  color: #fff !important;
+  padding: 12px 18px;
+  border-radius: 10px;
+  text-decoration: none;
+  font-weight: 600;
+  min-width: 250px;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.3);
+  transition: background 0.3s, transform 0.2s, box-shadow 0.3s;
+}
+
+/* Button hover effect */
+.logo-btn:hover {
+  background: rgba(0, 90, 180, 1);
+  transform: scale(1.05);
+  box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
+}
+
+/* Description inside button */
+.logo-desc {
+  display: block;
+  font-weight: 400;
+  font-size: 0.9rem;
+  color: #e0e0e0;
+  margin-top: 2px;
+}
+
+/* Explicit colors for each button (adjust freely) */
+.logo-btn:nth-child(1) { background: #0099cc !important; } /* Install */
+.logo-btn:nth-child(2) { background: #0073e6 !important; } /* Drawing */
+.logo-btn:nth-child(3) { background: #009966 !important; } /* Protocols */
+.logo-btn:nth-child(4) { background: #ff9900 !important; } /* Simulation */
+.logo-btn:nth-child(5) { background: #666666 !important; } /* Connectivity */
+.logo-btn:nth-child(6) { background: #3366cc !important; } /* Monitoring */
+.logo-btn:nth-child(7) { background: #ac647c !important; } /* Developer */
+.logo-btn:nth-child(8) { background: #2c5373 !important; } /* Reference */
+
+/* ---------- INFO BLOCK ---------- */
+.info-block {
+  background-color: #eef6ff;
+  border-left: 4px solid #0078d7;
+  padding: 1em 1.2em;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin-bottom: 1.5em;  /* Adds space below the block */
+}
+.info-block strong {
+  color: #005a9e;
+}
+
+/* ---------- WARNING BLOCK ---------- */
+.warning-block {
+  background-color: #fff8e5;
+  border-left: 4px solid #f1c40f;
+  padding: 1em 1.2em;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin-bottom: 1.5em;  /* Adds space below the block */
+}
+.warning-block strong {
+  color: #a67c00;
+}
+
+/* ---------- ERROR BLOCK ---------- */
+.error-block {
+  background-color: #fdecea;
+  border-left: 4px solid #e74c3c;
+  padding: 1em 1.2em;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.1);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin-bottom: 1.5em;  /* Adds space below the block */
+}
+.error-block strong {
+  color: #a93226;
+}
+
+/* ---------- COMPONENT EXAMPLES ---------- */
+.component-examples {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: center;
+  gap: 0.45rem 0.75rem;
+  margin: 1em auto 1.6em;
+  text-align: center;
+}
+.component-examples img {
+  display: block;
+  margin: 0;
+}
+.component-examples .example-caption {
+  display: block;
+  flex: 0 0 100%;
+  margin-top: 0.1rem;
+  font-size: 0.85rem;
+  font-style: italic;
+  color: #666666;
+}

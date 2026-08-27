@@ -1,0 +1,37 @@
+<mxfile host="65bd71144e">
+    <diagram name="ComponentMode / ComponentData lifecycle" id="mode-data-lifecycle">
+        <mxGraphModel dx="1726" dy="839" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="820" pageHeight="280" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="mode" value="ComponentMode&lt;br&gt;(Pydantic model)&lt;br&gt;user input · GUI fields · config files" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#ECECFF;strokeColor=#9370DB;fontFamily=Trebuchet MS;fontSize=13;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="50" width="240" height="80" as="geometry"/>
+                </mxCell>
+                <mxCell id="edit" value="edited ComponentMode&lt;br&gt;(a changed field)" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#ECECFF;strokeColor=#9370DB;fontFamily=Trebuchet MS;fontSize=13;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="70" y="210" width="240" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="data" value="ComponentData&lt;br&gt;(dataclass)" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#ECECFF;strokeColor=#9370DB;fontFamily=Trebuchet MS;fontSize=14;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="320" y="110" width="160" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="build" value="internal_structure()&lt;br&gt;builds ports, internal edges, inventories" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#ECECFF;strokeColor=#9370DB;fontFamily=Trebuchet MS;fontSize=13;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="510" y="10" width="240" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="sync" value="sync_internal_state()&lt;br&gt;refreshes derived runtime state" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#ECECFF;strokeColor=#9370DB;fontFamily=Trebuchet MS;fontSize=13;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="510" y="210" width="240" height="60" as="geometry"/>
+                </mxCell>
+                <mxCell id="e1" value="Data.from_mode(mode)" style="edgeStyle=none;html=1;strokeColor=#333333;strokeWidth=1.5;fontFamily=Trebuchet MS;fontSize=12;fontColor=#333333;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;endSize=8;" parent="1" source="mode" target="data" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e2" value="data.update(partial_mode)" style="edgeStyle=none;html=1;strokeColor=#333333;strokeWidth=1.5;fontFamily=Trebuchet MS;fontSize=12;fontColor=#333333;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;endSize=8;" parent="1" source="edit" target="data" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e3" value="__post_init__()" style="edgeStyle=none;html=1;strokeColor=#333333;strokeWidth=1.5;fontFamily=Trebuchet MS;fontSize=12;fontColor=#333333;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;endSize=8;" parent="1" source="data" target="build" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="e4" value="after update()" style="edgeStyle=none;html=1;strokeColor=#333333;strokeWidth=1.5;fontFamily=Trebuchet MS;fontSize=12;fontColor=#333333;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;endSize=8;" parent="1" source="data" target="sync" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

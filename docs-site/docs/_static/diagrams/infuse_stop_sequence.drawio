@@ -1,0 +1,97 @@
+<mxfile host="65bd71144e">
+    <diagram name="infuse/stop scheduled command sequence" id="infuse-stop-sequence">
+        <mxGraphModel dx="1726" dy="839" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="1050" pageHeight="680" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="callerTop" value="Protocol / Command block" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#ECECFF;strokeColor=#9370DB;fontFamily=Trebuchet MS;fontSize=13;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="20" y="20" width="280" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="dataTop" value="ComponentData" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#ECECFF;strokeColor=#9370DB;fontFamily=Trebuchet MS;fontSize=13;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="600" y="20" width="200" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="callerBottom" value="Protocol / Command block" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#ECECFF;strokeColor=#9370DB;fontFamily=Trebuchet MS;fontSize=13;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="20" y="610" width="280" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="dataBottom" value="ComponentData" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#ECECFF;strokeColor=#9370DB;fontFamily=Trebuchet MS;fontSize=13;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="600" y="610" width="200" height="50" as="geometry"/>
+                </mxCell>
+                <mxCell id="lifelineCaller" style="edgeStyle=none;html=1;strokeColor=#9370DB;strokeWidth=1;dashed=1;dashPattern=4 3;endArrow=none;startArrow=none;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="160" y="70" as="sourcePoint"/>
+                        <mxPoint x="160" y="610" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="lifelineData" style="edgeStyle=none;html=1;strokeColor=#9370DB;strokeWidth=1;dashed=1;dashPattern=4 3;endArrow=none;startArrow=none;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="700" y="70" as="sourcePoint"/>
+                        <mxPoint x="700" y="610" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="msg1" value="put(command, **kwargs)" style="edgeStyle=none;html=1;strokeColor=#333333;strokeWidth=1.5;fontFamily=Trebuchet MS;fontSize=12;fontColor=#333333;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;endSize=8;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="160" y="110" as="sourcePoint"/>
+                        <mxPoint x="700" y="110" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="msg2" value="PutResult (validated, nothing mutated yet)" style="edgeStyle=none;html=1;strokeColor=#333333;strokeWidth=1.5;dashed=1;dashPattern=6 4;fontFamily=Trebuchet MS;fontSize=11.5;fontColor=#333333;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;endSize=8;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="700" y="165" as="sourcePoint"/>
+                        <mxPoint x="160" y="165" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="msg3" value="apply(&quot;infuse&quot;, rate=..., volume=...)" style="edgeStyle=none;html=1;strokeColor=#333333;strokeWidth=1.5;fontFamily=Trebuchet MS;fontSize=11.5;fontColor=#333333;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;endSize=8;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="160" y="220" as="sourcePoint"/>
+                        <mxPoint x="700" y="220" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="msg4" value="mutate fields" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#333333;strokeWidth=1.5;fontFamily=Trebuchet MS;fontSize=12;fontColor=#333333;align=left;verticalAlign=middle;spacingLeft=6;endArrow=block;endFill=1;endSize=8;rounded=0;exitX=1;exitY=0;entryX=1;entryY=0;targetPerimeterSpacing=10;curved=1;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="700" y="255" as="sourcePoint"/>
+                        <mxPoint x="700" y="280" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="770" y="255"/>
+                            <mxPoint x="770" y="280"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="msg5" value="sync_internal_state()" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#333333;strokeWidth=1.5;fontFamily=Trebuchet MS;fontSize=12;fontColor=#333333;align=left;verticalAlign=middle;spacingLeft=6;endArrow=block;endFill=1;endSize=8;rounded=0;curved=1;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="700" y="310" as="sourcePoint"/>
+                        <mxPoint x="700" y="335" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="770" y="310"/>
+                            <mxPoint x="770" y="335"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="msg6" value="PutResult(scheduled=[ScheduledCommand(dt, &quot;stop&quot;)])" style="edgeStyle=none;html=1;strokeColor=#333333;strokeWidth=1.5;dashed=1;dashPattern=6 4;fontFamily=Trebuchet MS;fontSize=11;fontColor=#333333;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;endSize=8;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="700" y="380" as="sourcePoint"/>
+                        <mxPoint x="160" y="380" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="note" value="dt seconds later, the scheduler fires the follow-up automatically" style="rounded=1;arcSize=8;whiteSpace=wrap;html=1;fillColor=#ffffde;strokeColor=#aaaa33;fontFamily=Trebuchet MS;fontSize=12;fontStyle=2;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="130" y="415" width="600" height="45" as="geometry"/>
+                </mxCell>
+                <mxCell id="msg8" value="apply(&quot;stop&quot;)" style="edgeStyle=none;html=1;strokeColor=#333333;strokeWidth=1.5;fontFamily=Trebuchet MS;fontSize=12;fontColor=#333333;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;endSize=8;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="160" y="505" as="sourcePoint"/>
+                        <mxPoint x="700" y="505" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="msg9" value="sync_internal_state()" style="edgeStyle=orthogonalEdgeStyle;html=1;strokeColor=#333333;strokeWidth=1.5;fontFamily=Trebuchet MS;fontSize=12;fontColor=#333333;align=left;verticalAlign=middle;spacingLeft=6;endArrow=block;endFill=1;endSize=8;rounded=0;curved=1;" parent="1" edge="1">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="700" y="540" as="sourcePoint"/>
+                        <mxPoint x="700" y="565" as="targetPoint"/>
+                        <Array as="points">
+                            <mxPoint x="770" y="540"/>
+                            <mxPoint x="770" y="565"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

@@ -1,0 +1,19 @@
+<mxfile host="app.diagrams.net" version="24.7.5">
+  <diagram name="Terminal fixed-flow" id="terminal-fixed-flow">
+    <mxGraphModel dx="800" dy="600" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="640" pageHeight="120" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="net" value="rest of the hydraulic network" style="rounded=1;arcSize=50;whiteSpace=wrap;html=1;fillColor=#ECECFF;strokeColor=#9370DB;fontFamily=Trebuchet MS;fontSize=13;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="20" y="40" width="250" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="p1" value="Port 1&lt;br&gt;boundary: FLOW, value = flow_rate" style="rounded=1;arcSize=15;whiteSpace=wrap;html=1;fillColor=#ECECFF;strokeColor=#9370DB;fontFamily=Trebuchet MS;fontSize=13;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="340" y="25" width="280" height="70" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" style="edgeStyle=none;html=1;strokeColor=#333333;strokeWidth=1.5;endArrow=block;endFill=1;endSize=8;" edge="1" parent="1" source="net" target="p1">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -85,9 +85,11 @@ pip install chemunited-core
 ```
 chemunited-orchestrator/
 ├── packages/                 five workspace packages (see table above)
+├── docs-site/                Sphinx source for chemunited-docs.readthedocs.io
 ├── .github/workflows/        shared pre-commit + security CI, one publish workflow per package
 ├── windows_installer.bat     one-file Windows installer for the desktop app
 ├── example/                  sample .chemunited project files
+├── .readthedocs.yaml         Read the Docs build config (points into docs-site/)
 └── pyproject.toml            uv workspace root config
 ```
 

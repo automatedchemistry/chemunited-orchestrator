@@ -1,0 +1,25 @@
+<mxfile host="app.diagrams.net" version="24.7.5">
+  <diagram name="Vessel with inventory" id="vessel-inventory">
+    <mxGraphModel dx="800" dy="600" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="540" pageHeight="220" math="0" shadow="0">
+      <root>
+        <mxCell id="0" />
+        <mxCell id="1" parent="0" />
+        <mxCell id="p1" value="Port 1 (TOP)" style="rounded=1;arcSize=15;whiteSpace=wrap;html=1;fillColor=#ECECFF;strokeColor=#9370DB;fontFamily=Trebuchet MS;fontSize=14;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="20" y="20" width="160" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="p2" value="Port 2 (BOTTOM)" style="rounded=1;arcSize=15;whiteSpace=wrap;html=1;fillColor=#ECECFF;strokeColor=#9370DB;fontFamily=Trebuchet MS;fontSize=14;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="20" y="160" width="160" height="40" as="geometry" />
+        </mxCell>
+        <mxCell id="inv" value="InventoryNode&lt;br&gt;gas_content + liq_content" style="rounded=1;arcSize=10;whiteSpace=wrap;html=1;fillColor=#ECECFF;strokeColor=#9370DB;fontFamily=Trebuchet MS;fontSize=13;fontColor=#333333;" vertex="1" parent="1">
+          <mxGeometry x="340" y="80" width="180" height="60" as="geometry" />
+        </mxCell>
+        <mxCell id="e1" value="JUNCTION" style="edgeStyle=none;html=1;strokeColor=#333333;strokeWidth=1.5;fontFamily=Trebuchet MS;fontSize=12;fontColor=#333333;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;endSize=8;" edge="1" parent="1" source="p1" target="inv">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+        <mxCell id="e2" value="JUNCTION" style="edgeStyle=none;html=1;strokeColor=#333333;strokeWidth=1.5;fontFamily=Trebuchet MS;fontSize=12;fontColor=#333333;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;endSize=8;" edge="1" parent="1" source="p2" target="inv">
+          <mxGeometry relative="1" as="geometry" />
+        </mxCell>
+      </root>
+    </mxGraphModel>
+  </diagram>
+</mxfile>

@@ -1,0 +1,51 @@
+<mxfile host="65bd71144e">
+    <diagram name="TRANSPORT vs JUNCTION internal edge roles" id="transport-junction-roles">
+        <mxGraphModel dx="986" dy="479" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="740" pageHeight="310" math="0" shadow="0">
+            <root>
+                <mxCell id="0"/>
+                <mxCell id="1" parent="0"/>
+                <mxCell id="tGroup" value="TRANSPORT — resistance computed from geometry" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;verticalAlign=top;align=center;spacingTop=10;fontFamily=Trebuchet MS;fontSize=13;fontStyle=1;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="20" y="20" width="320" height="270" as="geometry"/>
+                </mxCell>
+                <mxCell id="t1" value="Port 1" style="rounded=1;arcSize=15;whiteSpace=wrap;html=1;fillColor=#ECECFF;strokeColor=#9370DB;fontFamily=Trebuchet MS;fontSize=14;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="60" y="80" width="100" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="t2" value="Port 2" style="rounded=1;arcSize=15;whiteSpace=wrap;html=1;fillColor=#ECECFF;strokeColor=#9370DB;fontFamily=Trebuchet MS;fontSize=14;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="215" y="170" width="100" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="et" value="" style="edgeStyle=none;html=1;strokeColor=#333333;strokeWidth=1.5;fontFamily=Trebuchet MS;fontSize=12;fontColor=#333333;labelBackgroundColor=#ffffff;endArrow=block;endFill=1;endSize=8;" parent="1" source="t1" target="t2" edge="1">
+                    <mxGeometry x="-0.1807" y="1" relative="1" as="geometry">
+                        <mxPoint as="offset"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="jGroup" value="JUNCTION — lossless hub / inventory link" style="rounded=1;arcSize=6;whiteSpace=wrap;html=1;fillColor=#f5f5f5;strokeColor=#666666;verticalAlign=top;align=center;spacingTop=10;fontFamily=Trebuchet MS;fontSize=13;fontStyle=1;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="360" y="20" width="360" height="270" as="geometry"/>
+                </mxCell>
+                <mxCell id="j1" value="Port 1" style="rounded=1;arcSize=15;whiteSpace=wrap;html=1;fillColor=#ECECFF;strokeColor=#9370DB;fontFamily=Trebuchet MS;fontSize=14;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="380" y="70" width="110" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="j2" value="Port 2" style="rounded=1;arcSize=15;whiteSpace=wrap;html=1;fillColor=#ECECFF;strokeColor=#9370DB;fontFamily=Trebuchet MS;fontSize=14;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="380" y="150" width="110" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="j3" value="Port 3" style="rounded=1;arcSize=15;whiteSpace=wrap;html=1;fillColor=#ECECFF;strokeColor=#9370DB;fontFamily=Trebuchet MS;fontSize=14;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="380" y="230" width="110" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="j0" value="hidden hub&lt;br&gt;Port 0" style="ellipse;whiteSpace=wrap;html=1;fillColor=#ECECFF;strokeColor=#9370DB;fontFamily=Trebuchet MS;fontSize=12.5;fontColor=#333333;" parent="1" vertex="1">
+                    <mxGeometry x="565" y="115" width="110" height="110" as="geometry"/>
+                </mxCell>
+                <mxCell id="ej1" style="edgeStyle=none;html=1;strokeColor=#333333;strokeWidth=1.5;endArrow=block;endFill=1;endSize=8;" parent="1" source="j1" target="j0" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="ej2" style="edgeStyle=none;html=1;strokeColor=#333333;strokeWidth=1.5;endArrow=block;endFill=1;endSize=8;" parent="1" source="j2" target="j0" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="ej3" style="edgeStyle=none;html=1;strokeColor=#333333;strokeWidth=1.5;endArrow=block;endFill=1;endSize=8;" parent="1" source="j3" target="j0" edge="1">
+                    <mxGeometry relative="1" as="geometry"/>
+                </mxCell>
+                <mxCell id="2" value="&lt;span style=&quot;color: rgb(63, 63, 63); font-family: &amp;quot;Trebuchet MS&amp;quot;; white-space: nowrap; background-color: rgb(242, 242, 242);&quot;&gt;length, diameter&lt;/span&gt;" style="text;html=1;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;" vertex="1" parent="1">
+                    <mxGeometry x="130" y="125" width="110" height="30" as="geometry"/>
+                </mxCell>
+            </root>
+        </mxGraphModel>
+    </diagram>
+</mxfile>

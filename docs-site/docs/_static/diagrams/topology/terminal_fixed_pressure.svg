@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 120" font-family="Trebuchet MS, Verdana, Arial, sans-serif">
+  <title>Terminal fixed-pressure</title>
+  <defs>
+    <marker id="arrow-tfp" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#333333"/>
+    </marker>
+  </defs>
+
+  <line x1="270" y1="60" x2="339" y2="60" stroke="#333333" stroke-width="1.5" marker-end="url(#arrow-tfp)"/>
+
+  <rect x="20" y="40" width="250" height="40" rx="20" ry="20" fill="#ECECFF" stroke="#9370DB" stroke-width="1"/>
+  <text x="145" y="65" text-anchor="middle" font-size="13" fill="#333333">rest of the hydraulic network</text>
+
+  <rect x="340" y="25" width="280" height="70" rx="6" ry="6" fill="#ECECFF" stroke="#9370DB" stroke-width="1"/>
+  <text x="480" y="55" text-anchor="middle" font-size="14" fill="#333333">Port 1</text>
+  <text x="480" y="74" text-anchor="middle" font-size="11" fill="#333333">boundary: PRESSURE, value = setpoint</text>
+</svg>

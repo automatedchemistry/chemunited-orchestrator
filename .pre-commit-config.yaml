@@ -30,6 +30,9 @@ repos:
         stages: [pre-commit]
       - id: check-added-large-files
         stages: [pre-commit]
+        # docs-site/docs/_static/*.gif are intentional tutorial walkthroughs
+        # (2-37MB each), not accidental large-file commits.
+        exclude: ^docs-site/docs/_static/.*\.gif$
 
   - repo: local
     hooks:
