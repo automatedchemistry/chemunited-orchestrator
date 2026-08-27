@@ -18,10 +18,18 @@ repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v5.0.0
     hooks:
+      # Explicit stages:[pre-commit] on every hook below the pytest-* block
+      # keeps `--hook-stage manual` (used by CI to run just the test suites)
+      # from redundantly re-running everything else too -- a hook with no
+      # stages key runs at every stage, manual included, by default.
       - id: trailing-whitespace
+        stages: [pre-commit]
       - id: end-of-file-fixer
+        stages: [pre-commit]
       - id: check-yaml
+        stages: [pre-commit]
       - id: check-added-large-files
+        stages: [pre-commit]
 
   - repo: local
     hooks:
@@ -43,12 +51,14 @@ repos:
         entry: uv run black
         language: system
         types: [python]
+        stages: [pre-commit]
 
       - id: ruff
         name: ruff
         entry: uv run ruff check --fix
         language: system
         types: [python]
+        stages: [pre-commit]
 
       - id: mypy
         name: mypy
@@ -56,3 +66,53 @@ repos:
         language: system
         pass_filenames: false
         types: [python]
+        stages: [pre-commit]
+
+      # `stages: [manual]` -- the full suite (chemunited-workflow alone is
+      # 5+ minutes) would make every local `git commit` painfully slow.
+      # These only run when explicitly invoked, which the pre-commit.yml
+      # GitHub workflow does via `--hook-stage manual`; a plain `git commit`
+      # or `pre-commit run --all-files` never triggers them.
+      #
+      # One hook per package, each its own `uv run --package` invocation,
+      # rather than a single `pytest <dir1> ... <dir5>` call: pytest resolves
+      # one rootdir/config for the whole invocation, so a combined run can't
+      # see each package's own testpaths/pythonpath settings, and every
+      # package's tests/ directory shares the same bare module name --
+      # two packages happening to have an identically-named test file (e.g.
+      # test_custom_components.py in both core and orchestrator) collide as
+      # the same imported module. Separate invocations sidestep both.
+      - id: pytest-quantities
+        name: pytest (chemunited-quantities)
+        entry: uv run --package chemunited-quantities pytest packages/chemunited-quantities/tests
+        language: system
+        pass_filenames: false
+        stages: [manual]
+
+      - id: pytest-core
+        name: pytest (chemunited-core)
+        entry: uv run --package chemunited-core pytest packages/chemunited-core/tests
+        language: system
+        pass_filenames: false
+        stages: [manual]
+
+      - id: pytest-workflow
+        name: pytest (chemunited-workflow)
+        entry: uv run --package chemunited-workflow pytest packages/chemunited-workflow/tests
+        language: system
+        pass_filenames: false
+        stages: [manual]
+
+      - id: pytest-sim
+        name: pytest (chemunited-sim)
+        entry: uv run --package chemunited-sim pytest packages/chemunited-sim/tests
+        language: system
+        pass_filenames: false
+        stages: [manual]
+
+      - id: pytest-orchestrator
+        name: pytest (chemunited-orchestrator)
+        entry: uv run --package chemunited pytest packages/chemunited-orchestrator/tests
+        language: system
+        pass_filenames: false
+        stages: [manual]

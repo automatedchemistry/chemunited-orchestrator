@@ -243,6 +243,9 @@ def create_main_environment(tmp_path: Path, monkeypatch) -> tuple[Path, Path]:
     icon_path = tmp_path / "chemunited.ico"
     icon_path.write_bytes(b"icon")
 
+    # main()'s own platform guard would otherwise short-circuit every test
+    # here on non-Windows CI runners before exercising the real logic.
+    monkeypatch.setattr(windows_launcher.sys, "platform", "win32")
     monkeypatch.setattr(windows_launcher, "PROJECT_ROOT", project_root)
     monkeypatch.setattr(windows_launcher, "ICON_PATH", icon_path)
     monkeypatch.setattr(windows_launcher.sys, "prefix", str(venv_dir))
@@ -279,6 +282,7 @@ def test_main_reports_missing_launcher_files(tmp_path, monkeypatch):
     venv_dir.mkdir()
     # No executables written under venv_dir/Scripts, so build_launcher fails.
 
+    monkeypatch.setattr(windows_launcher.sys, "platform", "win32")
     monkeypatch.setattr(windows_launcher, "PROJECT_ROOT", project_root)
     monkeypatch.setattr(windows_launcher.sys, "prefix", str(venv_dir))
 
