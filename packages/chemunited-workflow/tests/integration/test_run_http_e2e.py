@@ -20,9 +20,9 @@ from pathlib import Path
 import pytest
 import requests as _requests
 import uvicorn
+from tests.helpers import make_project_tree
 
 from chemunited_workflow.api import create_api
-from tests.helpers import make_project_tree
 
 # ── Process sources ───────────────────────────────────────────────────────────
 

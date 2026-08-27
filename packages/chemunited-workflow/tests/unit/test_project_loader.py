@@ -5,9 +5,9 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
+from tests.helpers import write_source
 
 from chemunited_workflow.project_loader import ProjectLoadError, load_project
-from tests.helpers import write_source
 
 VALID_INIT_SRC = """
 PROCESSES = {}

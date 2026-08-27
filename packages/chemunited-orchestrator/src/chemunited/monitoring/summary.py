@@ -56,8 +56,7 @@ def _state_style(state: str) -> tuple[str, str, str]:
 
 def _set_badge_style(label: QLabel, state: str) -> None:
     bg, fg, border = _state_style(state)
-    label.setStyleSheet(
-        f"""
+    label.setStyleSheet(f"""
         QLabel {{
             background: {bg};
             color: {fg};
@@ -66,8 +65,7 @@ def _set_badge_style(label: QLabel, state: str) -> None:
             padding: 4px 8px;
             font-weight: 700;
         }}
-        """
-    )
+        """)
 
 
 def _json_text(value: Any) -> str:
@@ -593,15 +591,13 @@ class ReportFrame(QWidget):
     def _build_errors_card(self, errors: dict[str, Any], parent: QWidget) -> QWidget:
         frame = QFrame(parent)
         frame.setObjectName("report_errors_frame")
-        frame.setStyleSheet(
-            """
+        frame.setStyleSheet("""
             QFrame#report_errors_frame {
                 background: #FDECEA;
                 border: 1px solid #D32F2F;
                 border-radius: 7px;
             }
-            """
-        )
+            """)
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(12, 8, 12, 8)
         layout.setSpacing(4)

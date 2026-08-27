@@ -87,8 +87,7 @@ class FileCard(GroupHeaderCardWidget):
             btn_summary.setVisible(False)
             btn_open.setVisible(False)
             warning_btn = TransparentPushButton("File is corrupted!")
-            warning_btn.setStyleSheet(
-                """
+            warning_btn.setStyleSheet("""
             TransparentPushButton {
                 color: #B71C1C;
             }
@@ -98,8 +97,7 @@ class FileCard(GroupHeaderCardWidget):
             TransparentPushButton:pressed {
                 color: #F44336;
             }
-            """
-            )
+            """)
             layout.addWidget(warning_btn)
 
         # store reference

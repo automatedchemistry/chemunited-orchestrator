@@ -165,14 +165,12 @@ class SimDbReader:
                         xs.append(float(row["time"]))
                         ys.append(float(row["temperature"]) + _K_TO_C)
             if _table_exists(self._conn, "cell_state"):
-                for row in self._conn.execute(
-                    """
+                for row in self._conn.execute("""
                     SELECT time, edge_id, AVG(temperature) AS avg_temp
                     FROM cell_state
                     GROUP BY time, edge_id
                     ORDER BY time
-                """
-                ):
+                """):
                     if (
                         _matches(row["edge_id"], component)
                         and row["avg_temp"] is not None
@@ -203,14 +201,12 @@ class SimDbReader:
         series: dict[str, tuple[list, list]] = defaultdict(lambda: ([], []))
         try:
             if _table_exists(self._conn, "inventory_content"):
-                for row in self._conn.execute(
-                    """
+                for row in self._conn.execute("""
                     SELECT time, node_id, phase, species_id, moles
                     FROM inventory_content
                     WHERE species_id != '__carrier__'
                     ORDER BY time
-                """
-                ):
+                """):
                     if _matches(row["node_id"], component):
                         key = f"{row['node_id']} / {row['phase']} / {row['species_id']}"
                         xs, ys = series[key]

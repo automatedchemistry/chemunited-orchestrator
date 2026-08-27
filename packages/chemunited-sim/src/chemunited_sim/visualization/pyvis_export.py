@@ -127,8 +127,7 @@ def render_pyvis_html(
         spring_strength=0.035,
         damping=0.45,
     )
-    net.set_options(
-        """
+    net.set_options("""
         var options = {
           "nodes": {
             "borderWidth": 1,
@@ -148,8 +147,7 @@ def render_pyvis_html(
             "stabilization": {"iterations": 300}
           }
         }
-        """
-    )
+        """)
 
     for nid, node in sorted(graph.nodes.items()):
         group, shape = _node_visual(graph, nid, node)

@@ -1094,8 +1094,7 @@ class CustomProcess(Process[ProcessConfig]):
 
     def _prepare_stock(self) -> str:
         return "helper"
-""".strip()
-            + "\n",
+""".strip() + "\n",
             encoding="utf-8",
         )
         window.orchestrator.working_dir = working_dir

@@ -695,15 +695,13 @@ try:
     print(f"\n  Recorded time-points ({len(times)}): {[f'{t:.0f}s' for t in times]}")
 
     print("\n  reagent_a decay in reactor (from inventory_content):")
-    rows = conn.execute(
-        """
+    rows = conn.execute("""
         SELECT time, moles FROM inventory_content
         WHERE  node_id = 'reactor.Inventory'
           AND  phase   = 'liquid'
           AND  species_id = 'reagent_a'
         ORDER  BY time
-        """
-    ).fetchall()
+        """).fetchall()
     for t_rec, moles in rows:
         bar = "#" * max(1, int(moles / n_a_init * 30))
         print(f"    t={t_rec:5.1f}s  {moles:.4e} mol  {bar}")

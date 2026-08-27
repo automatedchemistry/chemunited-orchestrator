@@ -162,7 +162,6 @@ def test_discover_sila2_filters_to_get_entries(mocker, svc):
 
 def test_discover_opcua_filters_to_get_entries(mocker, svc):
     from asyncua import ua
-
     from tests.unit.test_clients_opcua import FakeClient, FakeNode
 
     readonly_var = FakeNode(browse_name=ua.QualifiedName("Status", 2), writable=False)

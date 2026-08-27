@@ -6,12 +6,12 @@ import json
 from unittest.mock import MagicMock
 
 import pytest
+from tests.helpers import MINIMAL_PROCESS_SRC, write_source
 
 from chemunited_workflow.api.monitoring_store import MonitoringStore
 from chemunited_workflow.api.run_store import RunStore
 from chemunited_workflow.api.services.monitoring import MonitoringService
 from chemunited_workflow.api.services.runner import RunnerService
-from tests.helpers import MINIMAL_PROCESS_SRC, write_source
 
 
 def _make_runner(tmp_path, monitoring_service=None) -> tuple[RunnerService, RunStore]:

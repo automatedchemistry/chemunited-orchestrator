@@ -11,9 +11,9 @@ from unittest.mock import MagicMock
 import pytest
 import responses as resp_lib
 from fastapi.testclient import TestClient
+from tests.helpers import make_project_tree
 
 from chemunited_workflow.api import create_api
-from tests.helpers import make_project_tree
 
 FIXTURES = Path(__file__).parent.parent / "fixtures"
 

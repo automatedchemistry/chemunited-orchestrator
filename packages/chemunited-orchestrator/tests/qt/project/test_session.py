@@ -109,8 +109,7 @@ def test_process_load_parameters_uses_process_file_stem(tmp_path):
     protocols_dir.mkdir(parents=True)
     process_path = protocols_dir / "react.py"
     process_path.write_text(
-        dedent(
-            """
+        dedent("""
             from __future__ import annotations
 
             import networkx as nx
@@ -128,9 +127,7 @@ def test_process_load_parameters_uses_process_file_stem(tmp_path):
             class CustomProcess(Process[ProcessConfig]):
                 def build_workflow(self) -> nx.DiGraph:
                     return nx.DiGraph()
-            """
-        ).strip()
-        + "\n",
+            """).strip() + "\n",
         encoding="utf-8",
     )
     history_dir = working_dir / "protocols_historic"
@@ -200,8 +197,7 @@ def test_sync_process_updates_existing_file_in_place(tmp_path):
     process_path = working_dir / "protocols" / "React.py"
     process_path.parent.mkdir(parents=True, exist_ok=True)
     process_path.write_text(
-        dedent(
-            """
+        dedent("""
             from __future__ import annotations
 
             import networkx as nx
@@ -307,9 +303,7 @@ def test_sync_process_updates_existing_file_in_place(tmp_path):
                 def finish(self, ctx: NodeExecutionContext) -> bool:
                     ctx.runtime.status_message = "Custom finish"
                     return True
-            """
-        ).strip()
-        + "\n",
+            """).strip() + "\n",
         encoding="utf-8",
     )
 
@@ -467,8 +461,7 @@ def test_restore_workflow_infers_legacy_block_types_when_not_explicitly_saved(tm
     session.new(name="demo", location=tmp_path, init_git=False)
     session.save_process(
         "React",
-        dedent(
-            """
+        dedent("""
             from __future__ import annotations
 
             import networkx as nx
@@ -590,9 +583,7 @@ def test_restore_workflow_infers_legacy_block_types_when_not_explicitly_saved(tm
 
                 def finish(self, ctx: NodeExecutionContext) -> bool:
                     return True
-            """
-        ).strip()
-        + "\n",
+            """).strip() + "\n",
     )
 
     restored_classes = session.load_process_classes()

@@ -167,8 +167,7 @@ class CommandEditorDialog(FramelessDialog):
         )
         dialog_fill = "#2f2f2f" if isDarkTheme() else "#f7f7f7"
 
-        self.setStyleSheet(
-            f"""
+        self.setStyleSheet(f"""
             QDialog#commandEditorDialog {{
                 background-color: {dialog_fill};
                 border: 1px solid {panel_border};
@@ -189,8 +188,7 @@ class CommandEditorDialog(FramelessDialog):
                 border-radius: 6px;
                 padding: 4px 10px;
             }}
-            """
-        )
+            """)
 
     def _make_separator(self) -> QFrame:
         line = QFrame(self)

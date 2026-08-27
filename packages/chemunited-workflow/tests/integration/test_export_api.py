@@ -10,9 +10,9 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from tests.helpers import make_project_tree
 
 from chemunited_workflow.api import create_api
-from tests.helpers import make_project_tree
 
 FIXTURES = Path(__file__).parent.parent / "fixtures"
 

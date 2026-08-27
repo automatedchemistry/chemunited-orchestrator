@@ -132,8 +132,7 @@ class AppCard(QFrame):
         root.addWidget(self.iconLabel, alignment=Qt.AlignTop)  # type: ignore[attr-defined]
         root.addLayout(text_layout, stretch=1)
 
-        self.setStyleSheet(
-            """
+        self.setStyleSheet("""
             QFrame#appCard {
                 background: transparent;
                 border: none;
@@ -151,8 +150,7 @@ class AppCard(QFrame):
                 font-size: 11px;
                 color: rgba(120, 120, 120, 0.95);
             }
-            """
-        )
+            """)
 
 
 class TreeAddItem(TreeWidget):

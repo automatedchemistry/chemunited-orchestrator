@@ -14,29 +14,24 @@ def _write_project(project_dir: Path, connect: str) -> None:
     protocols_dir.mkdir(parents=True, exist_ok=True)
 
     (draw_dir / "setup.py").write_text(
-        textwrap.dedent(
-            """
+        textwrap.dedent("""
             def build_draw(platform):
                 pass
-            """
-        ),
+            """),
         encoding="utf-8",
     )
     (protocols_dir / "__init__.py").write_text(
-        textwrap.dedent(
-            """
+        textwrap.dedent("""
             from .Process import CustomProcess as ProcessProcess, ProcessConfig
 
             PROCESSES = {"Process": ProcessProcess}
             CONFIGS = {"Process": ProcessConfig}
-            """
-        ),
+            """),
         encoding="utf-8",
     )
     process_path = protocols_dir / "Process.py"
     process_path.write_text(
-        textwrap.dedent(
-            f"""
+        textwrap.dedent(f"""
             from __future__ import annotations
 
             import networkx as nx
@@ -60,8 +55,7 @@ def _write_project(project_dir: Path, connect: str) -> None:
                         disconnect="",
                     )
                     return True
-            """
-        ),
+            """),
         encoding="utf-8",
     )
 

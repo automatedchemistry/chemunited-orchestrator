@@ -330,8 +330,7 @@ def test_load_process_classes_reloads_external_process_file_changes(tmp_path):
     protocols_dir = tmp_path / "protocols"
     protocols_dir.mkdir()
     (protocols_dir / "__init__.py").write_text(
-        dedent(
-            """
+        dedent("""
             from .React import (
                 CustomProcess as ReactProcess,
                 ProcessConfig as ReactConfig,
@@ -344,9 +343,7 @@ def test_load_process_classes_reloads_external_process_file_changes(tmp_path):
             CONFIGS = {
                 "React": ReactConfig,
             }
-            """
-        ).strip()
-        + "\n",
+            """).strip() + "\n",
         encoding="utf-8",
     )
     process_path = protocols_dir / "React.py"
@@ -396,9 +393,7 @@ def test_load_process_classes_skips_invalid_process_file(tmp_path):
 
 
 def _process_content(node_id: str) -> str:
-    return (
-        dedent(
-            f"""
+    return dedent(f"""
             from __future__ import annotations
 
             import networkx as nx
@@ -416,7 +411,4 @@ def _process_content(node_id: str) -> str:
                     graph = nx.DiGraph()
                     graph.add_node({node_id!r})
                     return graph
-            """
-        ).strip()
-        + "\n"
-    )
+            """).strip() + "\n"

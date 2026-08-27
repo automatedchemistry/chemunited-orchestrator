@@ -225,12 +225,10 @@ class NodeParametersDialog(FramelessDialog):
         )
         dialog_fill = "#2f2f2f" if isDarkTheme() else "#f7f7f7"
 
-        self.setStyleSheet(
-            f"""
+        self.setStyleSheet(f"""
             QDialog#nodeParametersDialog {{
                 background-color: {dialog_fill};
                 border: 1px solid {panel_border};
                 border-radius: 10px;
             }}
-            """
-        )
+            """)

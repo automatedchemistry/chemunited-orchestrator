@@ -116,7 +116,9 @@ def units_for_dimension(dimensions, ureg: UnitRegistry) -> list[str]:
                 try:
                     ureg(unit)
                     valid.append(unit)
-                except Exception:  # nosec B110 - skip curated units this registry doesn't recognize
+                except (
+                    Exception
+                ):  # nosec B110 - skip curated units this registry doesn't recognize
                     pass
             return valid
 

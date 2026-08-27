@@ -78,15 +78,13 @@ class SummaryParametersFrame(QFrame):
     ) -> QWidget:
         section = QFrame(parent)
         section.setObjectName("summarySection")
-        section.setStyleSheet(
-            """
+        section.setStyleSheet("""
             QFrame#summarySection {
                 background: palette(base);
                 border: 1px solid rgba(0, 0, 0, 28);
                 border-radius: 8px;
             }
-            """
-        )
+            """)
 
         layout = QVBoxLayout(section)
         layout.setContentsMargins(14, 12, 14, 12)
@@ -109,8 +107,7 @@ class SummaryParametersFrame(QFrame):
         row = QFrame(parent)
         row.setObjectName("parameterRow")
         row.setMinimumHeight(44)
-        row.setStyleSheet(
-            """
+        row.setStyleSheet("""
             QFrame#parameterRow {
                 background: rgba(0, 0, 0, 5);
                 border: 1px solid rgba(0, 0, 0, 20);
@@ -120,8 +117,7 @@ class SummaryParametersFrame(QFrame):
                 background: rgba(0, 120, 212, 12);
                 border-color: rgba(0, 120, 212, 70);
             }
-            """
-        )
+            """)
 
         layout = QHBoxLayout(row)
         layout.setContentsMargins(12, 7, 12, 7)
@@ -135,8 +131,7 @@ class SummaryParametersFrame(QFrame):
         badge.setObjectName("typeBadge")
         badge.setAlignment(Qt.AlignCenter)  # type: ignore[attr-defined]
         badge.setFixedWidth(48)
-        badge.setStyleSheet(
-            """
+        badge.setStyleSheet("""
             QLabel#typeBadge {
                 background: #E7F1FF;
                 color: #005FB8;
@@ -144,8 +139,7 @@ class SummaryParametersFrame(QFrame):
                 font-weight: 700;
                 padding: 3px 6px;
             }
-            """
-        )
+            """)
 
         name_label = BodyLabel(name, row)
         name_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)

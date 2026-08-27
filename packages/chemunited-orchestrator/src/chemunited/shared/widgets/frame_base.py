@@ -251,8 +251,7 @@ if __name__ == "__main__":
     def _placeholder(title: str, background: str) -> QLabel:
         label = QLabel(title)
         label.setAlignment(Qt.AlignmentFlag.AlignCenter)
-        label.setStyleSheet(
-            f"""
+        label.setStyleSheet(f"""
             QLabel {{
                 background: {background};
                 border: 1px solid rgba(0, 0, 0, 0.12);
@@ -260,8 +259,7 @@ if __name__ == "__main__":
                 font-size: 16px;
                 padding: 24px;
             }}
-            """
-        )
+            """)
         return label
 
     app = QApplication(sys.argv)
