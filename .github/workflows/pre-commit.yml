@@ -39,3 +39,10 @@ jobs:
 
       - name: Run pre-commit
         run: uv run pre-commit run --all-files --show-diff-on-failure
+
+      - name: Run test suites
+        # The pytest-* hooks are stages:[manual] so they never slow down a
+        # local `git commit` -- CI opts in explicitly here instead.
+        run: uv run pre-commit run --all-files --hook-stage manual --show-diff-on-failure
+        env:
+          QT_QPA_PLATFORM: offscreen
