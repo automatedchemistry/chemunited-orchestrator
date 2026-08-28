@@ -37,7 +37,9 @@ def capture(base_url: str, out_dir: Path) -> None:
         for filename, route in PAGES.items():
             url = base_url.rstrip("/") + route
             page.goto(url, wait_until="networkidle")
-            page.wait_for_timeout(500)  # let Vue finish rendering after the last request
+            page.wait_for_timeout(
+                500
+            )  # let Vue finish rendering after the last request
             out_path = out_dir / filename
             page.screenshot(path=str(out_path), full_page=True)
             print(f"Saved {out_path} <- {url}")

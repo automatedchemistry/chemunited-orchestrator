@@ -59,7 +59,7 @@ Each reaction converts a **reactant** into a **product**, at a given **rate cons
 The same `Process`/`Platform` code that runs against real hardware runs **unmodified** against the simulator, the simulation engine swaps in a stand-in client in place of each real HTTP device client, so no protocol code needs to know whether it's talking to a pump or a physics model.
 
 <div class="info-block">
-<strong>💡 Terms at a glance</strong><br> <strong>HydraulicGraph</strong> — the compiled network of nodes and edges built from your platform drawing, used to solve pressures and flows.<br> 
+<strong>💡 Terms at a glance</strong><br> <strong>HydraulicGraph</strong> — the compiled network of nodes and edges built from your platform drawing, used to solve pressures and flows.<br>
 
 <strong>Pocket</strong> — a discrete slug of fluid (a phase, volume, species, temperature) moving through the tubing.<br> <strong>Resistance override</strong> — how active components like pumps, valves, and back-pressure regulators actively drive the hydraulics, instead of passively obeying tubing geometry alone.
 </div>

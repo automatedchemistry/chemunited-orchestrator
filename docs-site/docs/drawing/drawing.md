@@ -54,7 +54,7 @@ This panel lists all components available for building your setup, organized int
 
 ## Connections
 
-Connections define how components interact within the setup. Each connection begins and ends at a connection point, 
+Connections define how components interact within the setup. Each connection begins and ends at a connection point,
 and each point belongs to a specific category. Only connection points of the same category can be linked.
 
 ### Types of Connection Points
@@ -73,14 +73,14 @@ These connections affect simulated thermal behavior, but they do not influence t
 * <img src="../_static/electronic_point.png" width="16" style="vertical-align:middle; margin-right:4px;"> **Electronic Connection Point**
 
 Used for connections that transmit electronic control signals.
-While devices in ChemUnited can be accessed directly, in certain cases, it is more 
-efficient to trigger device actions through the microcontroller connected to it. This is especially useful when 
+While devices in ChemUnited can be accessed directly, in certain cases, it is more
+efficient to trigger device actions through the microcontroller connected to it. This is especially useful when
 several devices must be activated simultaneously.
 For more details on the microcontroller implementation, see the referenced documentation.
 
 * <img src="../_static/movement_point.png" width="16" style="vertical-align:middle; margin-right:4px;"> **Movement Connection Point**
 
-An extension of the flow connection, used to represent the movement of samples—typically handled by mechanical 
+An extension of the flow connection, used to represent the movement of samples—typically handled by mechanical
 arms, gantries, or other robotic modules.
 
 <div class="warning-block">
@@ -95,15 +95,15 @@ The most important field is the name, which serves as the unique identifier for 
 
 <div class="warning-block">
 <strong>⚠️ Warning</strong><br>
-Choose the component name carefully. All properties, protocols, and orchestration features are linked to this name. 
-If you need to rename a component later, the recommended approach is to <b>remove and recreate it again</b> 
-using the new name. 
+Choose the component name carefully. All properties, protocols, and orchestration features are linked to this name.
+If you need to rename a component later, the recommended approach is to <b>remove and recreate it again</b>
+using the new name.
 </div>
 
 Unlike components, connection properties do not open automatically.
 
-<div class="info-block"> 
-<strong>💡 Information</strong><br> 
+<div class="info-block">
+<strong>💡 Information</strong><br>
 While all components share some common parameters, each one also includes
 <b>specific adjustable settings</b> depending on its type. For example, <b>Name</b> and
 <b>Angle</b> appear in every component's property window, but a <b>Syringe Pump</b> additionally

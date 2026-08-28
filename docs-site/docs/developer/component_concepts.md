@@ -138,7 +138,7 @@ Tubing, loops, columns, flow reactors — anything where geometry alone determin
 <img src="../_static/diagrams/topology/two_port_transport.svg" alt="Port 1 connects to Port 2 through a TRANSPORT edge, resistance derived from length and diameter" style="max-width:50%;">
 
 <div class="component-examples">
-<img src="../_static/components/Loop.svg" width="100" height="100"> 
+<img src="../_static/components/Loop.svg" width="100" height="100">
 <img src="../_static/components/FlowReactor.svg" width="100" height="100">
 <div class="example-caption">Example components: Loop, Flow Reactor</div>
 </div>

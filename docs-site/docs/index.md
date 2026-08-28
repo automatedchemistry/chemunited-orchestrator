@@ -6,7 +6,7 @@
 
 ## 🚀 Overview
 
-**ChemUnited** provides a user-friendly, visual interface for designing and executing complex lab automation 
+**ChemUnited** provides a user-friendly, visual interface for designing and executing complex lab automation
 workflows. It enables researchers, chemists, and automation engineers to construct, simulate, and monitor experiments through
 an intuitive GUI without writing extensive code.
 
@@ -137,7 +137,3 @@ Max Planck Institute of Colloids and Interfaces - Automated Chemistry Group
 ```
 
 📧 samuel.saraiva@mpikg.mpg.de
-
-
-
-

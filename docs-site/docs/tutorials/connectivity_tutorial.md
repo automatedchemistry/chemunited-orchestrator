@@ -36,7 +36,7 @@ In the main window, select the project configuration workflow by clicking:
 
 This option helps you create or edit the configuration file associated with your project.
 
-<div class="info-block"> <strong>💡 Note</strong><br> You can use ChemUnited-Drive even without a 
+<div class="info-block"> <strong>💡 Note</strong><br> You can use ChemUnited-Drive even without a
 ChemUnited Orchestrator project. The project integration is provided only for convenience
 (it helps locate and manage configuration files).
 </div>
@@ -59,7 +59,7 @@ In this tutorial, we do not have real hardware connected, so we will add blocks 
 
 ## Step 3 — Configure device parameters
 
-Once the device block is added, configure the connection and device parameters 
+Once the device block is added, configure the connection and device parameters
 (e.g., address, port, serial settings, channel IDs, etc.).
 
 If you are unsure what each parameter means, refer to FlowChem’s device documentation:
@@ -93,9 +93,9 @@ valve_type = "16"
 Before launching the server, run Diagnostics to verify each device configuration independently.
 This step is important because it helps you detect connection problems early (wrong address, missing device, incorrect parameters, etc.).
 
-<div class="warning-block"> <strong>💡 Information</strong><br> In this tutorial we use <strong>Virtual Mode</strong> 
-for demonstration, since no real devices are connected. Enable it in <code>Settings → Virtual Mode</code>. 
-</div> 
+<div class="warning-block"> <strong>💡 Information</strong><br> In this tutorial we use <strong>Virtual Mode</strong>
+for demonstration, since no real devices are connected. Enable it in <code>Settings → Virtual Mode</code>.
+</div>
 
 <img src="../_static/connectivity03.gif" width="900px">
 
@@ -118,6 +118,6 @@ inspect the logs to confirm the server is running and devices were loaded correc
 
 ## What you can do next
 
-After the server is running, return to ChemUnited Orchestrator and associate the online devices with the 
-abstract components in your workflow graph (drag-and-drop association). Once connected, your protocol can 
+After the server is running, return to ChemUnited Orchestrator and associate the online devices with the
+abstract components in your workflow graph (drag-and-drop association). Once connected, your protocol can
 send commands to the devices via API.

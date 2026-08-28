@@ -48,7 +48,7 @@ OPC UA device looks exactly the same as writing one against a FlowChem device.
 
 ## Associate components
 
-In the **Connectivity** panel (shown below), the list of online components is populated based on the selected 
+In the **Connectivity** panel (shown below), the list of online components is populated based on the selected
 **FlowChem server address**.
 
 <div class="warning-block">
@@ -68,7 +68,7 @@ To associate a device with the workflow graph:
 
 <img src="../_static/connection.gif" width="900px">
 
-After this step, the abstract component in the workflow graph is linked to the real device exposed by the 
+After this step, the abstract component in the workflow graph is linked to the real device exposed by the
 FlowChem server, and the process can control it during execution.
 
 ## Associations file

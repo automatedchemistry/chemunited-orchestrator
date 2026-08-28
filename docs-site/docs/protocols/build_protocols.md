@@ -2,7 +2,7 @@
 
 The objective of this frame is to create and organize the protocols that define how the platform operates.
 
-Before explaining how the orchestration system is designed to build these protocols, it is important to understand 
+Before explaining how the orchestration system is designed to build these protocols, it is important to understand
 how the protocol structure is organized within the package.
 
 ## Protocol Hierarchy
@@ -12,9 +12,9 @@ The following diagram illustrates the hierarchical relationship between the diff
 ![Alt text](../_static/protocol_hierarchy.svg)
 
 <div class="info-block">
-<strong>💡 Information</strong><br> 
-This hierarchical organization allows the orchestration to combine automation logic with flexible scripting. 
-Complex experimental protocols can therefore be built by combining processes, modules, and component-level commands. 
+<strong>💡 Information</strong><br>
+This hierarchical organization allows the orchestration to combine automation logic with flexible scripting.
+Complex experimental protocols can therefore be built by combining processes, modules, and component-level commands.
 </div>
 
 ## Explanation of Each Level
@@ -74,12 +74,12 @@ This frame is divided into three areas:
 
 1. **Platform layout**
 
-The platform drawing is displayed here. Although it does not have any direct functionality for protocol building, it is very useful for 
+The platform drawing is displayed here. Although it does not have any direct functionality for protocol building, it is very useful for
 inspecting the physical setup so the user can write commands correctly.
 
 2. **Process workflow canvas**
 
-Below the platform layout, this area shows the workflow graph of the currently selected process. 
+Below the platform layout, this area shows the workflow graph of the currently selected process.
 The details of how to build and edit workflows are explained in the [next section](module_workflows.md).
 
 3. **Process list and navigation**
@@ -87,9 +87,9 @@ The details of how to build and edit workflows are explained in the [next sectio
 On the right side you will find the **Process List**, with one row per process. Each row has a context menu
 (accessed via the **···** button) with the following options:
 
-   - ✏️ **edit**: Rename the item.  
-   - <img src="../_static/icons/python.svg" width="16" style="vertical-align:middle; margin-right:4px;"> **parameter**: Open the process parameter settings.  
-   - 📚 **duplicate**: Create a copy of the item.  
+   - ✏️ **edit**: Rename the item.
+   - <img src="../_static/icons/python.svg" width="16" style="vertical-align:middle; margin-right:4px;"> **parameter**: Open the process parameter settings.
+   - 📚 **duplicate**: Create a copy of the item.
    - <img src="../_static/icons/trash_black.svg" width="16" style="vertical-align:middle; margin-right:4px;"> **remove**: Delete the item.
 
 To the right of the Process List, a vertical navigation rail switches between: **Home**, **Process List**,

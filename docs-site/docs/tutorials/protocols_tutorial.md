@@ -1,6 +1,6 @@
 # Tutorial Example
 
-In this tutorial, you will build a simple protocol with a single module. 
+In this tutorial, you will build a simple protocol with a single module.
 The module will transfer a defined volume of liquid from a source vessel to a collector.
 
 In our example, we will move liquid from **DMF** to the **Collector** using a valve and a syringe pump.
@@ -46,7 +46,7 @@ This transfer is implemented using four commands:
 
 4. Infuse 1 mL using the syringe pump Pump.
 
-<div class="info-block"> <strong>💡 Information</strong><br> 
+<div class="info-block"> <strong>💡 Information</strong><br>
 This example does not account for dead volume between the vessels and the valve.
 It is intended for demonstration purposes only. </div>
 

@@ -42,9 +42,9 @@ In the example above:
 * The Active list contains three entries, where `process01` appears twice
 
 The resulting execution sequence will be:
-    
+
 `process01` → `process02` → `process01`
-    
+
 This flexibility in arranging the Active list (and repeating individual processes) allows the user to customize
 different execution scenarios according to their needs.
 
@@ -94,16 +94,16 @@ Each item in the list has a context menu, accessed via the **···** button, wi
 
 On the bottom-left side of the Pre-Running window, three main action buttons are available:
 
-* <img src="../_static/icons/variable_black.svg" width="16" style="vertical-align:middle; margin-right:4px;"> **Main Parameters** 
+* <img src="../_static/icons/variable_black.svg" width="16" style="vertical-align:middle; margin-right:4px;"> **Main Parameters**
 
 Access and adjust the global parameters of the project for the current protocol.
 
-* <img src="../_static/icons/chemunited.svg" width="16" style="vertical-align:middle; margin-right:4px;"> **Run Monitoring** 
+* <img src="../_static/icons/chemunited.svg" width="16" style="vertical-align:middle; margin-right:4px;"> **Run Monitoring**
 
 Launch the monitoring application to execute the protocol.
 This requires that all electronic components are already connected and online in the **Connectivity** window.
 
-* <img src="../_static/icons/Save_black.svg" width="16" style="vertical-align:middle; margin-right:4px;"> **Save Protocol Script**  
+* <img src="../_static/icons/Save_black.svg" width="16" style="vertical-align:middle; margin-right:4px;"> **Save Protocol Script**
 
 Save the protocol — including all configured parameters — as a `protocol script file`.
 The file is stored in JSON format and contains all information required to execute the protocol.
@@ -127,7 +127,7 @@ Open the local folder containing the protocol script.
 
 Open a read-only window displaying a summary of all predefined parameters.
 
-* <img src="../_static/icons/chemunited.svg" width="16" style="vertical-align:middle; margin-right:4px;"> **Run Monitoring** 
+* <img src="../_static/icons/chemunited.svg" width="16" style="vertical-align:middle; margin-right:4px;"> **Run Monitoring**
 
 Execute the protocol directly in monitoring mode.
 

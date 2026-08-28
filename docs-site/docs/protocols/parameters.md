@@ -35,7 +35,7 @@ entered downstream.
 
 ## Supported parameter types
 
-The following parameter types are supported. 
+The following parameter types are supported.
 When a parameter is created, a corresponding Field(...) definition is generated automatically.
 
 1. Integer

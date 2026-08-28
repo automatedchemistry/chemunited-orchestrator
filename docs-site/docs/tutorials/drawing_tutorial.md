@@ -38,9 +38,9 @@ The components required for this setup are:
   <img src="../_static/components_tutorial.png" alt="Image 1" width="85%">
 </p>
 
-<div class="info-block"> 
-<strong>💡 Information</strong><br> 
-To set an inclination for the pump, simply double-click the component to open the properties window. 
+<div class="info-block">
+<strong>💡 Information</strong><br>
+To set an inclination for the pump, simply double-click the component to open the properties window.
 Then, adjust the angle to <strong>45°</strong>.
 </div>
 
