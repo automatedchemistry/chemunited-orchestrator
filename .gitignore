@@ -238,3 +238,6 @@ example/test_sim/
 
 # Batch files
 chemunited.bat
+
+# Test mcp
+.mcp.json
