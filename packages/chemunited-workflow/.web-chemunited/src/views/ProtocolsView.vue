@@ -51,6 +51,9 @@ const mode = computed<'view' | 'write'>(() =>
 const stepSchema = ref<Record<string, unknown> | null>(null)
 const stepValues = ref<Record<string, Record<string, unknown>>>({})
 
+const stepDiagramSvg = ref<string | null>(null)
+const _diagramCache = new Map<string, string | null>()
+
 const mainParamProperties = computed<Record<string, unknown>>(() => {
   if (!stepSchema.value) return {}
   const s = stepSchema.value as {
@@ -112,6 +115,7 @@ function removeStep() {
   protocolSteps.value.splice(selectedStepIdx.value, 1)
   selectedStepIdx.value = null
   stepSchema.value = null
+  stepDiagramSvg.value = null
   if (protocolSteps.value.length === 0) {
     isModified.value = false
   } else {
@@ -122,13 +126,27 @@ function removeStep() {
 async function selectStep(i: number) {
   selectedStepIdx.value = i
   stepSchema.value = null
+  stepDiagramSvg.value = null
   const step = protocolSteps.value[i]
   if (!step) return
   const proc = processes.value.find(p => step.startsWith(p.name + '_'))
   if (!proc) return
-  const res = await fetch(`/processes/${proc.name}/schema`)
-  if (!res.ok) { notify(await extractError(res), 'error'); return }
-  stepSchema.value = await res.json()
+
+  const cachedDiagram = _diagramCache.get(proc.name)
+  const diagramPromise = cachedDiagram !== undefined
+    ? Promise.resolve(cachedDiagram)
+    : fetch(`/processes/${proc.name}/diagram`)
+        .then(res => (res.ok ? res.text() : null))
+        .then(svg => { _diagramCache.set(proc.name, svg); return svg })
+        .catch(() => null)
+
+  const [schemaRes, diagramSvg] = await Promise.all([
+    fetch(`/processes/${proc.name}/schema`),
+    diagramPromise,
+  ])
+  if (!schemaRes.ok) { notify(await extractError(schemaRes), 'error'); return }
+  stepSchema.value = await schemaRes.json()
+  stepDiagramSvg.value = diagramSvg
 }
 
 function moveStepUp(i: number) {
@@ -202,6 +220,18 @@ onMounted(() => {
         Save protocol
       </button>
     </header>
+
+    <section v-if="stepDiagramSvg && selectedStep" class="schema-panel diagram-panel">
+      <div class="schema-heading">
+        <div>
+          <p class="page-eyebrow">Workflow diagram</p>
+          <h2>Graph</h2>
+          <p>Structure of <strong>{{ selectedStep }}</strong>'s process.</p>
+        </div>
+      </div>
+      <!-- eslint-disable-next-line vue/no-v-html -->
+      <div class="diagram-svg-wrap" v-html="stepDiagramSvg" />
+    </section>
 
     <section v-if="stepSchema && selectedStep" class="schema-panel">
       <div class="schema-heading">
@@ -876,6 +906,19 @@ onMounted(() => {
 
 .schema-panel {
   padding: 1.35rem;
+}
+
+.diagram-svg-wrap {
+  margin-top: 0.75rem;
+  width: 100%;
+  overflow: hidden;
+}
+
+.diagram-svg-wrap :deep(svg) {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-height: 480px;
 }
 
 .schema-heading {

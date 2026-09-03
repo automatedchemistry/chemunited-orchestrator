@@ -1,8 +1,12 @@
-"""Routes: GET /processes, GET /processes/{name}/schema."""
+"""Routes: GET /processes, GET /processes/{name}/source,
+GET /processes/{name}/schema, GET /processes/{name}/diagram.
+"""
 
 from fastapi import APIRouter, Depends, HTTPException
+from fastapi.responses import Response
 
-from ..dependencies import get_protocol_service
+from ..dependencies import get_project_holder, get_protocol_service
+from ..project_holder import ProjectHolder
 from ..schemas import ProcessSource
 from ..services.protocol import ProtocolService
 
@@ -51,3 +55,34 @@ async def get_process_schema(
         return svc.get_process_schema(name)
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
+
+
+@router.get("/{name}/diagram", include_in_schema=False)
+async def get_process_diagram(
+    name: str,
+    holder: ProjectHolder = Depends(get_project_holder),
+) -> Response:
+    """Return this process's workflow diagram as a pre-generated SVG.
+
+    The diagram is exported from the orchestrator app's canvas on project
+    save (``draw/workflows/{name}.svg``) — it is not rendered live here.
+    404 if the project hasn't been saved since this process was added.
+    """
+    pd = holder.project_dir
+    if pd is None:
+        raise HTTPException(status_code=404, detail="No project loaded.")
+    workflows_dir = (pd / "draw" / "workflows").resolve()
+    svg_path = (workflows_dir / f"{name}.svg").resolve()
+    if not svg_path.is_relative_to(workflows_dir):
+        raise HTTPException(
+            status_code=400,
+            detail=f"Invalid process name {name!r}: path traversal is not allowed.",
+        )
+    if not svg_path.is_file():
+        raise HTTPException(
+            status_code=404,
+            detail=f"No diagram found for process {name!r}. Save the project to generate it.",
+        )
+    return Response(
+        content=svg_path.read_text(encoding="utf-8"), media_type="image/svg+xml"
+    )

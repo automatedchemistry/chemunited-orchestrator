@@ -24,6 +24,7 @@ from chemunited.project.manifest import ProjectManifest
 from chemunited.project.platform_svg import (
     PLATFORM_DEVICES_RELATIVE_PATH,
     PLATFORM_SVG_RELATIVE_PATH,
+    PROCESS_WORKFLOWS_DIR_RELATIVE_PATH,
     export_platform_svg,
 )
 from chemunited.project.recent import RecentProjectsStore
@@ -461,6 +462,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
         self._save_platform_svg()
         self._session.save_draw(self._build_draw_data())
         self._save_protocols()
+        self._save_process_workflow_svgs()
         self._ensure_main_parameters_script()
         self._session.save_connectivity(self._build_connectivity_data())
         self._session.export_chemunited(export_destination)
@@ -585,6 +587,22 @@ class OrchestratorProjectFile(OrchestratorExecution):
             devices_path=self.working_dir / PLATFORM_DEVICES_RELATIVE_PATH,
             components=self.components.items(),
         )
+
+    def _save_process_workflow_svgs(self) -> None:
+        if self.working_dir is None:
+            return
+        workflows_dir = self.working_dir / PROCESS_WORKFLOWS_DIR_RELATIVE_PATH
+        for name in self.protocols:
+            graph = self.parent_ref.workflows_protocol[name]
+            if graph is None:
+                continue
+            export_platform_svg(graph.scene_attribute, workflows_dir / f"{name}.svg")
+
+        if workflows_dir.is_dir():
+            keep = {f"{name}.svg" for name in self.protocols}
+            for stale in workflows_dir.glob("*.svg"):
+                if stale.name not in keep:
+                    stale.unlink()
 
     def _record_recent_project(self, path: Path | None) -> None:
         if path is None:

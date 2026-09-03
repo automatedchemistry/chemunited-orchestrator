@@ -964,6 +964,44 @@ class TestAddComponent:
         with zipfile.ZipFile(tmp_path / "demo.chemunited") as archive:
             assert "draw/platform.svg" in archive.namelist()
 
+    def test_save_exports_process_workflow_svg(self, window: SetupWindow, tmp_path):
+        working_dir = tmp_path / "demo"
+        session = ProjectSession()
+        session.new(name="demo", location=tmp_path, init_git=False)
+        window.orchestrator.working_dir = working_dir
+        window.orchestrator._session = session
+
+        window.orchestrator.add_process("Demo")
+
+        window.orchestrator.save()
+
+        svg_path = working_dir / "draw" / "workflows" / "Demo.svg"
+        assert svg_path.exists()
+        assert "<svg" in svg_path.read_text(encoding="utf-8")
+
+        with zipfile.ZipFile(tmp_path / "demo.chemunited") as archive:
+            assert "draw/workflows/Demo.svg" in archive.namelist()
+
+    def test_save_removes_stale_process_workflow_svg_after_rename(
+        self, window: SetupWindow, tmp_path
+    ):
+        working_dir = tmp_path / "demo"
+        session = ProjectSession()
+        session.new(name="demo", location=tmp_path, init_git=False)
+        window.orchestrator.working_dir = working_dir
+        window.orchestrator._session = session
+
+        window.orchestrator.add_process("Demo")
+        window.orchestrator.save()
+        old_svg = working_dir / "draw" / "workflows" / "Demo.svg"
+        assert old_svg.exists()
+
+        window.orchestrator.rename_process("Demo", "Renamed")
+        window.orchestrator.save()
+
+        assert not old_svg.exists()
+        assert (working_dir / "draw" / "workflows" / "Renamed.svg").exists()
+
     def test_save_preserves_existing_main_parameters_file(
         self, window: SetupWindow, tmp_path
     ):

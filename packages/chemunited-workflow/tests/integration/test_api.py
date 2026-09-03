@@ -735,6 +735,32 @@ def test_get_process_source_path_traversal(client):
     assert r.status_code in (400, 404)
 
 
+# ── /processes/{name}/diagram ───────────────────────────────────────────────
+
+
+def test_get_process_diagram_existing(client, project):
+    workflows_dir = project["tmp_path"] / "draw" / "workflows"
+    workflows_dir.mkdir(parents=True)
+    (workflows_dir / "my_process.svg").write_text(
+        "<svg xmlns='http://www.w3.org/2000/svg'></svg>", encoding="utf-8"
+    )
+    r = client.get("/processes/my_process/diagram")
+    assert r.status_code == 200
+    assert r.headers["content-type"].startswith("image/svg+xml")
+    assert "<svg" in r.text
+
+
+def test_get_process_diagram_not_saved_yet(client):
+    r = client.get("/processes/my_process/diagram")
+    assert r.status_code == 404
+
+
+def test_get_process_diagram_path_traversal(client):
+    # Same normalisation caveat as test_get_process_source_path_traversal.
+    r = client.get("/processes/..%2F..%2Fsecret/diagram")
+    assert r.status_code in (400, 404)
+
+
 # ── /protocols DELETE ────────────────────────────────────────────────────────
 
 

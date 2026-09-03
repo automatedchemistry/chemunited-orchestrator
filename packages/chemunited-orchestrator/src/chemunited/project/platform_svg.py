@@ -12,6 +12,7 @@ from PyQt5.QtWidgets import QGraphicsItem, QGraphicsScene
 
 PLATFORM_SVG_RELATIVE_PATH = Path("draw") / "platform.svg"
 PLATFORM_DEVICES_RELATIVE_PATH = Path("draw") / "platform-devices.json"
+PROCESS_WORKFLOWS_DIR_RELATIVE_PATH = Path("draw") / "workflows"
 
 _EMPTY_SCENE_RECT = QRectF(0, 0, 640, 360)
 _MARGIN = 24.0
