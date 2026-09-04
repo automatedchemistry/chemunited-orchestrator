@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "chemunited-workflow"
-version = "0.0.8"
+version = "0.0.9"
 description = "Conditional NetworkX-based workflow execution with loopbacks and parallel branches."
 requires-python = ">=3.11"
 license = { file = "LICENSE" }
