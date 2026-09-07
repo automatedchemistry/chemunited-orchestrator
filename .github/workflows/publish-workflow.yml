@@ -8,14 +8,13 @@ on:
 permissions:
   contents: read
 
-defaults:
-  run:
-    working-directory: packages/chemunited-workflow
-
 jobs:
   build:
     name: Test and build distributions
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: packages/chemunited-workflow
 
     steps:
       - name: Check out repository
