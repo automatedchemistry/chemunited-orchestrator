@@ -40,7 +40,13 @@ INFO:     Uvicorn running on http://0.0.0.0:3116
 
 Other machines on the LAN can then open `http://<hostname>.local:3116/` in a browser. The mDNS record is withdrawn cleanly when the server stops (Ctrl-C).
 
-> **Note:** No authentication is included. Anyone on the local network can reach the full API. Use only on trusted networks.
+> **Note:** State-changing requests from other machines require a bearer token — pass `--token` or set `CHEMUNITED_API_TOKEN` before using `--advertise`. Loopback callers and all read-only endpoints (monitoring, logs, status) are never gated; without a token, remote machines can view the dashboard but cannot start/cancel runs, load projects, or send device commands.
+
+```bash
+# Advertise with a bearer token so remote clients can also control the server
+export CHEMUNITED_API_TOKEN=$(python -c "import secrets; print(secrets.token_urlsafe(32))")
+chemunited-workflow serve my_project/ --advertise
+```
 
 To load or switch projects at runtime:
 

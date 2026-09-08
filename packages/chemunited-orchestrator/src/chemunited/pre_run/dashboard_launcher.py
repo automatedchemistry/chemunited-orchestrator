@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import os
+import secrets
 import socket
 import subprocess
 import sys
@@ -30,6 +32,7 @@ from qfluentwidgets import (
     InfoBar,
     InfoBarPosition,
     LineEdit,
+    PasswordLineEdit,
     PrimaryPushButton,
     PushButton,
     ScrollArea,
@@ -138,6 +141,7 @@ class DashBoardLauncherFrame(QFrame):
         super().__init__(parent)
         self._pre_run_ref = parent
         self._is_running = False
+        self._launched_token: str | None = None
         self._init_ui()
         self._connect_signals()
         self._update_address_display()
@@ -210,6 +214,16 @@ class DashBoardLauncherFrame(QFrame):
         self._mcp_addr_row.setVisible(False)
         vlay.addWidget(self._mcp_addr_row)
 
+        self._status_token_label = self._addr_label("")
+        self._status_token_copy_btn = PushButton("Copy")
+        self._status_token_copy_btn.setFixedWidth(70)
+        self._status_token_copy_btn.clicked.connect(self._copy_running_token)  # type: ignore[attr-defined]
+        self._status_token_row = self._labeled_row(
+            "API Token:", self._status_token_label, self._status_token_copy_btn
+        )
+        self._status_token_row.setVisible(False)
+        vlay.addWidget(self._status_token_row)
+
         vlay.addWidget(_SectionSeparator())
 
         btn_row = QWidget()
@@ -237,13 +251,15 @@ class DashBoardLauncherFrame(QFrame):
         return lbl
 
     @staticmethod
-    def _labeled_row(caption: str, value_widget: QWidget) -> QWidget:
+    def _labeled_row(caption: str, value_widget: QWidget, *extra: QWidget) -> QWidget:
         row = QWidget()
         lay = QHBoxLayout(row)
         lay.setContentsMargins(0, 2, 0, 2)
         lay.setSpacing(8)
         lay.addWidget(CaptionLabel(caption))
         lay.addWidget(value_widget)
+        for widget in extra:
+            lay.addWidget(widget)
         lay.addStretch(1)
         return row
 
@@ -329,6 +345,31 @@ class DashBoardLauncherFrame(QFrame):
         vlay.addWidget(self._advertise_name_row)
         vlay.addWidget(self._advertise_name_sep)
 
+        self._token_edit = PasswordLineEdit()
+        self._token_edit.setFixedWidth(220)
+        self._token_edit.setPlaceholderText("Bearer token for remote clients")
+        self._token_copy_btn = PushButton("Copy")
+        self._token_copy_btn.setFixedWidth(70)
+        token_row_widget = QWidget()
+        token_row_layout = QHBoxLayout(token_row_widget)
+        token_row_layout.setContentsMargins(0, 0, 0, 0)
+        token_row_layout.setSpacing(6)
+        token_row_layout.addWidget(self._token_edit)
+        token_row_layout.addWidget(self._token_copy_btn)
+        self._advertise_token_row = _OptionRow(
+            "API Token",
+            "Required for remote (non-loopback) clients to start/cancel runs, load "
+            "projects, or send device commands. Auto-generated; edit or paste your "
+            "own. Passed via environment variable — never shown in the command "
+            "preview below.",
+            token_row_widget,
+        )
+        self._advertise_token_sep = _SectionSeparator()
+        self._advertise_token_row.setVisible(False)
+        self._advertise_token_sep.setVisible(False)
+        vlay.addWidget(self._advertise_token_row)
+        vlay.addWidget(self._advertise_token_sep)
+
         self._mcp_switch = SwitchButton()
         self._mcp_switch.setChecked(False)
         vlay.addWidget(
@@ -359,6 +400,11 @@ class DashBoardLauncherFrame(QFrame):
         self._command_preview.setReadOnly(True)
         self._command_preview.setFont(QFont("Consolas", 9))
         vlay.addWidget(self._command_preview)
+
+        self._token_env_note = CaptionLabel("")
+        self._token_env_note.setWordWrap(True)
+        self._token_env_note.setVisible(False)
+        vlay.addWidget(self._token_env_note)
 
         if not _IS_WINDOWS:
             note = CaptionLabel(
@@ -427,6 +473,8 @@ class DashBoardLauncherFrame(QFrame):
         self._mcp_switch.checkedChanged.connect(self._update_address_display)  # type: ignore[attr-defined]
         self._port_spin.valueChanged.connect(self._update_address_display)  # type: ignore[attr-defined]
         self._advertise_name_edit.textChanged.connect(self._update_address_display)  # type: ignore[attr-defined]
+        self._token_edit.textChanged.connect(self._update_address_display)  # type: ignore[attr-defined]
+        self._token_copy_btn.clicked.connect(self._copy_token)  # type: ignore[attr-defined]
         self._link_btn.clicked.connect(self._open_browser)  # type: ignore[attr-defined]
         self._set_project_btn.clicked.connect(self._send_project_to_dashboard)  # type: ignore[attr-defined]
         self._launch_btn.clicked.connect(self._launch_dashboard)  # type: ignore[attr-defined]
@@ -441,6 +489,10 @@ class DashBoardLauncherFrame(QFrame):
     def _on_advertise_changed(self, checked: bool) -> None:
         self._advertise_name_row.setVisible(checked)
         self._advertise_name_sep.setVisible(checked)
+        self._advertise_token_row.setVisible(checked)
+        self._advertise_token_sep.setVisible(checked)
+        if checked and not self._token_edit.text().strip():
+            self._token_edit.setText(secrets.token_urlsafe(32))
         self._update_address_display()
 
     # ------------------------------------------------------------------ display
@@ -505,11 +557,31 @@ class DashBoardLauncherFrame(QFrame):
             cmd += " " + " ".join(options)
         self._command_preview.setText(cmd)
 
+        advertise_on = self._advertise_switch.isChecked()
+        token_set = bool(self._token_edit.text().strip())
+        if advertise_on and token_set:
+            self._token_env_note.setText(
+                "The API token is passed via the CHEMUNITED_API_TOKEN environment "
+                "variable — it is not included in the command above."
+            )
+            self._token_env_note.setVisible(True)
+        elif advertise_on and not token_set:
+            self._token_env_note.setText(
+                "Warning: LAN Advertisement is on with no API token set — remote "
+                "clients will be unable to start/cancel runs, load projects, or "
+                "send device commands on this instance."
+            )
+            self._token_env_note.setVisible(True)
+        else:
+            self._token_env_note.setVisible(False)
+
     # ------------------------------------------------------------------ status
 
     def refresh_status(self) -> None:
         port = self._port_spin.value()
         self._is_running = inpect_execution_address(DEFAULT_HOST, port)
+        if not self._is_running:
+            self._launched_token = None
         self._apply_running_state()
 
     def _apply_running_state(self) -> None:
@@ -519,6 +591,11 @@ class DashBoardLauncherFrame(QFrame):
         self._set_project_btn.setVisible(running)
         self._options_card.setEnabled(not running)
         self._launch_btn.setVisible(not running)
+
+        show_token = running and bool(self._launched_token)
+        self._status_token_row.setVisible(show_token)
+        if show_token:
+            self._status_token_label.setText(self._launched_token)
 
     def showEvent(self, event) -> None:
         super().showEvent(event)
@@ -652,6 +729,17 @@ class DashBoardLauncherFrame(QFrame):
             )
             args = [a for a in args if a not in ("--tray", "--silent")]
 
+        token: str | None = None
+        if self._advertise_switch.isChecked():
+            candidate = self._token_edit.text().strip()
+            if candidate:
+                token = candidate
+
+        env = None
+        if token is not None:
+            env = os.environ.copy()
+            env["CHEMUNITED_API_TOKEN"] = token
+
         try:
             subprocess.Popen(  # nosec B603 # shell=False; args built from sys.executable + fixed subcommand list
                 args,
@@ -659,7 +747,9 @@ class DashBoardLauncherFrame(QFrame):
                 stdin=subprocess.DEVNULL,
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
+                env=env,
             )
+            self._launched_token = token
             InfoBar.success(
                 "Dashboard Launched",
                 "Server is starting — click Refresh in a few seconds to verify.",
@@ -682,14 +772,25 @@ class DashBoardLauncherFrame(QFrame):
         except Exception as exc:
             logger.error(f"Launch Failed — {exc}")
 
-    def _copy_mcp_config(self, json_text: str) -> None:
-        QApplication.clipboard().setText(json_text)  # type: ignore[union-attr]
+    def _copy_to_clipboard(self, text: str, *, subject: str) -> None:
+        if not text:
+            return
+        QApplication.clipboard().setText(text)  # type: ignore[union-attr]
         InfoBar.success(
             "Copied",
-            "MCP configuration copied to clipboard.",
+            f"{subject} copied to clipboard.",
             orient=Qt.Horizontal,  # type: ignore[attr-defined]
             isClosable=True,
             position=InfoBarPosition.TOP,
             duration=2500,
             parent=self,
         )
+
+    def _copy_mcp_config(self, json_text: str) -> None:
+        self._copy_to_clipboard(json_text, subject="MCP configuration")
+
+    def _copy_token(self) -> None:
+        self._copy_to_clipboard(self._token_edit.text().strip(), subject="API token")
+
+    def _copy_running_token(self) -> None:
+        self._copy_to_clipboard(self._launched_token or "", subject="API token")

@@ -56,15 +56,20 @@ Running the bare `chemunited-workflow` command with no arguments is equivalent t
 | `--reload` | Auto-restart the server on code changes (development use). |
 | `--advertise` | Bind to all interfaces and announce the server on the local network via mDNS/Zeroconf, so it can be discovered by other machines. |
 | `--advertise-name` | Custom name to advertise the server as, when `--advertise` is used. |
+| `--token` | Bearer token remote (non-loopback) clients must present for state-changing requests (defaults to `$CHEMUNITED_API_TOKEN`; prefer the env var over the flag to keep it out of shell history and process listings). Loopback callers and read-only requests are never gated. |
 | `--with-mcp` | Expose the [MCP tool interface](api_and_mcp.md) on the same port as the dashboard. |
 | `--tray` | Run the server in the background with a system-tray icon (Windows), with quick actions to open the dashboard, check status, or quit. |
 | `--silent` | Detach the console window. Requires `--tray`, and is not compatible with `--reload`. |
 
 <div class="warning-block">
 <strong>⚠️ Warning</strong><br>
-The work-server does not require authentication. When started with <code>--advertise</code> (or bound to a
-non-localhost <code>--host</code>), anyone on the same network can view and control the run. Only use this on
-trusted lab networks.
+Read-only endpoints (monitoring, logs, status) are always open to anyone who can reach the server. State-changing
+requests (start/cancel a run, load a project, send device commands, ...) are allowed unconditionally from
+<code>127.0.0.1</code>/<code>::1</code>, and from any other address only with a matching
+<code>Authorization: Bearer &lt;token&gt;</code> header — set it with <code>--token</code> or
+<code>CHEMUNITED_API_TOKEN</code>. Without a token, remote clients started via <code>--advertise</code> (or a
+non-localhost <code>--host</code>) can still <em>view</em> the dashboard but cannot change anything. Only expose an
+untokened server to a fully trusted lab network.
 </div>
 
 ## Next steps

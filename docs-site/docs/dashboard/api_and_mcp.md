@@ -43,6 +43,10 @@ and inspecting protocol executions.
 
 <div class="warning-block">
 <strong>⚠️ Warning</strong><br>
-Like the REST API, the MCP interface has no built-in authentication. Only enable <code>--with-mcp</code> on trusted
-networks, and be aware that any connected MCP client can start or cancel runs on real hardware.
+MCP is mounted on the same FastAPI app as the REST API, so it is covered by the same loopback-or-token gate (see
+<a href="overview.md">Dashboard overview</a>): state-changing tool calls are allowed unconditionally from the local
+machine, and from any other address only with a valid <code>Authorization: Bearer &lt;token&gt;</code> header
+(<code>--token</code> / <code>CHEMUNITED_API_TOKEN</code>). Read-only MCP tools are never gated. Configure your MCP
+client to send this header when connecting to a non-loopback <code>--with-mcp</code> endpoint, otherwise it will be
+limited to read-only tools.
 </div>

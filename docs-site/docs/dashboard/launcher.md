@@ -24,6 +24,7 @@ work-server directly from the desktop app, so you don't have to run its CLI comm
 | **System Tray** | Keeps the dashboard running as a tray icon after the launcher window and terminal are closed. Requires the `pystray` package — if it isn't installed, the dashboard launches without tray support and a warning is logged (install with `pip install chemunited-workflow[tray]`). |
 | **Silent Mode** | Windows only, and only takes effect when **System Tray** is also on. Detaches the process from the terminal on launch, so no console window appears. |
 | **LAN Advertisement** | Broadcasts the dashboard on the local network via mDNS, so other devices can reach it by name instead of by IP. Turning it on reveals a **Network Name** field (defaults to `ChemUnited @ <hostname>`) used as the advertised name. |
+| **API Token** | Only shown when **LAN Advertisement** is on. Bearer token remote (non-loopback) clients must present for state-changing requests. Auto-generated the first time Advertisement is turned on (only if the field is empty — editing or re-toggling never overwrites your own value); use **Copy** to copy it to the clipboard. Not shown in the **Generated command** preview — passed to the server via the `CHEMUNITED_API_TOKEN` environment variable so it never appears in shell history or process listings. |
 | **Expose MCP Endpoint** | Also serves a Model Context Protocol (MCP) endpoint at `/mcp`, for LLM agents to interact with the project (see [API & MCP Tools](api_and_mcp.md)). Turning it on reveals the **MCP Client Configuration** card below. |
 
 <div class="info-block">
@@ -45,6 +46,13 @@ Click **Launch Dashboard** to start the server with the options above. If a dash
 configured port, the launcher warns instead of starting a second instance. Once running, the Launch Options card
 is disabled (options can't be changed on a running server) and the button row switches to **Open Dashboard** /
 **Send Project to Dashboard**.
+
+If **LAN Advertisement** was on with a token set at launch, the **Dashboard Status** card shows an **API Token**
+row with its own **Copy** button. Unlike the Launch Options card, this row stays enabled while the server is
+running, so you can copy the token to share with a remote dashboard user even after Launch Options has been
+disabled. It only reflects the token used by the instance launched from this window in this session — it's
+cleared if the dashboard stops, and stays hidden if a dashboard already running on the configured port wasn't
+started from this launcher (e.g. from a terminal, or a previous run of the app).
 
 Use **Refresh Status** at any time to re-check whether the configured port is currently occupied — for example,
 after starting or stopping the dashboard from a terminal outside the launcher.
