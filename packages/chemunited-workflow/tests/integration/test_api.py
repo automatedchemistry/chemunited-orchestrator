@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 import responses as resp_lib
 from fastapi.testclient import TestClient
-from tests.helpers import make_project_tree
+from tests.helpers import LOOPBACK_CLIENT, make_project_tree
 
 from chemunited_workflow.api import create_api
 
@@ -151,7 +151,7 @@ def app(project):
 
 @pytest.fixture
 def client(app):
-    return TestClient(app)
+    return TestClient(app, client=LOOPBACK_CLIENT)
 
 
 # ── /processes ────────────────────────────────────────────────────────────────
@@ -350,7 +350,7 @@ def test_get_active_run_while_running(app):
     run_id = holder.run_store.try_start("run_001.json")
     assert run_id is not None
 
-    with TestClient(app) as local_client:
+    with TestClient(app, client=LOOPBACK_CLIENT) as local_client:
         r = local_client.get("/run/active")
 
     assert r.status_code == 200
@@ -369,7 +369,7 @@ def test_get_active_run_while_paused(app):
     assert run_id is not None
     assert holder.run_store.pause() is True
 
-    with TestClient(app) as local_client:
+    with TestClient(app, client=LOOPBACK_CLIENT) as local_client:
         r = local_client.get("/run/active")
 
     assert r.status_code == 200
@@ -440,7 +440,7 @@ def test_cancel_run_interrupts_client_wait(tmp_path):
             main_parameter_class=main_mod.MainParameter,
         )
     )
-    local_client = TestClient(api)
+    local_client = TestClient(api, client=LOOPBACK_CLIENT)
 
     r = local_client.post(
         "/run/",
@@ -533,7 +533,7 @@ def test_pause_run_holds_wait_then_resume_continues(tmp_path):
             main_parameter_class=main_mod.MainParameter,
         )
     )
-    local_client = TestClient(api)
+    local_client = TestClient(api, client=LOOPBACK_CLIENT)
 
     r = local_client.post(
         "/run/",
@@ -1076,7 +1076,7 @@ def _write_valid_protocols_package(project_dir: Path) -> None:
 def test_put_project_success(tmp_path):
     _write_valid_protocols_package(tmp_path)
     app = create_api()
-    with TestClient(app) as bare_client:
+    with TestClient(app, client=LOOPBACK_CLIENT) as bare_client:
         r = bare_client.put("/project/", json={"project_dir": str(tmp_path)})
     assert r.status_code == 200
     assert r.json()["project_dir"] == str(tmp_path.resolve())
@@ -1084,7 +1084,7 @@ def test_put_project_success(tmp_path):
 
 def test_put_project_missing_files(tmp_path):
     app = create_api()
-    with TestClient(app) as bare_client:
+    with TestClient(app, client=LOOPBACK_CLIENT) as bare_client:
         r = bare_client.put("/project/", json={"project_dir": str(tmp_path)})
     assert r.status_code == 422
     assert "protocols/__init__.py" in r.json()["detail"]
@@ -1100,7 +1100,7 @@ def test_put_project_syntax_error(tmp_path):
         "class MainParameter:\n    pass\n", encoding="utf-8"
     )
     app = create_api()
-    with TestClient(app) as bare_client:
+    with TestClient(app, client=LOOPBACK_CLIENT) as bare_client:
         r = bare_client.put("/project/", json={"project_dir": str(tmp_path)})
     assert r.status_code == 422
     detail = r.json()["detail"]
@@ -1115,7 +1115,7 @@ def test_put_project_service_init_failure(tmp_path, mocker):
         side_effect=RuntimeError("boom"),
     )
     app = create_api()
-    with TestClient(app) as bare_client:
+    with TestClient(app, client=LOOPBACK_CLIENT) as bare_client:
         r = bare_client.put("/project/", json={"project_dir": str(tmp_path)})
     assert r.status_code == 422
     detail = r.json()["detail"]
@@ -1128,7 +1128,7 @@ def test_put_project_service_init_failure(tmp_path, mocker):
 
 def test_platform_devices_no_project():
     app = create_api()
-    with TestClient(app) as bare_client:
+    with TestClient(app, client=LOOPBACK_CLIENT) as bare_client:
         r = bare_client.get("/project/platform-devices")
     assert r.status_code == 404
 

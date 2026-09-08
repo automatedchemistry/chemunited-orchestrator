@@ -11,7 +11,7 @@ from unittest.mock import MagicMock
 import pytest
 import responses as resp_lib
 from fastapi.testclient import TestClient
-from tests.helpers import make_project_tree
+from tests.helpers import LOOPBACK_CLIENT, make_project_tree
 
 from chemunited_workflow.api import create_api
 
@@ -69,7 +69,7 @@ def app(holder):
 
 @pytest.fixture
 def client(app):
-    return TestClient(app)
+    return TestClient(app, client=LOOPBACK_CLIENT)
 
 
 def _wait_until(predicate, timeout=2.0, interval=0.02):

@@ -2,6 +2,11 @@
 
 from pathlib import Path
 
+# Starlette's TestClient defaults scope["client"] to ("testclient", 50000),
+# which is not loopback -- pass this to TestClient(..., client=LOOPBACK_CLIENT)
+# to exercise routes as the AccessControlMiddleware sees a local caller.
+LOOPBACK_CLIENT: tuple[str, int] = ("127.0.0.1", 51216)
+
 MINIMAL_PROCESS_SRC = """
 from typing import Annotated
 

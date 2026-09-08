@@ -10,7 +10,7 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
-from tests.helpers import make_project_tree
+from tests.helpers import LOOPBACK_CLIENT, make_project_tree
 
 from chemunited_workflow.api import create_api
 
@@ -84,26 +84,26 @@ def app(project):
 
 @pytest.fixture
 def client(app):
-    return TestClient(app)
+    return TestClient(app, client=LOOPBACK_CLIENT)
 
 
 # ── no project loaded ────────────────────────────────────────────────────────
 
 
 def test_preview_returns_503_when_no_project_loaded():
-    client = TestClient(create_api())
+    client = TestClient(create_api(), client=LOOPBACK_CLIENT)
     r = client.get("/export/preview")
     assert r.status_code == 503
 
 
 def test_download_returns_503_when_no_project_loaded():
-    client = TestClient(create_api())
+    client = TestClient(create_api(), client=LOOPBACK_CLIENT)
     r = client.get("/export/download", params={"log": "x.log"})
     assert r.status_code == 503
 
 
 def test_clean_returns_503_when_no_project_loaded():
-    client = TestClient(create_api())
+    client = TestClient(create_api(), client=LOOPBACK_CLIENT)
     r = client.post("/export/clean", json={"logs": ["x.log"]})
     assert r.status_code == 503
 

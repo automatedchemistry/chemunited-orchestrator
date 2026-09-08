@@ -50,3 +50,9 @@ class MinimalProcess(Process[MinimalConfig]):
 @pytest.fixture
 def minimal_process():
     return MinimalProcess(config=MinimalConfig())
+
+
+@pytest.fixture(autouse=True)
+def _no_leaked_api_token(monkeypatch):
+    """Never let a developer's real shell CHEMUNITED_API_TOKEN leak into a test run."""
+    monkeypatch.delenv("CHEMUNITED_API_TOKEN", raising=False)

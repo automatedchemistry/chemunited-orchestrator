@@ -11,7 +11,7 @@ from pathlib import Path
 import pytest
 import responses as resp_lib
 from fastapi.testclient import TestClient
-from tests.helpers import make_project_tree
+from tests.helpers import LOOPBACK_CLIENT, make_project_tree
 
 from chemunited_workflow.api import create_api
 
@@ -64,7 +64,7 @@ def holder(tmp_path):
 
 @pytest.fixture
 def client(holder):
-    return TestClient(holder._api)
+    return TestClient(holder._api, client=LOOPBACK_CLIENT)
 
 
 def _wait_until(predicate, timeout=5.0, interval=0.02):

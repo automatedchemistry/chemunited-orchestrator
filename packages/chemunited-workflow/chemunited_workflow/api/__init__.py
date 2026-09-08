@@ -19,6 +19,7 @@ from .routers.protocols import read_router as protocols_read_router
 from .routers.protocols import write_router as protocols_write_router
 from .routers.runner import router as runner_router
 from .routers.ui import router as ui_router
+from .security import AccessControlMiddleware
 
 _WEB_DIR = Path(__file__).parent.parent / "web"
 
@@ -28,6 +29,7 @@ def create_api(
     with_mcp: bool = False,
     host: str = "127.0.0.1",
     port: int = 3116,
+    token: str | None = None,
 ) -> FastAPI:
     """Create and return a configured FastAPI application.
 
@@ -36,6 +38,11 @@ def create_api(
 
     Pass ``with_mcp=True`` to also mount an MCP streamable-HTTP endpoint at
     ``/mcp`` sharing the same ``ProjectHolder``.
+
+    State-changing requests (``POST``/``PUT``/``DELETE``/...) are only
+    allowed from loopback or with a bearer token matching ``token``; read
+    requests (``GET``/``HEAD``) are always open. See
+    :mod:`chemunited_workflow.api.security`.
     """
     holder = ProjectHolder()
 
@@ -63,6 +70,7 @@ def create_api(
             yield
 
     app = FastAPI(title="chemunited API", lifespan=_lifespan)
+    app.add_middleware(AccessControlMiddleware, token=token)
 
     app.dependency_overrides[get_project_holder] = lambda: holder
 

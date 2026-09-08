@@ -10,7 +10,7 @@ from unittest.mock import patch
 
 import pytest
 from fastapi.testclient import TestClient
-from tests.helpers import make_project_tree
+from tests.helpers import LOOPBACK_CLIENT, make_project_tree
 
 from chemunited_workflow.api import create_api
 from chemunited_workflow.clients import BaseClient, ComponentClient
@@ -128,7 +128,7 @@ def test_api_dry_run_run_completes(tmp_path):
             main_parameter_class=main_mod.MainParameter,
         )
     )
-    client = TestClient(app)
+    client = TestClient(app, client=LOOPBACK_CLIENT)
     r = client.post("/run/", json={"protocol": "run_001.json", "dry_run": True})
     assert r.status_code == 202
 

@@ -100,3 +100,23 @@ def test_reload_is_incompatible_with_tray_mode():
 
     assert result.exit_code == 2
     assert "--reload is incompatible with --tray" in result.output
+
+
+def test_exposure_warning_when_non_loopback_host_has_no_token():
+    assert cli._exposure_warning("0.0.0.0", None) is not None
+
+
+def test_exposure_warning_none_when_non_loopback_host_has_token():
+    assert cli._exposure_warning("0.0.0.0", "x") is None
+
+
+def test_exposure_warning_none_for_loopback_v4_host():
+    assert cli._exposure_warning("127.0.0.1", None) is None
+
+
+def test_exposure_warning_none_for_loopback_v6_host():
+    assert cli._exposure_warning("::1", None) is None
+
+
+def test_exposure_warning_none_for_blank_token():
+    assert cli._exposure_warning("0.0.0.0", "   ") is not None

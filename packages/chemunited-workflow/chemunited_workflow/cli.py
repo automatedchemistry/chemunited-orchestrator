@@ -115,6 +115,25 @@ def _display_host(host: str) -> str:
     return host
 
 
+def _exposure_warning(host: str, token: str | None) -> str | None:
+    """Return a warning message if *host* is non-loopback and *token* is unset."""
+    if (token or "").strip():
+        return None
+    try:
+        loopback = ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        loopback = False
+    if loopback:
+        return None
+    return (
+        f"WARNING: server is bound to {host} (not loopback) and no --token/"
+        "CHEMUNITED_API_TOKEN is configured. All state-changing requests "
+        "(start/stop run, load project, custom device commands, ...) from "
+        "other machines will be rejected with 401. Monitoring/read endpoints "
+        "remain open to anyone who can reach this host."
+    )
+
+
 # ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
@@ -190,6 +209,19 @@ def main(ctx: click.Context) -> None:
     help="Also expose an MCP streamable-HTTP endpoint within the FastAPI server.",
 )
 @click.option(
+    "--token",
+    "token",
+    default=None,
+    envvar="CHEMUNITED_API_TOKEN",
+    help=(
+        "Bearer token required for state-changing requests from non-loopback "
+        "clients (defaults to $CHEMUNITED_API_TOKEN; prefer the env var over "
+        "this flag to keep the token out of shell history/process listings). "
+        "Monitoring/read endpoints and requests from 127.0.0.1/::1 are never "
+        "gated."
+    ),
+)
+@click.option(
     "--tray",
     "use_tray",
     is_flag=True,
@@ -210,6 +242,7 @@ def serve(
     advertise: bool,
     advertise_name: str | None,
     with_mcp: bool,
+    token: str | None,
     use_tray: bool,
     silent: bool,
 ) -> None:
@@ -297,10 +330,15 @@ def serve(
     if advertise and host == "127.0.0.1":
         host = "0.0.0.0"  # nosec B104
 
+    warning = _exposure_warning(host, token)
+    if warning is not None:
+        click.secho(warning, fg="yellow", err=True)
+
     app = create_api(
         with_mcp=with_mcp,
         host=host,
         port=resolved_port,
+        token=token,
     )
 
     if project_dir is not None:

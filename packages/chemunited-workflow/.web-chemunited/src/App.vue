@@ -1,11 +1,26 @@
 <script setup lang="ts">
 import { onMounted, ref } from 'vue'
 import { RouterLink, RouterView } from 'vue-router'
+import { useApiToken } from './composables/useApiToken'
 import { useNotification } from './composables/useNotification'
 import { useRunStatusStore } from './stores/runStatus'
 
 const { message, type, notify, dismiss } = useNotification()
 const runStatusStore = useRunStatusStore()
+const { token: apiToken, setToken: saveApiToken } = useApiToken()
+const showTokenField = ref(false)
+const tokenDraft = ref(apiToken.value)
+
+function toggleTokenField() {
+  showTokenField.value = !showTokenField.value
+  if (showTokenField.value) tokenDraft.value = apiToken.value
+}
+
+function saveToken() {
+  saveApiToken(tokenDraft.value)
+  showTokenField.value = false
+  notify(apiToken.value ? 'API token saved.' : 'API token cleared.', 'success')
+}
 
 onMounted(() => { runStatusStore.checkActiveRun() })
 
@@ -208,6 +223,29 @@ const navItems = [
           </svg>
           <span>API Docs</span>
         </a>
+        <div v-if="showTokenField" class="token-field">
+          <input
+            v-model="tokenDraft"
+            type="password"
+            placeholder="API token"
+            aria-label="API access token"
+            @keyup.enter="saveToken"
+          />
+          <button type="button" @click="saveToken">Save</button>
+        </div>
+        <button
+          type="button"
+          class="utility-link"
+          :title="apiToken ? 'API token set — click to change' : 'Set API token for remote control'"
+          @click="toggleTokenField"
+        >
+          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M15 7a4 4 0 1 0-4 4"/>
+            <path d="M11 11 3 19v2h2l8-8"/>
+            <path d="M16 6h2m-2 0v2"/>
+          </svg>
+          <span>{{ apiToken ? 'API token set' : 'Set API token' }}</span>
+        </button>
         <button
           type="button"
           class="theme-toggle"
@@ -412,6 +450,38 @@ const navItems = [
   text-align: left;
 }
 
+.token-field {
+  display: flex;
+  gap: 0.4rem;
+  padding: 0 0.75rem 0.3rem;
+}
+
+.token-field input {
+  min-width: 0;
+  flex: 1;
+  padding: 0.4rem 0.55rem;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.06);
+  font-size: 0.8rem;
+}
+
+.token-field button {
+  flex: 0 0 auto;
+  padding: 0.4rem 0.65rem;
+  color: #fff;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 7px;
+  background: rgba(255, 255, 255, 0.1);
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.token-field button:hover {
+  background: rgba(255, 255, 255, 0.18);
+}
+
 .refresh-button:disabled {
   cursor: wait;
   opacity: 0.65;
@@ -587,7 +657,8 @@ const navItems = [
   }
 
   .brand,
-  .utility-link {
+  .utility-link,
+  .token-field {
     display: none;
   }
 
