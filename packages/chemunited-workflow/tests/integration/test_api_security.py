@@ -3,9 +3,9 @@
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
+from tests.helpers import LOOPBACK_CLIENT
 
 from chemunited_workflow.api import create_api
-from tests.helpers import LOOPBACK_CLIENT
 
 REMOTE_CLIENT_V6 = ("::1", 51216)
 

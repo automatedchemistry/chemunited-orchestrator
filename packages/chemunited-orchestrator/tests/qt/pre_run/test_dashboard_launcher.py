@@ -20,7 +20,9 @@ def _make_frame(qtbot: QtBot, monkeypatch) -> DashBoardLauncherFrame:
     return frame
 
 
-def test_advertise_toggle_reveals_and_generates_token(qtbot: QtBot, monkeypatch, screenshot):
+def test_advertise_toggle_reveals_and_generates_token(
+    qtbot: QtBot, monkeypatch, screenshot
+):
     frame = _make_frame(qtbot, monkeypatch)
 
     assert not frame._advertise_token_row.isVisible()
