@@ -30,6 +30,7 @@ interface ActiveRunResponse {
   active_run_id: string | null
   state: string | null
   pending_inputs?: Record<string, string>
+  protocol?: string | null
 }
 
 interface RunReport {
@@ -66,6 +67,10 @@ export const useRunStatusStore = defineStore('runStatus', () => {
           activeRunId.value = data.active_run_id
           runState.value = data.state === 'paused' ? 'paused' : 'running'
           pendingInputs.value = data.pending_inputs ?? {}
+          // Lets a viewer who didn't start the run rebuild the process/node
+          // view from the same protocol, instead of relying on their own
+          // dropdown selection.
+          if (data.protocol) selectedProtocol.value = data.protocol
           return
         }
       }

@@ -395,6 +395,15 @@ onMounted(async () => {
 
   if ((store.runState === 'running' || store.runState === 'paused') && store.activeRunId) {
     runId.value = store.activeRunId
+    // A viewer who didn't start the run themselves (a different browser/user,
+    // or this tab's first visit to the page) has no process cards yet —
+    // `checkActiveRun()` already populated `selectedProtocol` from the
+    // server, so build the same skeleton `onProtocolChange` would have.
+    // The stream replays the full event history from the start of the run
+    // on every new connection, so this fully reconstructs current progress.
+    if (store.processCards.length === 0 && store.selectedProtocol) {
+      await onProtocolChange()
+    }
     store.setMessage('Reconnected to active run. Listening for events.', 'info')
     applyPendingInputs()
     openStream()

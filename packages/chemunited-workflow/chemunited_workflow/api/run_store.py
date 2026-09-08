@@ -28,6 +28,7 @@ _ACTIVE_STATES = (RunState.RUNNING, RunState.PAUSED)
 @dataclass
 class RunRecord:
     run_id: str
+    protocol_filename: str = ""
     state: RunState = RunState.RUNNING
     cancel_event: threading.Event = field(default_factory=threading.Event)
     pause_event: threading.Event = field(default_factory=threading.Event)
@@ -69,17 +70,27 @@ class RunStore:
         try:
             data = json.loads(lf.read_text(encoding="utf-8"))
             run_id = data.get("run_id", "unknown")
+            protocol_filename = data.get("protocol_filename", "")
         except Exception:
             run_id = "unknown"
-        self._record = RunRecord(run_id=run_id, state=RunState.RUNNING)
+            protocol_filename = ""
+        self._record = RunRecord(
+            run_id=run_id, protocol_filename=protocol_filename, state=RunState.RUNNING
+        )
 
-    def _write_lockfile(self, run_id: str) -> None:
+    def _write_lockfile(self, run_id: str, protocol_filename: str) -> None:
         lf = self._lockfile_path()
         if lf is None:
             return
         try:
             lf.write_text(
-                json.dumps({"run_id": run_id, "state": "running"}),
+                json.dumps(
+                    {
+                        "run_id": run_id,
+                        "protocol_filename": protocol_filename,
+                        "state": "running",
+                    }
+                ),
                 encoding="utf-8",
             )
         except OSError:
@@ -108,8 +119,8 @@ class RunStore:
             stem = Path(protocol_filename).stem
             now = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
             run_id = f"{stem}_{now}"
-            self._record = RunRecord(run_id=run_id)
-        self._write_lockfile(run_id)
+            self._record = RunRecord(run_id=run_id, protocol_filename=protocol_filename)
+        self._write_lockfile(run_id, protocol_filename)
         return run_id
 
     def append_event(self, event: WorkflowExecutionEvent) -> None:
@@ -117,14 +128,22 @@ class RunStore:
             if self._record is not None:
                 self._record.events.append(event)
 
-    def pop_events(self) -> list[WorkflowExecutionEvent]:
-        """Return and clear all events accumulated since the last poll."""
+    def events_since(self, cursor: int) -> tuple[list[WorkflowExecutionEvent], int]:
+        """Non-destructive read of every event recorded from index ``cursor`` onward.
+
+        Returns ``(events, new_cursor)`` — pass ``new_cursor`` back in as
+        ``cursor`` next time to fetch only what's new. Unlike a pop-and-clear
+        queue, this never mutates shared state, so any number of independent
+        readers (concurrent dashboard viewers, an SSE stream per connection,
+        an MCP poll) can each track their own position without stealing
+        events from one another. A cursor of 0 replays the full history —
+        how a client that connects mid-run reconstructs everything that
+        already happened.
+        """
         with self._lock:
             if self._record is None:
-                return []
-            events = list(self._record.events)
-            self._record.events.clear()
-            return events
+                return [], cursor
+            return list(self._record.events[cursor:]), len(self._record.events)
 
     def append_result(self, result: WorkflowResult) -> None:
         with self._lock:

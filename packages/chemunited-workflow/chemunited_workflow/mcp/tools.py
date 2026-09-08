@@ -210,22 +210,26 @@ def register_tools(mcp: FastMCP, holder: ProjectHolder) -> None:
         return {"run_id": run_id}
 
     @mcp.tool()
-    def get_run_status() -> dict:
+    def get_run_status(after: int = 0) -> dict:
         """Poll the status of the current execution.
         Returns the current state (``running``, ``paused``, ``finished``,
-        ``failed``, or ``cancelled``) and all events since the last call to
-        this tool. Call repeatedly until ``state`` is ``"finished"`` or
-        ``"failed"``."""
+        ``failed``, or ``cancelled``) and every event recorded from index
+        ``after`` onward, plus a ``cursor`` to pass as ``after`` on the next
+        call so you only get what's new. The read doesn't consume
+        events — a dashboard or another caller polling the same run
+        concurrently still sees everything. Call repeatedly until ``state``
+        is ``"finished"`` or ``"failed"``."""
         if not holder.is_loaded():
             return {"error": _NO_PROJECT}
         rec = holder.run_store.get()
         if rec is None:
             return {"error": "No run is active or recorded."}
-        events = holder.run_store.pop_events()
+        events, cursor = holder.run_store.events_since(after)
         return {
             "run_id": rec.run_id,
             "state": rec.state.value,
             "events": [e.model_dump() for e in events],
+            "cursor": cursor,
         }
 
     @mcp.tool()

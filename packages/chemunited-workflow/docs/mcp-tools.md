@@ -32,7 +32,7 @@ When running with `--with-mcp` (MCP streamable-HTTP endpoint embedded in the Fas
 |------|-------------|
 | `start_run` | Execute a protocol file; returns a `run_id`, or an error if a run is already active. Pass `record_monitoring=True` to also persist monitored readings to `log/monitoring/{run_id}/` — errors instead of starting the run if no monitoring variables are registered. |
 | `get_active_run` | Return the active run ID without consuming queued execution events. |
-| `get_run_status` | Poll run state and events (clears the event queue on each call). |
+| `get_run_status` | Poll run state and events from a cursor (`after`, default `0`). Non-destructive — pass back the returned `cursor` to fetch only what's new; other callers (e.g. a dashboard) polling the same run are unaffected. |
 | `get_run_report` | Full per-step execution report for the current or last completed run. |
 | `cancel_run` | Cancel the active run (cooperative — stops at the next step checkpoint). Works whether the run is `running` or `paused`. |
 | `pause_run` | Pause the active run (cooperative — holds at the next checkpoint, which may be mid-node between device calls). Hardware is left as-is. Only valid while `running`. |

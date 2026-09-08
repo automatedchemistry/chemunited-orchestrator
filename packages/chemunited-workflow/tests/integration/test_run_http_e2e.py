@@ -151,15 +151,20 @@ def _load_module(path: Path, name: str):
 def _poll_until_finished(
     base_url: str, timeout: float = _RUN_TIMEOUT
 ) -> tuple[str, list[dict]]:
-    """Poll /status until terminal state. Returns (state, all_events_seen)."""
+    """Poll /status until terminal state, using `cursor` to fetch only new
+    events each time. Returns (state, all_events_seen)."""
     deadline = time.time() + timeout
     all_events: list[dict] = []
     state = "running"
+    cursor = 0
     while time.time() < deadline:
-        resp = _requests.get(f"{base_url}/run/status", timeout=5.0)
+        resp = _requests.get(
+            f"{base_url}/run/status", params={"after": cursor}, timeout=5.0
+        )
         assert resp.status_code == 200
         body = resp.json()
         all_events.extend(body.get("events", []))
+        cursor = body.get("cursor", cursor)
         state = body["state"]
         if state in ("finished", "failed", "cancelled"):
             break

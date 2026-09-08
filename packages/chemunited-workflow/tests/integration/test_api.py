@@ -340,7 +340,12 @@ def test_resume_paused_run(app, client):
 def test_get_active_run_when_idle(client):
     r = client.get("/run/active")
     assert r.status_code == 200
-    assert r.json() == {"active_run_id": None, "state": None, "pending_inputs": {}}
+    assert r.json() == {
+        "active_run_id": None,
+        "state": None,
+        "pending_inputs": {},
+        "protocol": None,
+    }
 
 
 def test_get_active_run_while_running(app):
@@ -358,6 +363,7 @@ def test_get_active_run_while_running(app):
         "active_run_id": run_id,
         "state": "running",
         "pending_inputs": {},
+        "protocol": "run_001.json",
     }
 
 
@@ -377,6 +383,7 @@ def test_get_active_run_while_paused(app):
         "active_run_id": run_id,
         "state": "paused",
         "pending_inputs": {},
+        "protocol": "run_001.json",
     }
 
 

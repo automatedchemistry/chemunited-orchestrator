@@ -33,7 +33,10 @@ async def get_active_run(
     `node_id -> prompt message` for every node currently blocked on
     `request_operator_input()` — a client that reconnects after the
     `NODE_INPUT_REQUESTED` event already streamed can use this to redraw the
-    prompt instead of leaving the run silently stalled.
+    prompt instead of leaving the run silently stalled. `protocol` is the
+    filename the active run was started from — a dashboard that didn't
+    itself start the run can use it to rebuild the process/node view before
+    replaying events from `/stream` or `/status`.
     """
     run_id = holder.active_run_id()
     rec = holder.run_store.get() if run_id is not None else None
@@ -41,6 +44,7 @@ async def get_active_run(
         "active_run_id": run_id,
         "state": rec.state.value if rec is not None else None,
         "pending_inputs": holder.run_store.pending_input_prompts(),
+        "protocol": rec.protocol_filename if rec is not None else None,
     }
 
 
@@ -78,22 +82,30 @@ async def start_run(
 
 
 @router.get("/status")
-async def get_run_status(svc: RunnerService = Depends(get_runner_service)):
+async def get_run_status(
+    after: int = 0,
+    svc: RunnerService = Depends(get_runner_service),
+):
     """Poll the status of the current (or last) run.
 
     Returns the current state (`running`, `paused`, `finished`, `failed`, or
-    `cancelled`) and all `WorkflowExecutionEvent` objects accumulated since
-    the last call.
-    Events are cleared on each read. For a continuous feed, use `/stream` instead.
+    `cancelled`) and every `WorkflowExecutionEvent` recorded from index
+    `after` onward, plus the new `cursor` to pass as `after` on the next
+    call. Leaving `after` at 0 replays the full history — the default is
+    safe for a client that just connected. The read is non-destructive, so
+    any number of callers (multiple dashboard viewers, a script) can poll
+    concurrently, each tracking its own cursor, without stealing events from
+    one another. For a push-based feed, use `/stream` instead.
     """
     rec = svc._run_store.get()
     if rec is None:
         raise HTTPException(status_code=404, detail="No run is active or recorded.")
-    events = svc._run_store.pop_events()
+    events, cursor = svc._run_store.events_since(after)
     return RunStatus(
         run_id=rec.run_id,
         state=rec.state.value,
         events=[e.model_dump() for e in events],
+        cursor=cursor,
     )
 
 
@@ -123,7 +135,11 @@ async def stream_run(svc: RunnerService = Depends(get_runner_service)):
     """Stream execution events as Server-Sent Events (SSE).
 
     Keeps the connection open while the run is active (`running` or `paused`)
-    and pushes each `WorkflowExecutionEvent` as it arrives. Also pushes a
+    and pushes each `WorkflowExecutionEvent` as it arrives. A connection
+    opened after the run started first replays every event recorded so far,
+    then continues live — each connection tracks its own position, so any
+    number of dashboard viewers can stream the same run concurrently and
+    each gets the full event history. Also pushes a
     `{"state": "paused"|"running"}` frame whenever the run is paused or
     resumed. Closes with a final
     `{"state": "finished"|"failed"|"cancelled"}` frame when the run ends.
@@ -150,12 +166,14 @@ async def _generate_run_stream(
         yield 'data: {"error": "no run found"}\n\n'
         return
 
+    cursor = 0
     last_sent = time.monotonic()
     last_state = rec.state
     active_states = (RunState.RUNNING, RunState.PAUSED)
     while rec.state in active_states:
         sent_event = False
-        for event in svc._run_store.pop_events():
+        events, cursor = svc._run_store.events_since(cursor)
+        for event in events:
             yield f"data: {event.model_dump_json()}\n\n"
             sent_event = True
 
@@ -178,8 +196,9 @@ async def _generate_run_stream(
 
     # The run can transition out of RUNNING/PAUSED between one poll's sleep
     # and the next loop-condition check; any events appended in that gap
-    # would otherwise be dropped, so drain the queue once more before closing.
-    for event in svc._run_store.pop_events():
+    # would otherwise be dropped, so read once more before closing.
+    events, cursor = svc._run_store.events_since(cursor)
+    for event in events:
         yield f"data: {event.model_dump_json()}\n\n"
 
     yield f'data: {{"state": "{rec.state.value}"}}\n\n'

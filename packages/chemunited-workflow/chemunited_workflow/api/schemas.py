@@ -89,6 +89,7 @@ class RunStatus(BaseModel):
     run_id: str
     state: str
     events: list[dict[str, Any]]
+    cursor: int
 
 
 class RunInputIn(BaseModel):

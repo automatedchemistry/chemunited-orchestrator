@@ -38,18 +38,36 @@ def test_try_start_allowed_after_terminal_state():
     assert run_id is not None
 
 
-def test_pop_events_returns_appended_and_clears():
+def test_events_since_returns_appended_and_does_not_clear():
     store = RunStore()
     store.try_start("p_2026-01-01T00-00-00.json")
     e1 = _make_event("a")
     e2 = _make_event("b")
     store.append_event(e1)
     store.append_event(e2)
-    events = store.pop_events()
+    events, cursor = store.events_since(0)
     assert len(events) == 2
     assert events[0].message == "a"
     assert events[1].message == "b"
-    assert store.pop_events() == []
+    assert cursor == 2
+    # Non-destructive: a second reader from the start still sees everything.
+    events_again, cursor_again = store.events_since(0)
+    assert len(events_again) == 2
+    assert cursor_again == 2
+
+
+def test_events_since_cursor_returns_only_new_events():
+    store = RunStore()
+    store.try_start("p_2026-01-01T00-00-00.json")
+    store.append_event(_make_event("a"))
+    events, cursor = store.events_since(0)
+    assert len(events) == 1
+
+    store.append_event(_make_event("b"))
+    events, cursor = store.events_since(cursor)
+    assert len(events) == 1
+    assert events[0].message == "b"
+    assert cursor == 2
 
 
 def test_cancel_running_returns_true():
@@ -186,9 +204,9 @@ def test_get_returns_none_with_no_run():
     assert store.get() is None
 
 
-def test_pop_events_returns_empty_with_no_run():
+def test_events_since_returns_empty_with_no_run():
     store = RunStore()
-    assert store.pop_events() == []
+    assert store.events_since(0) == ([], 0)
 
 
 def test_cancel_event_returns_none_with_no_run():
@@ -217,7 +235,7 @@ def test_thread_safe_append_events():
         t.join()
 
     assert errors == []
-    events = store.pop_events()
+    events, _cursor = store.events_since(0)
     assert len(events) == 50
 
 
