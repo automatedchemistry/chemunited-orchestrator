@@ -136,7 +136,7 @@ class SetupWindow(MainWindowBase):
             onClick=self._show_project_menu,
             selectable=True,
             position=NavigationItemPosition.TOP,
-            tooltip="Project",
+            tooltip="Project management: create, load, save, and manage recent projects",
         )
 
         self.add_project_action = Action(
@@ -358,22 +358,31 @@ class SetupWindow(MainWindowBase):
             self.SegmentWindow,
             OrchestratorIcon.CHEMUNITED,
             "Segment",
+            tooltip="Switch between the mains panels",
         )
+
+        self.navigationInterface.addSeparator(position=NavigationItemPosition.BOTTOM)
 
         self.addSubInterface(
             self.compounds_widget,
             OrchestratorIcon.CHEMICAL,
             "Compounds",
+            position=NavigationItemPosition.BOTTOM,
+            tooltip="Simulation: Manage chemical compounds",
         )
         self.addSubInterface(
             self.inventory_widget,
             FluentIcon.LIBRARY,
             "Inventory",
+            position=NavigationItemPosition.BOTTOM,
+            tooltip="Simulation: Manage inventory items",
         )
         self.addSubInterface(
             self.reactions_widget,
             OrchestratorIcon.MOLECULE,
             "Reactions",
+            position=NavigationItemPosition.BOTTOM,
+            tooltip="Simulation: Manage chemical reactions",
         )
         self.switchTo(self.SegmentWindow)
 

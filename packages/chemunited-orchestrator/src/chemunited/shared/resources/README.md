@@ -15,7 +15,7 @@ When you add a new figure, icon, or stylesheet, the usual workflow is:
 ## Folder layout
 
 - `icons/`: small UI icons, mostly `.svg`
-- `components/`: larger component figures, currently `.png`
+- `components/`: component-specific icon *overrides* (see below), `.svg`
 - `qss/`: stylesheets
 
 ## How the Qt resource paths are built
@@ -32,8 +32,8 @@ Examples from this project:
   becomes `:/styles/qss/dark/main_window.qss`
 - Prefix `/icons` + file `icons/air.svg`
   becomes `:/icons/icons/air.svg`
-- Prefix `/components_icons` + file `components/ReactorLIGHT.png`
-  becomes `:/components_icons/components/ReactorLIGHT.png`
+- Prefix `/components_icons` + file `components/Gantry3D.svg`
+  becomes `:/components_icons/components/Gantry3D.svg`
 
 ## Adding a new icon
 
@@ -85,37 +85,43 @@ Example:
 NEW_ICON = "new_icon"
 ```
 
-## Adding a new component figure
+## Adding a new component icon override
 
-Put the new component images in:
+Component figures live in `chemunited-core`'s `figure_registry`
+(`chemunited_core.figure_registry`), which is the single source of truth for
+component artwork — the tree palette
+([tree_add.py](../../draw/tree_add.py)) and the canvas rendering
+(`graph_item.py`) both resolve a component's icon from there by default via
+`COMPONENTS[name].figure_base` (or `name` itself) and `get_figure_path(...)`.
 
-```text
-src/chemunited/shared/resources/components/
-```
+**Do not add a new figure here.** If you're adding a new device type, or a
+new device that can reuse an existing figure, register it in
+`chemunited_core.figure_registry` instead.
 
-Then add them to the `/components_icons` section in `resources_rc.qrc`.
+This local `components/` folder exists only for the rare case where the tree
+palette needs a *different icon than the shared figure* for one specific
+component — e.g. `Gantry3D` has its own icon here even though it shares the
+`Gantry` figure with `Gantry1D` in core. To add such an override:
 
-Current convention is one light and one dark image:
-
-```text
-MyComponentLIGHT.png
-MyComponentDARK.png
-```
+1. Put the SVG in `src/chemunited/shared/resources/components/`, named
+   **exactly** after the component's `chemunited_core.figure_registry.COMPONENTS`
+   key (e.g. `Gantry3D.svg`) — `tree_add.py._component_icon` only looks up an
+   override by exact component-name match.
+2. Add it to the `/components_icons` section in `resources_rc.qrc`.
+3. Rebuild `resources_rc.py` with `pyrcc5` (see below).
 
 Example:
 
 ```xml
 <qresource prefix="/components_icons">
-    <file>components/MyComponentLIGHT.png</file>
-    <file>components/MyComponentDARK.png</file>
+    <file>components/Gantry3D.svg</file>
 </qresource>
 ```
 
-Resulting runtime paths:
+Resulting runtime path:
 
 ```text
-:/components_icons/components/MyComponentLIGHT.png
-:/components_icons/components/MyComponentDARK.png
+:/components_icons/components/Gantry3D.svg
 ```
 
 ## Adding a new stylesheet resource

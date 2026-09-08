@@ -77,7 +77,12 @@ class WindowBase(FramelessWindow):
         self.titleBar.iconLabel.setPixmap(QIcon(_ICON_PATH).pixmap(20, 20))
 
     def addSubInterface(
-        self, interface, icon, text: str, position=NavigationItemPosition.TOP
+        self,
+        interface,
+        icon,
+        text: str,
+        position=NavigationItemPosition.TOP,
+        tooltip: str | None = None,
     ):
         """Add a top-level page to the main window navigation."""
         route_key = interface.objectName() or text
@@ -90,7 +95,7 @@ class WindowBase(FramelessWindow):
             text=text,
             onClick=lambda: self.switchTo(interface),
             position=position,
-            tooltip=text,
+            tooltip=tooltip or text,
         )
 
     def setQss(self):
@@ -170,6 +175,7 @@ class MainWindowBase(WindowBase):
             FluentIcon.MESSAGE,
             "Loggings Console",
             NavigationItemPosition.BOTTOM,
+            tooltip="View log messages and application events",
         )
 
     @override

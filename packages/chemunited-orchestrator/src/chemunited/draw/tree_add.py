@@ -1,9 +1,8 @@
 from __future__ import annotations
 
-from pathlib import Path
-
-from PyQt5.QtCore import QFile, QMimeData, QSize, Qt
-from PyQt5.QtGui import QDrag, QIcon
+from PyQt5.QtCore import QByteArray, QFile, QMimeData, QSize, Qt
+from PyQt5.QtGui import QDrag, QIcon, QPainter, QPixmap
+from PyQt5.QtSvg import QSvgRenderer
 from PyQt5.QtWidgets import (
     QAbstractItemView,
     QFrame,
@@ -19,10 +18,8 @@ from qfluentwidgets import TreeWidget
 from chemunited.elements.component import list_components
 from chemunited.shared.icon import OrchestratorIcon
 from chemunited_core.components.enums import ComponentType
+from chemunited_core.figure_registry import COMPONENTS, get_figure_path
 
-_COMPONENTS_DIR = (
-    Path(__file__).resolve().parents[1] / "shared" / "resources" / "components"
-)
 QT_DISPLAY_ROLE = getattr(Qt, "DisplayRole")
 QT_ITEM_IS_DRAG_ENABLED = getattr(Qt, "ItemIsDragEnabled")
 QT_ITEM_IS_ENABLED = getattr(Qt, "ItemIsEnabled")
@@ -41,40 +38,29 @@ def _description_for(component_type: ComponentType | None) -> str:
     return "Component"
 
 
-def _path_exists(path: str) -> bool:
-    if path.startswith(":/"):
-        return QFile.exists(path)
-    return Path(path).exists()
-
-
-def _figure_name_candidates(component_name: str) -> list[str]:
-    candidates = [component_name]
-
-    if component_name.endswith("Component"):
-        candidates.append(f"{component_name[: -len('Component')]}component")
-
-    if component_name:
-        candidates.append(f"{component_name[0].lower()}{component_name[1:]}")
-
-    return list(dict.fromkeys(candidates))
+def _icon_from_svg_bytes(svg_bytes: bytes, size: int = 64) -> QIcon:
+    renderer = QSvgRenderer(QByteArray(svg_bytes))
+    pixmap = QPixmap(size, size)
+    pixmap.fill(Qt.transparent)  # type: ignore[attr-defined]
+    painter = QPainter(pixmap)
+    renderer.render(painter)
+    painter.end()
+    return QIcon(pixmap)
 
 
 def _component_icon(component_name: str) -> QIcon:
+    resource_path = f":/components_icons/components/{component_name}.svg"
+    if QFile.exists(resource_path):
+        return QIcon(resource_path)
 
-    for figure_name in _figure_name_candidates(component_name):
-        resource_path = f":/components_icons/components/{figure_name}.svg"
-        if _path_exists(resource_path):
-            return QIcon(resource_path)
+    defn = COMPONENTS.get(component_name)
+    figure_name = (defn.figure_base or component_name) if defn else component_name
+    try:
+        svg_bytes = get_figure_path(figure_name).read_bytes()
+    except (FileNotFoundError, OSError):
+        return QIcon(OrchestratorIcon.COMPONENT_ICON.path())
 
-        local_svg = _COMPONENTS_DIR / f"{figure_name}.svg"
-        if local_svg.exists():
-            return QIcon(str(local_svg))
-
-        local_png = _COMPONENTS_DIR / f"{figure_name}.png"
-        if local_png.exists():
-            return QIcon(str(local_png))
-
-    return QIcon(OrchestratorIcon.COMPONENT_ICON.path())
+    return _icon_from_svg_bytes(svg_bytes)
 
 
 class AppCard(QFrame):

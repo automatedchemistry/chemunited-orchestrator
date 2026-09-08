@@ -7,6 +7,7 @@ from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication
 
 from chemunited.setup import SetupWindow
+from chemunited.shared.widgets.logo_window import show_waiting
 
 _APP_ID = "org.chemunited.orchestrator"
 _ICON_PATH = ":/icons/icons/chemunited.ico"
@@ -37,6 +38,8 @@ def main(project_file: str | None = None, overwrite: bool = False) -> None:
     app = QApplication(sys.argv)
 
     app.setWindowIcon(QIcon(_ICON_PATH))
+
+    show_waiting(3)
 
     window = SetupWindow()
     window.show()
