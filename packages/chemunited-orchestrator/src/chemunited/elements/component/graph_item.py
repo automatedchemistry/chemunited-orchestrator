@@ -165,11 +165,11 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
         self.setAcceptHoverEvents(True)  # needed for child hover to work
 
         self.build()
-        self.post_layout()
-        self.build_bounding_rect()
         self.setPos(*data.position)
         self.setRotation(data.angle)
         self._apply_mirror(data.mirror)
+        self.post_layout()
+        self.build_bounding_rect()
         self.set_frame_mode(SetupStepMode.DESIGN)  # initialise badge/warning visibility
 
     # -- properties --
@@ -305,10 +305,18 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
         override for a custom arrangement.
         """
         br = self.boundingRect()
+        inverse = self._upright_inverse()
 
         # Name: centred horizontally, placed below the figure with a 4 px gap.
+        # Kept upright/unmirrored regardless of the group's angle/mirror so it
+        # always reads left to right.
         name_w = self._name.boundingRect().width()
         self._name.setPos(-name_w / 2, br.bottom() + 4)
+        self._keep_upright(self._name, inverse)
+
+        # Port-number labels: same readability treatment as the name.
+        for label in self._port_labels.values():
+            self._keep_upright(label, inverse)
 
         # Badge: centred horizontally, placed above the figure with a 4 px gap.
         if self._badge is not None:
@@ -341,6 +349,24 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
         if mirror:
             t.scale(-1, 1)
         self.setTransform(t)
+
+    def _upright_inverse(self) -> QTransform:
+        """Linear transform that exactly cancels this group's current
+        rotation + mirror, derived from sceneTransform() so we never rely on
+        how Qt internally composes rotation() with transform().
+        """
+        t = self.sceneTransform()
+        linear = QTransform(t.m11(), t.m12(), t.m21(), t.m22(), 0, 0)
+        inverse, invertible = linear.inverted()
+        return inverse if invertible else QTransform()
+
+    @staticmethod
+    def _keep_upright(item: TextElement, inverse: QTransform) -> None:
+        """Cancel the group's rotation/mirror for `item` so it renders
+        horizontal and left-to-right, independent of the component's angle
+        or mirror state.
+        """
+        item.setTransform(inverse)
 
     def sync(self, mode: BaseModel) -> None:
         """Reconcile visuals when ComponentData is updated externally.
@@ -633,6 +659,7 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
             self._data.angle = self._normalized_angle(value)
             for point in self._points.values():
                 point.connectionMove()
+            self.post_layout()  # keep labels upright & positioned after a drag-rotate
         elif change == QGraphicsItem.ItemSelectedHasChanged:
             selected = bool(value)
             self._bounding_rect.setPen(
