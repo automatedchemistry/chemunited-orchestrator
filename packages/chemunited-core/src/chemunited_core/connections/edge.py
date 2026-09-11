@@ -148,6 +148,18 @@ class EdgeMode(BaseModel, populate_by_name=True):
             "off_text": "Liquid",
         },
     )
+    fixed_volume: Annotated[ChemUnitQuantity, ChemQuantityValidator("ul")] = Field(
+        default=ChemUnitQuantity("0 ul"),
+        title="Fixed internal volume (measured)",
+        description=(
+            "Measured internal volume override. If greater than 0, this value "
+            "is used as the connection's capacity instead of the geometric "
+            "length/diameter calculation. Leave at 0 to use geometry."
+        ),
+        json_schema_extra={
+            "group": GroupParameterCategory.PROPERTY.value,
+        },
+    )
     inflection_points: list[tuple[float, float]] = Field(
         default_factory=list,
         title="Inflection points",
@@ -162,10 +174,11 @@ class EdgeMode(BaseModel, populate_by_name=True):
 
     @model_validator(mode="after")
     def check_flow_rules(self) -> "EdgeMode":
-        """Ensure that non-flow connections have length and diameter set to 0."""
+        """Ensure that non-flow connections have length, diameter, and fixed_volume set to 0."""
         if self.classification != ConnectionType.HYDRAULIC:
             self.length = ChemUnitQuantity("0 mm")
             self.diameter = ChemUnitQuantity("0 mm")
+            self.fixed_volume = ChemUnitQuantity("0 ul")
 
         return self
 
@@ -189,6 +202,7 @@ class EdgeData(Element):
     diameter: ChemUnitQuantity
     straight_path: bool = True
     air_pressure_line: bool = False
+    fixed_volume: ChemUnitQuantity = ChemUnitQuantity("0 ul")
     inflection_points: list[tuple[float, float]] = field(
         default_factory=list,
     )
@@ -198,7 +212,7 @@ class EdgeData(Element):
         """Fill content with one air segment if the user declared nothing."""
         if self.content:
             return
-        volume = math.pi * (self.diameter_value / 2.0) ** 2 * self.length_value
+        volume = self.capacity
         if volume <= 0.0:
             return
         n_air = (
@@ -225,8 +239,10 @@ class EdgeData(Element):
 
     @property
     def capacity(self) -> float:
-        """capacity in SI"""
-        return float(self.length_value * np.pi * self.diameter**2 / 4)  # m**3
+        """capacity in SI (m**3); uses the measured fixed_volume override when set"""
+        if self.fixed_volume_value > 0.0:
+            return self.fixed_volume_value
+        return float(self.length_value * np.pi * self.diameter_value**2 / 4)  # m**3
 
     @property
     def length_value(self) -> float:
@@ -235,3 +251,7 @@ class EdgeData(Element):
     @property
     def diameter_value(self) -> float:
         return float(self.diameter.to_base_units().magnitude)
+
+    @property
+    def fixed_volume_value(self) -> float:
+        return float(self.fixed_volume.to_base_units().magnitude)
