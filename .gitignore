@@ -218,6 +218,7 @@ __marimo__/
 .claude/
 CLAUDE.md
 tests/screenshots/
+docs-site/docs/tutorial_recorder/_raw/
 .tmp_pytest_paths/
 AGENTS.md
 
@@ -241,3 +242,6 @@ chemunited.bat
 
 # Test mcp
 .mcp.json
+
+# mp4 tutorials
+docs-site/docs/tutorial_recorder/
