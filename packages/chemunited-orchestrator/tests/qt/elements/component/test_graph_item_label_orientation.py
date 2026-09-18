@@ -6,7 +6,10 @@ left-to-right on the canvas.
 import pytest
 from PyQt5.QtCore import QPointF
 
-from chemunited.elements.component.component_factory import create_component, list_components
+from chemunited.elements.component.component_factory import (
+    create_component,
+    list_components,
+)
 
 ANGLES = [0, 45, 90, 135, 180, 225, 270, 315]
 MIRRORS = [False, True]
