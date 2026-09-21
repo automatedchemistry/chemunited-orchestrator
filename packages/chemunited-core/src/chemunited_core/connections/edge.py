@@ -1,4 +1,3 @@
-import math
 from dataclasses import dataclass, field
 from typing import Annotated
 
@@ -174,7 +173,8 @@ class EdgeMode(BaseModel, populate_by_name=True):
 
     @model_validator(mode="after")
     def check_flow_rules(self) -> "EdgeMode":
-        """Ensure that non-flow connections have length, diameter, and fixed_volume set to 0."""
+        """Ensure that non-flow connections have length, diameter,
+        and fixed_volume set to 0."""
         if self.classification != ConnectionType.HYDRAULIC:
             self.length = ChemUnitQuantity("0 mm")
             self.diameter = ChemUnitQuantity("0 mm")
