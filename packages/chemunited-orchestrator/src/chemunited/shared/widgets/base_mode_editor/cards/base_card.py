@@ -43,6 +43,7 @@ class BaseFieldCard(CardWidget):
         # a top-level HWND on Windows, causing a visible flash.
         desc = self._field_info.description or ""
         self._desc_label = CaptionLabel(desc)
+        self._desc_label.setWordWrap(True)
         layout.addWidget(self._desc_label)
         self._desc_label.setVisible(bool(desc))
 
