@@ -54,31 +54,23 @@ class TestAddConnection:
 
     # ── add: happy path ────────────────────────────────────────────────────
 
-    def test_connection_registered_in_orchestrator(
-        self, two_pumps: SetupWindow, screenshot
-    ):
-        screenshot(two_pumps, "initial")
-
+    def test_connection_registered_in_orchestrator(self, two_pumps: SetupWindow):
         two_pumps.orchestrator.add_connection(
             origin="PumpA",
             destiny="PumpB",
             origin_port=2,
             destiny_port=1,
         )
-
-        screenshot(two_pumps, "after_connection")
 
         assert CONNECTION_NAME in two_pumps.orchestrator.connections
 
-    def test_connection_graph_item_in_scene(self, two_pumps: SetupWindow, screenshot):
+    def test_connection_graph_item_in_scene(self, two_pumps: SetupWindow):
         two_pumps.orchestrator.add_connection(
             origin="PumpA",
             destiny="PumpB",
             origin_port=2,
             destiny_port=1,
         )
-
-        screenshot(two_pumps, "connection_in_scene")
 
         connection = two_pumps.orchestrator.connections[CONNECTION_NAME]
         assert connection in two_pumps.scene_attribute.items()
@@ -181,24 +173,18 @@ class TestAddConnection:
     # ── remove: happy path ─────────────────────────────────────────────────
 
     def test_remove_connection_unregisters_from_orchestrator(
-        self, two_pumps_connected: SetupWindow, screenshot
+        self, two_pumps_connected: SetupWindow
     ):
-        screenshot(two_pumps_connected, "before_remove")
-
         two_pumps_connected.orchestrator.remove_connection(CONNECTION_NAME)
-
-        screenshot(two_pumps_connected, "after_remove")
 
         assert CONNECTION_NAME not in two_pumps_connected.orchestrator.connections
 
     def test_remove_connection_removes_graph_item_from_scene(
-        self, two_pumps_connected: SetupWindow, screenshot
+        self, two_pumps_connected: SetupWindow
     ):
         connection = two_pumps_connected.orchestrator.connections[CONNECTION_NAME]
 
         two_pumps_connected.orchestrator.remove_connection(CONNECTION_NAME)
-
-        screenshot(two_pumps_connected, "after_remove")
 
         assert connection not in two_pumps_connected.scene_attribute.items()
 

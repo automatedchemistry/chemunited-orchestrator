@@ -217,7 +217,6 @@ __marimo__/
 
 .claude/
 CLAUDE.md
-tests/screenshots/
 docs-site/docs/tutorial_recorder/_raw/
 .tmp_pytest_paths/
 AGENTS.md
