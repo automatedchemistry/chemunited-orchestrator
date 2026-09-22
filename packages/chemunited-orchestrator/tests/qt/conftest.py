@@ -28,10 +28,12 @@ def _drain_deferred_deletes(qtbot):
     """Let deleteLater()'d widgets actually get destroyed before the next test.
 
     pytest-qt's own teardown (_close_widgets) calls widget.close() +
-    deleteLater(), then a single bare QApplication.processEvents(). qtbot.
-    wait() drives a real event loop for a bit longer, giving deferred
-    deletes a more reliable chance to actually run before the next test's
-    fixtures start building a new window on top of them.
+    deleteLater(), then a single bare QApplication.processEvents(). That one
+    call is not reliably enough to fully process QEvent::DeferredDelete
+    before the next test's fixtures start building a new window on top of
+    the still-half-torn-down one - without this, the suite segfaults
+    deterministically on this machine. qtbot.wait() drives a real event loop
+    for a bit longer, giving deferred deletes a real chance to finish.
     """
     yield
-    qtbot.wait(50)
+    qtbot.wait(200)
