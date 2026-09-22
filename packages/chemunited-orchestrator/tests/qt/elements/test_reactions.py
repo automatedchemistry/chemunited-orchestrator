@@ -7,19 +7,6 @@ from chemunited.elements.reactions import ReactionDialog
 from chemunited.setup import SetupWindow
 from chemunited_core.compounds import COMPOUNDS, ChemicalEntity
 
-# Skipped: reliably segfaults Linux CI (Python 3.14, PyQt5 5.15.11) during
-# teardown after this file's tests finish. The crash trace is a generic Qt
-# QTimer firing mid-event-loop-pump (QTimerInfoList::activateTimers ->
-# QObject::event -> CPython _Py_Dealloc), not anything reactions-specific -
-# looks like a CPython 3.14 / PyQt5 SIP GC-reentrancy issue, so the same
-# class of crash may resurface in other qt test files too. Not reproducible
-# on Windows locally. Re-enable once that's root-caused or worked around
-# (e.g. disabling the cyclic GC around qtbot.wait()/processEvents() pumps).
-pytestmark = pytest.mark.skip(
-    reason="Segfaults on Linux CI during teardown (Qt timer -> CPython dealloc "
-    "crash); see module docstring/comment above import block."
-)
-
 
 @pytest.fixture
 def window(qtbot: QtBot):
