@@ -25,9 +25,24 @@ class UpdateAvailable:
 class VersionCheckThread(QThread):
     updates_found: pyqtSignal = pyqtSignal(list)
 
+    def __init__(self, parent=None) -> None:
+        super().__init__(parent)
+        self._stop_requested = False
+
+    def stop(self) -> None:
+        """Ask run() to skip any package it hasn't started checking yet.
+
+        Doesn't interrupt a urlopen() already in flight (bounded by its own
+        5s timeout) - callers that need the thread fully stopped still need
+        to wait() after this.
+        """
+        self._stop_requested = True
+
     def run(self) -> None:
         updates = []
         for pkg in TRACKED:
+            if self._stop_requested:
+                return
             try:
                 installed = Version(version(pkg))
             except PackageNotFoundError:
