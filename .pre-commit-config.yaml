@@ -115,7 +115,22 @@ repos:
 
       - id: pytest-orchestrator
         name: pytest (chemunited-orchestrator)
-        entry: uv run --package chemunited pytest packages/chemunited-orchestrator/tests
+        entry: uv run --package chemunited pytest packages/chemunited-orchestrator/tests --ignore=packages/chemunited-orchestrator/tests/qt
+        language: system
+        pass_filenames: false
+        stages: [manual]
+
+      # The Qt/GUI suite is excluded from CI on purpose (see pre-commit.yml's
+      # "Run test suites" step, which invokes hooks by id and deliberately
+      # leaves this one out) -- it's flaky on GitHub Actions' headless Linux
+      # runners for reasons unrelated to the app itself (PyQt5/SIP timer and
+      # QThread-teardown races that don't reproduce locally). Run it by hand
+      # on a real machine: `uv run pre-commit run pytest-orchestrator-qt
+      # --hook-stage manual --all-files`, or just `uv run --package
+      # chemunited pytest packages/chemunited-orchestrator/tests/qt` directly.
+      - id: pytest-orchestrator-qt
+        name: pytest (chemunited-orchestrator qt/GUI suite - local only)
+        entry: uv run --package chemunited pytest packages/chemunited-orchestrator/tests/qt
         language: system
         pass_filenames: false
         stages: [manual]
