@@ -59,12 +59,8 @@ class TestAllComponents:
 
     # ── add ────────────────────────────────────────────────────────────────
 
-    def test_all_components_added_to_orchestrator(
-        self, window: SetupWindow, screenshot
-    ):
-        screenshot(window, "initial")
+    def test_all_components_added_to_orchestrator(self, window: SetupWindow):
         _add_all(window)
-        screenshot(window, "all_components_added")
 
         categories, _ = list_components()
         all_names = [name for names in categories.values() for name in names]
@@ -73,9 +69,8 @@ class TestAllComponents:
                 name in window.orchestrator.components
             ), f"Component '{name}' missing from orchestrator.components"
 
-    def test_all_components_graph_items_in_scene(self, window: SetupWindow, screenshot):
+    def test_all_components_graph_items_in_scene(self, window: SetupWindow):
         _add_all(window)
-        screenshot(window, "scene_after_all_added")
 
         scene_items = set(window.scene_attribute.items())
         for name in window.orchestrator.components:
@@ -94,20 +89,14 @@ class TestAllComponents:
 
     # ── remove ─────────────────────────────────────────────────────────────
 
-    def test_all_components_removed_from_orchestrator(
-        self, window: SetupWindow, screenshot
-    ):
+    def test_all_components_removed_from_orchestrator(self, window: SetupWindow):
         _add_all(window)
-        screenshot(window, "before_remove")
 
         _remove_all(window)
-        screenshot(window, "after_remove")
 
         assert len(window.orchestrator.components) == 0
 
-    def test_all_components_graph_items_removed_from_scene(
-        self, window: SetupWindow, screenshot
-    ):
+    def test_all_components_graph_items_removed_from_scene(self, window: SetupWindow):
         _add_all(window)
         graph_items = [
             window.orchestrator.components[name].graph
@@ -115,7 +104,6 @@ class TestAllComponents:
         ]
 
         _remove_all(window)
-        screenshot(window, "scene_after_all_removed")
 
         scene_items = set(window.scene_attribute.items())
         for item in graph_items:

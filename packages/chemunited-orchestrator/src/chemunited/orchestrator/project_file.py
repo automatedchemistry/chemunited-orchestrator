@@ -741,7 +741,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
                 after_success()
             self._finish_busy_status(done_message)
         finally:
-            self._project_load_thread = None
+            self._retire_project_load_thread()
             self._notify_project_actions_changed()
 
     def _on_project_load_failed(self, exc: Exception, *, failure_prefix: str) -> None:
@@ -749,8 +749,22 @@ class OrchestratorProjectFile(OrchestratorExecution):
             f"{failure_prefix}: {exc}"
         )
         self._fail_busy_status(f"{failure_prefix}: {exc}")
-        self._project_load_thread = None
+        self._retire_project_load_thread()
         self._notify_project_actions_changed()
+
+    def _retire_project_load_thread(self) -> None:
+        # loaded/failed are only ever emitted from inside ProjectLoadThread.run(),
+        # right before it returns, so run() has already returned (or is about to)
+        # by the time this executes - wait() here is effectively instant. Without
+        # it, dropping the reference leaves the QThread alive only via Qt's
+        # parent/child ownership until its deferred deleteLater() runs; if the
+        # window is torn down first (e.g. between tests), Qt's cascading delete
+        # can hit the thread before it has fully joined and abort the process
+        # with "QThread: Destroyed while thread is still running".
+        thread = self._project_load_thread
+        self._project_load_thread = None
+        if thread is not None:
+            thread.wait()
 
     def _apply_loaded_project(self, payload: ProjectLoadPayload) -> None:
         self._reset_project_state()

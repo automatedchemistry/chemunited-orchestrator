@@ -1,47 +1,39 @@
-import datetime
-from pathlib import Path
-
 import pytest
-from PyQt5.QtGui import QPixmap
-from pytestqt.qtbot import QtBot, _iter_widgets
-
-SCREENSHOT_DIR = Path("tests/screenshots")
-
-
-def _capture(widget, name: str, test_name: str) -> None:
-    folder = SCREENSHOT_DIR / test_name
-    folder.mkdir(parents=True, exist_ok=True)
-    ts = datetime.datetime.now().strftime("%H%M%S_%f")
-    path = folder / f"{name}_{ts}.png"
-    pixmap = QPixmap(widget.size())
-    widget.render(pixmap)
-    pixmap.save(str(path), "PNG")
-    print(f"[screenshot] {path}")
-
-
-@pytest.fixture
-def screenshot(request):
-    test_name = request.node.name
-
-    def take(widget, label: str = "snap") -> None:
-        _capture(widget, label, test_name)
-
-    return take
 
 
 @pytest.fixture(autouse=True)
-def screenshot_on_failure(request, qtbot: QtBot):
+def _no_version_check(monkeypatch):
+    """Never let SetupWindow's background update check actually run in tests.
+
+    SetupWindow.initWindow() schedules _start_version_check() ~1s after
+    construction, which starts a VersionCheckThread that makes real HTTPS
+    calls to pypi.org (up to 5s timeout x 5 packages) with no shutdown
+    coordination anywhere - closeEvent never stopped or waited for it. Any
+    test whose window lives past that 1s mark can get torn down while the
+    thread is still blocked on network I/O; Qt's parent/child cascade then
+    destroys the still-running QThread and aborts the whole process
+    ("QThread: Destroyed while thread is still running") - this is what was
+    crashing full-suite runs, especially in CI where pypi.org is typically
+    unreachable and every request stalls to its full timeout. SetupWindow.
+    closeEvent now stops+waits for it too (belt and suspenders), but tests
+    still shouldn't be making real network calls regardless.
+    """
+    monkeypatch.setattr(
+        "chemunited.setup.SetupWindow._start_version_check", lambda self: None
+    )
+
+
+@pytest.fixture(autouse=True)
+def _drain_deferred_deletes(qtbot):
+    """Let deleteLater()'d widgets actually get destroyed before the next test.
+
+    pytest-qt's own teardown (_close_widgets) calls widget.close() +
+    deleteLater(), then a single bare QApplication.processEvents(). That one
+    call is not reliably enough to fully process QEvent::DeferredDelete
+    before the next test's fixtures start building a new window on top of
+    the still-half-torn-down one - without this, the suite segfaults
+    deterministically on this machine. qtbot.wait() drives a real event loop
+    for a bit longer, giving deferred deletes a real chance to finish.
+    """
     yield
-    rep = getattr(request.node, "rep_call", None)
-    if rep is not None and rep.failed:
-        for i, widget_ref in enumerate(_iter_widgets(request.node)):
-            widget = widget_ref()
-            if widget is not None:
-                _capture(widget, f"FAILED_widget_{i}", request.node.name)
-
-
-@pytest.hookimpl(tryfirst=True, hookwrapper=True)
-def pytest_runtest_makereport(item, call):
-    outcome = yield
-    rep = outcome.get_result()
-    setattr(item, "rep_" + rep.when, rep)
+    qtbot.wait(200)

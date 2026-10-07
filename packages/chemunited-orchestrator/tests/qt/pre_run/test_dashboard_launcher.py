@@ -20,9 +20,7 @@ def _make_frame(qtbot: QtBot, monkeypatch) -> DashBoardLauncherFrame:
     return frame
 
 
-def test_advertise_toggle_reveals_and_generates_token(
-    qtbot: QtBot, monkeypatch, screenshot
-):
+def test_advertise_toggle_reveals_and_generates_token(qtbot: QtBot, monkeypatch):
     frame = _make_frame(qtbot, monkeypatch)
 
     assert not frame._advertise_token_row.isVisible()
@@ -30,7 +28,6 @@ def test_advertise_toggle_reveals_and_generates_token(
 
     frame._advertise_switch.setChecked(True)
     frame.resize(620, 950)
-    screenshot(frame, "advertise_on_with_token")
 
     assert frame._advertise_token_row.isVisible()
     token = frame._token_edit.text()

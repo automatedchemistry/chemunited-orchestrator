@@ -14,6 +14,7 @@ from pydantic import (
     ValidationInfo,
     field_validator,
 )
+from PyQt5 import sip
 from PyQt5.QtCore import QObject, QProcess, QTimer, QUrl, pyqtSignal
 from PyQt5.QtNetwork import QNetworkAccessManager, QNetworkRequest
 from qfluentwidgets import TextBrowser
@@ -181,6 +182,7 @@ class ApiProcess(QObject):
         self._working_dir = working_dir
         self._parent_widget = parent
         self._log_browser = log_browser
+        self._stopped = False
         self._process = QProcess(self)
         self._nam = QNetworkAccessManager(self)
         self.client = ApiClient(AnyHttpUrl(BASE_URL))  # default value
@@ -243,6 +245,11 @@ class ApiProcess(QObject):
         return True
 
     def stop_api(self):
+        # Doesn't abort replies already in flight from _ping()/_fetch_logs() -
+        # their finished signal can still arrive after this returns. _stopped
+        # (checked by every reply handler and _append) is what actually
+        # protects self._log_browser, which we don't own and can outlive us.
+        self._stopped = True
         self._ping_timer.stop()
         if self._process.state() != QProcess.ProcessState.NotRunning:  # type: ignore[attr-defined]
             self._process.terminate()
@@ -252,16 +259,18 @@ class ApiProcess(QObject):
     def _on_stdout(self):
         data = self._process.readAllStandardOutput().data().decode(errors="replace")
         self._append(data)
-        if data.strip():
+        if data.strip() and not self._stopped:
             self.process_log_received.emit(data.rstrip(), "stdout")
 
     def _on_stderr(self):
         data = self._process.readAllStandardError().data().decode(errors="replace")
         self._append(data)
-        if data.strip():
+        if data.strip() and not self._stopped:
             self.process_log_received.emit(data.rstrip(), "stderr")
 
     def _append(self, text: str):
+        if self._stopped or sip.isdeleted(self._log_browser):
+            return
         self._log_browser.append(text.rstrip())
 
     def _on_started(self):
@@ -282,7 +291,8 @@ class ApiProcess(QObject):
             _NAMES.get(int(error), "Unknown"),
             int(error),
         )
-        self.api_alive.emit(False)
+        if not self._stopped:
+            self.api_alive.emit(False)
 
     def _on_process_finished(self, exit_code: int, exit_status) -> None:
         if exit_status == QProcess.ExitStatus.CrashExit or exit_code != 0:  # type: ignore[attr-defined]
@@ -291,11 +301,14 @@ class ApiProcess(QObject):
                 exit_code,
                 "CrashExit" if exit_status == QProcess.ExitStatus.CrashExit else "NormalExit",  # type: ignore[attr-defined]
             )
-            self.api_alive.emit(False)
+            if not self._stopped:
+                self.api_alive.emit(False)
         else:
             logger.info("API subprocess finished normally: exit_code={}.", exit_code)
 
     def _ping(self):
+        if self._stopped:
+            return
         req = QNetworkRequest(QUrl(_api_url(self.client.url, "processes")))
         reply = self._nam.get(req)
         if reply is not None:
@@ -308,9 +321,13 @@ class ApiProcess(QObject):
             alive = False
         finally:
             reply.deleteLater()
+        if self._stopped:
+            return
         self.api_alive.emit(alive)
 
     def _fetch_logs(self):
+        if self._stopped:
+            return
         req = QNetworkRequest(QUrl(_api_url(self.client.url, "logs/")))
         reply = self._nam.get(req)
         if reply is not None:
@@ -319,6 +336,8 @@ class ApiProcess(QObject):
     def _on_logs_reply(self, reply):
         raw = reply.readAll().data().decode(errors="replace")
         reply.deleteLater()
+        if self._stopped:
+            return
         try:
             logs = json.loads(raw)
             if logs:

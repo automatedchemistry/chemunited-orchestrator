@@ -78,29 +78,21 @@ class TestAddComponent:
         qtbot.waitExposed(w)
         return w
 
-    def test_component_registered_in_orchestrator(
-        self, window: SetupWindow, screenshot
-    ):
-        screenshot(window, "initial")
-
+    def test_component_registered_in_orchestrator(self, window: SetupWindow):
         window.orchestrator.add_component(
             name="HPLCPump",
             figure="HPLCPump",
             position=(0.0, 0.0),
         )
 
-        screenshot(window, "after_add")
-
         assert "HPLCPump" in window.orchestrator.components
 
-    def test_component_graph_item_in_scene(self, window: SetupWindow, screenshot):
+    def test_component_graph_item_in_scene(self, window: SetupWindow):
         window.orchestrator.add_component(
             name="HPLCPump",
             figure="HPLCPump",
             position=(100.0, 100.0),
         )
-
-        screenshot(window, "component_in_scene")
 
         component = window.orchestrator.components["HPLCPump"]
         scene_items = window.scene_attribute.items()

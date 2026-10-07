@@ -21,7 +21,8 @@ class BaseModeDialog(FramelessDialog):
     ):
         super().__init__(parent=parent)
         self.setWindowTitle(title or model_class.__name__)
-        self.setResizeEnabled(False)
+        self.setResizeEnabled(True)
+        self.resize(560, 640)
 
         self.editor_widget = BaseModeEditorWidget(
             model_class=model_class,

@@ -54,6 +54,7 @@ class SetupWindow(MainWindowBase):
     def __init__(self):
         super().__init__()
 
+        self._version_check_thread = None
         self.scene_attribute = SceneCore()
         self.SegmentWindow = SegmentWindow(self)
 
@@ -585,6 +586,13 @@ class SetupWindow(MainWindowBase):
     def closeEvent(self, a0):
         if self.mcp_service.is_running:
             self.mcp_service.stop()
+        if self._version_check_thread is not None:
+            # Without this, a version check still in flight when the window
+            # closes can get torn down mid-run by Qt's parent/child cascade,
+            # which aborts the process ("QThread: Destroyed while thread is
+            # still running").
+            self._version_check_thread.stop()
+            self._version_check_thread.wait()
         self.SimulateWindowReport.close()
         super().closeEvent(a0)
 

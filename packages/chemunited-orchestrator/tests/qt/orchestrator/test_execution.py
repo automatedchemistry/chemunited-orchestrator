@@ -234,6 +234,7 @@ def test_execute_project_conflict_can_stop_without_starting_selected_protocol(
                 "run_id": "existing_2026-06-18T12-00-00",
                 "state": "running",
                 "events": [],
+                "cursor": 0,
             },
             "project/": {"project_dir": "other-project"},
         },
@@ -262,6 +263,7 @@ def test_execute_run_conflict_decline_keeps_current_protocol(tmp_path) -> None:
                 "run_id": "existing_2026-06-18T12-00-00",
                 "state": "running",
                 "events": [],
+                "cursor": 0,
             },
             "project/": {"project_dir": "project"},
         },
@@ -283,6 +285,7 @@ def test_execute_run_conflict_accept_stops_without_retry(tmp_path) -> None:
                 "run_id": "existing_2026-06-18T12-00-00",
                 "state": "running",
                 "events": [],
+                "cursor": 0,
             },
             "project/": {"project_dir": "project"},
         },
@@ -300,7 +303,12 @@ def test_execute_run_conflict_accept_stops_without_retry(tmp_path) -> None:
 def test_stop_execution_returns_false_without_active_run() -> None:
     client = FakeClient(
         delete_response={"status": "cancelled"},
-        get_response={"run_id": "RUN-1", "state": "finished", "events": []},
+        get_response={
+            "run_id": "RUN-1",
+            "state": "finished",
+            "events": [],
+            "cursor": 0,
+        },
     )
     execution = _execution_with_parent(client)
 
@@ -312,7 +320,12 @@ def test_stop_execution_returns_false_without_active_run() -> None:
 def test_stop_execution_discovers_active_api_run() -> None:
     client = FakeClient(
         delete_response={"status": "cancelled"},
-        get_response={"run_id": "RUN-1", "state": "running", "events": []},
+        get_response={
+            "run_id": "RUN-1",
+            "state": "running",
+            "events": [],
+            "cursor": 0,
+        },
     )
     execution = _execution_with_parent(client)
     execution._stop_run_polling = lambda: None
