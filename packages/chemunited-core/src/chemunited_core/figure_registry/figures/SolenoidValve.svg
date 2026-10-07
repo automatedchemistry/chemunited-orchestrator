@@ -1,33 +1,28 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<!-- Creator: CorelDRAW -->
-<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="4.6875in" height="3.64583in" version="1.1" style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
-viewBox="0 0 4687.5 3645.83"
- xmlns:xlink="http://www.w3.org/1999/xlink"
- xmlns:xodm="http://www.corel.com/coreldraw/odm/2003">
- <defs>
-  <style type="text/css">
-   <![CDATA[
-    .str0 {stroke:black;stroke-width:10.41;stroke-miterlimit:2.61313}
-    .fil1 {fill:black}
-    .fil0 {fill:#454444}
-    .fil5 {fill:#4A4949}
-    .fil3 {fill:#4D4D4D}
-    .fil4 {fill:#666666}
-    .fil2 {fill:gray}
-   ]]>
-  </style>
- </defs>
- <g id="Layer_x0020_1">
-  <metadata id="CorelCorpID_0Corel-Layer"/>
-  <g id="_1658082622112">
-   <rect class="fil0 str0" x="1292.58" y="205.11" width="1996.03" height="1996.03" rx="359.3" ry="439.14"/>
-   <rect class="fil1 str0" x="1093.86" y="785.35" width="198.72" height="600.21"/>
-   <rect class="fil2 str0" x="301.46" y="2615.26" width="4075.97" height="575.76"/>
-   <rect class="fil3 str0" x="73.44" y="2478.44" width="228.02" height="838"/>
-   <rect class="fil4 str0" x="1504.31" y="2408.21" width="1681.69" height="207.06"/>
-   <rect class="fil1 str0" x="1966.06" y="2201.16" width="678.38" height="207.06"/>
-   <rect class="fil5 str0" x="4377.44" y="2478.44" width="228.02" height="838"/>
+<!-- ChemUnited figure: SolenoidValve (2/2 inline solenoid valve).
+     Units: scene px at 100 % zoom (50 px). Ports at (2.5, 31.9) and
+     (47.5, 31.9); electrical port on the plug at (12, 11.4); the open/closed
+     indicator is drawn in code on the coil face at (25, 12.3). -->
+<svg xmlns="http://www.w3.org/2000/svg" width="4.6875in" height="3.64583in" viewBox="0 0 50 38.889">
+  <defs>
+    <linearGradient id="metal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#CBD5E1"/>
+      <stop offset="0.4" stop-color="#F8FAFC"/>
+      <stop offset="1" stop-color="#94A3B8"/>
+    </linearGradient>
+    <linearGradient id="coil" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#475569"/>
+      <stop offset="0.4" stop-color="#6B7A8D"/>
+      <stop offset="1" stop-color="#3B4757"/>
+    </linearGradient>
+  </defs>
+  <g fill="url(#metal)" stroke="#334155" stroke-width="0.8">
+    <rect x="0.6" y="28" width="7" height="7.8" rx="1"/>
+    <rect x="42.4" y="28" width="7" height="7.8" rx="1"/>
   </g>
- </g>
+  <rect x="6" y="26" width="38" height="12" rx="2" fill="url(#metal)" stroke="#334155" stroke-width="1"/>
+  <rect x="20" y="23.5" width="10" height="3.5" fill="url(#metal)" stroke="#334155" stroke-width="0.7"/>
+  <rect x="14" y="2.5" width="22" height="22" rx="2.5" fill="url(#coil)" stroke="#1E293B" stroke-width="1"/>
+  <rect x="7" y="7" width="8.5" height="9" rx="1.5" fill="#94A3B8" stroke="#334155" stroke-width="0.8"/>
+  <line x1="9.5" y1="9.5" x2="9.5" y2="13.5" stroke="#475569" stroke-width="0.6"/>
 </svg>

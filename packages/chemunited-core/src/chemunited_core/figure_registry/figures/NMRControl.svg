@@ -1,48 +1,52 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<!-- Creator: CorelDRAW -->
-<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="2.39583in" height="3.02083in" version="1.1" style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
-viewBox="0 0 2395.83 3020.83"
- xmlns:xlink="http://www.w3.org/1999/xlink"
- xmlns:xodm="http://www.corel.com/coreldraw/odm/2003">
- <defs>
-  <style type="text/css">
-   <![CDATA[
-    .str0 {stroke:black;stroke-width:10.41;stroke-miterlimit:2.61313}
-    .str1 {stroke:#2A2AA8;stroke-width:10.41;stroke-miterlimit:2.61313}
-    .str2 {stroke:#A8302A;stroke-width:10.41;stroke-miterlimit:2.61313}
-    .fil5 {fill:black}
-    .fil3 {fill:#2A2AA8}
-    .fil2 {fill:#3D497A}
-    .fil4 {fill:#A8302A}
-    .fil1 {fill:#D9D5D5}
-    .fil0 {fill:url(#id0)}
-   ]]>
-  </style>
-  <linearGradient id="id0" gradientUnits="userSpaceOnUse" x1="137.61" y1="1781.18" x2="2220.94" y2="1781.18">
-   <stop offset="0" style="stop-opacity:1; stop-color:#EBE8E8"/>
-   <stop offset="0.2" style="stop-opacity:1; stop-color:#F5F3F3"/>
-   <stop offset="1" style="stop-opacity:1; stop-color:white"/>
-  </linearGradient>
- </defs>
- <g id="Layer_x0020_1">
-  <metadata id="CorelCorpID_0Corel-Layer"/>
-  <rect class="fil0 str0" x="137.61" y="901.32" width="2083.33" height="1759.71"/>
-  <rect class="fil1 str0" x="582.55" y="20.51" width="197.71" height="565.21"/>
-  <rect class="fil1 str0" x="1075.65" y="141.46" width="127.93" height="400.06"/>
-  <rect class="fil1 str0" x="1512.93" y="15.86" width="197.71" height="565.21"/>
-  <path class="fil1 str0" d="M1178.05 901.32l-1041.67 0c0,-254.17 466.37,-460.21 1041.67,-460.21 575.3,0 1041.67,206.04 1041.67,460.21l-1041.67 0z"/>
-  <path class="fil2 str0" d="M161.12 1697.91l219.25 0c80.21,0 145.83,65.62 145.83,145.83l0 1090.25 -510.91 0 0 -1090.25c0,-80.21 65.62,-145.83 145.83,-145.83z"/>
-  <path class="fil2 str0" d="M2017.96 1691.17l219.25 0c80.21,0 145.83,65.62 145.83,145.83l0 1090.25 -510.91 0 0 -1090.25c0,-80.21 65.62,-145.83 145.83,-145.83z"/>
-  <circle class="fil3 str1" cx="932.74" cy="1567.44" r="130.21"/>
-  <polygon class="fil3 str1" points="1252.72,1246.15 1229.47,1340.89 1206.22,1435.63 1134.73,1364.15 1063.24,1292.66 1157.98,1269.4 "/>
-  <rect class="fil3 str1" transform="matrix(0.707107 0.707107 -0.707107 0.707107 1157.91 1289.34)" width="63.18" height="626.28"/>
-  <circle class="fil4 str2" cx="1557.73" cy="1567.44" r="130.21"/>
-  <polygon class="fil4 str2" points="1255.85,1866.11 1279.11,1771.37 1302.36,1676.63 1373.85,1748.12 1445.33,1819.61 1350.6,1842.86 "/>
-  <rect class="fil4 str2" transform="matrix(0.707107 0.707107 -0.707107 0.707107 1782.91 1289.34)" width="63.18" height="626.28"/>
-  <rect class="fil5 str0" x="60.89" y="2932.22" width="66.46" height="62.31"/>
-  <rect class="fil5 str0" x="373.38" y="2932.22" width="66.46" height="62.31"/>
-  <rect class="fil5 str0" x="1935.86" y="2932.22" width="66.46" height="62.31"/>
-  <rect class="fil5 str0" x="2248.36" y="2932.22" width="66.46" height="62.31"/>
- </g>
+<!-- ChemUnited figure: NMRControl (benchtop NMR with flow cell).
+     Units: scene px at 100 % zoom. Flow-cell fittings / ports at
+     (11.65, 40) and (67.65, 40). -->
+<svg xmlns="http://www.w3.org/2000/svg" width="2.39583in" height="3.02083in" viewBox="0 0 79.31 100">
+  <defs>
+    <linearGradient id="housing" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F8FAFC"/>
+      <stop offset="1" stop-color="#D5DDE6"/>
+    </linearGradient>
+    <linearGradient id="metal" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#94A3B8"/>
+      <stop offset="0.45" stop-color="#F1F5F9"/>
+      <stop offset="1" stop-color="#94A3B8"/>
+    </linearGradient>
+    <radialGradient id="nut" cx="0.4" cy="0.35" r="0.7">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#94A3B8"/>
+    </radialGradient>
+  </defs>
+
+  <g fill="#475569">
+    <rect x="8" y="93.5" width="12" height="5" rx="1"/>
+    <rect x="59.31" y="93.5" width="12" height="5" rx="1"/>
+  </g>
+
+  <!-- sample inlet -->
+  <rect x="33.65" y="1.5" width="12" height="11" rx="2" fill="url(#metal)" stroke="#334155" stroke-width="1"/>
+  <rect x="37.4" y="1.5" width="4.5" height="3.5" fill="#334155"/>
+
+  <rect x="2" y="10" width="75.31" height="85" rx="7" fill="url(#housing)" stroke="#334155" stroke-width="1.2"/>
+  <rect x="2.6" y="25" width="74.11" height="3" fill="#2F6FB2"/>
+  <rect x="21" y="14.5" width="37.31" height="7" rx="1.5" fill="#0F172A" stroke="#334155" stroke-width="0.6"/>
+  <line x1="24" y1="18" x2="40" y2="18" stroke="#5EEAD4" stroke-width="1.6" stroke-linecap="round"/>
+
+  <!-- flow path to the magnet centre -->
+  <path d="M15.8 40 H24 Q30 40 33 46 M63.5 40 H55.3 Q49.3 40 46.3 46" fill="none" stroke="#64748B" stroke-width="1.3" stroke-linecap="round"/>
+  <line x1="39.65" y1="12" x2="39.65" y2="42" stroke="#94A3B8" stroke-width="1" stroke-dasharray="2 2"/>
+
+  <!-- magnet emblem -->
+  <circle cx="39.65" cy="60" r="18" fill="#E2E8F0" stroke="#94A3B8" stroke-width="0.8"/>
+  <path d="M25.65 60 A14 14 0 0 1 53.65 60 Z" fill="#EF4444" stroke="#991B1B" stroke-width="0.6"/>
+  <path d="M25.65 60 A14 14 0 0 0 53.65 60 Z" fill="#3B82F6" stroke="#1E40AF" stroke-width="0.6"/>
+  <text x="39.65" y="56.5" font-family="Arial" font-size="8" font-weight="bold" fill="#FFFFFF" text-anchor="middle">N</text>
+  <text x="39.65" y="70.5" font-family="Arial" font-size="8" font-weight="bold" fill="#FFFFFF" text-anchor="middle">S</text>
+
+  <g fill="url(#nut)" stroke="#334155" stroke-width="0.9">
+    <circle cx="11.65" cy="40" r="4.2"/>
+    <circle cx="67.65" cy="40" r="4.2"/>
+  </g>
+  <circle cx="68" cy="86" r="1.6" fill="#22C55E"/>
 </svg>

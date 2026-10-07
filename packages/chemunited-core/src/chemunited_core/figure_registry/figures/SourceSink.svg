@@ -1,22 +1,26 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<!-- Creator: CorelDRAW -->
-<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="1.09375in" height="1.09375in" version="1.1" style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
-viewBox="0 0 1093.75 1093.75"
- xmlns:xlink="http://www.w3.org/1999/xlink"
- xmlns:xodm="http://www.corel.com/coreldraw/odm/2003">
- <defs>
-  <style type="text/css">
-   <![CDATA[
-    .str0 {stroke:black;stroke-width:10.41;stroke-miterlimit:2.61313}
-    .fil1 {fill:black}
-    .fil0 {fill:#C4C4C4}
-   ]]>
-  </style>
- </defs>
- <g id="Layer_x0020_1">
-  <metadata id="CorelCorpID_0Corel-Layer"/>
-  <path class="fil0 str0" d="M542.12 545.64l0 520.83c-287.65,0 -520.83,-233.19 -520.83,-520.83 0,-287.65 233.19,-520.83 520.83,-520.83l0 520.83z"/>
-  <path class="fil1 str0" d="M542.12 545.64l0 -520.83c287.65,0 520.83,233.19 520.83,520.83 0,287.65 -233.19,520.83 -520.83,520.83l0 -520.83z"/>
- </g>
+<!-- ChemUnited figure: SourceSink (open boundary: infinite source / drain).
+     Units: scene px at 100 % zoom. The connection boss is on the left
+     (port at (5, 25)); Source uses the same figure rotated 180 deg. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="1.09375in" height="1.09375in" viewBox="0 0 50 50">
+  <defs>
+    <linearGradient id="housing" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F8FAFC"/>
+      <stop offset="1" stop-color="#D5DDE6"/>
+    </linearGradient>
+    <radialGradient id="well" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#0F172A"/>
+      <stop offset="1" stop-color="#475569"/>
+    </radialGradient>
+    <linearGradient id="metal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#CBD5E1"/>
+      <stop offset="0.4" stop-color="#F8FAFC"/>
+      <stop offset="1" stop-color="#94A3B8"/>
+    </linearGradient>
+  </defs>
+  <circle cx="25" cy="25" r="22.5" fill="url(#housing)" stroke="#334155" stroke-width="1.2"/>
+  <circle cx="25" cy="25" r="14.5" fill="url(#well)" stroke="#334155" stroke-width="0.8"/>
+  <circle cx="25" cy="25" r="9.5" fill="none" stroke="#94A3B8" stroke-opacity="0.55" stroke-width="0.8"/>
+  <circle cx="25" cy="25" r="4.5" fill="none" stroke="#94A3B8" stroke-opacity="0.4" stroke-width="0.8"/>
+  <rect x="1" y="20.5" width="9" height="9" rx="1.8" fill="url(#metal)" stroke="#334155" stroke-width="1"/>
 </svg>

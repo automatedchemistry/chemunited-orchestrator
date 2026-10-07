@@ -112,9 +112,12 @@
         <file>components/FlowReactor.svg</file>
         <file>components/FourPortDistributionValve.svg</file>
         <file>components/FourPortFivePositionValve.svg</file>
+        <file>components/Gantry1D.svg</file>
+        <file>components/Gantry3D.svg</file>
         <file>components/GlassBottle.svg</file>
         <file>components/HPLCControl.svg</file>
         <file>components/HPLCPump.svg</file>
+        <file>components/HeiConnectTemperatureControl.svg</file>
         <file>components/IRControl.svg</file>
         <file>components/LengthControl.svg</file>
         <file>components/Loop.svg</file>
@@ -127,6 +130,7 @@
         <file>components/PeltierCoolerTemperatureControl.svg</file>
         <file>components/PhidgetBubbleSensorComponent.svg</file>
         <file>components/PhidgetBubbleSensorPowerComponent.svg</file>
+        <file>components/PhotoReactor.svg</file>
         <file>components/PhotoSensor.svg</file>
         <file>components/PowerControl.svg</file>
         <file>components/PowerSwitch.svg</file>
@@ -140,8 +144,10 @@
         <file>components/SolenoidValve.svg</file>
         <file>components/SolenoidValve2Way.svg</file>
         <file>components/Source.svg</file>
+        <file>components/StirringControl.svg</file>
         <file>components/SyringePump.svg</file>
         <file>components/TemperatureControl.svg</file>
+        <file>components/TemperatureSensor.svg</file>
         <file>components/ThreePortFourPositionValve.svg</file>
         <file>components/ThreePortTwoPositionValve.svg</file>
         <file>components/TwelvePortDistributionValve.svg</file>

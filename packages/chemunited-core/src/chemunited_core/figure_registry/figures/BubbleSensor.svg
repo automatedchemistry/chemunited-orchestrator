@@ -1,46 +1,36 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<!-- Creator: CorelDRAW -->
-<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="0.989583in" height="0.333331in" version="1.1" style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
-viewBox="0 0 989.58 333.33"
- xmlns:xlink="http://www.w3.org/1999/xlink"
- xmlns:xodm="http://www.corel.com/coreldraw/odm/2003">
- <defs>
-  <style type="text/css">
-   <![CDATA[
-    .str0 {stroke:black;stroke-width:10.41;stroke-miterlimit:2.61313}
-    .fil4 {fill:black}
-    .fil3 {fill:#00FF0D}
-    .fil5 {fill:#3150BF}
-    .fil1 {fill:#542D00}
-    .fil0 {fill:#666666}
-    .fil2 {fill:#F50808}
-   ]]>
-  </style>
- </defs>
- <g id="Layer_x0020_1">
-  <metadata id="CorelCorpID_0Corel-Layer"/>
-  <rect class="fil0 str0" x="29.71" y="155.35" width="925.2" height="169.72" rx="41.67" ry="48.16"/>
-  <path class="fil1 str0" d="M185.74 4.18l164.57 0 0 151.18 -247.9 0 0 -67.85c0,-45.83 37.5,-83.33 83.33,-83.33z"/>
-  <path class="fil1 str0" d="M623.24 4.18l164.57 0c45.83,0 83.33,37.5 83.33,83.33l0 67.85 -247.9 0 0 -151.18z"/>
-  <ellipse class="fil2 str0" cx="677.09" cy="76.43" rx="33.66" ry="31.25"/>
-  <ellipse class="fil3 str0" cx="768.85" cy="75.58" rx="33.66" ry="31.25"/>
-  <ellipse class="fil2 str0" cx="192.77" cy="76.43" rx="33.66" ry="31.25"/>
-  <ellipse class="fil3 str0" cx="284.53" cy="75.58" rx="33.66" ry="31.25"/>
-  <rect class="fil4 str0" x="4.83" y="200.1" width="23.13" height="80.24"/>
-  <rect class="fil4 str0" x="956.92" y="195.04" width="23.13" height="80.24"/>
-  <ellipse class="fil5" cx="407.75" cy="210.34" rx="20.78" ry="21.51"/>
-  <ellipse class="fil5" cx="444.54" cy="245.47" rx="20.78" ry="21.51"/>
-  <ellipse class="fil5" cx="507.08" cy="214.74" rx="20.78" ry="21.51"/>
-  <ellipse class="fil5" cx="597.81" cy="270.77" rx="20.78" ry="21.51"/>
-  <ellipse class="fil5" cx="650.22" cy="202.45" rx="20.78" ry="21.51"/>
-  <ellipse class="fil5" cx="332.49" cy="208.23" rx="20.78" ry="21.51"/>
-  <ellipse class="fil5" cx="317.31" cy="257.76" rx="20.78" ry="21.51"/>
-  <ellipse class="fil5" cx="198.2" cy="195.76" rx="20.78" ry="21.51"/>
-  <ellipse class="fil5" cx="96.44" cy="252.33" rx="20.78" ry="21.51"/>
-  <ellipse class="fil5" cx="705.71" cy="253.24" rx="20.78" ry="21.51"/>
-  <ellipse class="fil5" cx="789.75" cy="204.62" rx="20.78" ry="21.51"/>
-  <ellipse class="fil5" cx="853.74" cy="258.12" rx="20.78" ry="21.51"/>
-  <ellipse class="fil5" cx="252.24" cy="256.31" rx="20.78" ry="21.51"/>
- </g>
+<!-- ChemUnited figure: BubbleSensor (optical clip-on sensor around a tube).
+     Units: scene px at 100 % zoom. Tube ends / ports at (2, 23.84) and
+     (98, 23.84). -->
+<svg xmlns="http://www.w3.org/2000/svg" width="0.989583in" height="0.333331in" viewBox="0 0 100 33.684">
+  <defs>
+    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#64748B"/>
+      <stop offset="1" stop-color="#334155"/>
+    </linearGradient>
+    <linearGradient id="tube" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#FFFFFF" stop-opacity="0.75"/>
+      <stop offset="1" stop-color="#CBD5E1" stop-opacity="0.45"/>
+    </linearGradient>
+  </defs>
+
+  <!-- tube with bubbles -->
+  <rect x="1" y="21.3" width="98" height="5.1" rx="2.5" fill="url(#tube)" stroke="#64748B" stroke-width="0.8"/>
+  <g fill="#FFFFFF" stroke="#64748B" stroke-width="0.5">
+    <circle cx="12" cy="23.84" r="1.6"/>
+    <circle cx="18.5" cy="23.84" r="1"/>
+    <circle cx="82" cy="23.84" r="1.8"/>
+    <circle cx="89" cy="23.84" r="1.1"/>
+  </g>
+
+  <!-- sensor clip -->
+  <rect x="46.5" y="0.6" width="7" height="4.5" fill="#94A3B8" stroke="#334155" stroke-width="0.7"/>
+  <rect x="28" y="4" width="44" height="28.5" rx="3.5" fill="url(#panel)" stroke="#1E293B" stroke-width="1"/>
+  <line x1="31" y1="5.6" x2="69" y2="5.6" stroke="#FFFFFF" stroke-opacity="0.3" stroke-width="0.8" stroke-linecap="round"/>
+  <rect x="28.6" y="19.6" width="42.8" height="8.5" fill="#1E293B"/>
+  <rect x="28.6" y="21.6" width="42.8" height="4.5" fill="#94A3B8" fill-opacity="0.45"/>
+  <g stroke="#1E293B" stroke-width="0.6">
+    <circle cx="40" cy="12" r="2.8" fill="#EF4444"/>
+    <circle cx="60" cy="12" r="2.8" fill="#22C55E"/>
+  </g>
 </svg>

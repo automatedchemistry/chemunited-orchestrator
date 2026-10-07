@@ -1,34 +1,16 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<!-- Creator: CorelDRAW -->
-<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="0.354165in" height="1.28124in" version="1.1" style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
-viewBox="0 0 354.17 1281.24"
- xmlns:xlink="http://www.w3.org/1999/xlink"
- xmlns:xodm="http://www.corel.com/coreldraw/odm/2003">
- <defs>
-  <style type="text/css">
-   <![CDATA[
-    .str0 {stroke:black;stroke-width:10.41;stroke-miterlimit:2.61313}
-    .fil1 {fill:black}
-    .fil0 {fill:url(#id0)}
-    .fil2 {fill:url(#id1)}
-   ]]>
-  </style>
-  <linearGradient id="id0" gradientUnits="userSpaceOnUse" x1="70.31" y1="996.85" x2="286.17" y2="996.85">
-   <stop offset="0" style="stop-opacity:1; stop-color:#C9C9C9"/>
-   <stop offset="0.94902" style="stop-opacity:1; stop-color:#E4E4E4"/>
-   <stop offset="1" style="stop-opacity:1; stop-color:white"/>
-  </linearGradient>
-  <linearGradient id="id1" gradientUnits="userSpaceOnUse" x1="124.28" y1="426.75" x2="232.2" y2="426.75">
-   <stop offset="0" style="stop-opacity:1; stop-color:#E3E3E3"/>
-   <stop offset="0.94902" style="stop-opacity:1; stop-color:#F1F1F1"/>
-   <stop offset="1" style="stop-opacity:1; stop-color:white"/>
-  </linearGradient>
- </defs>
- <g id="Layer_x0020_1">
-  <metadata id="CorelCorpID_0Corel-Layer"/>
-  <rect class="fil0" x="70.31" y="840.4" width="215.85" height="312.91"/>
-  <rect class="fil1 str0" x="4.73" y="1153.31" width="347.02" height="128.59"/>
-  <path class="fil2" d="M207.61 13.1l24.6 0 0 827.3 -107.93 0 0 -743.96c0,-45.83 37.5,-83.33 83.33,-83.33z"/>
- </g>
+<!-- ChemUnited figure: BottlePressureAccess (gas line fitting on a cap).
+     Units: scene px at 100 % zoom (drawn 20 px tall). Top end = port. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="0.354165in" height="1.28124in" viewBox="0 0 5.529 20">
+  <defs>
+    <linearGradient id="metal" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#94A3B8"/>
+      <stop offset="0.45" stop-color="#F1F5F9"/>
+      <stop offset="1" stop-color="#94A3B8"/>
+    </linearGradient>
+  </defs>
+  <rect x="1.65" y="0.3" width="2.23" height="12" rx="0.8" fill="url(#metal)" stroke="#475569" stroke-width="0.45"/>
+  <rect x="0.35" y="10.5" width="4.83" height="9.2" rx="0.8" fill="url(#metal)" stroke="#334155" stroke-width="0.55"/>
+  <line x1="0.6" y1="13.6" x2="4.9" y2="13.6" stroke="#64748B" stroke-width="0.35"/>
+  <line x1="0.6" y1="16.6" x2="4.9" y2="16.6" stroke="#64748B" stroke-width="0.35"/>
 </svg>

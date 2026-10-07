@@ -1,79 +1,62 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<!-- Creator: CorelDRAW -->
-<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="3.64583in" height="3.54166in" version="1.1" style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
-viewBox="0 0 3645.83 3541.66"
- xmlns:xlink="http://www.w3.org/1999/xlink"
- xmlns:xodm="http://www.corel.com/coreldraw/odm/2003">
- <defs>
-  <style type="text/css">
-   <![CDATA[
-    .str1 {stroke:white;stroke-width:31.25;stroke-miterlimit:2.61313}
-    .str0 {stroke:black;stroke-width:10.41;stroke-miterlimit:2.61313}
-    .fil3 {fill:none}
-    .fil10 {fill:#4A4A4A}
-    .fil9 {fill:black}
-    .fil5 {fill:#3B3B3B}
-    .fil7 {fill:#545353}
-    .fil0 {fill:#8F94A8}
-    .fil8 {fill:#C9C9C9}
-    .fil4 {fill:#D1D1D1}
-    .fil1 {fill:#DEDEDE}
-    .fil2 {fill:#EBEBEB}
-    .fil11 {fill:white}
-    .fil6 {fill:url(#id0)}
-   ]]>
-  </style>
-  <linearGradient id="id0" gradientUnits="userSpaceOnUse" x1="2445.8" y1="978.93" x2="2544.37" y2="1205.13">
-   <stop offset="0" style="stop-opacity:1; stop-color:black"/>
-   <stop offset="0.101961" style="stop-opacity:1; stop-color:#7F7F7F"/>
-   <stop offset="1" style="stop-opacity:1; stop-color:white"/>
-  </linearGradient>
- </defs>
- <g id="Layer_x0020_1">
-  <metadata id="CorelCorpID_0Corel-Layer"/>
-  <path class="fil0 str0" d="M1356.63 2230.81l2281.7 0 0 1171.71c0,68.75 -56.25,125 -125,125l-2156.71 0 0 -1296.7z"/>
-  <rect class="fil1 str0" x="1357.01" y="2172.61" width="2276.23" height="57.35"/>
-  <path class="fil2 str0" d="M137.16 10.53l1216.87 0 0 2157.02 -1340.5 0 0 -2033.4c0,-68 55.63,-123.63 123.63,-123.63z"/>
-  <path class="fil2 str0" d="M1356.96 2174.85l2276.25 0 0 -2040.65c0,-68.74 -56.25,-125 -125,-125l-2151.25 0 0 2165.65z"/>
-  <path class="fil0 str0" d="M12.64 2228.11l1340.16 0 0 1296.7 -1215.16 0c-68.75,0 -125,-56.25 -125,-125l0 -1171.71z"/>
-  <line class="fil3 str0" x1="1548.91" y1="2400.79" x2="3451.73" y2= "2400.79" />
-  <line class="fil3 str0" x1="1548.91" y1="2504.95" x2="3451.73" y2= "2504.95" />
-  <line class="fil3 str0" x1="1548.91" y1="2609.12" x2="3451.73" y2= "2609.12" />
-  <line class="fil3 str0" x1="1548.91" y1="2713.28" x2="3451.73" y2= "2713.28" />
-  <line class="fil3 str0" x1="1548.91" y1="2817.45" x2="3451.73" y2= "2817.45" />
-  <line class="fil3 str0" x1="1548.91" y1="2921.61" x2="3451.73" y2= "2921.61" />
-  <line class="fil3 str0" x1="1548.91" y1="3025.78" x2="3451.73" y2= "3025.78" />
-  <line class="fil3 str0" x1="1548.91" y1="3129.94" x2="3451.73" y2= "3129.94" />
-  <line class="fil3 str0" x1="1548.91" y1="3234.11" x2="3451.73" y2= "3234.11" />
-  <line class="fil3 str0" x1="1548.91" y1="3338.28" x2="3451.73" y2= "3338.28" />
-  <line class="fil3 str0" x1="81.39" y1="2400.79" x2="1160.09" y2= "2400.79" />
-  <line class="fil3 str0" x1="81.39" y1="2504.95" x2="1160.09" y2= "2504.95" />
-  <line class="fil3 str0" x1="81.39" y1="2609.12" x2="1160.09" y2= "2609.12" />
-  <line class="fil3 str0" x1="81.39" y1="2713.28" x2="1160.09" y2= "2713.28" />
-  <line class="fil3 str0" x1="81.39" y1="2817.45" x2="1160.09" y2= "2817.45" />
-  <line class="fil3 str0" x1="81.39" y1="2921.61" x2="1160.09" y2= "2921.61" />
-  <line class="fil3 str0" x1="81.39" y1="3025.78" x2="1160.09" y2= "3025.78" />
-  <line class="fil3 str0" x1="81.39" y1="3129.94" x2="1160.09" y2= "3129.94" />
-  <line class="fil3 str0" x1="81.39" y1="3234.11" x2="1160.09" y2= "3234.11" />
-  <line class="fil3 str0" x1="81.39" y1="3338.28" x2="1160.09" y2= "3338.28" />
-  <rect class="fil1 str0" x="12.9" y="2172.59" width="1344.54" height="57.35"/>
-  <rect class="fil4 str0" x="2006.43" y="650.09" width="977.31" height="883.87" rx="208.33" ry="208.33"/>
-  <rect class="fil5 str1" x="2208.62" y="805.57" width="572.92" height="572.92"/>
-  <rect class="fil6 str0" x="2294.72" y="989.62" width="400.72" height="204.81"/>
-  <rect class="fil7 str0" x="2377.14" y="263.79" width="247.38" height="386.3"/>
-  <rect class="fil8 str0" x="2424.01" y="136.98" width="153.61" height="124.67"/>
-  <rect class="fil9 str0" x="2470.76" y="60.15" width="60.11" height="73.46"/>
-  <rect class="fil4 str0" x="263.09" y="1127.83" width="977.31" height="883.87" rx="208.33" ry="208.33"/>
-  <path class="fil10 str0" d="M263.09 1469l977.31 0 0 -132.84c0,-114.59 -93.74,-208.33 -208.33,-208.33l-560.65 0c-114.59,0 -208.33,93.74 -208.33,208.33l0 132.84z"/>
-  <circle class="fil11 str0" cx="372.28" cy="1375.59" r="26.04"/>
-  <circle class="fil11 str0" cx="476.44" cy="1375.59" r="26.04"/>
-  <circle class="fil11 str0" cx="580.61" cy="1375.59" r="26.04"/>
-  <circle class="fil11 str0" cx="684.78" cy="1375.59" r="26.04"/>
-  <circle class="fil11 str0" cx="788.94" cy="1375.59" r="26.04"/>
-  <circle class="fil11 str0" cx="893.11" cy="1375.59" r="26.04"/>
-  <circle class="fil11 str0" cx="997.27" cy="1375.59" r="26.04"/>
-  <circle class="fil11 str0" cx="1101.44" cy="1375.59" r="26.04"/>
-  <path class="fil3 str0" d="M2470.76 78.22c-130.03,-11.1 -260.06,-22.2 -387.24,3.89 -127.18,26.09 -251.51,89.37 -326.44,187.06 -74.93,97.69 -100.47,229.79 -87.15,339.14 13.32,109.35 65.5,195.93 128.06,247.56 62.56,51.62 135.5,68.27 171.97,75.49 36.47,7.22 36.47,5 36.47,2.78"/>
- </g>
+<!-- ChemUnited figure: MSControl (benchtop mass spectrometer).
+     Units: scene px at 100 % zoom. Inlet fittings / ports at (10, 8.57)
+     and (25, 8.57) on the ion-source module. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="3.64583in" height="3.54166in" viewBox="0 0 100 97.143">
+  <defs>
+    <linearGradient id="housing" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F8FAFC"/>
+      <stop offset="1" stop-color="#D5DDE6"/>
+    </linearGradient>
+    <linearGradient id="slate" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#E2E8F0"/>
+      <stop offset="1" stop-color="#A3B0BE"/>
+    </linearGradient>
+    <radialGradient id="source" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#34D399"/>
+      <stop offset="1" stop-color="#0F172A"/>
+    </radialGradient>
+    <radialGradient id="nut" cx="0.4" cy="0.35" r="0.7">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#94A3B8"/>
+    </radialGradient>
+  </defs>
+
+  <g fill="#475569">
+    <rect x="8" y="91" width="12" height="5" rx="1"/>
+    <rect x="80" y="91" width="12" height="5" rx="1"/>
+  </g>
+  <rect x="2" y="14" width="96" height="78" rx="5" fill="url(#housing)" stroke="#334155" stroke-width="1.2"/>
+  <rect x="2.6" y="48" width="94.8" height="3" fill="#10B981"/>
+
+  <!-- display with stick spectrum -->
+  <rect x="42" y="20" width="50" height="22" rx="2" fill="#0F172A" stroke="#334155" stroke-width="0.6"/>
+  <line x1="46" y1="38" x2="88" y2="38" stroke="#5EEAD4" stroke-opacity="0.5" stroke-width="0.6"/>
+  <g stroke="#5EEAD4" stroke-width="1.4">
+    <line x1="50" y1="38" x2="50" y2="33"/>
+    <line x1="55" y1="38" x2="55" y2="30"/>
+    <line x1="61" y1="38" x2="61" y2="24"/>
+    <line x1="66" y1="38" x2="66" y2="34"/>
+    <line x1="72" y1="38" x2="72" y2="28"/>
+    <line x1="78" y1="38" x2="78" y2="35"/>
+    <line x1="84" y1="38" x2="84" y2="31"/>
+  </g>
+
+  <!-- vacuum section -->
+  <g stroke="#94A3B8" stroke-width="1.8" stroke-linecap="round">
+    <line x1="10" y1="60" x2="90" y2="60"/>
+    <line x1="10" y1="66" x2="90" y2="66"/>
+    <line x1="10" y1="72" x2="90" y2="72"/>
+    <line x1="10" y1="78" x2="90" y2="78"/>
+    <line x1="10" y1="84" x2="90" y2="84"/>
+  </g>
+
+  <!-- ion source module -->
+  <rect x="3" y="2.5" width="32" height="41" rx="3" fill="url(#slate)" stroke="#334155" stroke-width="1.2"/>
+  <circle cx="19" cy="29" r="7.5" fill="url(#source)" stroke="#1E293B" stroke-width="0.8"/>
+  <path d="M14.5 25.5 A5.5 5.5 0 0 1 18 23" fill="none" stroke="#FFFFFF" stroke-opacity="0.45" stroke-width="1" stroke-linecap="round"/>
+  <g fill="url(#nut)" stroke="#334155" stroke-width="0.9">
+    <circle cx="10" cy="8.57" r="4.2"/>
+    <circle cx="25" cy="8.57" r="4.2"/>
+  </g>
 </svg>

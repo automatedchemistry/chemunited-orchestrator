@@ -25,15 +25,17 @@ def _assert_head_is_atmospheric(component: Gantry3DData) -> None:
     assert boundary.value == ATMOSPHERE_PRESSURE_PA
 
 
-def test_gantry_registry_uses_shared_base_figure() -> None:
+def test_gantry_registry_uses_distinct_figures() -> None:
     assert COMPONENTS["Gantry1D"].data_class is Gantry1DData
     assert COMPONENTS["Gantry1D"].mode_class is Gantry1DMode
     assert COMPONENTS["Gantry1D"].figure_base == "Gantry"
     assert COMPONENTS["Gantry3D"].data_class is Gantry3DData
     assert COMPONENTS["Gantry3D"].mode_class is Gantry3DMode
-    assert COMPONENTS["Gantry3D"].figure_base == "Gantry"
+    assert COMPONENTS["Gantry3D"].figure_base == ""
     assert issubclass(Gantry3DData, Gantry1DData)
-    assert get_figure_path("Gantry3D").name == "Gantry.svg"
+    assert get_figure_path("Gantry").name == "Gantry.svg"
+    assert get_figure_path("Gantry3D").name == "Gantry3D.svg"
+    assert get_figure_path("Gantry3D").is_file()
 
 
 def test_gantry1d_position_opens_selected_port() -> None:

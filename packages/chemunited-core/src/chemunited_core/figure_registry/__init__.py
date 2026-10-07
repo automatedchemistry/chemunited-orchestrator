@@ -213,7 +213,6 @@ __all__ = [
 ]
 
 _FIGURES = _pkg_files("chemunited_core.figure_registry.figures")
-_FIGURE_ALIASES = {"Gantry3D": "Gantry"}
 
 # Figures registered from outside the package (project-local custom components),
 # keyed the same way callers already resolve names: figure_base or the
@@ -228,7 +227,6 @@ _PROJECT_COMPONENTS: set[str] = set()
 
 def get_figure_svg(name: str) -> str:
     """Return SVG markup for *name* (filename without .svg extension)."""
-    name = _FIGURE_ALIASES.get(name, name)
     if name in _EXTERNAL_FIGURES:
         return _EXTERNAL_FIGURES[name].read_text(encoding="utf-8")
     return _FIGURES.joinpath(f"{name}.svg").read_text(encoding="utf-8")
@@ -236,7 +234,6 @@ def get_figure_svg(name: str) -> str:
 
 def get_figure_path(name: str) -> Traversable:
     """Return a Traversable for the SVG file (zip-safe; use open() or as_file())."""
-    name = _FIGURE_ALIASES.get(name, name)
     if name in _EXTERNAL_FIGURES:
         return _EXTERNAL_FIGURES[name]
     return _FIGURES.joinpath(f"{name}.svg")
@@ -319,7 +316,6 @@ COMPONENTS: dict[str, ComponentDefinition] = {
     "Gantry3D": ComponentDefinition(
         Gantry3DData,
         Gantry3DMode,
-        figure_base="Gantry",
         svg_scale=4.0,
         category="assembly",
     ),

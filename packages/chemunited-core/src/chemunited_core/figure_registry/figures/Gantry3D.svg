@@ -1,0 +1,197 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- ChemUnited figure: Gantry3D (XYZ cartesian liquid handler over a vial deck,
+     drawn in oblique projection: depth runs up and to the right).
+     Units: scene px at 100 % zoom (200 px wide). Head fitting / port at
+     (100, 15.5), same as Gantry.svg. The top-left corner (x < 34, y < 25) is
+     left empty for the "3D" label drawn in code. Axis colours: x red,
+     y green, z blue. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="5.35433in" height="3.64173in" viewBox="0 0 200 136.029">
+  <defs>
+    <linearGradient id="housing" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F8FAFC"/>
+      <stop offset="1" stop-color="#D5DDE6"/>
+    </linearGradient>
+    <linearGradient id="deck" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#E2E8F0"/>
+      <stop offset="1" stop-color="#CBD5E1"/>
+    </linearGradient>
+    <linearGradient id="slate" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#CBD5E1"/>
+      <stop offset="1" stop-color="#94A3B8"/>
+    </linearGradient>
+    <linearGradient id="metalV" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#94A3B8"/>
+      <stop offset="0.45" stop-color="#F1F5F9"/>
+      <stop offset="1" stop-color="#94A3B8"/>
+    </linearGradient>
+    <linearGradient id="carriage" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#5B9BE0"/>
+      <stop offset="1" stop-color="#1F4F91"/>
+    </linearGradient>
+    <linearGradient id="panel" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#64748B"/>
+      <stop offset="1" stop-color="#334155"/>
+    </linearGradient>
+    <radialGradient id="nut" cx="0.4" cy="0.35" r="0.7">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#94A3B8"/>
+    </radialGradient>
+  </defs>
+
+  <!-- deck (top, front and right faces) -->
+  <g stroke="#334155" stroke-width="1.2" stroke-linejoin="round">
+    <polygon points="6,130 168,130 192,104 30,104" fill="url(#deck)"/>
+    <polygon points="6,130 168,130 168,135 6,135" fill="#94A3B8"/>
+    <polygon points="168,130 192,104 192,109 168,135" fill="#A3B0BE"/>
+  </g>
+
+  <!-- back posts -->
+  <g fill="url(#metalV)" stroke="#334155" stroke-width="1">
+    <rect x="30" y="28" width="6" height="76"/>
+    <rect x="186" y="28" width="6" height="76"/>
+  </g>
+
+  <!-- vials: back row (A) -->
+  <g fill="#FFFFFF" fill-opacity="0.45" stroke="#64748B" stroke-width="0.6">
+    <rect x="43.80" y="96.68" width="7" height="12" rx="1.2"/>
+    <rect x="57.58" y="96.68" width="7" height="12" rx="1.2"/>
+    <rect x="71.35" y="96.68" width="7" height="12" rx="1.2"/>
+    <rect x="85.13" y="96.68" width="7" height="12" rx="1.2"/>
+    <rect x="98.90" y="96.68" width="7" height="12" rx="1.2"/>
+    <rect x="112.68" y="96.68" width="7" height="12" rx="1.2"/>
+    <rect x="126.46" y="96.68" width="7" height="12" rx="1.2"/>
+    <rect x="140.23" y="96.68" width="7" height="12" rx="1.2"/>
+    <rect x="154.01" y="96.68" width="7" height="12" rx="1.2"/>
+    <rect x="167.78" y="96.68" width="7" height="12" rx="1.2"/>
+  </g>
+  <g fill-opacity="0.9">
+    <rect x="44.50" y="100.78" width="5.6" height="7.2" rx="0.8" fill="#F59E0B"/>
+    <rect x="58.28" y="102.78" width="5.6" height="5.2" rx="0.8" fill="#EF4444"/>
+    <rect x="72.05" y="99.78" width="5.6" height="8.2" rx="0.8" fill="#22C55E"/>
+    <rect x="85.83" y="101.78" width="5.6" height="6.2" rx="0.8" fill="#3B82F6"/>
+    <rect x="99.60" y="98.78" width="5.6" height="9.2" rx="0.8" fill="#A855F7"/>
+    <rect x="113.38" y="102.78" width="5.6" height="5.2" rx="0.8" fill="#14B8A6"/>
+    <rect x="127.16" y="100.78" width="5.6" height="7.2" rx="0.8" fill="#F59E0B"/>
+    <rect x="140.93" y="99.78" width="5.6" height="8.2" rx="0.8" fill="#EF4444"/>
+    <rect x="154.71" y="101.78" width="5.6" height="6.2" rx="0.8" fill="#22C55E"/>
+    <rect x="168.48" y="98.78" width="5.6" height="9.2" rx="0.8" fill="#3B82F6"/>
+  </g>
+  <g fill="#475569">
+    <rect x="43.30" y="94.18" width="8" height="3" rx="0.6"/>
+    <rect x="57.08" y="94.18" width="8" height="3" rx="0.6"/>
+    <rect x="70.85" y="94.18" width="8" height="3" rx="0.6"/>
+    <rect x="84.63" y="94.18" width="8" height="3" rx="0.6"/>
+    <rect x="98.40" y="94.18" width="8" height="3" rx="0.6"/>
+    <rect x="112.18" y="94.18" width="8" height="3" rx="0.6"/>
+    <rect x="125.96" y="94.18" width="8" height="3" rx="0.6"/>
+    <rect x="139.73" y="94.18" width="8" height="3" rx="0.6"/>
+    <rect x="153.51" y="94.18" width="8" height="3" rx="0.6"/>
+    <rect x="167.28" y="94.18" width="8" height="3" rx="0.6"/>
+  </g>
+  <!-- vials: front row (B) -->
+  <g fill="#FFFFFF" fill-opacity="0.45" stroke="#64748B" stroke-width="0.6">
+    <rect x="28.92" y="112.80" width="7" height="12" rx="1.2"/>
+    <rect x="42.70" y="112.80" width="7" height="12" rx="1.2"/>
+    <rect x="56.47" y="112.80" width="7" height="12" rx="1.2"/>
+    <rect x="70.25" y="112.80" width="7" height="12" rx="1.2"/>
+    <rect x="84.02" y="112.80" width="7" height="12" rx="1.2"/>
+    <rect x="97.80" y="112.80" width="7" height="12" rx="1.2"/>
+    <rect x="111.58" y="112.80" width="7" height="12" rx="1.2"/>
+    <rect x="125.35" y="112.80" width="7" height="12" rx="1.2"/>
+    <rect x="139.13" y="112.80" width="7" height="12" rx="1.2"/>
+    <rect x="152.90" y="112.80" width="7" height="12" rx="1.2"/>
+  </g>
+  <g fill-opacity="0.9">
+    <rect x="29.62" y="117.90" width="5.6" height="6.2" rx="0.8" fill="#3B82F6"/>
+    <rect x="43.40" y="114.90" width="5.6" height="9.2" rx="0.8" fill="#A855F7"/>
+    <rect x="57.17" y="118.90" width="5.6" height="5.2" rx="0.8" fill="#14B8A6"/>
+    <rect x="70.95" y="116.90" width="5.6" height="7.2" rx="0.8" fill="#F59E0B"/>
+    <rect x="84.72" y="115.90" width="5.6" height="8.2" rx="0.8" fill="#EF4444"/>
+    <rect x="98.50" y="117.90" width="5.6" height="6.2" rx="0.8" fill="#22C55E"/>
+    <rect x="112.28" y="114.90" width="5.6" height="9.2" rx="0.8" fill="#3B82F6"/>
+    <rect x="126.05" y="116.90" width="5.6" height="7.2" rx="0.8" fill="#A855F7"/>
+    <rect x="139.83" y="118.90" width="5.6" height="5.2" rx="0.8" fill="#14B8A6"/>
+    <rect x="153.60" y="115.90" width="5.6" height="8.2" rx="0.8" fill="#F59E0B"/>
+  </g>
+  <g fill="#475569">
+    <rect x="28.42" y="110.30" width="8" height="3" rx="0.6"/>
+    <rect x="42.20" y="110.30" width="8" height="3" rx="0.6"/>
+    <rect x="55.97" y="110.30" width="8" height="3" rx="0.6"/>
+    <rect x="69.75" y="110.30" width="8" height="3" rx="0.6"/>
+    <rect x="83.52" y="110.30" width="8" height="3" rx="0.6"/>
+    <rect x="97.30" y="110.30" width="8" height="3" rx="0.6"/>
+    <rect x="111.08" y="110.30" width="8" height="3" rx="0.6"/>
+    <rect x="124.85" y="110.30" width="8" height="3" rx="0.6"/>
+    <rect x="138.63" y="110.30" width="8" height="3" rx="0.6"/>
+    <rect x="152.40" y="110.30" width="8" height="3" rx="0.6"/>
+  </g>
+
+  <!-- front posts -->
+  <g fill="url(#metalV)" stroke="#334155" stroke-width="1">
+    <rect x="6" y="54" width="6" height="76"/>
+    <rect x="162" y="54" width="6" height="76"/>
+  </g>
+
+  <!-- Y rails (run into depth) -->
+  <g fill="url(#housing)" stroke="#334155" stroke-width="1.2" stroke-linejoin="round">
+    <polygon points="4,54 28,28 38,28 14,54"/>
+    <polygon points="160,54 184,28 194,28 170,54"/>
+  </g>
+  <g stroke="#94A3B8" stroke-width="1.2" stroke-linecap="round">
+    <line x1="10.5" y1="51" x2="31.5" y2="31"/>
+    <line x1="166.5" y1="51" x2="187.5" y2="31"/>
+  </g>
+
+  <!-- X bridge riding on both Y rails -->
+  <rect x="14" y="36" width="170" height="10" rx="2" fill="url(#housing)" stroke="#334155" stroke-width="1.2"/>
+  <line x1="28" y1="41" x2="170" y2="41" stroke="#94A3B8" stroke-width="1.6" stroke-linecap="round"/>
+  <g fill="url(#slate)" stroke="#334155" stroke-width="1">
+    <rect x="12" y="33" width="14" height="16" rx="2"/>
+    <rect x="172" y="33" width="14" height="16" rx="2"/>
+  </g>
+
+  <!-- Z arm + probe -->
+  <rect x="95.5" y="46" width="9" height="34" fill="url(#metalV)" stroke="#334155" stroke-width="1"/>
+  <rect x="92.5" y="78" width="15" height="6" rx="1.2" fill="url(#panel)" stroke="#1E293B" stroke-width="0.8"/>
+  <path d="M99.2 84 H100.8 V90 L100 92.5 L99.2 90 Z" fill="#CBD5E1" stroke="#475569" stroke-width="0.4"/>
+
+  <!-- carriage -->
+  <rect x="86" y="7" width="28" height="43" rx="3" fill="url(#carriage)" stroke="#1E3A5F" stroke-width="1.2"/>
+  <line x1="89" y1="9" x2="111" y2="9" stroke="#FFFFFF" stroke-opacity="0.35" stroke-width="0.8" stroke-linecap="round"/>
+  <g fill="#1E3A5F">
+    <circle cx="91" cy="44.5" r="1.6"/>
+    <circle cx="109" cy="44.5" r="1.6"/>
+  </g>
+  <circle cx="100" cy="15.5" r="4.2" fill="url(#nut)" stroke="#334155" stroke-width="0.9"/>
+
+  <!-- travel arrows: X on the bridge, Y on the left rail, Z beside the arm -->
+  <g fill="#EF4444">
+    <polygon points="75,41 82,37 82,45"/>
+    <polygon points="125,41 118,37 118,45"/>
+  </g>
+  <g fill="#22C55E">
+    <polygon points="31.1,30.1 29.28,35.9 25.46,32.38"/>
+    <polygon points="10.9,51.9 16.54,49.62 12.72,46.1"/>
+  </g>
+  <line x1="113" y1="56" x2="113" y2="72" stroke="#3B82F6" stroke-width="1.2"/>
+  <g fill="#3B82F6">
+    <polygon points="113,51.5 110.3,57 115.7,57"/>
+    <polygon points="113,76.5 110.3,71 115.7,71"/>
+  </g>
+
+  <!-- axis marker: X, Y, Z -->
+  <g stroke-width="1.4" stroke-linecap="round">
+    <line x1="168" y1="19" x2="184" y2="19" stroke="#EF4444"/>
+    <line x1="168" y1="19" x2="173.76" y2="12.75" stroke="#22C55E"/>
+    <line x1="168" y1="19" x2="168" y2="8.5" stroke="#3B82F6"/>
+  </g>
+  <polygon points="189,19 183.5,16.3 183.5,21.7" fill="#EF4444"/>
+  <polygon points="177.49,8.71 175.74,14.58 171.78,10.92" fill="#22C55E"/>
+  <polygon points="168,3 165.3,8.5 170.7,8.5" fill="#3B82F6"/>
+  <circle cx="168" cy="19" r="1.5" fill="#334155"/>
+  <g font-family="Arial" font-size="7" font-weight="bold">
+    <text x="191" y="23" fill="#EF4444">x</text>
+    <text x="179.5" y="9" fill="#22C55E">y</text>
+    <text x="160" y="8" fill="#3B82F6">z</text>
+  </g>
+</svg>

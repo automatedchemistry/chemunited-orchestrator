@@ -1,20 +1,18 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<!-- Creator: CorelDRAW -->
-<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="3.22917in" height="2.32291in" version="1.1" style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
-viewBox="0 0 3229.17 2322.91"
- xmlns:xlink="http://www.w3.org/1999/xlink"
- xmlns:xodm="http://www.corel.com/coreldraw/odm/2003">
- <defs>
-  <style type="text/css">
-   <![CDATA[
-    .str0 {stroke:black;stroke-width:10.41;stroke-miterlimit:2.61313;stroke-opacity:0.501961}
-    .fil0 {fill:#E8E8E8;fill-opacity:0.501961}
-   ]]>
-  </style>
- </defs>
- <g id="Layer_x0020_1">
-  <metadata id="CorelCorpID_0Corel-Layer"/>
-  <polygon class="fil0 str0" points="149.83,1963.55 149.83,365.72 337.32,178.22 2892.99,178.22 3080.48,365.72 3080.48,1963.55 2892.99,2151.04 337.32,2151.04 "/>
- </g>
+<!-- ChemUnited figure: FlowReactorBase (coil-reactor mounting plate).
+     Units: scene px at 100 % zoom. The tubing coil is drawn in code on top
+     (x 2.5-97.5, y 10.5-61.5); tube ends / ports at (5, 16) and (95, 16). -->
+<svg xmlns="http://www.w3.org/2000/svg" width="3.22917in" height="2.32291in" viewBox="0 0 100 71.935">
+  <defs>
+    <linearGradient id="housing" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F8FAFC"/>
+      <stop offset="1" stop-color="#D5DDE6"/>
+    </linearGradient>
+  </defs>
+  <rect x="3.5" y="3.5" width="93" height="64.935" rx="5" fill="url(#housing)" stroke="#334155" stroke-width="1.2"/>
+  <rect x="6.5" y="8" width="87" height="56" rx="3" fill="#E2E8F0" stroke="#94A3B8" stroke-width="0.6"/>
+  <g fill="#94A3B8" stroke="#64748B" stroke-width="0.4">
+    <circle cx="20" cy="66" r="1"/>
+    <circle cx="80" cy="66" r="1"/>
+  </g>
 </svg>

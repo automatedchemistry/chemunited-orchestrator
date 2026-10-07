@@ -1,116 +1,152 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<!-- Creator: CorelDRAW -->
-<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="2.49999in" height="4.37499in" version="1.1" style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
-viewBox="0 0 2499.99 4374.99"
- xmlns:xlink="http://www.w3.org/1999/xlink"
- xmlns:xodm="http://www.corel.com/coreldraw/odm/2003">
- <defs>
-  <style type="text/css">
-   <![CDATA[
-    .str3 {stroke:black;stroke-width:10.41;stroke-miterlimit:2.61313;stroke-opacity:0.341176}
-    .str1 {stroke:black;stroke-width:10.41;stroke-miterlimit:2.61313;stroke-opacity:0.501961}
-    .str0 {stroke:black;stroke-width:10.41;stroke-miterlimit:2.61313}
-    .str4 {stroke:#414A87;stroke-width:10.41;stroke-miterlimit:2.61313}
-    .str2 {stroke:#E0E0E3;stroke-width:20.83;stroke-miterlimit:2.61313}
-    .fil4 {fill:none}
-    .fil6 {fill:black}
-    .fil7 {fill:#404040}
-    .fil11 {fill:#414A87}
-    .fil1 {fill:#525151}
-    .fil10 {fill:#945151}
-    .fil0 {fill:#BFBFBF}
-    .fil5 {fill:#C2C2C2}
-    .fil2 {fill:#EBEBEB}
-    .fil8 {fill:black;fill-rule:nonzero}
-    .fil9 {fill:#457C96;fill-opacity:0.341176}
-    .fil3 {fill:#4D4D4D;fill-opacity:0.501961}
-   ]]>
-  </style>
- </defs>
- <g id="Layer_x0020_1">
-  <metadata id="CorelCorpID_0Corel-Layer"/>
-  <rect class="fil0 str0" x="148.55" y="4264.82" width="576.27" height="72.92"/>
-  <path class="fil1 str0" d="M1775.11 4321.58c-0.01,-86.27 21.5,-56.49 -111.84,-64.67 -326.25,-20.01 -539.54,-14.75 -864.05,3.84 -95.11,5.45 -75.58,-21.64 -75.59,76.83 363.03,-19.39 609.24,-33.79 976.94,-5.76l68.16 1.5 6.39 -11.74z"/>
-  <rect class="fil0 str0" x="1769.36" y="4264.82" width="576.27" height="72.92"/>
-  <rect class="fil2 str0" x="58.32" y="4160.82" width="2381.72" height="99.31"/>
-  <polygon class="fil3 str1" points="58.32,3752.75 2440.04,3752.75 2440.04,4160.82 58.32,4160.82 "/>
-  <rect class="fil2 str0" x="58.32" y="3648.56" width="2381.72" height="99.31"/>
-  <rect class="fil0 str0" x="149.42" y="3591.82" width="1156.58" height="53.98"/>
-  <rect class="fil0 str0" x="148.55" y="4264.82" width="576.27" height="72.92"/>
-  <rect class="fil0 str0" x="1483.66" y="3591.82" width="864" height="53.98"/>
-  <rect class="fil0 str0" x="146.75" y="3533.05" width="870.73" height="53.98"/>
-  <rect class="fil0 str0" x="1267.27" y="3533.05" width="1083.06" height="53.98"/>
-  <rect class="fil2 str0" x="58.32" y="3430.96" width="2381.72" height="99.31"/>
-  <polygon class="fil3 str1" points="62.39,2095.43 2444.11,2095.43 2444.11,3425.4 62.39,3425.4 "/>
-  <rect class="fil4 str0" x="1422.77" y="3095.41" width="1020.51" height="329.99"/>
-  <rect class="fil4 str0" x="1422.77" y="2764.02" width="1018.05" height="329.99"/>
-  <rect class="fil4 str0" x="1424.72" y="2435.88" width="1018.56" height="329.99"/>
-  <rect class="fil4 str0" x="1422.77" y="2102.8" width="1021.98" height="329.99"/>
-  <circle class="fil4 str2" cx="1933.76" cy="2267.84" r="41.67"/>
-  <circle class="fil4 str2" cx="1933.76" cy="2600.86" r="41.67"/>
-  <circle class="fil4 str2" cx="1933.76" cy="2928.99" r="41.67"/>
-  <circle class="fil4 str2" cx="1933.76" cy="3260.44" r="41.67"/>
-  <path class="fil5 str0" d="M1385.79 2695.76l33.3 0 0 151.61 -33.3 0c-28.46,0 -51.75,-23.28 -51.75,-51.75l0 -48.12c0,-28.46 23.28,-51.75 51.75,-51.75z"/>
-  <rect class="fil2 str0" x="58.32" y="1993.4" width="2381.72" height="99.31"/>
-  <rect class="fil6 str0" x="1017.48" y="3533.05" width="249.79" height="53.98"/>
-  <rect class="fil6 str0" x="1306.01" y="3591.82" width="177.66" height="53.98"/>
-  <line class="fil4 str0" x1="1806.4" y1="3690.76" x2="1806.4" y2= "4202.23" />
-  <rect class="fil0 str0" x="324.05" y="1939.78" width="692.29" height="53.98"/>
-  <rect class="fil0 str0" x="324.05" y="1884.76" width="691.42" height="53.98"/>
-  <rect class="fil0 str0" x="1499.76" y="1939.78" width="742.6" height="53.98"/>
-  <rect class="fil0 str0" x="1498.89" y="1884.76" width="743.47" height="53.98"/>
-  <rect class="fil7 str0" x="1017.79" y="1883.04" width="481.11" height="53.98"/>
-  <rect class="fil6 str0" x="1016.65" y="1938.58" width="481.11" height="53.98"/>
-  <rect class="fil2 str0" x="73.4" y="1325.17" width="2381.72" height="551.31" rx="720.02" ry="158.73"/>
-  <path class="fil6 str0" d="M1264.29 1332.8l110 0c0,53.37 -49.25,96.65 -110,96.65 -60.75,0 -110,-43.27 -110,-96.65l110 0z"/>
-  <g>
-   <path class="fil8" d="M278.02 1583.4l-6.36 -0 0.01 -10.41c486.94,0.3 964.34,-9.5 1455.6,-6.37l505.33 7.65 -0.01 10.41c-643.63,16.03 -1253.21,1.11 -1891.86,-1.14l-62.71 -0.13z"/>
+<!-- ChemUnited figure: HPLC (modular stack: solvents, pump, autosampler,
+     column oven, detector, base). Units: scene px at 100 % zoom (200 px tall).
+     Fittings / ports at (2.3, 180) and (112.3, 180); the live chromatogram is
+     drawn in code above the stack. -->
+<svg xmlns="http://www.w3.org/2000/svg" width="2.49999in" height="4.37499in" viewBox="0 0 114.286 200">
+  <defs>
+    <linearGradient id="housing" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F8FAFC"/>
+      <stop offset="1" stop-color="#D5DDE6"/>
+    </linearGradient>
+    <linearGradient id="slate" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#CBD5E1"/>
+      <stop offset="1" stop-color="#94A3B8"/>
+    </linearGradient>
+    <linearGradient id="metal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#CBD5E1"/>
+      <stop offset="0.4" stop-color="#F8FAFC"/>
+      <stop offset="1" stop-color="#94A3B8"/>
+    </linearGradient>
+    <radialGradient id="head" cx="0.4" cy="0.35" r="0.7">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#A3B0BE"/>
+    </radialGradient>
+    <radialGradient id="lamp" cx="0.5" cy="0.5" r="0.5">
+      <stop offset="0" stop-color="#FEF3C7"/>
+      <stop offset="1" stop-color="#F59E0B"/>
+    </radialGradient>
+  </defs>
+
+  <!-- solvent tray -->
+  <g stroke="#64748B" stroke-width="0.8">
+    <rect x="14" y="6" width="17" height="15" rx="2.5" fill="#FFFFFF" fill-opacity="0.4"/>
+    <rect x="37" y="6" width="17" height="15" rx="2.5" fill="#FFFFFF" fill-opacity="0.4"/>
+    <rect x="60" y="6" width="17" height="15" rx="2.5" fill="#FFFFFF" fill-opacity="0.4"/>
+    <rect x="83" y="6" width="17" height="15" rx="2.5" fill="#FFFFFF" fill-opacity="0.4"/>
   </g>
-  <rect class="fil2 str0" x="48.23" y="735.11" width="2381.72" height="99.31"/>
-  <rect class="fil0 str0" x="313.96" y="681.5" width="692.29" height="53.98"/>
-  <rect class="fil0 str0" x="313.96" y="626.47" width="691.42" height="53.98"/>
-  <rect class="fil0 str0" x="1489.67" y="681.5" width="742.6" height="53.98"/>
-  <rect class="fil0 str0" x="1488.8" y="626.47" width="743.47" height="53.98"/>
-  <rect class="fil7 str0" x="1007.7" y="624.75" width="481.11" height="53.98"/>
-  <rect class="fil6 str0" x="1006.56" y="680.3" width="481.11" height="53.98"/>
-  <rect class="fil0 str0" x="322.59" y="1272.32" width="1916.37" height="53.98"/>
-  <rect class="fil0 str0" x="322.59" y="1217.3" width="691.42" height="53.98"/>
-  <rect class="fil0 str0" x="1497.43" y="1217.3" width="743.47" height="53.98"/>
-  <rect class="fil7 str0" x="1016.33" y="1215.58" width="481.11" height="53.98"/>
-  <rect class="fil2 str0" x="44.86" y="1111.84" width="2381.72" height="99.31"/>
-  <polygon class="fil3 str1" points="47.85,838.24 2429.57,838.24 2429.57,1109.69 47.85,1109.69 "/>
-  <line class="fil4 str0" x1="1868.34" y1="794.62" x2="1868.34" y2= "1147.87" />
-  <path class="fil9 str3" d="M277.16 177.27l119.66 0c0,45.83 37.5,83.33 83.33,83.33l0 355 -286.32 0 0 -355c45.83,0 83.33,-37.5 83.33,-83.33z"/>
-  <rect class="fil6 str0" x="264.85" y="157.33" width="147.89" height="16.93"/>
-  <rect class="fil10 str0" x="287.37" y="87.49" width="101.56" height="69.49"/>
-  <rect class="fil6 str0" x="291.05" y="40.2" width="37.54" height="11.2"/>
-  <rect class="fil6 str0" x="303.73" y="50.07" width="12.18" height="33.58"/>
-  <polygon class="fil11 str4" points="366.75,91.62 362.24,65.93 357.74,40.25 366.76,40.25 375.77,40.25 371.26,65.93 "/>
-  <path class="fil9 str3" d="M511.22 174.32l119.66 0c0,45.83 37.5,83.33 83.33,83.33l0 355 -286.32 0 0 -355c45.83,0 83.33,-37.5 83.33,-83.33z"/>
-  <rect class="fil6 str0" x="498.91" y="154.39" width="147.89" height="16.93"/>
-  <rect class="fil10 str0" x="521.43" y="84.55" width="101.56" height="69.49"/>
-  <rect class="fil6 str0" x="525.11" y="37.25" width="37.54" height="11.2"/>
-  <rect class="fil6 str0" x="537.79" y="47.13" width="12.18" height="33.58"/>
-  <polygon class="fil11 str4" points="600.81,88.67 596.31,62.99 591.8,37.31 600.82,37.31 609.83,37.31 605.33,62.99 "/>
-  <path class="fil9 str3" d="M909.45 175.72l119.66 0c0,45.83 37.5,83.33 83.33,83.33l0 355 -286.32 0 0 -355c45.83,0 83.33,-37.5 83.33,-83.33z"/>
-  <rect class="fil6 str0" x="897.14" y="155.79" width="147.89" height="16.93"/>
-  <rect class="fil10 str0" x="919.66" y="85.95" width="101.56" height="69.49"/>
-  <rect class="fil6 str0" x="923.34" y="38.65" width="37.54" height="11.2"/>
-  <rect class="fil6 str0" x="936.02" y="48.52" width="12.18" height="33.58"/>
-  <polygon class="fil11 str4" points="999.04,90.07 994.53,64.39 990.02,38.7 999.04,38.7 1008.06,38.7 1003.55,64.39 "/>
-  <path class="fil9 str3" d="M2088.67 175.72l119.66 0c0,45.83 37.5,83.33 83.33,83.33l0 355 -286.32 0 0 -355c45.83,0 83.33,-37.5 83.33,-83.33z"/>
-  <rect class="fil6 str0" x="2076.35" y="155.79" width="147.89" height="16.93"/>
-  <rect class="fil10 str0" x="2098.87" y="85.95" width="101.56" height="69.49"/>
-  <rect class="fil6 str0" x="2102.55" y="38.65" width="37.54" height="11.2"/>
-  <rect class="fil6 str0" x="2115.23" y="48.53" width="12.18" height="33.58"/>
-  <polygon class="fil11 str4" points="2178.26,90.07 2173.75,64.39 2169.24,38.71 2178.26,38.71 2187.28,38.71 2182.77,64.39 "/>
-  <path class="fil9 str3" d="M1571.15 175.72l119.66 0c0,45.83 37.5,83.33 83.33,83.33l0 355 -286.32 0 0 -355c45.83,0 83.33,-37.5 83.33,-83.33z"/>
-  <rect class="fil6 str0" x="1558.84" y="155.79" width="147.89" height="16.93"/>
-  <rect class="fil10 str0" x="1581.36" y="85.95" width="101.56" height="69.49"/>
-  <rect class="fil6 str0" x="1585.04" y="38.65" width="37.54" height="11.2"/>
-  <rect class="fil6 str0" x="1597.72" y="48.53" width="12.18" height="33.58"/>
-  <polygon class="fil11 str4" points="1660.74,90.07 1656.23,64.39 1651.72,38.71 1660.74,38.71 1669.76,38.71 1665.25,64.39 "/>
-  <rect class="fil2 str0" x="54.14" y="520.64" width="2381.72" height="99.31"/>
- </g>
+  <g fill-opacity="0.85">
+    <rect x="14.8" y="11" width="15.4" height="9.2" rx="2" fill="#93C5FD"/>
+    <rect x="37.8" y="12.5" width="15.4" height="7.7" rx="2" fill="#FDE68A"/>
+    <rect x="60.8" y="10" width="15.4" height="10.2" rx="2" fill="#C4B5FD"/>
+    <rect x="83.8" y="13.5" width="15.4" height="6.7" rx="2" fill="#A7F3D0"/>
+  </g>
+  <g fill="#2F6FB2" stroke="#1E3A5F" stroke-width="0.6">
+    <rect x="17.5" y="2.5" width="10" height="4" rx="1"/>
+    <rect x="40.5" y="2.5" width="10" height="4" rx="1"/>
+    <rect x="63.5" y="2.5" width="10" height="4" rx="1"/>
+    <rect x="86.5" y="2.5" width="10" height="4" rx="1"/>
+  </g>
+  <rect x="8" y="21" width="98.286" height="8" rx="2" fill="url(#slate)" stroke="#334155" stroke-width="1"/>
+
+  <!-- module frames -->
+  <g fill="url(#housing)" stroke="#334155" stroke-width="1.2">
+    <rect x="8" y="31" width="98.286" height="32" rx="2.5"/>
+    <rect x="8" y="65" width="98.286" height="47" rx="2.5"/>
+    <rect x="8" y="114" width="98.286" height="28" rx="2.5"/>
+    <rect x="8" y="144" width="98.286" height="24" rx="2.5"/>
+  </g>
+  <rect x="8" y="170" width="98.286" height="27" rx="2.5" fill="url(#slate)" stroke="#334155" stroke-width="1.2"/>
+  <g fill="#334155">
+    <rect x="11" y="34" width="6" height="26" rx="1.5"/>
+    <rect x="11" y="68" width="6" height="41" rx="1.5"/>
+    <rect x="11" y="117" width="6" height="22" rx="1.5"/>
+    <rect x="11" y="147" width="6" height="18" rx="1.5"/>
+  </g>
+  <g fill="#22C55E">
+    <circle cx="14" cy="38" r="1.4"/>
+    <circle cx="14" cy="72" r="1.4"/>
+    <circle cx="14" cy="121" r="1.4"/>
+    <circle cx="14" cy="151" r="1.4"/>
+  </g>
+
+  <!-- pump module -->
+  <g stroke="#334155" stroke-width="1">
+    <circle cx="36" cy="47" r="8" fill="url(#head)"/>
+    <circle cx="57" cy="47" r="8" fill="url(#head)"/>
+  </g>
+  <g fill="#475569">
+    <circle cx="36" cy="47" r="3"/>
+    <circle cx="57" cy="47" r="3"/>
+  </g>
+  <rect x="72" y="36" width="29" height="9" rx="1.5" fill="#0F172A" stroke="#334155" stroke-width="0.6"/>
+  <line x1="75" y1="40.5" x2="90" y2="40.5" stroke="#5EEAD4" stroke-width="1.6" stroke-linecap="round"/>
+  <g fill="url(#slate)" stroke="#475569" stroke-width="0.5">
+    <rect x="72" y="49" width="8" height="5" rx="1"/>
+    <rect x="82.5" y="49" width="8" height="5" rx="1"/>
+    <rect x="93" y="49" width="8" height="5" rx="1"/>
+  </g>
+
+  <!-- autosampler window with vials -->
+  <rect x="22" y="70" width="79" height="37" rx="2" fill="#0F172A" fill-opacity="0.88" stroke="#334155" stroke-width="0.8"/>
+  <rect x="26" y="103" width="71" height="2" fill="#64748B"/>
+  <g fill="#FFFFFF" fill-opacity="0.35" stroke="#94A3B8" stroke-width="0.5">
+    <rect x="29" y="79" width="6" height="9" rx="1"/>
+    <rect x="40" y="79" width="6" height="9" rx="1"/>
+    <rect x="51" y="79" width="6" height="9" rx="1"/>
+    <rect x="62" y="79" width="6" height="9" rx="1"/>
+    <rect x="73" y="79" width="6" height="9" rx="1"/>
+    <rect x="84" y="79" width="6" height="9" rx="1"/>
+    <rect x="29" y="93" width="6" height="9" rx="1"/>
+    <rect x="40" y="93" width="6" height="9" rx="1"/>
+    <rect x="51" y="93" width="6" height="9" rx="1"/>
+    <rect x="62" y="93" width="6" height="9" rx="1"/>
+    <rect x="73" y="93" width="6" height="9" rx="1"/>
+    <rect x="84" y="93" width="6" height="9" rx="1"/>
+  </g>
+  <g fill="#5B9BE0">
+    <rect x="28.5" y="76.5" width="7" height="2.8" rx="0.6"/>
+    <rect x="39.5" y="76.5" width="7" height="2.8" rx="0.6"/>
+    <rect x="50.5" y="76.5" width="7" height="2.8" rx="0.6"/>
+    <rect x="61.5" y="76.5" width="7" height="2.8" rx="0.6"/>
+    <rect x="72.5" y="76.5" width="7" height="2.8" rx="0.6"/>
+    <rect x="83.5" y="76.5" width="7" height="2.8" rx="0.6"/>
+    <rect x="28.5" y="90.5" width="7" height="2.8" rx="0.6"/>
+    <rect x="39.5" y="90.5" width="7" height="2.8" rx="0.6"/>
+    <rect x="50.5" y="90.5" width="7" height="2.8" rx="0.6"/>
+    <rect x="61.5" y="90.5" width="7" height="2.8" rx="0.6"/>
+    <rect x="72.5" y="90.5" width="7" height="2.8" rx="0.6"/>
+    <rect x="83.5" y="90.5" width="7" height="2.8" rx="0.6"/>
+  </g>
+
+  <!-- column oven -->
+  <rect x="22" y="118" width="79" height="20" rx="2" fill="#0F172A" fill-opacity="0.88" stroke="#334155" stroke-width="0.8"/>
+  <rect x="31" y="125.5" width="61" height="5" rx="2.5" fill="url(#metal)" stroke="#94A3B8" stroke-width="0.5"/>
+  <g fill="#94A3B8">
+    <rect x="28" y="124.5" width="4" height="7" rx="0.8"/>
+    <rect x="91" y="124.5" width="4" height="7" rx="0.8"/>
+  </g>
+
+  <!-- detector -->
+  <circle cx="34" cy="156" r="5.5" fill="url(#lamp)" stroke="#92400E" stroke-width="0.6"/>
+  <rect x="45" y="151" width="56" height="10" rx="1.5" fill="#0F172A" stroke="#334155" stroke-width="0.6"/>
+  <polyline points="48,158 60,158 64,153.5 67,158 78,158 81,155.5 84,158 98,158" fill="none" stroke="#5EEAD4" stroke-width="1" stroke-linejoin="round"/>
+
+  <!-- base: vents + fittings -->
+  <g stroke="#64748B" stroke-width="1.4" stroke-linecap="round">
+    <line x1="30" y1="176" x2="84" y2="176"/>
+    <line x1="30" y1="181" x2="84" y2="181"/>
+    <line x1="30" y1="186" x2="84" y2="186"/>
+    <line x1="30" y1="191" x2="84" y2="191"/>
+  </g>
+  <g fill="url(#metal)" stroke="#334155" stroke-width="1">
+    <rect x="0.6" y="175" width="9" height="10" rx="1"/>
+    <rect x="104.686" y="175" width="9" height="10" rx="1"/>
+  </g>
+  <g stroke="#64748B" stroke-width="0.6">
+    <line x1="1" y1="178.3" x2="9.2" y2="178.3"/>
+    <line x1="1" y1="181.7" x2="9.2" y2="181.7"/>
+    <line x1="105.1" y1="178.3" x2="113.3" y2="178.3"/>
+    <line x1="105.1" y1="181.7" x2="113.3" y2="181.7"/>
+  </g>
 </svg>

@@ -1,49 +1,55 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<!-- Creator: CorelDRAW -->
-<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="3.95833in" height="2.86458in" version="1.1" style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
-viewBox="0 0 3958.33 2864.58"
- xmlns:xlink="http://www.w3.org/1999/xlink"
- xmlns:xodm="http://www.corel.com/coreldraw/odm/2003">
- <defs>
-  <style type="text/css">
-   <![CDATA[
-    .str0 {stroke:black;stroke-width:10.41;stroke-miterlimit:2.61313}
-    .fil3 {fill:black}
-    .fil2 {fill:#342DB5}
-    .fil1 {fill:#8A8A8A}
-    .fil4 {fill:#A6A3A3}
-    .fil5 {fill:#BABABA}
-    .fil6 {fill:#C2CACC}
-    .fil0 {fill:#E8E8E8}
-    .fil7 {fill:white}
-    .fil8 {fill:url(#id0)}
-   ]]>
-  </style>
-  <linearGradient id="id0" gradientUnits="userSpaceOnUse" x1="1310.4" y1="362.26" x2="2024.09" y2="1359.99">
-   <stop offset="0" style="stop-opacity:1; stop-color:#252423"/>
-   <stop offset="0.419608" style="stop-opacity:1; stop-color:#656564"/>
-   <stop offset="1" style="stop-opacity:1; stop-color:#A6A6A6"/>
-  </linearGradient>
- </defs>
- <g id="Layer_x0020_1">
-  <metadata id="CorelCorpID_0Corel-Layer"/>
-  <rect class="fil0 str0" x="629.78" y="1946.19" width="2692.65" height="911.62"/>
-  <rect class="fil1 str0" x="2763.87" y="810.7" width="547.98" height="1133.74"/>
-  <rect class="fil2 str0" x="2919.29" y="667.17" width="249.71" height="143.54"/>
-  <rect class="fil3 str0" x="2897.14" y="601.04" width="292.89" height="66.13"/>
-  <rect class="fil4 str0" x="439.74" y="2087.39" width="189.07" height="406.26"/>
-  <rect class="fil5 str0" x="280.04" y="2167.7" width="160.61" height="245.65"/>
-  <path class="fil6 str0" d="M916.6 4.69l1556.44 0c156.89,0 285.26,128.36 285.26,285.25l0 1656.25 -2126.96 0 0 -1656.25c0,-156.89 128.36,-285.25 285.26,-285.25z"/>
-  <rect class="fil4 str0" x="3318.59" y="2087.39" width="189.07" height="406.26"/>
-  <rect class="fil5 str0" x="3506.61" y="2158.31" width="160.61" height="245.65"/>
-  <rect class="fil7" x="1376.99" y="2299.3" width="986.43" height="134.56"/>
-  <polygon class="fil7" points="2732.15,2361.89 2464.41,2427.43 2196.67,2492.98 2196.67,2361.89 2196.67,2230.79 2464.41,2296.34 "/>
-  <rect class="fil8 str0" x="866.12" y="370.92" width="1602.25" height="980.42" rx="104.17" ry="104.17"/>
-  <ellipse class="fil7 str0" cx="1059.94" cy="1624.1" rx="75.29" ry="78.12"/>
-  <ellipse class="fil7 str0" cx="1372.44" cy="1624.1" rx="75.29" ry="78.12"/>
-  <ellipse class="fil7 str0" cx="1684.93" cy="1624.1" rx="75.29" ry="78.12"/>
-  <ellipse class="fil7 str0" cx="1997.43" cy="1624.1" rx="75.29" ry="78.12"/>
-  <ellipse class="fil7 str0" cx="2309.93" cy="1624.1" rx="75.29" ry="78.12"/>
- </g>
+<!-- ChemUnited figure: FlowMeter (inline liquid flow sensor with display).
+     Units: scene px at 100 % zoom. Front fittings / ports at (25, 36.2)
+     and (75, 36.2). -->
+<svg xmlns="http://www.w3.org/2000/svg" width="3.95833in" height="2.86458in" viewBox="0 0 100 72.368">
+  <defs>
+    <linearGradient id="housing" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F8FAFC"/>
+      <stop offset="1" stop-color="#D5DDE6"/>
+    </linearGradient>
+    <linearGradient id="slate" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#CBD5E1"/>
+      <stop offset="1" stop-color="#94A3B8"/>
+    </linearGradient>
+    <radialGradient id="nut" cx="0.4" cy="0.35" r="0.7">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#94A3B8"/>
+    </radialGradient>
+  </defs>
+
+  <rect x="3" y="3" width="94" height="66" rx="6" fill="url(#housing)" stroke="#334155" stroke-width="1.2"/>
+
+  <!-- display -->
+  <rect x="10" y="8.5" width="80" height="17.5" rx="2" fill="#0F172A" stroke="#334155" stroke-width="0.6"/>
+  <g stroke="#5EEAD4" stroke-linecap="round" fill="none">
+    <line x1="15" y1="14.5" x2="42" y2="14.5" stroke-width="3"/>
+    <line x1="15" y1="21" x2="33" y2="21" stroke-width="1.4" stroke-opacity="0.7"/>
+    <polyline points="54,21 60,17 65,19 71,13 77,15.5 85,12" stroke-width="1.1" stroke-linejoin="round"/>
+  </g>
+
+  <!-- flow channel -->
+  <rect x="14" y="31.2" width="72" height="10" rx="5" fill="#E2E8F0" stroke="#94A3B8" stroke-width="0.7"/>
+  <line x1="25" y1="36.2" x2="75" y2="36.2" stroke="#94A3B8" stroke-width="3" stroke-linecap="round"/>
+  <g fill="#2F6FB2" stroke="#2F6FB2" stroke-width="1.4" stroke-linecap="round">
+    <line x1="40" y1="36.2" x2="54" y2="36.2"/>
+    <polygon points="60,36.2 53,32.6 53,39.8" stroke-width="0.6" stroke-linejoin="round"/>
+  </g>
+  <g fill="url(#nut)" stroke="#334155" stroke-width="1">
+    <circle cx="25" cy="36.2" r="4.6"/>
+    <circle cx="75" cy="36.2" r="4.6"/>
+  </g>
+  <g fill="#475569">
+    <circle cx="25" cy="36.2" r="1.8"/>
+    <circle cx="75" cy="36.2" r="1.8"/>
+  </g>
+
+  <!-- controls -->
+  <g fill="url(#slate)" stroke="#475569" stroke-width="0.6">
+    <circle cx="18" cy="54" r="2.8"/>
+    <circle cx="27" cy="54" r="2.8"/>
+    <circle cx="36" cy="54" r="2.8"/>
+  </g>
+  <circle cx="83" cy="54" r="1.7" fill="#22C55E"/>
+  <rect x="9" y="61.5" width="82" height="2.6" rx="1.3" fill="#2F6FB2"/>
 </svg>

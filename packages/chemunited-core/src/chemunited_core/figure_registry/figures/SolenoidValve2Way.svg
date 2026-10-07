@@ -1,39 +1,29 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<!-- Creator: CorelDRAW -->
-<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="4.99999in" height="5.72917in" version="1.1" style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
-viewBox="0 0 4999.99 5729.17"
- xmlns:xlink="http://www.w3.org/1999/xlink"
- xmlns:xodm="http://www.corel.com/coreldraw/odm/2003">
- <defs>
-  <style type="text/css">
-   <![CDATA[
-    .str0 {stroke:black;stroke-width:10.41;stroke-miterlimit:2.61313}
-    .fil2 {fill:black}
-    .fil1 {fill:#454444}
-    .fil5 {fill:#4A4949}
-    .fil3 {fill:#4D4D4D}
-    .fil4 {fill:#666666}
-    .fil0 {fill:gray}
-   ]]>
-  </style>
- </defs>
- <g id="Layer_x0020_1">
-  <metadata id="CorelCorpID_0Corel-Layer"/>
-  <rect class="fil0 str0" x="2809.54" y="3708.64" width="1875.41" height="575.76"/>
-  <rect class="fil1 str0" x="1393.13" y="122.59" width="1996.03" height="1996.03" rx="359.3" ry="439.14"/>
-  <rect class="fil2 str0" x="1194.41" y="702.83" width="198.72" height="600.21"/>
-  <rect class="fil0 str0" x="346.3" y="3033.42" width="1875.41" height="575.76"/>
-  <rect class="fil3 str0" x="141.57" y="2914.5" width="228.02" height="838"/>
-  <rect class="fil4 str0" x="1604.85" y="2325.69" width="1681.69" height="207.06"/>
-  <rect class="fil2 str0" x="2066.61" y="2118.64" width="678.38" height="207.06"/>
-  <rect class="fil5 str0" x="141.57" y="4141.55" width="228.02" height="838"/>
-  <rect class="fil0 str0" x="367.9" y="4281.24" width="1875.41" height="575.76"/>
-  <rect class="fil1 str0" x="1083.65" y="2536.61" width="2666.95" height="2942.23" rx="392.06" ry="528.65"/>
-  <rect class="fil5 str0" x="4679.14" y="3563.55" width="228.02" height="838"/>
-  <circle class="fil2 str0" cx="1555.02" cy="3283.54" r="78.12"/>
-  <circle class="fil2 str0" cx="1555.02" cy="3283.54" r="78.12"/>
-  <circle class="fil2 str0" cx="1550.67" cy="4597.28" r="78.12"/>
-  <circle class="fil2 str0" cx="3394.07" cy="4014.96" r="78.12"/>
- </g>
+<!-- ChemUnited figure: SolenoidValve2Way (3/2 switching solenoid valve).
+     Units: scene px at 100 % zoom (50 px). Ports: common (41.8, 35), outlets
+     (1.8, 29) and (1.8, 40); electrical port on the plug at (8.8, 9); the
+     position indicator is drawn in code in the body window at (21.8, 35). -->
+<svg xmlns="http://www.w3.org/2000/svg" width="4.99999in" height="5.72917in" viewBox="0 0 43.636 50">
+  <defs>
+    <linearGradient id="metal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#CBD5E1"/>
+      <stop offset="0.4" stop-color="#F8FAFC"/>
+      <stop offset="1" stop-color="#94A3B8"/>
+    </linearGradient>
+    <linearGradient id="coil" x1="0" y1="0" x2="1" y2="0">
+      <stop offset="0" stop-color="#475569"/>
+      <stop offset="0.4" stop-color="#6B7A8D"/>
+      <stop offset="1" stop-color="#3B4757"/>
+    </linearGradient>
+  </defs>
+  <g fill="url(#metal)" stroke="#334155" stroke-width="0.8">
+    <rect x="0.5" y="25" width="7" height="8" rx="1"/>
+    <rect x="0.5" y="36" width="7" height="8" rx="1"/>
+    <rect x="36.1" y="31" width="7" height="8" rx="1"/>
+  </g>
+  <rect x="5.5" y="23.5" width="32.6" height="24" rx="2.5" fill="url(#metal)" stroke="#334155" stroke-width="1"/>
+  <rect x="14.5" y="28" width="14.6" height="14" rx="2" fill="#1E293B" stroke="#334155" stroke-width="0.6"/>
+  <rect x="12" y="2.5" width="20" height="21.5" rx="2.5" fill="url(#coil)" stroke="#1E293B" stroke-width="1"/>
+  <rect x="3.5" y="4.5" width="9" height="9" rx="1.5" fill="#94A3B8" stroke="#334155" stroke-width="0.8"/>
+  <line x1="6" y1="7" x2="6" y2="11" stroke="#475569" stroke-width="0.6"/>
 </svg>

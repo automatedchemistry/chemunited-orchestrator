@@ -1,40 +1,54 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE svg PUBLIC "-//W3C//DTD SVG 1.1//EN" "http://www.w3.org/Graphics/SVG/1.1/DTD/svg11.dtd">
-<!-- Creator: CorelDRAW -->
-<svg xmlns="http://www.w3.org/2000/svg" xml:space="preserve" width="3.54166in" height="3.85417in" version="1.1" style="shape-rendering:geometricPrecision; text-rendering:geometricPrecision; image-rendering:optimizeQuality; fill-rule:evenodd; clip-rule:evenodd"
-viewBox="0 0 3541.66 3854.17"
- xmlns:xlink="http://www.w3.org/1999/xlink"
- xmlns:xodm="http://www.corel.com/coreldraw/odm/2003">
- <defs>
-  <style type="text/css">
-   <![CDATA[
-    .str0 {stroke:black;stroke-width:10.41;stroke-miterlimit:2.61313}
-    .fil3 {fill:black}
-    .fil6 {fill:#045266}
-    .fil2 {fill:#342DB5}
-    .fil1 {fill:#8A8A8A}
-    .fil4 {fill:#A6A3A3}
-    .fil5 {fill:#BABABA}
-    .fil0 {fill:#E8E8E8}
-    .fil7 {fill:white}
-   ]]>
-  </style>
- </defs>
- <g id="Layer_x0020_1">
-  <metadata id="CorelCorpID_0Corel-Layer"/>
-  <rect class="fil0 str0" x="424.13" y="2607.15" width="2692.65" height="1180.98"/>
-  <rect class="fil1 str0" x="2275.97" y="1473.99" width="547.98" height="1133.74"/>
-  <rect class="fil2 str0" x="2408.19" y="1330.45" width="249.71" height="143.54"/>
-  <rect class="fil3 str0" x="2386.04" y="1264.32" width="292.89" height="66.13"/>
-  <rect class="fil3 str0" x="518.61" y="150.7" width="368.46" height="47.24"/>
-  <rect class="fil4 str0" x="234.1" y="3122.06" width="189.07" height="406.26"/>
-  <rect class="fil5 str0" x="74.39" y="3188.09" width="160.61" height="245.65"/>
-  <rect class="fil3 str0" x="1002.43" y="144.12" width="368.46" height="47.24"/>
-  <rect class="fil3 str0" x="1472.17" y="150.7" width="368.46" height="47.24"/>
-  <rect class="fil6 str0" x="425.7" y="197.94" width="1849.28" height="2816.22"/>
-  <rect class="fil4 str0" x="3112.94" y="3017.71" width="189.07" height="406.26"/>
-  <rect class="fil5 str0" x="3300.97" y="3088.63" width="160.61" height="245.65"/>
-  <rect class="fil7" x="586.39" y="2356.54" width="986.43" height="300.63"/>
-  <polygon class="fil7" points="1941.56,2496.36 1673.81,2642.81 1406.07,2789.25 1406.07,2496.36 1406.07,2203.46 1673.81,2349.91 "/>
- </g>
+<!-- ChemUnited figure: MassFlowControl (thermal mass-flow controller).
+     Units: scene px at 100 % zoom. Ports at (0.95, 85) and (90.95, 85);
+     a 50 px status tint is drawn in code over the centre (46, 50). -->
+<svg xmlns="http://www.w3.org/2000/svg" width="3.54166in" height="3.85417in" viewBox="0 0 91.892 100">
+  <defs>
+    <linearGradient id="housing" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#F8FAFC"/>
+      <stop offset="1" stop-color="#D5DDE6"/>
+    </linearGradient>
+    <linearGradient id="metal" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#CBD5E1"/>
+      <stop offset="0.4" stop-color="#F8FAFC"/>
+      <stop offset="1" stop-color="#94A3B8"/>
+    </linearGradient>
+  </defs>
+
+  <!-- flow body + fittings -->
+  <rect x="6" y="76" width="79.9" height="18" rx="2.5" fill="url(#metal)" stroke="#334155" stroke-width="1.2"/>
+  <g fill="url(#metal)" stroke="#334155" stroke-width="1">
+    <rect x="0.6" y="79.5" width="8.6" height="11" rx="1"/>
+    <rect x="82.7" y="79.5" width="8.6" height="11" rx="1"/>
+  </g>
+  <g stroke="#64748B" stroke-width="0.6">
+    <line x1="3.5" y1="80" x2="3.5" y2="90"/>
+    <line x1="6.3" y1="80" x2="6.3" y2="90"/>
+    <line x1="85.6" y1="80" x2="85.6" y2="90"/>
+    <line x1="88.4" y1="80" x2="88.4" y2="90"/>
+  </g>
+
+  <!-- connector -->
+  <rect x="35" y="1" width="22" height="6.5" rx="1" fill="#94A3B8" stroke="#334155" stroke-width="0.8"/>
+  <g fill="#475569">
+    <circle cx="40" cy="4.2" r="0.8"/>
+    <circle cx="44" cy="4.2" r="0.8"/>
+    <circle cx="48" cy="4.2" r="0.8"/>
+    <circle cx="52" cy="4.2" r="0.8"/>
+  </g>
+
+  <!-- electronics housing -->
+  <rect x="11" y="6.5" width="69.9" height="70" rx="4" fill="url(#housing)" stroke="#334155" stroke-width="1.2"/>
+  <rect x="17" y="13" width="57.9" height="21" rx="2" fill="#0F172A" stroke="#334155" stroke-width="0.6"/>
+  <g stroke="#5EEAD4" stroke-linecap="round">
+    <line x1="22" y1="20.5" x2="48" y2="20.5" stroke-width="3"/>
+    <line x1="22" y1="28" x2="38" y2="28" stroke-width="1.4" stroke-opacity="0.7"/>
+    <line x1="58" y1="28" x2="69" y2="28" stroke-width="1.4" stroke-opacity="0.7"/>
+  </g>
+  <rect x="11.6" y="39" width="68.7" height="3.4" fill="#2F6FB2"/>
+  <g fill="#64748B" stroke="#64748B" stroke-width="1.6" stroke-linecap="round">
+    <line x1="27" y1="58" x2="61" y2="58"/>
+    <polygon points="67,58 60,54.3 60,61.7" stroke-width="0.6" stroke-linejoin="round"/>
+  </g>
+  <circle cx="73" cy="70" r="1.6" fill="#22C55E"/>
 </svg>

@@ -85,40 +85,39 @@ Example:
 NEW_ICON = "new_icon"
 ```
 
-## Adding a new component icon override
+## Component palette icons
 
 Component figures live in `chemunited-core`'s `figure_registry`
 (`chemunited_core.figure_registry`), which is the single source of truth for
-component artwork — the tree palette
-([tree_add.py](../../draw/tree_add.py)) and the canvas rendering
-(`graph_item.py`) both resolve a component's icon from there by default via
-`COMPONENTS[name].figure_base` (or `name` itself) and `get_figure_path(...)`.
-
-**Do not add a new figure here.** If you're adding a new device type, or a
-new device that can reuse an existing figure, register it in
+component artwork. **Do not draw a new figure here.** If you're adding a new
+device type, or a new device that can reuse an existing figure, register it in
 `chemunited_core.figure_registry` instead.
 
-This local `components/` folder exists only for the rare case where the tree
-palette needs a *different icon than the shared figure* for one specific
-component — e.g. `Gantry3D` has its own icon here even though it shares the
-`Gantry` figure with `Gantry1D` in core. To add such an override:
+The `components/` folder holds the tree-palette icon
+([tree_add.py](../../draw/tree_add.py)) for every built-in component. These
+icons are *generated*, not hand-drawn: each one is the composed
+`GraphComponent` (all figure layers, rotary-valve ports, connection points)
+exported with `GraphComponent.export_svg()`. That is why many components that
+share one core figure (the rotary valves, `Source`/`Sink`, the `Power`
+devices, `SyringePump`'s barrel + plunger) still get distinct, accurate icons.
 
-1. Put the SVG in `src/chemunited/shared/resources/components/`, named
-   **exactly** after the component's `chemunited_core.figure_registry.COMPONENTS`
-   key (e.g. `Gantry3D.svg`) — `tree_add.py._component_icon` only looks up an
-   override by exact component-name match.
-2. Add it to the `/components_icons` section in `resources_rc.qrc`.
-3. Rebuild `resources_rc.py` with `pyrcc5` (see below).
+`tree_add.py._component_icon` looks an icon up by **exact component name**
+(`:/components_icons/components/<Name>.svg`) and falls back to the raw core
+figure when there is none (e.g. project-local custom components).
 
-Example:
+The icons are a snapshot, so **regenerate them whenever figures change or a
+component is added**. From `packages/chemunited-orchestrator`:
 
-```xml
-<qresource prefix="/components_icons">
-    <file>components/Gantry3D.svg</file>
-</qresource>
+```powershell
+python src\chemunited\elements\component\__render_components.py --icons src\chemunited\shared\resources\components
 ```
 
-Resulting runtime path:
+Then add any new `<file>components/<Name>.svg</file>` entries to the
+`/components_icons` section of `resources_rc.qrc` and rebuild
+`resources_rc.py` (see below). The analytics instruments draw a random demo
+spectrum, so their SVGs differ slightly on every export — that is expected.
+
+Resulting runtime path, e.g.:
 
 ```text
 :/components_icons/components/Gantry3D.svg
@@ -152,7 +151,7 @@ Resulting runtime paths:
 
 ## Rebuild the generated resource module
 
-Run this from the repository root:
+Run this from `packages/chemunited-orchestrator`:
 
 ```powershell
 pyrcc5 src\chemunited\shared\resources\resources_rc.qrc -o src\chemunited\shared\resources\resources_rc.py
