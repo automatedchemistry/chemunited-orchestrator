@@ -244,3 +244,6 @@ chemunited.bat
 
 # mp4 tutorials
 docs-site/docs/tutorial_recorder/
+
+# design files
+*.design
