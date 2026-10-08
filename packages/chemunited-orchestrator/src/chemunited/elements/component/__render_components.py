@@ -83,7 +83,7 @@ def _draw_caption(painter: QPainter, rect: QRectF, text: str, dark: bool) -> Non
     font.setPixelSize(12)
     painter.setFont(font)
     painter.setPen(QColor(220, 220, 220) if dark else QColor(60, 60, 60))
-    painter.drawText(rect, Qt.AlignCenter, text)
+    painter.drawText(rect, Qt.AlignCenter, text)  # type: ignore[attr-defined]
 
 
 def _render_component_tile(
@@ -103,13 +103,15 @@ def _render_component_tile(
     image.fill(DARK_BG if dark else LIGHT_BG)
     painter = QPainter(image)
     painter.setRenderHints(
-        QPainter.Antialiasing | QPainter.TextAntialiasing | QPainter.SmoothPixmapTransform
+        QPainter.Antialiasing
+        | QPainter.TextAntialiasing
+        | QPainter.SmoothPixmapTransform
     )
     # keep 1 scene px == `scale` image px, unless the figure is too big
     fit = min(1.0, (CELL - 8) / max(source.width(), source.height()))
     w, h = source.width() * fit * scale, source.height() * fit * scale
     target = QRectF((size - w) / 2, (size - h) / 2, w, h)
-    scene.render(painter, target, source, Qt.KeepAspectRatio)
+    scene.render(painter, target, source, Qt.KeepAspectRatio)  # type: ignore[attr-defined]
     painter.resetTransform()
     _draw_caption(
         painter,
@@ -134,7 +136,7 @@ def _render_svg_tile(name: str, dark: bool, scale: float) -> QImage:
     painter = QPainter(image)
     painter.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
     target = QRectF((size - w) / 2, (size - h) / 2, w, h)
-    painter.setPen(QPen(QColor(128, 128, 128, 80), 1, Qt.DashLine))
+    painter.setPen(QPen(QColor(128, 128, 128, 80), 1, Qt.DashLine))  # type: ignore[attr-defined]
     painter.drawRect(target)
     renderer.render(painter, target)
     _draw_caption(painter, QRectF(0, size, size, CAPTION_H * scale), name, dark)
@@ -202,7 +204,7 @@ def main() -> None:
     if args.fill > 0:
         global DEMO_FILL
         DEMO_FILL = args.fill
-        FlaskContent.content_color = lambda self, iventory=None: DEMO_LIQUID
+        FlaskContent.content_color = lambda self, iventory=None: DEMO_LIQUID  # type: ignore[method-assign]
 
     only = {n for n in args.only.split(",") if n}
 
