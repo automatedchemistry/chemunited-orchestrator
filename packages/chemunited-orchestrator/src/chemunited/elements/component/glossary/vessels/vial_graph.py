@@ -144,7 +144,7 @@ class VialContent(FlaskContent):
         fill = 0.0
         component_data = getattr(self.parent_ref, "inf", None)
         inventories = getattr(component_data, "internal_inventories", {})
-        inventory = next(iter(inventories.values()), None)
+        inventory = inventories.get(self._vial)
         capacity = float(getattr(component_data, "capacity_value", 0.0) or 0.0)
         if inventory is not None and capacity > 0:
             fill = inventory.liq_content.volume / capacity
