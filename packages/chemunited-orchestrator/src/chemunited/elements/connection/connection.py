@@ -4,7 +4,7 @@ from dataclasses import asdict
 from typing import override
 
 from PyQt5.QtCore import QPointF, Qt
-from PyQt5.QtGui import QColor, QPainterPath, QPen
+from PyQt5.QtGui import QColor, QPainterPath, QPainterPathStroker, QPen
 from PyQt5.QtWidgets import QGraphicsItem
 
 from chemunited.elements.component.component_parts.connection_point import (
@@ -139,6 +139,16 @@ class BaseConnectionItem(MovablePathItem):
             for p in self._handles:
                 p.show()
         self.rebuild_path()
+
+    @override
+    def shape(self) -> QPainterPath:
+        """Keep the clickable area near the line, excluding enclosed space."""
+        # A solid stroke keeps the gaps of dashed connections clickable too.
+        stroker = QPainterPathStroker()
+        stroker.setWidth(max(8.0, self.pen().widthF()))
+        stroker.setCapStyle(QT_ROUND_CAP)
+        stroker.setJoinStyle(QT_ROUND_JOIN)
+        return stroker.createStroke(self.path())
 
     def _draw_selection(self, painter) -> None:
         """Draw a blue dashed overlay when the connection is selected."""
