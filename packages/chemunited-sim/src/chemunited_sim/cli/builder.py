@@ -174,6 +174,17 @@ class PlatformBuilder:
         if "initial_temperature" in content:
             phase_content.initial_temperature = float(content["initial_temperature"])
 
+    def set_port_closed(self, component: str, port: int, closed: bool = True) -> None:
+        """Cap (or uncap) a port; CAPPED ports are left out of the hydraulic graph."""
+        data = self._components.get(component)
+        target = None if data is None else data.ports_by_number.get(port)
+        if target is None:
+            logger.warning(
+                "set_port_closed: unknown port '{}.{}' - ignored", component, port
+            )
+            return
+        target.block(closed)
+
     @property
     def reactions_map(self) -> ReactionsMap:
         return dict(self._reactions_map)

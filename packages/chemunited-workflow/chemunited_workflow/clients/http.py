@@ -18,6 +18,17 @@ _IS_IDLE_PATH = "is-idle"
 _MIN_FLOWCHEM_VERSION = "1.1.3"
 
 
+def _command_response(resp: requests.Response) -> CommandResponse:
+    # A failed status only gets this far under error_resilient=True, after
+    # _raise_for_status already logged and pushed it. Its body is usually
+    # plain text ("Internal Server Error"), so decoding it would replace that
+    # error with an unrelated JSONDecodeError — return `{}` instead, as the
+    # OPC UA and SiLA2 clients do for a resilient error.
+    if not resp.ok:
+        return CommandResponse(native=resp, text=resp.text, body_fn=lambda: {})
+    return CommandResponse(native=resp, text=resp.text, body_fn=resp.json)
+
+
 class BaseClient:
     """HTTP session wrapper — owns mechanics: URL building, verb methods, hooks, _request."""
 
@@ -279,15 +290,15 @@ class ComponentClient(DeviceClientMixin, BaseClient):
 
     def _transport_get(self, path: str, *, params) -> CommandResponse:
         resp = BaseClient.get(self, path, params=params)
-        return CommandResponse(native=resp, text=resp.text, body_fn=resp.json)
+        return _command_response(resp)
 
     def _transport_put(self, path: str, *, params, json) -> CommandResponse:
         resp = BaseClient.put(self, path, params=params, json=json)
-        return CommandResponse(native=resp, text=resp.text, body_fn=resp.json)
+        return _command_response(resp)
 
     def _transport_post(self, path: str, *, params, json) -> CommandResponse:
         resp = BaseClient.post(self, path, params=params, json=json)
-        return CommandResponse(native=resp, text=resp.text, body_fn=resp.json)
+        return _command_response(resp)
 
     # ── automatic wait-for-idle ─────────────────────────────────────────────
     # Every flowchem component exposes GET /is-idle (flowchem >= 1.1.3). A

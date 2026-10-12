@@ -13,6 +13,7 @@ import responses as resp_lib
 
 from chemunited_quantities import ChemUnitQuantity
 from chemunited_workflow.clients import BaseClient, ComponentClient
+from chemunited_workflow.clients.base import _pop_thread_resilient_errors
 from chemunited_workflow.durations import parse_timeout_commands
 from chemunited_workflow.exceptions import (
     ConcurrentClientAccessError,
@@ -176,6 +177,32 @@ def test_component_client_raw_response_returns_response_object(method, verb):
     result = getattr(client, verb)("/x", raw_response=True)
     assert isinstance(result, requests.Response)
     assert result.status_code == 200
+
+
+@resp_lib.activate
+@pytest.mark.parametrize(
+    ("method", "verb"),
+    [(resp_lib.GET, "get"), (resp_lib.PUT, "put"), (resp_lib.POST, "post")],
+)
+def test_component_client_resilient_http_error_returns_empty_body(method, verb):
+    """A resilient 500 with a plain-text body must not resurface as a
+    JSONDecodeError once the call returns — the HTTPError is the error."""
+    resp_lib.add(
+        method,
+        f"{BASE_URL}/x",
+        status=500,
+        body=b"Internal Server Error",
+        content_type="text/plain",
+    )
+    if verb in ("put", "post"):
+        resp_lib.add(resp_lib.GET, f"{BASE_URL}/is-idle", status=200, body=b"true")
+    _pop_thread_resilient_errors()
+    client = ComponentClient(BASE_URL, error_resilient=True)
+    result = getattr(client, verb)("/x")
+    errors = _pop_thread_resilient_errors()
+    assert result == {}
+    assert len(errors) == 1
+    assert isinstance(errors[0], requests.HTTPError)
 
 
 # ── automatic wait-for-idle (GET /is-idle) ───────────────────────────────────
