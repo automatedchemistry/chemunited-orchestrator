@@ -18,8 +18,10 @@ The right card is the sequence itself:
 
 * **Saved Protocol** — a dropdown to load an existing saved protocol file for editing instead of starting from
   scratch.
-* The step list shows each process you've added, in execution order, with controls to reorder (up/down) or delete
-  a step. An empty sequence shows **No protocol steps** until you add one from the library.
+* The step list shows each process you've added, in execution order, with controls to reorder (up/down), duplicate,
+  or delete a step. An empty sequence shows **No protocol steps** until you add one from the library.
+* **Duplicate** inserts a copy of the selected step directly below it, with the process parameters already set on it,
+  under the next free index (for example `React_2`). Edit the copy freely — the original keeps its values.
 * The status badge (e.g. `Editing`) reflects whether the currently loaded sequence has unsaved changes.
 
 Click **Save protocol** to write the sequence out as a new, timestamped protocol file — saved protocols are
@@ -27,6 +29,6 @@ immutable, so saving again creates a new file rather than overwriting the one yo
 
 <div class="info-block">
 <strong>💡 Information</strong><br>
-Deleting a saved protocol file is only available in builder mode from the API/MCP surface — see
-<a href="api_and_mcp.md">API & MCP Tools</a>.
+To delete a saved protocol file, select it in <a href="run_control.md">Run Control</a> and click the trash icon
+next to the Protocol dropdown, or use the API/MCP surface — see <a href="api_and_mcp.md">API & MCP Tools</a>.
 </div>

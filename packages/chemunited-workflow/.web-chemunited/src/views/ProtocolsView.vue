@@ -102,11 +102,25 @@ function markModified() {
   isModified.value = true
 }
 
+// Step keys are '{process}_{index}'; the backend splits on the last '_<digits>'.
+function processNameOf(step: string): string {
+  return step.replace(/_\d+$/, '')
+}
+
+function nextStepKey(processName: string): string {
+  let next = 0
+  for (const step of protocolSteps.value) {
+    if (processNameOf(step) === processName)
+      next = Math.max(next, Number(step.slice(processName.length + 1)) + 1)
+  }
+  return `${processName}_${next}`
+}
+
 function addProcess() {
   if (!selectedLeftProcess.value) return
-  const name = selectedLeftProcess.value.name
-  const count = protocolSteps.value.filter(s => s.startsWith(name + '_')).length
-  protocolSteps.value.push(`${name}_${count}`)
+  const key = nextStepKey(selectedLeftProcess.value.name)
+  stepValues.value[key] = {}
+  protocolSteps.value.push(key)
   markModified()
 }
 
@@ -129,7 +143,7 @@ async function selectStep(i: number) {
   stepDiagramSvg.value = null
   const step = protocolSteps.value[i]
   if (!step) return
-  const proc = processes.value.find(p => step.startsWith(p.name + '_'))
+  const proc = processes.value.find(p => p.name === processNameOf(step))
   if (!proc) return
 
   const cachedDiagram = _diagramCache.get(proc.name)
@@ -167,6 +181,18 @@ function moveStepDown(i: number) {
   steps[i + 1] = steps[i] ?? ''
   steps[i] = tmp ?? ''
   protocolSteps.value = steps
+  selectedStepIdx.value = i + 1
+  markModified()
+}
+
+function duplicateStep() {
+  const i = selectedStepIdx.value
+  if (i === null) return
+  const source = protocolSteps.value[i]
+  if (!source) return
+  const copy = nextStepKey(processNameOf(source))
+  stepValues.value[copy] = JSON.parse(JSON.stringify(stepValues.value[source] ?? {}))
+  protocolSteps.value.splice(i + 1, 0, copy)
   selectedStepIdx.value = i + 1
   markModified()
 }
@@ -376,6 +402,18 @@ onMounted(() => {
               @click="moveStepDown(selectedStepIdx!)"
             >
               <svg viewBox="0 0 20 20" fill="none" aria-hidden="true"><path d="m5 8 5 5 5-5"/></svg>
+            </button>
+            <button
+              type="button"
+              class="icon-button"
+              :disabled="selectedStepIdx === null"
+              title="Duplicate selected step"
+              aria-label="Duplicate selected step"
+              @click="duplicateStep"
+            >
+              <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path d="M7 7h10v10H7zM13 7V3H3v10h4"/>
+              </svg>
             </button>
             <span class="toolbar-divider"></span>
             <button
