@@ -782,6 +782,30 @@ def test_delete_missing_protocol(client):
     assert r.status_code == 404
 
 
+def test_delete_protocol_path_traversal(client):
+    # Same normalisation caveat as test_get_process_source_path_traversal.
+    r = client.delete("/protocols/..%5C..%5Csecret.json")
+    assert r.status_code in (400, 404)
+
+
+def test_delete_protocol_non_json_rejected(client, project):
+    notes = project["dirs"]["historic_dir"] / "notes.txt"
+    notes.write_text("keep me", encoding="utf-8")
+    r = client.delete("/protocols/notes.txt")
+    assert r.status_code == 400
+    assert notes.exists()
+
+
+def test_delete_protocol_in_use_by_active_run_returns_409(app, client, project):
+    from chemunited_workflow.api.dependencies import get_project_holder
+
+    holder = app.dependency_overrides[get_project_holder]()
+    holder.run_store.try_start("run_001.json")
+    r = client.delete("/protocols/run_001.json")
+    assert r.status_code == 409
+    assert (project["dirs"]["historic_dir"] / "run_001.json").exists()
+
+
 # ── /logs/search ──────────────────────────────────────────────────────────────
 
 

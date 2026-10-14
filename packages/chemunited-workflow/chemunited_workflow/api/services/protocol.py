@@ -128,8 +128,21 @@ class ProtocolService:
             )
         ]
 
+    def _protocol_path(self, filename: str) -> Path:
+        protocol_dir = self._protocol_dir.resolve()
+        target = (protocol_dir / filename).resolve()
+        if not target.is_relative_to(protocol_dir):
+            raise ValueError(
+                f"Invalid protocol filename '{filename}': path traversal is not allowed."
+            )
+        if target.suffix != ".json":
+            raise ValueError(
+                f"Invalid protocol filename '{filename}': must be a .json file."
+            )
+        return target
+
     def read_protocol(self, filename: str) -> dict[str, Any]:
-        path = self._protocol_dir / filename
+        path = self._protocol_path(filename)
         if not path.exists():
             raise FileNotFoundError(f"Protocol '{filename}' not found.")
         return json.loads(path.read_text(encoding="utf-8"))
@@ -196,7 +209,7 @@ class ProtocolService:
     # ── Protocol delete ──────────────────────────────────────────────────────
 
     def delete_protocol(self, filename: str) -> None:
-        path = self._protocol_dir / filename
+        path = self._protocol_path(filename)
         if not path.exists():
             raise FileNotFoundError(f"Protocol '{filename}' not found.")
         path.unlink()

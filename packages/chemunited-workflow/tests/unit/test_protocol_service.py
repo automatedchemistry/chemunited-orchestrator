@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import sys
 import warnings
 from pathlib import Path
 from typing import Annotated
@@ -233,6 +234,34 @@ def test_delete_protocol_file_gone_after_call(svc, tmp_path):
     snap.write_text("{}", encoding="utf-8")
     svc.delete_protocol("snap_002.json")
     assert not snap.exists()
+
+
+_TRAVERSAL_NAMES = ["../outside.json"] + (
+    ["..\\outside.json"] if sys.platform == "win32" else []
+)
+
+
+@pytest.mark.parametrize("filename", _TRAVERSAL_NAMES)
+def test_delete_protocol_rejects_path_traversal(svc, tmp_path, filename):
+    outside = tmp_path / "outside.json"
+    outside.write_text("{}", encoding="utf-8")
+    with pytest.raises(ValueError, match="path traversal"):
+        svc.delete_protocol(filename)
+    assert outside.exists()
+
+
+def test_delete_protocol_rejects_non_json(svc, tmp_path):
+    notes = tmp_path / "protocols_historic" / "notes.txt"
+    notes.write_text("keep me", encoding="utf-8")
+    with pytest.raises(ValueError, match=r"\.json"):
+        svc.delete_protocol("notes.txt")
+    assert notes.exists()
+
+
+def test_read_protocol_rejects_path_traversal(svc, tmp_path):
+    (tmp_path / "outside.json").write_text("{}", encoding="utf-8")
+    with pytest.raises(ValueError, match="path traversal"):
+        svc.read_protocol("../outside.json")
 
 
 # ── search_logs ───────────────────────────────────────────────────────────────

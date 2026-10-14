@@ -2,7 +2,8 @@
 
 from fastapi import APIRouter, Depends, HTTPException
 
-from ..dependencies import get_protocol_service
+from ..dependencies import get_project_holder, get_protocol_service
+from ..project_holder import ProjectHolder
 from ..schemas import ProtocolIn
 from ..services.protocol import ProtocolService
 
@@ -34,6 +35,8 @@ async def get_protocol(
     """
     try:
         return svc.read_protocol(filename)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
 
@@ -61,13 +64,22 @@ async def create_protocol(
 async def delete_protocol(
     filename: str,
     svc: ProtocolService = Depends(get_protocol_service),
+    holder: ProjectHolder = Depends(get_project_holder),
 ):
     """Delete a protocol file.
 
     Permanently removes the file from `protocols_historic/`. This action is
-    irreversible. Only available in builder mode (`enable_builder=True`).
+    irreversible. Returns HTTP 409 if the active run was started from this
+    protocol — stop the run first.
     """
+    if holder.active_protocol() == filename:
+        raise HTTPException(
+            status_code=409,
+            detail=f"Protocol '{filename}' is in use by the active run.",
+        )
     try:
         svc.delete_protocol(filename)
+    except ValueError as exc:
+        raise HTTPException(status_code=400, detail=str(exc))
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc))

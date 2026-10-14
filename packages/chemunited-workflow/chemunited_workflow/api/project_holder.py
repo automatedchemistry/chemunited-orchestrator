@@ -64,6 +64,13 @@ class ProjectHolder:
     def active_run_id(self) -> str | None:
         return self._run_store.active_run_id
 
+    def active_protocol(self) -> str | None:
+        """Filename of the protocol the active run was started from, if any."""
+        if self.active_run_id() is None:
+            return None
+        rec = self._run_store.get()
+        return rec.protocol_filename if rec is not None else None
+
     # ── Mutation ──────────────────────────────────────────────────────────────
 
     def load(self, modules: ProjectModules) -> None:

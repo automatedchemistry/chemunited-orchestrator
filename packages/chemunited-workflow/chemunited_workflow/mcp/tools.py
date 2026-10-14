@@ -170,10 +170,12 @@ def register_tools(mcp: FastMCP, holder: ProjectHolder) -> None:
         """
         if not holder.is_loaded():
             return {"error": _NO_PROJECT}
+        if holder.active_protocol() == filename:
+            return {"error": f"Protocol '{filename}' is in use by the active run."}
         try:
             _protocol(holder).delete_protocol(filename)
             return {"deleted": filename}
-        except FileNotFoundError as exc:
+        except (FileNotFoundError, ValueError) as exc:
             return {"error": str(exc)}
 
     # ── Run control ───────────────────────────────────────────────────────────

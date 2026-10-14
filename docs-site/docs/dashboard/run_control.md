@@ -16,6 +16,10 @@
 Click **Start Protocol** to dispatch the run. If a run is already active, starting another is rejected until the
 current one finishes or is cancelled.
 
+To remove a protocol file you no longer need, select it and click the **trash icon** next to the Protocol dropdown.
+After you confirm, the `.json` file is permanently deleted from the project's protocol history folder. The button is
+disabled while a run is active, and a protocol that the active run was started from can't be deleted.
+
 ## System State
 
 The right-hand card reflects the run's state live, streamed over Server-Sent Events rather than requiring a manual

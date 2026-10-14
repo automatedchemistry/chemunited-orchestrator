@@ -19,6 +19,7 @@ const store = useRunStatusStore()
 const protocols = ref<ProtocolMeta[]>([])
 const streamStatus = ref<'closed' | 'opening' | 'open' | 'reconnecting'>('closed')
 const runId = ref<string | null>(store.activeRunId)
+const isDeleting = ref(false)
 
 // Operator's in-progress reply text, keyed by nodeId — local draft state,
 // not server-driven like the rest of NodeCard.
@@ -56,6 +57,9 @@ const isRunning = computed(() => store.runState === 'running')
 const isPaused = computed(() => store.runState === 'paused')
 const isActive = computed(() => isRunning.value || isPaused.value)
 const canStart = computed(() => Boolean(store.selectedProtocol) && !isActive.value)
+const canDelete = computed(
+  () => Boolean(store.selectedProtocol) && !isActive.value && !isDeleting.value,
+)
 
 const stateText: Record<string, [string, string]> = {
   idle: ['Idle', 'Waiting for protocol dispatch.'],
@@ -108,6 +112,30 @@ async function onProtocolChange() {
     }
     store.processCards = cards
   } catch { /* ignore */ }
+}
+
+async function deleteProtocol() {
+  if (!canDelete.value) return
+  const name = store.selectedProtocol
+  if (!window.confirm(`Permanently delete "${name}"? This cannot be undone.`)) return
+
+  isDeleting.value = true
+  try {
+    const res = await fetch(`/protocols/${encodeURIComponent(name)}`, { method: 'DELETE' })
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({ detail: res.statusText })) as { detail?: string }
+      store.setMessage(`Delete failed: ${err.detail ?? res.statusText}`, 'error')
+      return
+    }
+    store.selectedProtocol = ''
+    store.processCards = []
+    await loadProtocols()
+    store.setMessage(`Protocol "${name}" deleted.`, 'success')
+  } catch {
+    store.setMessage('Could not reach the protocols endpoint.', 'error')
+  } finally {
+    isDeleting.value = false
+  }
 }
 
 function closeStream({ markFailed = false }: { markFailed?: boolean } = {}) {
@@ -446,20 +474,36 @@ onUnmounted(() => {
         <form class="control-form" @submit.prevent>
           <div class="field">
             <label for="protocol-select">Protocol</label>
-            <select
-              id="protocol-select"
-              v-model="store.selectedProtocol"
-              :disabled="isActive || protocols.length === 0"
-              @change="onProtocolChange"
-            >
-              <option value="" disabled>
-                {{ protocols.length === 0 ? 'No protocols available' : 'Select a protocol' }}
-              </option>
-              <option v-for="p in protocols" :key="p.filename" :value="p.filename">
-                {{ p.filename }}
-              </option>
-            </select>
-            <span class="field-help">Protocol file from the project history folder.</span>
+            <div class="protocol-row">
+              <select
+                id="protocol-select"
+                v-model="store.selectedProtocol"
+                :disabled="isActive || protocols.length === 0"
+                @change="onProtocolChange"
+              >
+                <option value="" disabled>
+                  {{ protocols.length === 0 ? 'No protocols available' : 'Select a protocol' }}
+                </option>
+                <option v-for="p in protocols" :key="p.filename" :value="p.filename">
+                  {{ p.filename }}
+                </option>
+              </select>
+              <button
+                type="button"
+                class="icon-action"
+                :disabled="!canDelete"
+                title="Delete selected protocol"
+                aria-label="Delete selected protocol"
+                @click="deleteProtocol"
+              >
+                <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                  <path d="M4 6h12M8 3h4l1 3H7l1-3ZM6 6l1 11h6l1-11M9 9v5M11 9v5"/>
+                </svg>
+              </button>
+            </div>
+            <span class="field-help">
+              Protocol file from the project history folder. Use the trash icon to delete the selected file.
+            </span>
           </div>
 
           <div class="field">
@@ -867,6 +911,51 @@ onUnmounted(() => {
 .field input[type='text']:disabled {
   opacity: 0.6;
   cursor: not-allowed;
+}
+
+.protocol-row {
+  display: flex;
+  align-items: stretch;
+  gap: 0.5rem;
+}
+
+.protocol-row select {
+  flex: 1;
+  min-width: 0;
+}
+
+.icon-action {
+  display: grid;
+  flex-shrink: 0;
+  place-items: center;
+  width: 2.4rem;
+  padding: 0;
+  color: var(--color-danger);
+  background: var(--color-danger-soft);
+  border: 1px solid color-mix(in srgb, var(--color-danger) 22%, transparent);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  transition:
+    background 150ms,
+    opacity 150ms;
+}
+
+.icon-action:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--color-danger) 18%, transparent);
+}
+
+.icon-action:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.icon-action svg {
+  width: 17px;
+  height: 17px;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
 }
 
 .field-help {
