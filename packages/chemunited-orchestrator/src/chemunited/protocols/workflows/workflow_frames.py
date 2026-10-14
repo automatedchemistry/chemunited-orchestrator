@@ -832,6 +832,11 @@ class WorkflowGraph(GraphCore):
             ("Add Script", ProtocolBlock.SCRIPT, OrchestratorIcon.PYTHON.icon()),
             ("Add Loop", ProtocolBlock.LOOP, OrchestratorIcon.LOOP.icon()),
             ("Add Conditional", ProtocolBlock.IF, OrchestratorIcon.IF.icon()),
+            (
+                "Add Background",
+                ProtocolBlock.BACKGROUND,
+                OrchestratorIcon.UPDATE.icon(),
+            ),
         )
         for text, block_tag, icon in actions:
             action = Action(self)
@@ -988,6 +993,7 @@ class WorkflowGraph(GraphCore):
             ProtocolBlock.LOOP: (name, "Repeat"),
             ProtocolBlock.IF: (name, "Branch"),
             ProtocolBlock.COMMAND: (name, "Command"),
+            ProtocolBlock.BACKGROUND: (name, "Background"),
         }
         title, subtitle = labels[block_tag]
         if block_tag not in {ProtocolBlock.START, ProtocolBlock.END}:

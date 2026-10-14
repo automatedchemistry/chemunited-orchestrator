@@ -19,6 +19,7 @@ from chemunited.protocols.workflows.naming import (
     process_config_class_name,
 )
 from chemunited.shared.enums import WindowCategory
+from chemunited.shared.enums.protocols_enum import ProtocolBlock
 from chemunited.utils.files import load_attribute
 from chemunited_core.components.internals import DEFAULT_INVENTORY_KEY
 
@@ -728,7 +729,11 @@ def _rewrite_process_class(
     missing_methods = [
         name for name in new_managed_methods if name not in existing_method_names
     ]
-    stub_block = "\n\n".join(_render_method_stub(name) for name in missing_methods)
+    background_methods = _background_methods(workflow)
+    stub_block = "\n\n".join(
+        _render_method_stub(name, background=name in background_methods)
+        for name in missing_methods
+    )
 
     body_start = _node_start_offset(body_items[0], lines)
     class_end = _node_end_offset(class_node, lines)
@@ -954,7 +959,24 @@ def _line_col_to_offset(lines: list[str], lineno: int, col_offset: int) -> int:
     return sum(len(line) for line in lines[: lineno - 1]) + col_offset
 
 
-def _render_method_stub(method_name: str) -> str:
+def _background_methods(workflow: ProcessWorkflow) -> set[str]:
+    return {
+        block.method
+        for _, block in workflow.iter_blocks()
+        if block.block_tag == ProtocolBlock.BACKGROUND and block.method
+    }
+
+
+def _render_method_stub(method_name: str, *, background: bool = False) -> str:
+    if background:
+        return (
+            f"    def {method_name}(self, ctx: NodeExecutionContext) -> bool:\n"
+            "        # Runs alongside the rest of the protocol; stops when it ends.\n"
+            "        while not ctx.stop_requested:\n"
+            "            # Read instruments, process signals, ctx.report_progress(...)\n"
+            "            self.platform._wait(5)  # wakes immediately on stop\n"
+            "        return True"
+        )
     status_message = _default_status_message(method_name)
     return (
         f"    def {method_name}(self, ctx: NodeExecutionContext) -> bool:\n"
@@ -973,8 +995,9 @@ def _default_status_message(method_name: str) -> str:
 
 
 def _render_new_process_methods(workflow: ProcessWorkflow) -> str:
+    background_methods = _background_methods(workflow)
     return "\n\n".join(
-        _render_method_stub(method_name)
+        _render_method_stub(method_name, background=method_name in background_methods)
         for method_name in _workflow_managed_methods(workflow)
         if method_name not in {"start", "finish"}
     )

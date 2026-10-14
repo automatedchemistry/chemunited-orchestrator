@@ -14,6 +14,8 @@ from .models import (
     WorkflowNodeSpec,
 )
 
+BACKGROUND_BLOCK_TAG = "background"
+
 
 def compile_workflow(user_graph: nx.DiGraph) -> CompiledWorkflow:
     """Compile an authored workflow graph into an executable DAG plus loopbacks."""
@@ -59,8 +61,32 @@ def compile_workflow(user_graph: nx.DiGraph) -> CompiledWorkflow:
         )
 
     return CompiledWorkflow(
-        user_graph=user_graph_copy, exec_graph=exec_graph, loopbacks=loopbacks
+        user_graph=user_graph_copy,
+        exec_graph=exec_graph,
+        loopbacks=loopbacks,
+        background_nodes=_find_background_nodes(exec_graph, loopbacks),
     )
+
+
+def _find_background_nodes(
+    exec_graph: nx.DiGraph, loopbacks: list[LoopBackSpec]
+) -> frozenset[str]:
+    """Nodes tagged ``block_tag="background"`` — run detached from the workflow.
+
+    A background node must be a leaf: nothing may wait on it, so it cannot
+    have outgoing edges or trigger a loopback.
+    """
+    loopback_sources = {loopback.source for loopback in loopbacks}
+    background: set[str] = set()
+    for node_id, attrs in exec_graph.nodes(data=True):
+        if attrs.get("block_tag") != BACKGROUND_BLOCK_TAG:
+            continue
+        if exec_graph.out_degree(node_id) > 0 or node_id in loopback_sources:
+            raise ValueError(
+                f"Background node {node_id!r} must not have outgoing connections."
+            )
+        background.add(node_id)
+    return frozenset(background)
 
 
 def _validate_node(node_id: str, attrs: dict[str, Any]) -> None:

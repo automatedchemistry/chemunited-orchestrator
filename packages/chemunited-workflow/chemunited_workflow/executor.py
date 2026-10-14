@@ -10,13 +10,14 @@ from concurrent.futures import (
     wait,
 )
 from dataclasses import dataclass
-from threading import RLock
+from threading import Event, RLock
 from time import perf_counter
 from typing import TYPE_CHECKING, Any, Callable, Sequence
 
 import networkx as nx
 from loguru import logger
 
+from .background import STOP_TIMEOUT_SECONDS, BackgroundTasks
 from .clients import _pop_thread_resilient_errors
 from .enums import NodeState, WorkflowEventType
 from .exceptions import RunCancelledError
@@ -58,6 +59,7 @@ class WorkflowExecutor:
         process_key: str | None = None,
         cancellation_check: Callable[[], bool] | None = None,
         request_input: Callable[[str, str, float], str] | None = None,
+        background: BackgroundTasks | None = None,
     ) -> None:
         self._compiled = compiled_workflow
         self._max_workers = max_workers
@@ -68,6 +70,11 @@ class WorkflowExecutor:
         self._process_key = process_key
         self._cancellation_check = cancellation_check
         self._request_input = request_input
+        self._background = background
+        # Set when an executor-owned background host winds down (standalone
+        # runs with no host passed in) — the runner's equivalent signal is
+        # the run's cancellation token.
+        self._background_stop = Event()
 
         self._state = WorkflowExecutorState()
         self._loopbacks_by_trigger: dict[tuple[str, bool], LoopBackSpec] = {}
@@ -109,6 +116,15 @@ class WorkflowExecutor:
             ),
         )
 
+        # Standalone run (no host passed in): background nodes live for this
+        # process only, and are stopped once its workflow finishes.
+        owns_background = self._background is None and bool(
+            self._compiled.background_nodes
+        )
+        if owns_background:
+            self._background = BackgroundTasks()
+            self._background_stop.clear()
+
         execution_error: Exception | None = None
         try:
             with ThreadPoolExecutor(
@@ -136,6 +152,16 @@ class WorkflowExecutor:
             execution_error = exc
             raise
         finally:
+            if owns_background and self._background is not None:
+                self._background_stop.set()
+                stuck = self._background.join(STOP_TIMEOUT_SECONDS)
+                if stuck:
+                    self._logger.warning(
+                        "Background node(s) did not stop within {}s: {}",
+                        STOP_TIMEOUT_SECONDS,
+                        ", ".join(stuck),
+                    )
+                self._background = None
             result_snapshot = WorkflowResult(
                 node_state=dict(self._state.node_state),
                 node_result=dict(self._state.node_result),
@@ -168,6 +194,9 @@ class WorkflowExecutor:
 
     def _is_cancelled(self) -> bool:
         return bool(self._cancellation_check and self._cancellation_check())
+
+    def _is_stopping(self) -> bool:
+        return self._is_cancelled() or self._background_stop.is_set()
 
     def _initialize_iteration(self, start_node: str, iteration: int) -> None:
         if self._process is None or self._pool is None:
@@ -278,10 +307,27 @@ class WorkflowExecutor:
                 "WorkflowExecutor.execute() must be called before submitting nodes."
             )
 
-        node_id, _ = node_key
+        node_id, iteration = node_key
         method_name = self._compiled.exec_graph.nodes[node_id].get("method")
 
         self._state.scheduled[node_key] = True
+
+        if self._background is not None and node_id in self._compiled.background_nodes:
+            # Detached: never added to _future_to_key, so this process (and the
+            # protocol after it) never waits for the node to finish.
+            self._update_node_status(
+                node_key,
+                state=NodeState.RUNNING,
+                message="Running in background; the workflow will not wait for it.",
+                event_type=WorkflowEventType.NODE_RUNNING,
+                method=method_name,
+            )
+            self._background.submit(
+                lambda: self._run_background_node(node_key),
+                name=f"{self._process_key or 'process'}:{node_id}:{iteration}",
+            )
+            return
+
         self._update_node_status(
             node_key,
             state=NodeState.RUNNING,
@@ -291,6 +337,53 @@ class WorkflowExecutor:
         )
         future = self._pool.submit(self._execute_node, node_key)
         self._future_to_key[future] = node_key
+
+    def _run_background_node(self, node_key: NodeKey) -> None:
+        """Body of a background node's thread.
+
+        Errors are logged and reported as events only — they never reach
+        ``self._state.errors``, so a failing background node can't fail the
+        process or the run.
+        """
+        method_name = self._compiled.exec_graph.nodes[node_key[0]].get("method")
+        try:
+            outcome = self._execute_node(node_key)
+        except RunCancelledError:
+            with self._lock:
+                self._state.node_result[node_key] = None
+                self._update_node_status(
+                    node_key,
+                    state=NodeState.COMPLETED,
+                    message="Background module stopped with the run.",
+                    event_type=WorkflowEventType.NODE_COMPLETED,
+                    method=method_name,
+                )
+        except Exception as exc:
+            self._logger.warning(
+                "Background node {!r} failed: {}. The run continues.",
+                node_key[0],
+                exc,
+            )
+            with self._lock:
+                self._state.node_result[node_key] = None
+                self._update_node_status(
+                    node_key,
+                    state=NodeState.FAILED,
+                    message=f"Background module failed: {exc}",
+                    event_type=WorkflowEventType.NODE_FAILED,
+                    method=method_name,
+                )
+        else:
+            with self._lock:
+                self._state.node_result[node_key] = outcome.result
+                self._update_node_status(
+                    node_key,
+                    state=NodeState.COMPLETED,
+                    message=f"Background module completed with result {outcome.result}.",
+                    event_type=WorkflowEventType.NODE_COMPLETED,
+                    result=outcome.result,
+                    method=method_name,
+                )
 
     def _execute_node(self, node_key: NodeKey) -> _NodeOutcome:
         if self._process is None:
@@ -347,6 +440,7 @@ class WorkflowExecutor:
             runtime=runtime,
             _progress_callback=_report_progress,
             _input_callback=_request_operator_input,
+            _stop_check=self._is_stopping,
         )
 
         _pop_thread_resilient_errors()  # clear stale errors from thread pool reuse

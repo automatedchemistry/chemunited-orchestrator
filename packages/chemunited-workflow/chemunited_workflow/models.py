@@ -84,6 +84,18 @@ class NodeExecutionContext:
     _input_callback: Callable[[str, float], str] | None = field(
         default=None, repr=False
     )
+    _stop_check: Callable[[], bool] | None = field(default=None, repr=False)
+
+    @property
+    def stop_requested(self) -> bool:
+        """``True`` once the run is cancelled or the protocol has ended.
+
+        Long-running nodes — background modules in particular — should poll
+        this to know when to return. ``self.platform._wait(...)``, device
+        commands and ``request_operator_input()`` already raise
+        ``RunCancelledError`` on the same signal.
+        """
+        return bool(self._stop_check is not None and self._stop_check())
 
     def report_progress(
         self,
@@ -220,3 +232,4 @@ class CompiledWorkflow:
     user_graph: nx.DiGraph
     exec_graph: nx.DiGraph
     loopbacks: list[LoopBackSpec]
+    background_nodes: frozenset[str] = frozenset()

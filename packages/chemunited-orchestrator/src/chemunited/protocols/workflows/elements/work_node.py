@@ -109,6 +109,7 @@ class WorkflowNode(QGraphicsItemGroup):
                 ProtocolBlock.LOOP: QColor("#1B8F5A"),
                 ProtocolBlock.IF: QColor("#C98200"),
                 ProtocolBlock.COMMAND: QColor("#D16946"),
+                ProtocolBlock.BACKGROUND: QColor("#7B61FF"),
             }[self.block_tag],
         }
 
@@ -120,12 +121,17 @@ class WorkflowNode(QGraphicsItemGroup):
             ProtocolBlock.START: OrchestratorIcon.PLAY,
             ProtocolBlock.END: OrchestratorIcon.STOP,
             ProtocolBlock.COMMAND: OrchestratorIcon.PROCESS,
+            ProtocolBlock.BACKGROUND: OrchestratorIcon.UPDATE,
         }[self.block_tag]
 
     def _apply_body_style(self, selected: bool = False):
         palette = self._palette()
         border = QColor("#3A7AFE") if selected else palette["border"]
-        self.body.setPen(QPen(border, 2 if selected else 1.4))
+        pen = QPen(border, 2 if selected else 1.4)
+        if self.block_tag == ProtocolBlock.BACKGROUND:
+            # Dashed outline: runs detached from the workflow.
+            pen.setStyle(Qt.DashLine)  # type: ignore[attr-defined]
+        self.body.setPen(pen)
 
     def _body_path(self, width: int, height: int) -> QPainterPath:
         path = QPainterPath()
@@ -173,7 +179,7 @@ class WorkflowNode(QGraphicsItemGroup):
 
     def _build(self):
         palette = self._palette()
-        if self.block_tag == ProtocolBlock.SCRIPT:
+        if self.block_tag in {ProtocolBlock.SCRIPT, ProtocolBlock.BACKGROUND}:
             width, height = 220, 122
         elif self.block_tag in {ProtocolBlock.START, ProtocolBlock.END}:
             width, height = 96, 96
@@ -273,7 +279,11 @@ class WorkflowNode(QGraphicsItemGroup):
             self.input_ports = WorkflowAccessPoints(
                 count=self.ports_numbers, role="left", node=self
             )
-        if self.block_tag not in {ProtocolBlock.IF, ProtocolBlock.END}:
+        if self.block_tag not in {
+            ProtocolBlock.IF,
+            ProtocolBlock.END,
+            ProtocolBlock.BACKGROUND,
+        }:
             self.output_ports = WorkflowAccessPoints(role="right", node=self)
         if self.block_tag in {ProtocolBlock.LOOP, ProtocolBlock.IF}:
             self.top_ports = WorkflowAccessPoints(

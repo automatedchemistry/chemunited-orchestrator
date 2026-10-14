@@ -11,6 +11,7 @@ from loguru import logger
 from pydantic import BaseModel
 
 from chemunited_workflow import Process, WorkflowExecutor, compile_workflow
+from chemunited_workflow.background import STOP_TIMEOUT_SECONDS, BackgroundTasks
 from chemunited_workflow.cancellation import wait_for_operator_input, wait_while_paused
 from chemunited_workflow.durations import parse_timeout_commands
 from chemunited_workflow.platform import Platform
@@ -131,77 +132,88 @@ class RunnerService:
             colorize=False,
             encoding="utf-8",
         )
+        background = BackgroundTasks()
+        cancellation_token: threading.Event | None = None
         try:
-            pool_dir = self._project_dir / "log" / "pool"
-            if pool_dir.exists():
-                for f in pool_dir.glob("*.jsonl"):
-                    f.unlink(missing_ok=True)
-            cancellation_token = self._run_store.cancel_event()
-            pause_event = self._run_store.pause_event()
+            try:
+                pool_dir = self._project_dir / "log" / "pool"
+                if pool_dir.exists():
+                    for f in pool_dir.glob("*.jsonl"):
+                        f.unlink(missing_ok=True)
+                cancellation_token = self._run_store.cancel_event()
+                pause_event = self._run_store.pause_event()
 
-            def request_input(
-                node_id: str, message: str, timeout_seconds: float
-            ) -> str:
-                event = self._run_store.request_input(node_id, message)
-                try:
-                    wait_for_operator_input(event, cancellation_token, timeout_seconds)
-                except Exception:
-                    self._run_store.pop_input_value(node_id)
-                    raise
-                return self._run_store.pop_input_value(node_id) or ""
+                def request_input(
+                    node_id: str, message: str, timeout_seconds: float
+                ) -> str:
+                    event = self._run_store.request_input(node_id, message)
+                    try:
+                        wait_for_operator_input(
+                            event, cancellation_token, timeout_seconds
+                        )
+                    except Exception:
+                        self._run_store.pop_input_value(node_id)
+                        raise
+                    return self._run_store.pop_input_value(node_id) or ""
 
-            platform = Platform.from_project_dir(
-                self._project_dir,
-                dry_run=dry_run,
-                log_dir=self._project_dir / "log",
-                timeout_commands=timeout_commands,
-                error_resilient=error_resilient,
-                cancellation_token=cancellation_token,
-                pause_event=pause_event,
-            )
-            if self._monitoring_service is not None:
-                self._monitoring_service.on_run_started(
-                    run_id, record=record_monitoring
-                )
-            for process_name, process_index in sequence:
-                # Honor a pause requested between processes, not just mid-node.
-                wait_while_paused(pause_event, cancellation_token)
-                record = self._run_store.get()
-                if record is not None and record.state == RunState.CANCELLED:
-                    return
-                config_data = data.get(f"{process_name}_{process_index}", {})
-                config = self._configs[process_name].model_validate(config_data)
-                process = self._processes[process_name](
-                    config=config,
-                    platform=platform,
-                    process_index=process_index,
-                )
-                process.load_parameters(protocol_filename)
-                compiled = compile_workflow(process.build_workflow())
-                wf_logger = WorkflowLogger(process_name, process_index)
-                executor = WorkflowExecutor(
-                    compiled,
-                    max_workers=4,
-                    event_listeners=[
-                        lambda e: self._run_store.append_event(e),
-                        wf_logger.handle_event,
-                    ],
+                platform = Platform.from_project_dir(
+                    self._project_dir,
+                    dry_run=dry_run,
+                    log_dir=self._project_dir / "log",
+                    timeout_commands=timeout_commands,
                     error_resilient=error_resilient,
-                    process_key=f"{process_name}_{process_index}",
-                    cancellation_check=(
-                        cancellation_token.is_set
-                        if cancellation_token is not None
-                        else None
-                    ),
-                    request_input=request_input,
+                    cancellation_token=cancellation_token,
+                    pause_event=pause_event,
                 )
-                result = executor.execute(process, start_node="start")
-                self._run_store.append_result(result)
-                if not error_resilient and result.errors:
-                    raise RuntimeError(
-                        f"Process '{process_name}' step {process_index} failed with "
-                        f"{len(result.errors)} node error(s)."
+                if self._monitoring_service is not None:
+                    self._monitoring_service.on_run_started(
+                        run_id, record=record_monitoring
                     )
+                for process_name, process_index in sequence:
+                    # Honor a pause requested between processes, not just mid-node.
+                    wait_while_paused(pause_event, cancellation_token)
+                    record = self._run_store.get()
+                    if record is not None and record.state == RunState.CANCELLED:
+                        return
+                    config_data = data.get(f"{process_name}_{process_index}", {})
+                    config = self._configs[process_name].model_validate(config_data)
+                    process = self._processes[process_name](
+                        config=config,
+                        platform=platform,
+                        process_index=process_index,
+                    )
+                    process.load_parameters(protocol_filename)
+                    compiled = compile_workflow(process.build_workflow())
+                    wf_logger = WorkflowLogger(process_name, process_index)
+                    executor = WorkflowExecutor(
+                        compiled,
+                        max_workers=4,
+                        event_listeners=[
+                            lambda e: self._run_store.append_event(e),
+                            wf_logger.handle_event,
+                        ],
+                        error_resilient=error_resilient,
+                        process_key=f"{process_name}_{process_index}",
+                        cancellation_check=(
+                            cancellation_token.is_set
+                            if cancellation_token is not None
+                            else None
+                        ),
+                        request_input=request_input,
+                        background=background,
+                    )
+                    result = executor.execute(process, start_node="start")
+                    self._run_store.append_result(result)
+                    if not error_resilient and result.errors:
+                        raise RuntimeError(
+                            f"Process '{process_name}' step {process_index} failed "
+                            f"with {len(result.errors)} node error(s)."
+                        )
+            finally:
+                # Runs on finish, failure and cancel alike — before the final
+                # state is set, so the run reads as active until background
+                # nodes have actually stopped.
+                self._stop_background(background, cancellation_token)
             self._run_store.set_state(success=True)
         except Exception:
             self._run_store.set_state(success=False)
@@ -209,6 +221,31 @@ class RunnerService:
             if self._monitoring_service is not None:
                 self._monitoring_service.on_run_finished()
             logger.remove(sink_id)
+
+    @staticmethod
+    def _stop_background(
+        background: BackgroundTasks, cancellation_token: threading.Event | None
+    ) -> None:
+        """Stop every background node started during the run and wait for them.
+
+        Trips the run's cancellation token directly rather than calling
+        ``RunStore.cancel()``: the run state is left alone (a finished
+        protocol still ends FINISHED), but ``platform._wait``, device calls,
+        operator-input waits and ``ctx.stop_requested`` all wake up at once.
+        Only run-scoped objects watch this token, and the main protocol is
+        already done by this point.
+        """
+        if not background.has_tasks:
+            return
+        if cancellation_token is not None:
+            cancellation_token.set()
+        stuck = background.join(STOP_TIMEOUT_SECONDS)
+        if stuck:
+            logger.warning(
+                "Background node(s) did not stop within {}s and were abandoned: {}",
+                STOP_TIMEOUT_SECONDS,
+                ", ".join(stuck),
+            )
 
     @staticmethod
     def _parse_sequence(data: dict) -> list[tuple[str, int]]:

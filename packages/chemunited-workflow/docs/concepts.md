@@ -50,6 +50,25 @@ def confirm_setup(self, ctx: NodeExecutionContext) -> bool:
 - **Not persisted across a server restart** — like the rest of run state, a pending prompt lives only in memory. A dashboard client that reconnects mid-wait (without a restart) still recovers the open prompt, via `GET /run/active`'s `pending_inputs` field.
 - Requires a run driven by the dashboard/API — calling it outside that context (e.g. a bare `WorkflowExecutor.execute(...)` with no `request_input` wired) raises `RuntimeError` immediately.
 
+## Background Nodes
+
+A node with `block_tag="background"` runs detached from its workflow: the executor starts it on its own thread and never waits for it, so its process finishes, and the protocol moves on to the next process, while it keeps running. Use it for work that should span the whole run, such as polling an analytical instrument or signal processing.
+
+```python
+def analytics_poll(self, ctx: NodeExecutionContext) -> bool:
+    while not ctx.stop_requested:
+        reading = self.platform["hplc"].get("last_result")
+        ctx.report_progress(0, f"Last reading: {reading}")
+        self.platform._wait(5)  # wakes immediately when the run stops
+    return True
+```
+
+- **Must be a leaf** — `compile_workflow()` rejects a background node with outgoing edges or a loopback.
+- **Stops with the run** — when the protocol finishes, fails, or is cancelled, `RunnerService` trips the run's cancellation token and waits up to 10 s (`chemunited_workflow.background.STOP_TIMEOUT_SECONDS`) for background nodes to return before setting the final run state. `ctx.stop_requested` turns `True`, and `self.platform._wait(...)`, device commands and `ctx.request_operator_input(...)` raise `RunCancelledError`. That exception ends the node normally. A node that ignores the signal is abandoned after the timeout, with a warning in the run log.
+- **Errors are logged, not fatal** — a failing background node emits `NODE_FAILED` and a warning, but is never added to `WorkflowResult.errors`, so it cannot fail its process or the run.
+- **Don't share devices with the main protocol** — device clients reject concurrent use from two threads (`ConcurrentClientAccessError`).
+- **Standalone runs** — with no run-level host (a bare `WorkflowExecutor.execute(...)`), the executor hosts background nodes itself and stops them when that workflow finishes.
+
 ## Physical Units
 
 Use `ChemUnitQuantity` from `chemunited-quantities` for values that carry SI units:

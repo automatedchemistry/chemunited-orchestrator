@@ -13,7 +13,7 @@ This keeps control logic outside individual modules (sometimes called blocks), s
 
 ## Module Types
 
-There are four kinds of modules.
+There are five kinds of modules.
 
 * <img src="../_static/icons/python.svg" width="16" style="vertical-align:middle; margin-right:4px;"> Script
 
@@ -35,6 +35,12 @@ Depending on the defined criteria, the process follows one branch or another.
 A Command module represents a single command sent to one associated device — no code required. Rather than
 clicking New Module, you drag it directly onto the canvas from the
 [Command List](build_protocols.md#command-list).
+
+* <img src="../_static/icons/update_black.svg" width="16" style="vertical-align:middle; margin-right:4px;"> Background
+
+A Background module is a Script that runs alongside the rest of the protocol. It has an input but no output, so
+nothing waits for it: the process continues, and the protocol moves on to the next processes while it keeps running.
+It stops when the protocol stops. See [Background modules](#background-modules).
 
 ## Why use workflows?
 
@@ -79,10 +85,45 @@ The *command* blocks (*command_1* through *command_6*) are Command modules — e
 an associated device and was dragged directly onto the canvas from the [Command List](build_protocols.md#command-list),
 rather than written as a Script.
 
+## Background modules
+
+Use a Background module for work that should run during the whole protocol, such as requesting data from an
+analytical instrument or processing a signal.
+
+```
+start ──▶ script_1 ──▶ end
+  │
+  └──▶ background_1        (dashed block, input only)
+```
+
+Here *background_1* starts together with *script_1*. When *script_1* reaches *end*, the process is finished and the
+protocol continues with the next process, while *background_1* keeps running. It stops when the protocol finishes,
+fails, or is cancelled.
+
+A new Background module starts from this template:
+
+```python
+def background_1(self, ctx: NodeExecutionContext) -> bool:
+    # Runs alongside the rest of the protocol; stops when it ends.
+    while not ctx.stop_requested:
+        # Read instruments, process signals, ctx.report_progress(...)
+        self.platform._wait(5)  # wakes immediately on stop
+    return True
+```
+
+* Keep the `while not ctx.stop_requested:` loop, and wait with `self.platform._wait(...)` rather than `time.sleep(...)`,
+  so the module stops as soon as the protocol does. When the protocol ends, the run waits up to 10 seconds for
+  background modules to stop.
+* Don't send commands to a device that the rest of the protocol also uses. Two modules can't use the same device at
+  the same time.
+* If a Background module fails, the error is logged and shown on its row, but the protocol keeps running.
+* If a Background module sits inside a loop, a new copy starts on every iteration.
+
 ## Building a module
 
-To create a new Script, Loop, or Conditional module, use the matching action in the
-[workflow canvas menu](build_protocols.md#workflow-canvas-menu) — **Add Script**, **Add Loop**, or **Add Conditional**.
+To create a new Script, Loop, Conditional, or Background module, use the matching action in the
+[workflow canvas menu](build_protocols.md#workflow-canvas-menu) — **Add Script**, **Add Loop**, **Add Conditional**, or
+**Add Background**.
 
 ### Saving
 

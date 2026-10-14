@@ -50,6 +50,7 @@ def generate_block_name(existing_names: Iterable[str], block_tag: ProtocolBlock)
         ProtocolBlock.LOOP: "loop",
         ProtocolBlock.IF: "conditional",
         ProtocolBlock.COMMAND: "command",
+        ProtocolBlock.BACKGROUND: "background",
     }.get(block_tag)
     if prefix is None:
         raise WorkflowRuleViolation(
@@ -86,6 +87,8 @@ def validate_connection_request(
 ) -> None:
     if start_name == end_name:
         raise WorkflowRuleViolation("A block cannot connect to itself")
+    if start_block_tag == ProtocolBlock.BACKGROUND:
+        raise WorkflowRuleViolation("Background blocks have no outputs")
     if start_role == "left":
         raise WorkflowRuleViolation("Connections cannot start from an input port")
     if end_role != "left":

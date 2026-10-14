@@ -382,6 +382,28 @@ def test_context_menu_actions_persist_complete_blocks(
         assert source.count(f"node_id={method_name!r},") == 1
 
 
+def test_context_menu_background_block_has_input_only_and_loop_stub(
+    tmp_path: Path,
+    qtbot: QtBot,
+) -> None:
+    workflow = ProcessWorkflow("React")
+    graph = _make_graph(working_dir=tmp_path, workflow=workflow, qtbot=qtbot)
+
+    graph._build_add_menu(QPointF()).actions()[3].trigger()
+
+    block = workflow.get_block("background_1")
+    assert block is not None
+    assert block.block_tag == ProtocolBlock.BACKGROUND
+    node = graph._nodes["background_1"]
+    assert node.input_ports is not None
+    assert node.output_ports is None
+
+    source = (tmp_path / "protocols" / "React.py").read_text(encoding="utf-8")
+    assert "def background_1(self, ctx: NodeExecutionContext) -> bool:" in source
+    assert "while not ctx.stop_requested:" in source
+    assert "block_tag='background'" in source
+
+
 def test_context_menu_loop_creates_missing_process_file(
     tmp_path: Path,
     qtbot: QtBot,
