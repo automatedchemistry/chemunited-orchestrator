@@ -3,7 +3,7 @@ from chemunited.shared.graph import GraphCore, SceneCore
 
 
 class SimGraphicView(GraphCore):
-    MODE = SetupStepMode.DESIGN
+    MODE = SetupStepMode.PROTOCOLS
 
     def __init__(self, scene: SceneCore | None = None, parent=None):
         super().__init__(scene, parent)

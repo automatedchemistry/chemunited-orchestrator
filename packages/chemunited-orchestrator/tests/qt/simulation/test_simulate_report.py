@@ -233,12 +233,9 @@ class TestSimulateWindowReportPlayback:
             figure="SolenoidValve",
             position=(600.0, 0.0),
         )
-        # Mirrors what SimulateWindowReport.simulate() does before starting a
-        # run: give the simulation window its own independent copy of the
-        # current design.
-        window.SimulateWindowReport.orchestrator.load_draw_data(
-            window.orchestrator.snapshot_draw_data()
-        )
+        # Same as SimulateWindowReport.simulate() before starting a run: give
+        # the simulation window its own independent copy of the current design.
+        window.SimulateWindowReport._load_design_snapshot()
 
     def _build_two_frame_db(self, db_path: Path) -> None:
         conn = _connect(db_path)
@@ -478,6 +475,39 @@ class TestSimulateWindowReportPlayback:
             window.orchestrator.connections["PumpA_2_PumpB_1"]
         )
         assert window.SimulateWindowReport.scene_attribute is not window.scene_attribute
+
+    def test_simulation_copy_hides_inflection_point_handles(self, qtbot: QtBot) -> None:
+        window = self._build_window(qtbot)
+        window.orchestrator.add_component(
+            name="PumpA",
+            figure="HPLCPump",
+            position=(200.0, 0.0),
+        )
+        window.orchestrator.add_component(
+            name="PumpB",
+            figure="HPLCPump",
+            position=(400.0, 0.0),
+        )
+        window.orchestrator.add_connection(
+            origin="PumpA",
+            destiny="PumpB",
+            origin_port=2,
+            destiny_port=1,
+            inflection_points=[(300.0, 100.0)],
+        )
+
+        window.SimulateWindowReport._load_design_snapshot()
+
+        sim_connection = window.SimulateWindowReport.orchestrator.connections[
+            "PumpA_2_PumpB_1"
+        ]
+        assert sim_connection.isVisible()
+        assert len(sim_connection._handles) == 1
+        assert not sim_connection._handles[0].isVisible()
+
+        # The design canvas keeps its own, still-editable handles.
+        design_connection = window.orchestrator.connections["PumpA_2_PumpB_1"]
+        assert design_connection._handles[0].isVisible()
 
     def test_scrubbing_does_not_mutate_design_canvas(
         self, qtbot: QtBot, tmp_path: Path

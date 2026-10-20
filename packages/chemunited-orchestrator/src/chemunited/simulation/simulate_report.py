@@ -916,8 +916,7 @@ class SimulateWindowReport(QMainWindow):
         self._process = process
         project_path = Path(project_path)
 
-        draw_data = self._setup_window.orchestrator.snapshot_draw_data()
-        self.orchestrator.load_draw_data(draw_data)
+        self._load_design_snapshot()
         self._start_pool_tailer(project_path)
 
         self.widget_profiles.show_running(process)
@@ -928,6 +927,12 @@ class SimulateWindowReport(QMainWindow):
         self._worker.simulation_done.connect(self._on_sim_done)
         self._worker.simulation_failed.connect(self._on_sim_failed)
         self._worker.start()
+
+    def _load_design_snapshot(self) -> None:
+        """Copy the design canvas into this window's own scene, without edit handles."""
+        draw_data = self._setup_window.orchestrator.snapshot_draw_data()
+        self.orchestrator.load_draw_data(draw_data)
+        self.orchestrator.switch_to_step(SimGraphicView.MODE)
 
     def recenter_views(self) -> None:
         self.central._graph.recenter_view()  # type: ignore
