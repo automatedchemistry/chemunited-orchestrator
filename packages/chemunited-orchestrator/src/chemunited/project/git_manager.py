@@ -41,10 +41,19 @@ connectivity/associations.json
 # Execution logs are local run outputs
 log/
 
+# Simulation results are local run outputs
+simulations/
+
 # OS
 .DS_Store
 Thumbs.db
 """
+
+# Rules added to an existing project's .gitignore when missing.
+_LOCAL_OUTPUT_RULES = (
+    ("# Execution logs are local run outputs", "log/"),
+    ("# Simulation results are local run outputs", "simulations/"),
+)
 
 
 def ensure_gitignore(working_dir: Path) -> None:
@@ -54,11 +63,14 @@ def ensure_gitignore(working_dir: Path) -> None:
         return
 
     content = gitignore.read_text(encoding="utf-8")
-    if "log/" in content.splitlines():
+    lines = content.splitlines()
+    missing = [rule for rule in _LOCAL_OUTPUT_RULES if rule[1] not in lines]
+    if not missing:
         return
     if content and not content.endswith("\n"):
         content += "\n"
-    content += "\n# Execution logs are local run outputs\nlog/\n"
+    for comment, pattern in missing:
+        content += f"\n{comment}\n{pattern}\n"
     gitignore.write_text(content, encoding="utf-8")
 
 

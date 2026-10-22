@@ -23,7 +23,14 @@ from chemunited.shared.enums.protocols_enum import ProtocolBlock
 from chemunited.utils.files import load_attribute
 from chemunited_core.components.internals import DEFAULT_INVENTORY_KEY
 
-_PACK_EXCLUDE = {".git", ".gitignore", ".chemunited_session", "__pycache__", "log"}
+_PACK_EXCLUDE = {
+    ".git",
+    ".gitignore",
+    ".chemunited_session",
+    "__pycache__",
+    "log",
+    "simulations",
+}
 _PROTOCOLS_SKIP = {"__init__", "main_parameters"}
 PROTOCOLS_HISTORIC_DIR = "protocols_historic"
 LOG_DIR = "log"

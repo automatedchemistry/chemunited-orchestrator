@@ -38,6 +38,9 @@ my_experiment/                       ← working directory (source of truth)
 ├── log/
 │   └── react_2026-03-27T16-18-00__2026-03-27T19-20-00.log ← execution logs
 │
+├── simulations/
+│   └── React_20260812_154145.db     ← simulation results (+ run log)
+│
 └── connectivity/
     └── associations.json            ← device ↔ component mapping (machine-specific)
 ```
@@ -271,6 +274,22 @@ it is excluded from Git and from `.chemunited` exports.
 
 ---
 
+### `simulations/` — simulation results
+
+Results written by the chemunited-sim server when a process is simulated: one
+`.db` file per run (plus its SQLite side files) and a `_log.log` run log.
+
+```
+simulations/
+├── React_20260812_154145.db
+└── React_20260812_154145_log.log
+```
+
+Like `log/`, the `simulations/` folder is local runtime output: it is created
+on the first simulation and excluded from Git and from `.chemunited` exports.
+
+---
+
 ### `connectivity/associations.json`
 
 Maps abstract draw components to real FlowChem device endpoints.
@@ -352,6 +371,7 @@ my_experiment.chemunited  (ZIP)
 | `__pycache__/` | Derived, always recomputed |
 | `.chemunited_session` | Local session state |
 | `log/` | Local execution logs |
+| `simulations/` | Local simulation results |
 
 ---
 
@@ -413,9 +433,9 @@ manifest.json updated (last_modified)
 Refresh draw/setup.py and draw/platform.svg
 Sync each protocols/<process>.py file in place
 Keep protocols_historic/*.json files in the working directory/archive
-Keep log/*.log files only in the working directory; never pack them
+Keep log/ and simulations/ only in the working directory; never pack them
 Pack working directory → my_experiment.chemunited
-(.git, .gitignore, and log/ excluded from ZIP)
+(.git, .gitignore, log/ and simulations/ excluded from ZIP)
 ```
 
 ---
@@ -429,6 +449,7 @@ Pack working directory → my_experiment.chemunited
 | `WorkflowExecutor` state | Always restarted |
 | Simulation state | Always recomputed |
 | Protocol run logs / results | Stored separately in the local `log/` folder, excluded from Git and `.chemunited` |
+| Simulation results | Stored separately in the local `simulations/` folder, excluded from Git and `.chemunited` |
 
 `draw/platform.svg` is the one generated companion file stored with the project.
 It is refreshed on save for sharing and documentation, but it is never used to

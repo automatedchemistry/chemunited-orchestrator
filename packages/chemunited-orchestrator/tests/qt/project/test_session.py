@@ -7,6 +7,7 @@ from textwrap import dedent
 import pytest
 
 from chemunited.orchestrator.project_file import OrchestratorProjectFile
+from chemunited.project.git_manager import ensure_gitignore
 from chemunited.project.manifest import ProjectManifest
 from chemunited.project.session import ProjectSession
 from chemunited.protocols.workflows import ProcessWorkflow
@@ -101,6 +102,39 @@ def test_log_directory_is_created_ignored_and_not_exported(tmp_path):
 
     with zipfile.ZipFile(archive_path, "r") as zf:
         assert not any(name.startswith("log/") for name in zf.namelist())
+
+
+def test_simulations_directory_is_ignored_and_not_exported(tmp_path):
+    session = ProjectSession()
+    session.new(name="demo", location=tmp_path, init_git=False)
+    working_dir = tmp_path / "demo"
+    simulations_dir = working_dir / "simulations"
+
+    assert "simulations/" in (working_dir / ".gitignore").read_text(encoding="utf-8")
+
+    simulations_dir.mkdir()
+    (simulations_dir / "React_20260812_154145.db").write_bytes(b"sqlite")
+    (simulations_dir / "React_20260812_154145_log.log").write_text(
+        "simulation output\n", encoding="utf-8"
+    )
+    archive_path = session.export_chemunited(tmp_path / "demo")
+
+    with zipfile.ZipFile(archive_path, "r") as zf:
+        assert not any(name.startswith("simulations/") for name in zf.namelist())
+
+
+def test_existing_gitignore_gains_missing_local_output_rules(tmp_path):
+    working_dir = tmp_path / "demo"
+    working_dir.mkdir()
+    gitignore = working_dir / ".gitignore"
+    gitignore.write_text("__pycache__/\nlog/\n", encoding="utf-8")
+
+    ensure_gitignore(working_dir)
+    ensure_gitignore(working_dir)
+
+    lines = gitignore.read_text(encoding="utf-8").splitlines()
+    assert lines.count("log/") == 1
+    assert lines.count("simulations/") == 1
 
 
 def test_process_load_parameters_uses_process_file_stem(tmp_path):
