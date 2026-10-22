@@ -16,9 +16,10 @@ let _platformDevicesCache: PlatformDevice[] | 'missing' | null = null
 </script>
 
 <script setup lang="ts">
-import { computed, nextTick, onMounted, ref } from 'vue'
+import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import DevicePropertiesPanel, { clearDeviceCommandsCache } from '../components/DevicePropertiesPanel.vue'
+import { createSvgPanZoom, type SvgPanZoom } from '../components/svgPanZoom'
 
 interface ProjectResponse {
   project_dir: string | null
@@ -58,10 +59,19 @@ const lastRun = ref<RunReport | null>(null)
 const platformSvg = ref<string | null>(null)
 const platformDevices = ref<PlatformDevice[]>([])
 const selectedDeviceId = ref<string | null>(null)
+const platformBox = ref<HTMLElement | null>(null)
+const platformWrap = ref<HTMLElement | null>(null)
+const isFullscreen = ref(false)
+const canFullscreen = document.fullscreenEnabled
+const panZoom = shallowRef<SvgPanZoom | null>(null)
 
 const selectedDevice = computed(
   () => platformDevices.value.find(device => device.id === selectedDeviceId.value) ?? null,
 )
+
+const devicesByLabel = computed(() => [...platformDevices.value].sort(
+  (a, b) => a.label.localeCompare(b.label, undefined, { numeric: true, sensitivity: 'base' }),
+))
 
 function projectName(dir: string | null): string {
   if (!dir) return '—'
@@ -187,22 +197,17 @@ async function initialize(forceRefresh = false) {
   } finally {
     isLoading.value = false
   }
-
-  // isLoading must already be false here — .platform-svg-wrap only exists in
-  // the v-else branch, which mounts after this flip. Injecting earlier (while
-  // still inside the try block above) finds no <svg> and silently no-ops.
-  await nextTick()
-  injectDeviceOverlay()
 }
 
 const SVG_NS = 'http://www.w3.org/2000/svg'
 
-function injectDeviceOverlay() {
-  const svg = document.querySelector('.platform-svg-wrap svg')
+// The click boxes are a layer inside the platform <svg>, so they follow pan and
+// zoom with no alignment code. Redrawing them never touches the viewBox.
+function drawDeviceLayer() {
+  const svg = platformWrap.value?.querySelector('svg')
   if (!svg) return
 
-  // Idempotent: drop any previously injected hit areas before re-adding, since
-  // v-html repaints (e.g. after Refresh) wipe them anyway.
+  // Idempotent: drop any previously drawn hit areas before re-adding.
   svg.querySelectorAll('[data-device-id]').forEach(el => el.remove())
 
   for (const device of platformDevices.value) {
@@ -216,6 +221,13 @@ function injectDeviceOverlay() {
     rect.dataset.deviceId = device.id
     svg.appendChild(rect)
   }
+  markSelectedDevice()
+}
+
+function markSelectedDevice() {
+  platformWrap.value?.querySelectorAll<SVGRectElement>('.device-hit-area').forEach(rect => {
+    rect.classList.toggle('is-selected', rect.dataset.deviceId === selectedDeviceId.value)
+  })
 }
 
 function onPlatformClick(event: MouseEvent) {
@@ -224,8 +236,51 @@ function onPlatformClick(event: MouseEvent) {
   if (id) selectedDeviceId.value = id
 }
 
+function findDevice(id: string) {
+  const device = platformDevices.value.find(item => item.id === id)
+  if (!device) return
+  selectedDeviceId.value = device.id
+  panZoom.value?.focus({ x: device.x, y: device.y, width: device.w, height: device.h })
+}
+
+function toggleFullscreen() {
+  if (document.fullscreenElement) {
+    void document.exitFullscreen()
+    return
+  }
+  platformBox.value?.requestFullscreen().catch(() => {
+    // Refused by the browser; the panel simply stays inline.
+  })
+}
+
+function onFullscreenChange() {
+  const box = platformBox.value
+  isFullscreen.value = box !== null && document.fullscreenElement === box
+}
+
+// v-html creates a new <svg> each time the panel mounts (first load, Refresh),
+// so navigation is attached to each new element and torn down with it.
+watch([platformWrap, platformSvg], ([wrap], _previous, onCleanup) => {
+  const svg = wrap?.querySelector('svg')
+  if (!svg) return
+  const controller = createSvgPanZoom(svg)
+  panZoom.value = controller
+  onCleanup(() => {
+    controller.destroy()
+    if (panZoom.value === controller) panZoom.value = null
+  })
+}, { flush: 'post' })
+
+watch([platformWrap, platformSvg, platformDevices], drawDeviceLayer, { flush: 'post' })
+watch(selectedDeviceId, markSelectedDevice, { flush: 'post' })
+
 onMounted(() => {
+  document.addEventListener('fullscreenchange', onFullscreenChange)
   void initialize()
+})
+
+onBeforeUnmount(() => {
+  document.removeEventListener('fullscreenchange', onFullscreenChange)
 })
 </script>
 
@@ -320,10 +375,88 @@ onMounted(() => {
       </div>
 
       <!-- Platform SVG (only shown when project_dir/draw/platform.svg exists) -->
-      <div v-if="platformSvg" class="platform-box">
-        <p class="stat-label">Platform</p>
-        <!-- eslint-disable-next-line vue/no-v-html -->
-        <div class="platform-svg-wrap" v-html="platformSvg" @click="onPlatformClick" />
+      <div v-if="platformSvg" ref="platformBox" class="platform-box">
+        <div class="platform-header">
+          <p class="stat-label">Platform</p>
+          <span class="platform-hint">Ctrl + scroll to zoom · drag to pan</span>
+          <div class="platform-toolbar" role="toolbar" aria-label="Platform view">
+            <template v-if="devicesByLabel.length">
+              <select
+                class="find-select"
+                title="Find component"
+                aria-label="Find component"
+                :value="selectedDeviceId ?? ''"
+                @change="findDevice(($event.target as HTMLSelectElement).value)"
+              >
+                <option value="" disabled>Find component…</option>
+                <option v-for="device in devicesByLabel" :key="device.id" :value="device.id">
+                  {{ device.label }}
+                </option>
+              </select>
+              <span class="toolbar-divider"></span>
+            </template>
+            <button
+              type="button"
+              class="icon-button"
+              title="Zoom out"
+              aria-label="Zoom out"
+              @click="panZoom?.zoomOut()"
+            >
+              <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <circle cx="9" cy="9" r="5.5"/>
+                <path d="m13 13 4 4M6.5 9h5"/>
+              </svg>
+            </button>
+            <button
+              type="button"
+              class="icon-button"
+              title="Zoom in"
+              aria-label="Zoom in"
+              @click="panZoom?.zoomIn()"
+            >
+              <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <circle cx="9" cy="9" r="5.5"/>
+                <path d="m13 13 4 4M6.5 9h5M9 6.5v5"/>
+              </svg>
+            </button>
+            <button
+              type="button"
+              class="icon-button"
+              title="Fit to view"
+              aria-label="Fit to view"
+              @click="panZoom?.fit()"
+            >
+              <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <path d="M3.5 9.5 10 4l6.5 5.5M5.5 8v8h9V8"/>
+              </svg>
+            </button>
+            <template v-if="canFullscreen">
+              <span class="toolbar-divider"></span>
+              <button
+                type="button"
+                class="icon-button"
+                :title="isFullscreen ? 'Exit fullscreen' : 'Fullscreen'"
+                :aria-label="isFullscreen ? 'Exit fullscreen' : 'Fullscreen'"
+                @click="toggleFullscreen"
+              >
+                <svg v-if="isFullscreen" viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                  <path d="M7.5 3v4.5H3M17 7.5h-4.5V3M12.5 17v-4.5H17M3 12.5h4.5V17"/>
+                </svg>
+                <svg v-else viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                  <path d="M3 7.5V3h4.5M12.5 3H17v4.5M17 12.5V17h-4.5M7.5 17H3v-4.5"/>
+                </svg>
+              </button>
+            </template>
+          </div>
+        </div>
+        <!-- eslint-disable vue/no-v-html -->
+        <div
+          ref="platformWrap"
+          class="platform-svg-wrap"
+          v-html="platformSvg"
+          @click="onPlatformClick"
+        />
+        <!-- eslint-enable vue/no-v-html -->
         <DevicePropertiesPanel
           v-if="selectedDevice"
           :device="selectedDevice"
@@ -541,25 +674,139 @@ onMounted(() => {
   margin-bottom: 1.25rem;
 }
 
-.platform-svg-wrap {
-  margin-top: 0.75rem;
-  width: 100%;
-  overflow: hidden;
+.platform-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem 1rem;
 }
 
-.platform-svg-wrap :deep(svg) {
+.platform-header .stat-label {
+  margin: 0;
+}
+
+.platform-hint {
+  color: var(--color-text-muted);
+  font-size: 0.74rem;
+}
+
+.platform-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  margin-left: auto;
+  padding: 0.25rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-background-mute);
+}
+
+.find-select {
+  min-width: 0;
+  max-width: 220px;
+  height: 31px;
+  padding: 0 0.5rem;
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: 7px;
+  background: var(--color-background-soft);
+  cursor: pointer;
+  font-size: 0.78rem;
+}
+
+.icon-button {
+  width: 31px;
+  height: 31px;
+  display: grid;
+  flex: 0 0 auto;
+  place-items: center;
+  padding: 0;
+  color: var(--color-text);
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.icon-button:hover {
+  color: var(--color-heading);
+  border-color: var(--color-border);
+  background: var(--color-background-soft);
+}
+
+.icon-button svg {
+  width: 17px;
+  height: 17px;
+  stroke: currentColor;
+  stroke-width: 1.7;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.toolbar-divider {
+  width: 1px;
+  height: 19px;
+  flex: 0 0 auto;
+  margin: 0 0.15rem;
+  background: var(--color-border);
+}
+
+.platform-svg-wrap {
+  height: 480px;
+  min-height: 240px;
+  margin-top: 0.75rem;
+  overflow: hidden;
+  resize: vertical;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+}
+
+.platform-svg-wrap > :deep(svg) {
   display: block;
   width: 100%;
-  height: auto;
-  max-height: 480px;
+  height: 100%;
+  cursor: grab;
+}
+
+.platform-svg-wrap > :deep(svg.is-panning),
+.platform-svg-wrap :deep(svg.is-panning .device-hit-area) {
+  cursor: grabbing;
 }
 
 .platform-svg-wrap :deep(.device-hit-area) {
   cursor: pointer;
 }
 
-.platform-svg-wrap :deep(.device-hit-area:hover) {
+.platform-svg-wrap :deep(.device-hit-area:hover),
+.platform-svg-wrap :deep(.device-hit-area.is-selected) {
   fill: color-mix(in srgb, var(--color-primary) 12%, transparent);
+}
+
+.platform-svg-wrap :deep(.device-hit-area.is-selected) {
+  stroke: var(--color-primary);
+  stroke-width: 2px;
+  vector-effect: non-scaling-stroke;
+}
+
+.platform-box:fullscreen {
+  display: flex;
+  flex-direction: column;
+  overflow: auto;
+  border-radius: 0;
+}
+
+.platform-box:fullscreen .platform-svg-wrap {
+  flex: 1 1 auto;
+  /* The resize handle leaves an inline height behind; the screen decides here. */
+  height: auto !important;
+  max-height: none;
+  resize: none;
+}
+
+.platform-box:fullscreen .device-panel {
+  flex: 0 0 auto;
+  max-height: 40vh;
+  overflow: auto;
 }
 
 /* Quick links */
@@ -616,6 +863,34 @@ onMounted(() => {
 
   .quick-links {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .platform-hint {
+    display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .platform-toolbar {
+    width: 100%;
+    margin-left: 0;
+  }
+
+  .find-select {
+    flex: 1;
+    max-width: none;
+  }
+}
+
+/* On touch screens dragging the drawing pans it, so leave some page around it
+   to scroll by. */
+@media (pointer: coarse) {
+  .platform-hint {
+    display: none;
+  }
+
+  .platform-svg-wrap {
+    max-height: 70vh;
   }
 }
 

@@ -33,8 +33,20 @@ Four cards summarize the loaded project:
 
 **Refresh** re-reads all four cards from the server. Below them, the **Platform** card renders the project's
 platform diagram (the same layout you build in [Drawing](../drawing/drawing.md)), useful for a quick visual sanity
-check of the loaded setup. At the bottom, four quick-navigation cards jump straight to Run Control, Protocols,
-Monitoring, and Logs.
+check of the loaded setup. Click a component in the diagram to open its connectivity status and commands below it.
+At the bottom, four quick-navigation cards jump straight to Run Control, Protocols, Monitoring, and Logs.
+
+### Navigating the platform diagram
+
+Large platforms can be explored right in the card:
+
+| To | Do this |
+|---|---|
+| Zoom | **Ctrl** + scroll (**⌘** + scroll on macOS) over the diagram, pinch on a trackpad or touch screen, or use the zoom buttons. A plain scroll still scrolls the page. |
+| Pan | Drag the diagram (one finger on a touch screen). A click without dragging still selects a component. |
+| See the whole platform | **Fit to view** (the house button), like **Home** on the desktop canvas. |
+| Find a component | Pick it from the **Find component** list: the view zooms to it and selects it. |
+| Get more room | Drag the diagram's bottom-right corner to make it taller, or use **Fullscreen** (press **Esc** to leave). |
 
 ## Starting the work-server manually
 
