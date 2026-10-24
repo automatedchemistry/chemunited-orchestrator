@@ -151,12 +151,19 @@ const canAddVariable = computed(() =>
 )
 // Start and Stop also switch the dashboard's platform view live, so they
 // work during a run (only the manual flag changes) and with no variables.
+// Start saves the variable list first, so it waits until the page has loaded
+// that list: an earlier click would save an empty list over the project's.
 const canStart = computed(() =>
   projectLoaded.value === true
+  && !isLoadingPage.value
+  && !pageError.value
   && !state.value.manual_on
   && !isStarting.value
 )
 const startTitle = computed(() => {
+  if (isLoadingPage.value || pageError.value) {
+    return 'Available once the monitoring config has loaded.'
+  }
   if (state.value.run_active) {
     return 'Keeps monitoring on after the run, and makes the platform view live.'
   }
