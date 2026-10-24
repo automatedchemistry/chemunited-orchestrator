@@ -1,4 +1,6 @@
 <script lang="ts">
+import type { LiveMap } from '../components/live/liveFormat'
+
 interface PlatformDevice {
   id: string
   label: string
@@ -13,13 +15,17 @@ interface PlatformDevice {
 // Module-level cache — persists across mount/unmount (no re-fetch on dashboard revisit)
 let _platformSvgCache: string | 'missing' | null = null
 let _platformDevicesCache: PlatformDevice[] | 'missing' | null = null
+let _platformLiveCache: LiveMap | 'missing' | null = null
 </script>
 
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import DevicePropertiesPanel, { clearDeviceCommandsCache } from '../components/DevicePropertiesPanel.vue'
+import PlatformLiveLayer from '../components/live/PlatformLiveLayer.vue'
+import type { Box } from '../components/live/liveFormat'
 import { createSvgPanZoom, type SvgPanZoom } from '../components/svgPanZoom'
+import { usePlatformLive } from '../composables/usePlatformLive'
 
 interface ProjectResponse {
   project_dir: string | null
@@ -65,6 +71,44 @@ const isFullscreen = ref(false)
 const canFullscreen = document.fullscreenEnabled
 const panZoom = shallowRef<SvgPanZoom | null>(null)
 
+// Live platform view: device states and LCD values from /platform/stream,
+// drawn where the desktop export's map (/project/platform-live) says.
+const {
+  live,
+  pictures,
+  devices: liveDevices,
+  displays: liveDisplays,
+  connection,
+  flashing,
+  start: startLive,
+  stop: stopLive,
+} = usePlatformLive()
+const platformLiveMap = ref<LiveMap | null>(null)
+const liveLayer = shallowRef<SVGGElement | null>(null)
+const showLegend = ref(false)
+
+// A map whose hash no longer matches the SVG would put pictures in the wrong
+// places: then only rings and command text, on the platform-devices boxes.
+const validLiveMap = computed(() => platformLiveMap.value?.svg_matches ? platformLiveMap.value : null)
+const liveMapStale = computed(() => platformLiveMap.value !== null && !platformLiveMap.value.svg_matches)
+const deviceBoxes = computed<Record<string, Box>>(() => Object.fromEntries(
+  platformDevices.value.map(device => [device.id, [device.x, device.y, device.w, device.h]]),
+))
+const liveOn = computed(() => live.value && connection.value === 'open')
+const livePill = computed(() => {
+  if (connection.value === 'open') return live.value ? 'live' : 'not-live'
+  return connection.value
+})
+const LIVE_PILL_TEXT: Record<string, string> = {
+  live: '● Live',
+  connecting: '◌ Connecting…',
+  reconnecting: '◌ Reconnecting…',
+  disconnected: '■ Disconnected — picture frozen',
+}
+const selectedLiveState = computed(() =>
+  selectedDeviceId.value ? liveDevices.value[selectedDeviceId.value] ?? null : null,
+)
+
 const selectedDevice = computed(
   () => platformDevices.value.find(device => device.id === selectedDeviceId.value) ?? null,
 )
@@ -102,6 +146,7 @@ async function initialize(forceRefresh = false) {
   if (forceRefresh) {
     _platformSvgCache = null
     _platformDevicesCache = null
+    _platformLiveCache = null
     clearDeviceCommandsCache()
     selectedDeviceId.value = null
   }
@@ -123,6 +168,9 @@ async function initialize(forceRefresh = false) {
     }
     if (_platformDevicesCache !== null) {
       platformDevices.value = _platformDevicesCache === 'missing' ? [] : _platformDevicesCache
+    }
+    if (_platformLiveCache !== null) {
+      platformLiveMap.value = _platformLiveCache === 'missing' ? null : _platformLiveCache
     }
 
     const [protocolsRes, processesRes, activeRes, reportRes] = await Promise.allSettled([
@@ -190,6 +238,25 @@ async function initialize(forceRefresh = false) {
         }
       } catch {
         _platformDevicesCache = 'missing'
+      }
+    }
+
+    // The live map is missing for projects saved before the live view
+    // existed: the panel then shows rings and command text only.
+    if (_platformLiveCache === null) {
+      try {
+        const res = await fetch('/project/platform-live')
+        if (res.ok) {
+          const map = await res.json() as LiveMap
+          _platformLiveCache = map
+          platformLiveMap.value = map
+        } else {
+          _platformLiveCache = 'missing'
+          platformLiveMap.value = null
+        }
+      } catch {
+        _platformLiveCache = 'missing'
+        platformLiveMap.value = null
       }
     }
   } catch (error) {
@@ -270,6 +337,27 @@ watch([platformWrap, platformSvg], ([wrap], _previous, onCleanup) => {
     if (panZoom.value === controller) panZoom.value = null
   })
 }, { flush: 'post' })
+
+// The live layer sits in the <svg> under the click boxes, which drawDeviceLayer
+// always appends after it, so clicks still reach the devices.
+watch([platformWrap, platformSvg], ([wrap], _previous, onCleanup) => {
+  const svg = wrap?.querySelector('svg')
+  if (!svg) return
+  const layer = document.createElementNS(SVG_NS, 'g')
+  layer.setAttribute('class', 'live-layer')
+  layer.setAttribute('pointer-events', 'none')
+  svg.insertBefore(layer, svg.querySelector('.device-hit-area'))
+  liveLayer.value = layer
+  onCleanup(() => {
+    layer.remove()
+    if (liveLayer.value === layer) liveLayer.value = null
+  })
+}, { flush: 'post' })
+
+watch(platformSvg, svg => {
+  if (svg) startLive()
+  else stopLive()
+})
 
 watch([platformWrap, platformSvg, platformDevices], drawDeviceLayer, { flush: 'post' })
 watch(selectedDeviceId, markSelectedDevice, { flush: 'post' })
@@ -378,6 +466,17 @@ onBeforeUnmount(() => {
       <div v-if="platformSvg" ref="platformBox" class="platform-box">
         <div class="platform-header">
           <p class="stat-label">Platform</p>
+          <RouterLink
+            v-if="livePill === 'not-live'"
+            to="/monitoring"
+            class="live-pill is-not-live"
+            title="The platform view is live while monitoring is on"
+          >
+            ○ Not live — start monitoring
+          </RouterLink>
+          <span v-else class="live-pill" :class="`is-${livePill}`" role="status">
+            {{ LIVE_PILL_TEXT[livePill] }}
+          </span>
           <span class="platform-hint">Ctrl + scroll to zoom · drag to pan</span>
           <div class="platform-toolbar" role="toolbar" aria-label="Platform view">
             <template v-if="devicesByLabel.length">
@@ -430,6 +529,21 @@ onBeforeUnmount(() => {
                 <path d="M3.5 9.5 10 4l6.5 5.5M5.5 8v8h9V8"/>
               </svg>
             </button>
+            <span class="toolbar-divider"></span>
+            <button
+              type="button"
+              class="icon-button"
+              :class="{ 'is-active': showLegend }"
+              title="Legend"
+              aria-label="Legend"
+              :aria-expanded="showLegend"
+              @click="showLegend = !showLegend"
+            >
+              <svg viewBox="0 0 20 20" fill="none" aria-hidden="true">
+                <circle cx="10" cy="10" r="7"/>
+                <path d="M8 8a2 2 0 1 1 2.6 1.9c-.4.2-.6.5-.6.9V12M10 14.5v.1"/>
+              </svg>
+            </button>
             <template v-if="canFullscreen">
               <span class="toolbar-divider"></span>
               <button
@@ -449,6 +563,30 @@ onBeforeUnmount(() => {
             </template>
           </div>
         </div>
+        <p v-if="liveMapStale" class="platform-note">
+          The drawing changed after its live map was saved. Save the project again in
+          the desktop app to see device pictures and LCDs.
+        </p>
+        <p v-else-if="liveOn && !pictures" class="platform-note">
+          Device pictures are off: the work-server needs chemunited-core
+          (<code>pip install chemunited-workflow[live]</code>).
+        </p>
+        <dl v-if="showLegend" class="live-legend">
+          <dt>Rotor lines, badges, relay lights</dt>
+          <dd>The last command the device received</dd>
+          <dt>Turning ring and command text</dt>
+          <dd>The device is running that command</dd>
+          <dt>Short flash</dt>
+          <dd>A command went to a device that doesn't report when it finishes</dd>
+          <dt>Grey “?”</dt>
+          <dd>Unknown: no command since the work-server started, or the last one failed</dd>
+          <dt>Black LCD with a value</dt>
+          <dd>The latest monitoring reading of its variable</dd>
+          <dt>LCD showing --</dt>
+          <dd>Not live, no reading yet, or the reading failed</dd>
+          <dt>LCD showing “not monitored”</dt>
+          <dd>Its variable isn't in the monitoring list</dd>
+        </dl>
         <!-- eslint-disable vue/no-v-html -->
         <div
           ref="platformWrap"
@@ -457,9 +595,22 @@ onBeforeUnmount(() => {
           @click="onPlatformClick"
         />
         <!-- eslint-enable vue/no-v-html -->
+        <Teleport v-if="liveLayer" :to="liveLayer">
+          <PlatformLiveLayer
+            :live="live"
+            :connection="connection"
+            :devices="liveDevices"
+            :displays="liveDisplays"
+            :flashing="flashing"
+            :map="validLiveMap"
+            :boxes="deviceBoxes"
+          />
+        </Teleport>
         <DevicePropertiesPanel
           v-if="selectedDevice"
           :device="selectedDevice"
+          :live-state="selectedLiveState"
+          :live-on="liveOn"
           @close="selectedDeviceId = null"
         />
       </div>
@@ -690,6 +841,78 @@ onBeforeUnmount(() => {
   font-size: 0.74rem;
 }
 
+.live-pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+  font-size: 0.74rem;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.live-pill.is-live {
+  color: var(--color-success);
+  background: var(--color-success-soft);
+}
+
+.live-pill.is-not-live {
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  background: var(--color-background-mute);
+}
+
+.live-pill.is-not-live:hover {
+  border-color: var(--color-border-hover);
+  color: var(--color-heading);
+}
+
+.live-pill.is-connecting,
+.live-pill.is-reconnecting {
+  color: var(--color-warning);
+  background: var(--color-warning-soft);
+}
+
+.live-pill.is-disconnected {
+  color: var(--color-danger);
+  background: var(--color-danger-soft);
+}
+
+.icon-button.is-active {
+  color: var(--color-primary);
+  border-color: var(--color-border);
+  background: var(--color-background-soft);
+}
+
+.platform-note {
+  margin: 0.6rem 0 0;
+  color: var(--color-text-muted);
+  font-size: 0.78rem;
+}
+
+.live-legend {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.3rem 1rem;
+  margin: 0.75rem 0 0;
+  padding: 0.75rem 0.9rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-background-mute);
+  font-size: 0.78rem;
+}
+
+.live-legend dt {
+  color: var(--color-heading);
+  font-weight: 680;
+}
+
+.live-legend dd {
+  margin: 0;
+  color: var(--color-text-muted);
+}
+
 .platform-toolbar {
   display: flex;
   align-items: center;
@@ -874,6 +1097,14 @@ onBeforeUnmount(() => {
   .platform-toolbar {
     width: 100%;
     margin-left: 0;
+  }
+
+  .live-legend {
+    grid-template-columns: 1fr;
+  }
+
+  .live-legend dd {
+    margin-bottom: 0.3rem;
   }
 
   .find-select {

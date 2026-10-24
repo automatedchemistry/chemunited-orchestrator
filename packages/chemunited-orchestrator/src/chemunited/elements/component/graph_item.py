@@ -530,6 +530,33 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
     def show_bounding_rect(self, visible: bool) -> None:
         self._bounding_rect.setVisible(visible)
 
+    # ── live platform view ─────────────────────────────────────────
+
+    def live_items(self) -> tuple[QGraphicsItem, ...]:
+        """The parts that show run-time state: a valve rotor, a status badge, …
+
+        The platform SVG export leaves them out, so the drawing never bakes
+        in a stale state; the dashboard's live view redraws them from the
+        commands each device gets, at ``live_anchors()``.
+        """
+        return ()
+
+    def live_anchors(self) -> dict[str, dict[str, object]]:
+        """Where each of ``live_items()`` sits, in scene coordinates.
+
+        Keyed by geometry: ``rotor`` (``center``, ``slots``), ``badge``
+        (``box``) or ``lights`` (``points``, ``r``). QPointF, QRectF and float
+        values are converted to SVG pixels on export.
+        """
+        return {}
+
+    def figure_box(self) -> QRectF:
+        """A tight scene box around the drawn figure, without labels or badges."""
+        return self._svg.sceneBoundingRect()
+
+    def _badge_anchors(self) -> dict[str, dict[str, object]]:
+        return {"badge": {"box": self._overlay.sceneBoundingRect()}}
+
     def export_svg(self, path: Path) -> None:
         """Export the component drawing to SVG without name or port-number labels."""
         path = Path(path)

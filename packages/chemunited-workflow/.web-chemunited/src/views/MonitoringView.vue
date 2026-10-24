@@ -149,13 +149,22 @@ const parameterFields = computed(() =>
 const canAddVariable = computed(() =>
   Boolean(selectedComponent.value && selectedCommand.value && !isLocked.value),
 )
+// Start and Stop also switch the dashboard's platform view live, so they
+// work during a run (only the manual flag changes) and with no variables.
 const canStart = computed(() =>
   projectLoaded.value === true
-  && config.value.variables.length > 0
-  && !state.value.run_active
-  && !isRunning.value
+  && !state.value.manual_on
   && !isStarting.value
 )
+const startTitle = computed(() => {
+  if (state.value.run_active) {
+    return 'Keeps monitoring on after the run, and makes the platform view live.'
+  }
+  if (config.value.variables.length === 0) {
+    return 'Nothing to read yet; the platform view still goes live.'
+  }
+  return 'Starts polling, and makes the platform view live.'
+})
 
 function apiError(error: unknown, fallback: string): string {
   if (error instanceof Error && error.message) return error.message
@@ -216,8 +225,23 @@ function normalizeParameters(parameters: unknown[]): ParameterField[] {
     }))
 }
 
+function canonical(value: unknown): unknown {
+  if (Array.isArray(value)) return value.map(canonical)
+  if (isPlainRecord(value)) {
+    return Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])]))
+  }
+  return value
+}
+
+// Matches the work-server's monitoring_key: the parameters as JSON with sorted
+// keys and no spaces, and nothing for a variable without parameters.
+function variableParams(variable: MonitoringVariable): string {
+  return Object.keys(variable.kwargs).length ? JSON.stringify(canonical(variable.kwargs)) : ''
+}
+
 function variableKey(variable: MonitoringVariable): string {
-  return `${variable.component}::${variable.command}`
+  const params = variableParams(variable)
+  return `${variable.component}::${variable.command}${params ? `::${params}` : ''}`
 }
 
 function historyUrl(variable: MonitoringVariable): string {
@@ -228,7 +252,9 @@ function historyUrl(variable: MonitoringVariable): string {
     .filter(Boolean)
     .map(part => encodeURIComponent(part))
     .join('/')
-  return `/monitoring/history/${component}/${command}`
+  const params = variableParams(variable)
+  const query = params ? `?kwargs=${encodeURIComponent(params)}` : ''
+  return `/monitoring/history/${component}/${command}${query}`
 }
 
 function isPlainRecord(value: unknown): value is Record<string, unknown> {
@@ -390,7 +416,7 @@ async function discoverCommands() {
       return
     }
     if (response.status === 502) {
-      discoveryMessage.value = `Device unreachable: ${await responseError(response, 'Device server unreachable.')}`
+      discoveryMessage.value = await responseError(response, 'Device server unreachable.')
       discoveryMessageType.value = 'warning'
       return
     }
@@ -531,7 +557,8 @@ async function startMonitoring() {
   clearNotice()
 
   try {
-    await putConfig()
+    // While a run polls, the variable list is locked: nothing to save.
+    if (!isRunning.value) await putConfig()
     try {
       await postStartOnly()
     } catch (error) {
@@ -560,7 +587,7 @@ async function retryStart() {
 }
 
 async function stopMonitoring() {
-  if (!isRunning.value || isStopping.value || state.value.run_active) return
+  if (!state.value.manual_on || isStopping.value) return
 
   isStopping.value = true
   startError.value = ''
@@ -572,8 +599,15 @@ async function stopMonitoring() {
       throw new Error(await responseError(response, 'Could not stop monitoring.'))
     }
     state.value = await response.json() as MonitoringState
-    clearPolling()
-    setNotice('Monitoring stopped.', 'success')
+    if (state.value.effective_on) {
+      setNotice(
+        'The platform view is no longer live. Monitoring goes on for the active run and stops when it ends.',
+        'info',
+      )
+    } else {
+      clearPolling()
+      setNotice('Monitoring stopped.', 'success')
+    }
   } catch (error) {
     pollError.value = apiError(error, 'Could not stop monitoring.')
   } finally {
@@ -801,22 +835,24 @@ onBeforeUnmount(() => {
         <span v-if="state.recording" class="session-pill recording">
           Recording <code>{{ state.run_id }}</code>
         </span>
+        <span v-if="state.manual_on" class="session-pill">Platform view live</span>
         <button
-          v-if="isRunning"
+          v-if="state.manual_on"
           type="button"
           class="button danger"
-          :disabled="isStopping || state.run_active"
-          :title="state.run_active ? 'Running automatically for the active protocol run.' : ''"
+          :disabled="isStopping"
+          :title="state.run_active ? 'The run keeps monitoring until it ends; the platform view stops being live.' : 'Stops polling; the platform view stops being live.'"
           @click="stopMonitoring"
         >
           <span v-if="isStopping" class="mini-spinner" aria-hidden="true"></span>
-          {{ state.run_active ? 'Auto (run active)' : (isStopping ? 'Stopping...' : 'Stop') }}
+          {{ isStopping ? 'Stopping...' : 'Stop' }}
         </button>
         <button
           v-else
           type="button"
           class="button primary"
           :disabled="!canStart"
+          :title="startTitle"
           @click="startMonitoring"
         >
           <span v-if="isStarting" class="mini-spinner" aria-hidden="true"></span>
@@ -866,7 +902,7 @@ onBeforeUnmount(() => {
             v-if="canRetryStart"
             type="button"
             class="button compact"
-            :disabled="isStarting || state.run_active"
+            :disabled="isStarting"
             @click="retryStart"
           >
             Retry

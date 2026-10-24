@@ -48,6 +48,41 @@ Large platforms can be explored right in the card:
 | Find a component | Pick it from the **Find component** list: the view zooms to it and selects it. |
 | Get more room | Drag the diagram's bottom-right corner to make it taller, or use **Fullscreen** (press **Esc** to leave). |
 
+### Live view
+
+While monitoring is on from the [Monitoring](monitoring.md) page, the diagram is **live**: it shows what each
+device was last told by the work-server, and your [LCD readouts](../drawing/drawing.md#lcd-readouts) show their
+monitoring readings. The pill next to **Platform** shows the state:
+
+| Pill | Meaning |
+|---|---|
+| **● Live** | The diagram follows the devices and LCDs. |
+| **○ Not live — start monitoring** | Monitoring isn't on. Click it to go to the Monitoring page. A run doesn't make the diagram live by itself. |
+| **◌ Reconnecting…** | The dashboard lost the work-server for a moment and is catching up. |
+| **■ Disconnected — picture frozen** | The work-server can't be reached: device badges are greyed and LCDs show `--`. |
+
+On a live diagram:
+
+| On the drawing | Meaning |
+|---|---|
+| Valve rotor lines, open/closed badges, relay lights | The last command the device received. |
+| Turning ring, with the command above it | The device is running that command. |
+| Short flash | A command went to a device that doesn't report when it finishes. |
+| Grey **?** | Unknown: no command since the work-server started, or the last one failed or timed out. |
+| Black LCD with a value, e.g. `24.35 °C` | The latest monitoring reading of its variable. |
+| LCD showing `--` | Not live, no reading yet, or the last reading failed (hover for why). |
+| LCD showing `not monitored` | Its variable isn't in the Monitoring page's list. |
+
+The diagram shows commands, not readings from the hardware: a valve that didn't move still shows the commanded
+position. Commands sent outside the work-server (vendor software, for example) never appear. The **?** button in
+the toolbar shows this legend.
+
+Clicking a device adds a **State** block to its panel: the last command with its time, the run and node that sent
+it, its status (Running, Done, Failed or Unknown), and the reason for a failure.
+
+If the drawing was changed after the project was last saved in the desktop app, the diagram shows running rings and
+commands only, with a note to save the project again.
+
 ## Starting the work-server manually
 
 You do not need to start the work-server yourself for a normal run — the orchestrator launches it automatically
@@ -60,6 +95,15 @@ chemunited-workflow serve [project_dir] [OPTIONS]
 ```
 
 Running the bare `chemunited-workflow` command with no arguments is equivalent to `serve` with defaults.
+
+The live view's device pictures (valve rotors, badges, relay lights) need chemunited-core, which a desktop
+installation already has. For a standalone work-server, install it with the `live` extra:
+
+```bash
+pip install "chemunited-workflow[live]"
+```
+
+Without it, the live view still shows which device is running which command, and the LCDs.
 
 | Flag | Description |
 |---|---|

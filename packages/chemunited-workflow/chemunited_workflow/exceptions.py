@@ -13,12 +13,12 @@ class OperatorInputTimeoutError(RuntimeError):
     """Raised when a request_operator_input() call gets no reply within its timeout."""
 
 
-class MonitoringRunActiveError(RuntimeError):
-    """Raised when the manual monitoring toggle is used while a protocol run is active."""
-
-
 class DeviceCommunicationError(RuntimeError):
     """Base for transport-level device communication failures across all client protocols."""
+
+
+class DeviceBusyError(DeviceCommunicationError):
+    """Raised when another request to the same device didn't finish within the lock timeout."""
 
 
 class SilaDeviceError(DeviceCommunicationError):

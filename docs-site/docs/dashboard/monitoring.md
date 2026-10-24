@@ -25,7 +25,19 @@ hand).
 
 Click **Add Variable** to add the selected component/command pair to the polling table below the form (shown with
 its **Component**, **Command**, and **Kwargs**). Click **Start** at the top to begin polling every variable in the
-table at the configured sample time.
+table at the configured sample time. The same command can be added more than once with different parameters (two
+channels of one ADC, for example): each keeps its own readings and profile.
+
+## Start, Stop and the live platform view
+
+**Start** and **Stop** also switch the Dashboard's [live platform view](overview.md#live-view): the diagram is live
+while monitoring is on from this page (the header shows **Platform view live**).
+
+* They work during a protocol run too. A run keeps monitoring on for its own duration either way; **Start** then
+  makes the diagram live and keeps monitoring on after the run, and **Stop** turns the live view off while the run
+  goes on polling until it ends.
+* **Start** works with no variables in the table: the diagram goes live, with nothing to read.
+* The variable table stays locked while monitoring polls.
 
 ## Profiles
 

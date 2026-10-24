@@ -4,10 +4,13 @@ from __future__ import annotations
 
 import threading
 from collections import deque
+from collections.abc import Callable
 from dataclasses import dataclass, field
 from typing import Any
 
-from ..exceptions import MonitoringRunActiveError
+from loguru import logger
+
+ReadingListener = Callable[[str, dict[str, Any]], None]
 
 HISTORY_MAXLEN = 25
 
@@ -32,62 +35,55 @@ class MonitoringStore:
     the run ends. ``recording``/``run_id`` are set only while a run has opted
     in to persisting readings to disk; they never affect how values are
     fetched, only whether each tick is also written to a file.
+
+    The manual toggle works during a run too: it then only changes
+    ``manual_on``, which decides whether monitoring stays on after the run and
+    whether the dashboard's platform view is live.
     """
 
     def __init__(self) -> None:
         self._lock = threading.Lock()
         self._record = MonitoringRecord()
+        self._reading_listener: ReadingListener | None = None
 
-    @staticmethod
-    def _raise_if_run_active(record: MonitoringRecord) -> None:
-        if record.run_active:
-            raise MonitoringRunActiveError(
-                "Monitoring is running automatically for the active protocol run."
-            )
-
-    def raise_if_run_active(self) -> None:
-        """Non-mutating check, callable by the service before other validation.
-
-        Lets the service report 409 ahead of e.g. a 422 for missing config
-        when both conditions hold — a run in progress means the manual
-        endpoint isn't meaningful right now, regardless of what else is
-        wrong with the request. try_manual_start()/try_manual_stop() re-check
-        this under the same lock right before mutating, so a run starting in
-        the gap between this call and theirs is still caught correctly.
-        """
+    def set_reading_listener(self, listener: ReadingListener | None) -> None:
+        """Pass each reading, with its key, to *listener* (the platform view's LCDs)."""
         with self._lock:
-            self._raise_if_run_active(self._record)
+            self._reading_listener = listener
 
     def try_manual_start(self) -> threading.Event | None:
         """Turn manual monitoring on.
 
         Returns the fresh stop_event for the caller to spawn a poll thread
-        with, or None if monitoring was already on (no-op). Returning the
-        event directly (rather than a bool the caller then fetches
-        separately) keeps "create the event" and "hand it to the caller"
-        one atomic step — no window where a concurrent begin_run() could
-        observe an inconsistent state.
-
-        Raises MonitoringRunActiveError if a protocol run currently has
-        monitoring forced on — the manual toggle isn't the user's to use
-        during a run.
+        with, or None if a poll loop is already running: monitoring was
+        already on, or a protocol run has it on — then only ``manual_on``
+        changes, and monitoring stays on after the run. Returning the event
+        directly (rather than a bool the caller then fetches separately)
+        keeps "create the event" and "hand it to the caller" one atomic
+        step — no window where a concurrent begin_run() could observe an
+        inconsistent state.
         """
         with self._lock:
-            self._raise_if_run_active(self._record)
             if self._record.manual_on:
                 return None
             self._record.manual_on = True
+            if self._record.run_active:
+                return None
             self._record.stop_event = threading.Event()
             return self._record.stop_event
 
     def try_manual_stop(self) -> None:
-        """Turn manual monitoring off, signalling the poll thread to stop if one is running."""
+        """Turn manual monitoring off, signalling the poll thread to stop.
+
+        During a protocol run only ``manual_on`` changes: polling continues
+        for the run and stops when it ends (see end_run()).
+        """
         with self._lock:
-            self._raise_if_run_active(self._record)
             if not self._record.manual_on:
                 return
             self._record.manual_on = False
-            self._record.stop_event.set()
+            if not self._record.run_active:
+                self._record.stop_event.set()
 
     def begin_run(self, run_id: str, record: bool) -> threading.Event | None:
         """Force monitoring on for an active protocol run.
@@ -132,6 +128,14 @@ class MonitoringStore:
             self._record.history.setdefault(key, deque(maxlen=HISTORY_MAXLEN)).append(
                 reading
             )
+            listener = self._reading_listener
+        if listener is not None:
+            try:
+                listener(key, reading)
+            except Exception:
+                logger.opt(exception=True).warning(
+                    "Monitoring reading listener failed for '{}'", key
+                )
 
     def get_latest(self) -> dict[str, dict[str, Any]]:
         with self._lock:

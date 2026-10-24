@@ -4,6 +4,7 @@ from PyQt5.QtCore import QObject, Qt
 from qfluentwidgets import InfoBar, InfoBarPosition
 
 from chemunited.elements.access import Components, Connections
+from chemunited.elements.display import LcdDisplayItem
 from chemunited.elements.reactions import ReactionDefinition
 from chemunited.protocols.workflows import ProcessWorkflow
 from chemunited.shared.enums import SetupStepMode, WindowCategory
@@ -30,6 +31,9 @@ class OrchestratorCore(QObject):
 
         # Reactions applied to vessel inventories or flow-reactor channels.
         self.reactions: list[ReactionDefinition] = []
+
+        # LCD readouts for the dashboard's live platform view, keyed by name.
+        self.displays: dict[str, LcdDisplayItem] = {}
 
         # Protocols used in the platform
         self.protocols: dict[str, ProcessWorkflow] = {}

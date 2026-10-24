@@ -10,9 +10,10 @@ import time
 from dataclasses import dataclass, field
 from itertools import count
 from pathlib import Path
-from typing import Any, Iterator, cast
+from typing import Any, cast
 
 from chemunited_core.components import ComponentData
+from chemunited_core.components.live_state import iter_apply_kwargs
 from chemunited_workflow import Platform, RunCancelledError
 from chemunited_workflow.clients import ComponentClient
 
@@ -39,43 +40,6 @@ def _wait_until_sim_time(
         time.sleep(0.0001)
     if stop_event.is_set():
         raise RunCancelledError("Run was cancelled.")
-
-
-def _normalize_connect_pairs(parsed: object) -> list[tuple[int, int]] | None:
-    if not isinstance(parsed, list) or not parsed:
-        return None
-    # Flat pair: [a, b] - both elements are numbers, not nested lists.
-    if len(parsed) == 2 and all(isinstance(x, (int, float)) for x in parsed):
-        return [tuple(parsed)]  # type: ignore[list-item]
-    # One or more pairs: [[a, b], ...] - every element is itself a 2-element list.
-    if all(isinstance(item, list) and len(item) == 2 for item in parsed):
-        return [tuple(item) for item in parsed]
-    return None
-
-
-def iter_apply_kwargs(command: str, kwargs: dict) -> Iterator[dict]:
-    """Normalize a "position" command's ``connect`` kwarg before calling apply().
-
-    ``PositionParameter.connect`` (chemunited_core.protocols.valves) is
-    deliberately str-typed for a GUI dropdown, and its JSON shape isn't
-    consistent - a flat pair "[a, b]" or a wrapped list of pairs
-    "[[a, b]]"/"[[a, b], [c, d]]". ``ComponentData.apply()`` expects a single
-    flat pair, so detect the shape, unwrap, and iterate - one ``apply()`` call
-    per pair. Mirrors chemunited-orchestrator's pool_commands.py, which does
-    the same unwrapping for its live GUI-replay path; this is the equivalent
-    for the actual physics application here.
-    """
-    if command == "position" and isinstance(kwargs.get("connect"), str):
-        try:
-            parsed = json.loads(kwargs["connect"])
-        except (json.JSONDecodeError, ValueError, TypeError):
-            parsed = None
-        pairs = _normalize_connect_pairs(parsed)
-        if pairs:
-            for pair in pairs:
-                yield {**kwargs, "connect": pair}
-            return
-    yield kwargs
 
 
 def write_pool_log(

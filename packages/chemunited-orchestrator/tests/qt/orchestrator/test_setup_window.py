@@ -927,6 +927,7 @@ class TestAddComponent:
             "reactions": [],
             "inventory": {},
             "port_closures": {},
+            "displays": [],
         }
         assert session.export_destination == source_file
         assert store.list() == [source_file.resolve()]

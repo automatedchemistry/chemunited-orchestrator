@@ -221,6 +221,7 @@ def build_draw(platform):
         ],
         "inventory": {},
         "port_closures": {},
+        "displays": [],
     }
 
 
@@ -317,6 +318,7 @@ def build_draw(platform):
         "reactions": [],
         "inventory": {},
         "port_closures": {},
+        "displays": [],
     }
 
 

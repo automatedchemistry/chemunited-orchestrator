@@ -5,6 +5,7 @@ from pydantic import Field
 
 from chemunited_core.common.enums import GroupParameterCategory
 from chemunited_core.components import PutResult
+from chemunited_core.components.live_state import iter_apply_kwargs
 from chemunited_core.components.valve import (
     ValveComponentData,
     ValveMode,
@@ -143,34 +144,40 @@ def rotor_from_connection(
 
 @dataclass
 class RotaryValveData(ValveComponentData):
-    """Intermediate base for all rotary valves — adds position-command support."""
+    """Intermediate base for all rotary valves — adds position-command support.
+
+    ``connect`` takes every shape the ``position`` command sends: a pair, or a
+    JSON string holding one pair or a list of pairs (see ``iter_apply_kwargs``).
+    """
 
     def put(self, command: str, **kwargs) -> PutResult:
         if command == "position":
-            new_rotor, _ = rotor_from_connection(
-                stator_ports=self.stator_ports,
-                rotor_ports=self.rotor_ports,
-                connection=kwargs.get("connect", [1, 2]),
-            )
-            if not new_rotor:
-                raise ValueError(
-                    f"It is not possible to connect the ports "
-                    f"{kwargs.get('connect')} in "
-                    f"{type(self).__name__}."
+            for call in iter_apply_kwargs(command, kwargs):
+                new_rotor, _ = rotor_from_connection(
+                    stator_ports=self.stator_ports,
+                    rotor_ports=self.rotor_ports,
+                    connection=call.get("connect", [1, 2]),
                 )
+                if not new_rotor:
+                    raise ValueError(
+                        f"It is not possible to connect the ports "
+                        f"{call.get('connect')} in "
+                        f"{type(self).__name__}."
+                    )
             return PutResult()
         raise ValueError(f"Unknown command '{command}' for {type(self).__name__}.")
 
     def apply(self, command: str, **kwargs) -> PutResult:
         if command == "position":
-            new_rotor, _ = rotor_from_connection(
-                stator_ports=self.stator_ports,
-                rotor_ports=self.rotor_ports,
-                connection=kwargs.get("connect", [1, 2]),
-            )
-            if new_rotor:
-                self.rotor_ports = new_rotor
-                self.sync_internal_state()
+            for call in iter_apply_kwargs(command, kwargs):
+                new_rotor, _ = rotor_from_connection(
+                    stator_ports=self.stator_ports,
+                    rotor_ports=self.rotor_ports,
+                    connection=call.get("connect", [1, 2]),
+                )
+                if new_rotor:
+                    self.rotor_ports = new_rotor
+                    self.sync_internal_state()
         return PutResult()
 
 

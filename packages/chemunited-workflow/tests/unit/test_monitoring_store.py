@@ -2,10 +2,7 @@
 
 from __future__ import annotations
 
-import pytest
-
 from chemunited_workflow.api.monitoring_store import HISTORY_MAXLEN, MonitoringStore
-from chemunited_workflow.exceptions import MonitoringRunActiveError
 
 
 def test_initial_state_is_fully_off():
@@ -53,19 +50,31 @@ def test_try_manual_stop_idempotent_noop_when_already_off():
     assert store.snapshot()["manual_on"] is False
 
 
-def test_manual_start_raises_while_run_active():
+def test_manual_start_during_a_run_only_sets_the_flag():
     store = MonitoringStore()
-    store.begin_run("run-1", record=False)
-    with pytest.raises(MonitoringRunActiveError):
-        store.try_manual_start()
+    run_event = store.begin_run("run-1", record=False)
+
+    assert store.try_manual_start() is None  # the run's poll loop keeps going
+    assert store.snapshot()["manual_on"] is True
+
+    store.end_run()
+    assert store.snapshot()["effective_on"] is True  # stays on after the run
+    assert not run_event.is_set()
 
 
-def test_manual_stop_raises_while_run_active():
+def test_manual_stop_during_a_run_keeps_polling_until_the_run_ends():
     store = MonitoringStore()
-    store.try_manual_start()
+    event = store.try_manual_start()
     store.begin_run("run-1", record=False)
-    with pytest.raises(MonitoringRunActiveError):
-        store.try_manual_stop()
+
+    store.try_manual_stop()
+    assert store.snapshot()["manual_on"] is False
+    assert store.snapshot()["effective_on"] is True
+    assert not event.is_set()
+
+    store.end_run()
+    assert store.snapshot()["effective_on"] is False
+    assert event.is_set()
 
 
 # ── run lifecycle ────────────────────────────────────────────────────────────
@@ -158,3 +167,30 @@ def test_get_history_unknown_key_returns_empty_list():
 def test_get_latest_starts_empty():
     store = MonitoringStore()
     assert store.get_latest() == {}
+
+
+# ── reading listener (the platform view's LCDs) ──────────────────────────────
+
+
+def test_the_reading_listener_gets_every_reading():
+    store = MonitoringStore()
+    seen = []
+    store.set_reading_listener(
+        lambda key, reading: seen.append((key, reading["value"]))
+    )
+
+    store.record_reading("pump::value", {"time": "t0", "value": 1.0, "error": None})
+
+    assert seen == [("pump::value", 1.0)]
+
+
+def test_a_failing_reading_listener_never_loses_the_reading():
+    store = MonitoringStore()
+
+    def broken(key, reading):
+        raise RuntimeError("listener bug")
+
+    store.set_reading_listener(broken)
+    store.record_reading("pump::value", {"time": "t0", "value": 1.0, "error": None})
+
+    assert store.get_latest()["pump::value"]["value"] == 1.0

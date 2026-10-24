@@ -1,4 +1,4 @@
-"""Tests for PlatformBuilder.set_port_closed (capped ports written by draw/setup.py)."""
+"""Tests for PlatformBuilder: capped ports and LCD displays written by draw/setup.py."""
 
 from __future__ import annotations
 
@@ -29,3 +29,19 @@ def test_set_port_closed_can_reopen_and_ignores_unknown_ports() -> None:
     builder.set_port_closed(component="missing", port=1)
 
     assert builder["V"].ports_by_number[2].closure == PortClosure.OPEN
+
+
+def test_add_display_is_accepted_and_adds_nothing_to_simulate() -> None:
+    builder = PlatformBuilder()
+    builder.add_component(name="V", figure="SixPortDistributionValve")
+
+    builder.add_display(
+        name="Inlet pressure",
+        position=(0.0, 0.0),
+        component="V",
+        command="monitor_position",
+        kwargs={},
+    )
+
+    assert [component.name for component in builder.components] == ["V"]
+    assert builder.edges == []

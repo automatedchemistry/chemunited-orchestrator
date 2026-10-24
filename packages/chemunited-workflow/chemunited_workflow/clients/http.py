@@ -11,6 +11,8 @@ import requests
 from loguru import logger
 from pydantic import AnyHttpUrl
 
+from ..device_locks import hold_device
+from ..exceptions import DeviceCommunicationError
 from .base import DeviceClientMixin, _push_thread_resilient_error
 from .envelope import CommandResponse
 
@@ -27,6 +29,18 @@ def _command_response(resp: requests.Response) -> CommandResponse:
     if not resp.ok:
         return CommandResponse(native=resp, text=resp.text, body_fn=lambda: {})
     return CommandResponse(native=resp, text=resp.text, body_fn=resp.json)
+
+
+def device_not_served(root: str, prefix: str) -> DeviceCommunicationError:
+    """For a device server whose OpenAPI schema has nothing under *prefix*.
+
+    Usually that server runs another project's device configuration, which an
+    empty command list would hide.
+    """
+    return DeviceCommunicationError(
+        f"{root} serves no device at {prefix.rstrip('/')}. Is the device server "
+        "running this project's device configuration?"
+    )
 
 
 class BaseClient:
@@ -189,6 +203,9 @@ class BaseClient:
         so entries are keyed by ``{command}_{verb}`` rather than by the bare
         command name to avoid one verb overwriting the other; the raw command
         name is preserved in each entry's ``"name"`` field.
+
+        Raises ``DeviceCommunicationError`` if the server serves nothing at all
+        under ``base_url``.
         """
         parts = urlsplit(self.base_url)
         root = f"{parts.scheme}://{parts.netloc}"
@@ -199,9 +216,11 @@ class BaseClient:
         schema = response.json()
 
         commands: dict[str, dict[str, Any]] = {}
+        served = False
         for path, methods in schema.get("paths", {}).items():
             if not path.startswith(prefix) or not isinstance(methods, dict):
                 continue
+            served = True
             command = path[len(prefix) :]
             for verb in ("get", "put"):
                 op = methods.get(verb)
@@ -212,6 +231,8 @@ class BaseClient:
                     "type": verb,
                     "parameters": self._extract_parameters(op),
                 }
+        if not served:
+            raise device_not_served(root, prefix)
         return commands
 
     @staticmethod
@@ -257,6 +278,7 @@ class ComponentClient(DeviceClientMixin, BaseClient):
         error_resilient: bool = False,
         cancellation_token=None,
         pause_event=None,
+        command_observer=None,
     ) -> None:
         BaseClient.__init__(self, url, dry_run=dry_run)
         self._init_device_semantics(
@@ -267,6 +289,7 @@ class ComponentClient(DeviceClientMixin, BaseClient):
             error_resilient=error_resilient,
             cancellation_token=cancellation_token,
             pause_event=pause_event,
+            command_observer=command_observer,
         )
         self._is_idle_supported: bool | None = None
 
@@ -328,7 +351,10 @@ class ComponentClient(DeviceClientMixin, BaseClient):
             self._raise_if_cancelled()
             response: requests.Response | None
             try:
-                response = BaseClient.get(self, _IS_IDLE_PATH)
+                # Lock each poll, not the whole wait, so monitoring reads of a
+                # device that works for minutes still get through between polls.
+                with hold_device(self._device_key()):
+                    response = BaseClient.get(self, _IS_IDLE_PATH)
             except requests.HTTPError as exc:
                 response = exc.response
 

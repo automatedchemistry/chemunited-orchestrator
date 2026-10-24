@@ -14,6 +14,7 @@ from typing import Any, Callable
 
 from loguru import logger
 
+from ...command_events import CommandObserver
 from ...custom_route_context import CustomRouteContext
 from ...platform import Platform
 
@@ -87,7 +88,11 @@ def discover_custom_routes(project_dir: Path) -> list[dict[str, Any]]:
 
 
 def call_custom_route(
-    project_dir: Path, name: str, kwargs: dict[str, Any]
+    project_dir: Path,
+    name: str,
+    kwargs: dict[str, Any],
+    *,
+    command_observer: CommandObserver | None = None,
 ) -> dict[str, Any]:
     """Call a registered custom route by name.
 
@@ -100,14 +105,17 @@ def call_custom_route(
 
     Opens a throwaway, unlocked Platform for the call's duration, exposed
     to the function via `CustomRouteContext.platform` so it can reach a
-    real device — closed again once the call returns.
+    real device — closed again once the call returns. ``command_observer``
+    puts the commands it sends on the live platform view.
     """
     routes = load_custom_routes(project_dir)
     if name not in routes:
         raise KeyError(f"Custom route '{name}' is not registered.")
     func = routes[name]
 
-    platform = Platform.from_project_dir(project_dir, error_resilient=True)
+    platform = Platform.from_project_dir(
+        project_dir, error_resilient=True, command_observer=command_observer
+    )
     CustomRouteContext.platform = platform
     start = time.monotonic()
     try:

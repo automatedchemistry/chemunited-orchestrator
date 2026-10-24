@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 from pathlib import Path
 
@@ -103,3 +104,35 @@ async def platform_devices(
             status_code=500, detail="platform-devices.json is malformed."
         ) from exc
     return data.get("devices", [])
+
+
+@router.get("/platform-live", include_in_schema=False)
+async def platform_live(holder: ProjectHolder = Depends(get_project_holder)) -> dict:
+    """Where each device's live parts sit on platform.svg, from the desktop export.
+
+    `svg_matches` is false when platform.svg is no longer the drawing the map
+    was written with (say, setup.py was edited without re-saving in the desktop
+    app): the dashboard then draws no pictures or LCDs from it.
+    """
+    pd = holder.project_dir
+    if pd is None:
+        raise HTTPException(status_code=404, detail="No project loaded.")
+    live_path = pd / "draw" / "platform-live.json"
+    if not live_path.is_file():
+        raise HTTPException(status_code=404, detail="platform-live.json not found.")
+    try:
+        data = json.loads(live_path.read_text(encoding="utf-8"))
+    except json.JSONDecodeError as exc:
+        raise HTTPException(
+            status_code=500, detail="platform-live.json is malformed."
+        ) from exc
+    svg_path = pd / "draw" / "platform.svg"
+    svg_sha256 = (
+        hashlib.sha256(svg_path.read_bytes()).hexdigest()
+        if svg_path.is_file()
+        else None
+    )
+    return {
+        **data,
+        "svg_matches": svg_sha256 is not None and data.get("svg_sha256") == svg_sha256,
+    }

@@ -10,6 +10,7 @@ from typing import Any
 
 from .cancellation import sleep_interruptibly
 from .clients import ComponentClient
+from .command_events import CommandObserver
 
 
 def _flowchem_configured(assoc: dict[str, Any]) -> bool:
@@ -124,6 +125,7 @@ class Platform(Mapping[str, ComponentClient]):
         error_resilient: bool = False,
         cancellation_token: threading.Event | None = None,
         pause_event: threading.Event | None = None,
+        command_observer: CommandObserver | None = None,
     ) -> "Platform":
         """Build a Platform from a connectivity/associations.json file.
 
@@ -142,6 +144,9 @@ class Platform(Mapping[str, ComponentClient]):
         to it (``{server_url}/{component_url}``) — the historical format.
         When absent, every ``"flowchem"`` association's ``component_url``
         must already be a full absolute URL, used as-is.
+
+        ``command_observer``, if given, is told how each PUT/POST goes (see
+        ``command_events``); the live platform view is built from it.
 
         Raises
         ------
@@ -165,6 +170,7 @@ class Platform(Mapping[str, ComponentClient]):
             error_resilient=error_resilient,
             cancellation_token=cancellation_token,
             pause_event=pause_event,
+            command_observer=command_observer,
         )
         components = {}
         for assoc in data["associations"]:
@@ -204,6 +210,7 @@ class Platform(Mapping[str, ComponentClient]):
         error_resilient: bool = False,
         cancellation_token: threading.Event | None = None,
         pause_event: threading.Event | None = None,
+        command_observer: CommandObserver | None = None,
     ) -> "Platform":
         """Shorthand: load from ``{project_dir}/connectivity/associations.json``."""
         return cls.from_connectivity(
@@ -214,4 +221,5 @@ class Platform(Mapping[str, ComponentClient]):
             error_resilient=error_resilient,
             cancellation_token=cancellation_token,
             pause_event=pause_event,
+            command_observer=command_observer,
         )

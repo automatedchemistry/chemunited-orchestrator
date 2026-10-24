@@ -23,6 +23,7 @@ from chemunited.elements.component.project_glossary import (
 from chemunited.project.manifest import ProjectManifest
 from chemunited.project.platform_svg import (
     PLATFORM_DEVICES_RELATIVE_PATH,
+    PLATFORM_LIVE_RELATIVE_PATH,
     PLATFORM_SVG_RELATIVE_PATH,
     PROCESS_WORKFLOWS_DIR_RELATIVE_PATH,
     export_platform_svg,
@@ -315,6 +316,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
         self._session = other._session
         self.components = other.components
         self.connections = other.connections
+        self.displays = other.displays
         self._passthrough_associations = other._passthrough_associations
 
         # protocols is mutated in place, not reassigned: MonitorProcessesWidget
@@ -459,6 +461,8 @@ class OrchestratorProjectFile(OrchestratorExecution):
                 )
 
         export_destination = export_destination or self._session.source_file
+        for problem in self.stale_display_bindings():
+            logger.bind(window=WindowCategory.SETUP).warning(problem)
         self._save_platform_svg()
         self._session.save_draw(self._build_draw_data())
         self._save_protocols()
@@ -585,7 +589,9 @@ class OrchestratorProjectFile(OrchestratorExecution):
             self.parent_ref.scene_attribute,
             self.working_dir / PLATFORM_SVG_RELATIVE_PATH,
             devices_path=self.working_dir / PLATFORM_DEVICES_RELATIVE_PATH,
+            live_path=self.working_dir / PLATFORM_LIVE_RELATIVE_PATH,
             components=self.components.items(),
+            displays=self.displays.values(),
         )
 
     def _save_process_workflow_svgs(self) -> None:
@@ -851,6 +857,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
 
         self.connections.clear()
         self.components.clear()
+        self.displays.clear()
         self.reactions.clear()
         self._passthrough_associations.clear()
         self.clear_protocols()
@@ -871,6 +878,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
         """
         self.components.clear()
         self.connections.clear()
+        self.displays.clear()
         self.reactions.clear()
         scene = self.parent_ref.scene_attribute
         scene.clearSelection()
@@ -911,6 +919,15 @@ class OrchestratorProjectFile(OrchestratorExecution):
             except Exception as exc:
                 logger.bind(window=WindowCategory.SETUP).opt(exception=exc).warning(
                     f"Skipped connection: {exc}"
+                )
+
+        for display in draw_data.get("displays", []):
+            try:
+                self.add_display(**dict(display))
+            except Exception as exc:
+                name = dict(display).get("name", "unknown")
+                logger.bind(window=WindowCategory.SETUP).opt(exception=exc).warning(
+                    f"Skipped LCD '{name}': {exc}"
                 )
 
         apply_inventory_status_payload(self.components, draw_data.get("inventory", {}))  # type: ignore[arg-type]
@@ -1242,6 +1259,9 @@ class OrchestratorProjectFile(OrchestratorExecution):
         reactions = [reaction.model_dump(mode="json") for reaction in self.reactions]
         inventory = build_inventory_status_payload(self.components.values())
         port_closures = build_port_closure_payload(self.components.values())
+        displays = [
+            item.display.model_dump(mode="json") for item in self.displays.values()
+        ]
         return {
             "compounds": compounds,
             "components": components,
@@ -1249,6 +1269,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
             "reactions": reactions,
             "inventory": inventory,
             "port_closures": port_closures,
+            "displays": displays,
         }
 
     def _sync_compound_list(self) -> None:

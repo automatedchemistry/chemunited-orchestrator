@@ -1,5 +1,7 @@
 from typing import ClassVar
 
+from PyQt5.QtWidgets import QGraphicsItem
+
 from chemunited.elements.component.component_parts import StatusOverlay
 from chemunited.elements.component.graph_item import GraphComponent
 from chemunited_core.figure_registry import MFCComponentData
@@ -18,3 +20,9 @@ class MFCComponent(GraphComponent[MFCComponentData]):
             StatusOverlay.COLOR_ACTIVE if active else StatusOverlay.COLOR_IDLE
         )
         self._overlay.setVisible(True)
+
+    def live_items(self) -> tuple[QGraphicsItem, ...]:
+        return (self._overlay,)
+
+    def live_anchors(self) -> dict[str, dict[str, object]]:
+        return self._badge_anchors()

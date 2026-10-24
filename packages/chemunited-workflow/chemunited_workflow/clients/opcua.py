@@ -21,6 +21,7 @@ from asyncua import ua
 from asyncua.sync import Client, SyncNode
 from loguru import logger
 
+from ..device_locks import hold_device
 from ..exceptions import OpcUaDeviceError
 from .base import DeviceClientMixin, _push_thread_resilient_error
 from .envelope import CommandResponse
@@ -86,6 +87,7 @@ class OpcUaComponentClient(DeviceClientMixin):
         error_resilient: bool = False,
         cancellation_token: threading.Event | None = None,
         pause_event: threading.Event | None = None,
+        command_observer=None,
     ) -> None:
         self._endpoint = endpoint
         self._root_node_id = root_node_id
@@ -104,6 +106,7 @@ class OpcUaComponentClient(DeviceClientMixin):
             error_resilient=error_resilient,
             cancellation_token=cancellation_token,
             pause_event=pause_event,
+            command_observer=command_observer,
         )
 
     def _ensure_connected(self) -> Client:
@@ -217,7 +220,9 @@ class OpcUaComponentClient(DeviceClientMixin):
         while True:
             self._raise_if_cancelled()
             try:
-                value = self._resolve(self._idle_node_path).get_value()
+                # Lock each poll, not the whole wait (see device_locks).
+                with hold_device(self._device_key()):
+                    value = self._resolve(self._idle_node_path).get_value()
             except Exception as exc:
                 wrapped = OpcUaDeviceError(str(exc))
                 if self._error_resilient:

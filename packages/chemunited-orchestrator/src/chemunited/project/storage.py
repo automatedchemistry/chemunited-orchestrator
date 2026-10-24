@@ -118,6 +118,7 @@ class _DrawRecorder:
         self.reactions: list[dict] = []
         self.inventory: dict[str, dict] = {}
         self.port_closures: dict[str, dict[str, bool]] = {}
+        self.displays: list[dict] = []
 
     def add_compound(self, **payload) -> None:
         self.compounds.append(dict(payload))
@@ -195,6 +196,9 @@ class _DrawRecorder:
         else:
             self.port_closures.get(component, {}).pop(str(port), None)
 
+    def add_display(self, **payload) -> None:
+        self.displays.append(dict(payload))
+
     def data(self) -> dict:
         return {
             "compounds": self.compounds,
@@ -203,6 +207,7 @@ class _DrawRecorder:
             "reactions": self.reactions,
             "inventory": self.inventory,
             "port_closures": self.port_closures,
+            "displays": self.displays,
         }
 
 
@@ -249,6 +254,9 @@ def _render_draw_body(draw_data: dict) -> str:
     for comp_name, port_payload in draw_data.get("port_closures", {}).items():
         for port_num_str in port_payload:
             calls.append(_render_port_closure(comp_name, port_num_str))
+
+    for display in draw_data.get("displays", []):
+        calls.append(_render_call("platform.add_display", display, "display"))
 
     if not calls:
         return "    pass\n"
@@ -328,6 +336,7 @@ def _ordered_payload(payload: dict, payload_type: str) -> dict:
             "phase",
             "delta_temperature_per_mol_converted",
         ),
+        "display": ("name", "position", "component", "command", "kwargs"),
     }[payload_type]
     ordered = {key: normalized.pop(key) for key in preferred if key in normalized}
     ordered.update({key: normalized[key] for key in sorted(normalized)})

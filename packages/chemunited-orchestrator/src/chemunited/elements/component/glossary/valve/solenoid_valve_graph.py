@@ -2,6 +2,7 @@ from typing import TYPE_CHECKING, ClassVar, cast
 
 from PyQt5.QtCore import QLineF
 from PyQt5.QtGui import QColor
+from PyQt5.QtWidgets import QGraphicsItem
 
 from chemunited.elements.component.component_parts import StatusOverlay
 from chemunited.elements.component.graph_item import GraphComponent
@@ -141,6 +142,12 @@ class _SolenoidValveVisuals(_SolenoidValveHost):
                 else StatusOverlaySolenoid.COLOR_CLOSED
             )
         self._overlay.setVisible(True)
+
+    def live_items(self) -> tuple[QGraphicsItem, ...]:
+        return (self._overlay,)
+
+    def live_anchors(self) -> dict[str, dict[str, object]]:
+        return self._badge_anchors()
 
 
 class SolenoidValve(_SolenoidValveVisuals, GraphComponent[SolenoidValveData]):

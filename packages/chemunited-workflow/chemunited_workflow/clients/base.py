@@ -10,7 +10,17 @@ from dataclasses import asdict, is_dataclass
 from pathlib import Path
 from typing import Any
 
+from loguru import logger
+
 from ..cancellation import raise_if_cancelled, sleep_interruptibly, wait_while_paused
+from ..command_events import (
+    CommandEvent,
+    CommandEventKind,
+    CommandObserver,
+    current_node,
+    next_call_id,
+)
+from ..device_locks import hold_device
 from ..durations import parse_timeout_commands
 from ..exceptions import ConcurrentClientAccessError
 from .envelope import CommandResponse
@@ -28,6 +38,15 @@ def _pop_thread_resilient_errors() -> list[Exception]:
     errors = getattr(_thread_resilient_errors, "errors", [])
     _thread_resilient_errors.errors = []
     return errors
+
+
+def _thread_resilient_error_count() -> int:
+    return len(getattr(_thread_resilient_errors, "errors", []))
+
+
+def _thread_resilient_errors_since(count: int) -> list[Exception]:
+    """Errors pushed after *count* were already on the list — read, never popped."""
+    return list(getattr(_thread_resilient_errors, "errors", [])[count:])
 
 
 def _json_safe(value: Any) -> Any:
@@ -65,6 +84,7 @@ class DeviceClientMixin(abc.ABC):
         error_resilient: bool = False,
         cancellation_token: threading.Event | None = None,
         pause_event: threading.Event | None = None,
+        command_observer: CommandObserver | None = None,
     ) -> None:
         self._dry_run = dry_run
         self._access_lock = threading.Lock()
@@ -75,8 +95,48 @@ class DeviceClientMixin(abc.ABC):
         self._error_resilient = error_resilient
         self._cancellation_token = cancellation_token
         self._pause_event = pause_event
+        self._command_observer = command_observer
 
     base_url: str
+
+    def _device_key(self) -> str:
+        """Key of this device's process-wide lock (see ``device_locks``)."""
+        return self.component_ui if self.component_ui != "undefined" else self.base_url
+
+    def _report(
+        self,
+        kind: CommandEventKind,
+        call_id: int,
+        path: str,
+        params: Any | None,
+        body: Any | None,
+        error: BaseException | None = None,
+    ) -> None:
+        """Tell the command observer (the live view) how a command is going.
+
+        Never raises: a broken observer must not fail the command itself.
+        """
+        if self._command_observer is None:
+            return
+        try:
+            self._command_observer(
+                CommandEvent(
+                    kind=kind,
+                    component=self.component_ui,
+                    command=path,
+                    call_id=call_id,
+                    params=dict(params) if isinstance(params, Mapping) else None,
+                    body=body,
+                    node=current_node(),
+                    error=(
+                        None if error is None else (str(error) or type(error).__name__)
+                    ),
+                )
+            )
+        except Exception:
+            logger.opt(exception=True).warning(
+                "Command observer failed for {} {}", self.component_ui, path
+            )
 
     def _write_json_log(self, data: dict[str, Any]) -> None:
         if self.pool_json_log is None:
@@ -163,21 +223,47 @@ class DeviceClientMixin(abc.ABC):
                 "simultaneously. Each ComponentClient must be used by only one workflow node "
                 "at a time — check your workflow graph for nodes that share the same device."
             )
+        is_command = verb in ("put", "post")
+        call_id = next_call_id() if is_command else 0
+        # Resilient errors are pushed rather than raised; counting them before
+        # and after (without popping) is how a pushed failure is noticed here.
+        errors_before = _thread_resilient_error_count()
         try:
-            if verb == "get":
-                resp = self._transport_get(path, params=safe_query_params)
-            elif verb == "put":
-                resp = self._transport_put(
-                    path, params=safe_query_params, json=safe_json
-                )
-            else:
-                resp = self._transport_post(
-                    path, params=safe_query_params, json=safe_json
-                )
+            if is_command:
+                self._report("started", call_id, path, safe_query_params, safe_json)
+            with hold_device(self._device_key()):
+                if verb == "get":
+                    resp = self._transport_get(path, params=safe_query_params)
+                elif verb == "put":
+                    resp = self._transport_put(
+                        path, params=safe_query_params, json=safe_json
+                    )
+                else:
+                    resp = self._transport_post(
+                        path, params=safe_query_params, json=safe_json
+                    )
             self._checkpoint()
+        except BaseException as exc:
+            if is_command:
+                self._report("failed", call_id, path, safe_query_params, safe_json, exc)
+            raise
         finally:
             self._access_lock.release()
-        self._execute_post_command(verb)
+        if not is_command:
+            self._execute_post_command(verb)
+            return resp.native if raw_response else resp.body_fn()
+        try:
+            self._execute_post_command(verb)
+        except BaseException as exc:
+            self._report("failed", call_id, path, safe_query_params, safe_json, exc)
+            raise
+        pushed = _thread_resilient_errors_since(errors_before)
+        if pushed:
+            self._report(
+                "failed", call_id, path, safe_query_params, safe_json, pushed[-1]
+            )
+        else:
+            self._report("finished", call_id, path, safe_query_params, safe_json)
         return resp.native if raw_response else resp.body_fn()
 
     def get(

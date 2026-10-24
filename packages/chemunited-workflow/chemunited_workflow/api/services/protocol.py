@@ -22,6 +22,8 @@ from chemunited_workflow.clients.base import _pop_thread_resilient_errors
 from chemunited_workflow.clients.http import ComponentClient
 from chemunited_workflow.platform import Platform
 
+from ..device_state import DeviceStateStore
+
 
 def _safe_close(client: Any, component_name: str) -> None:
     """Best-effort cleanup for a throwaway client — never masks the caller's result."""
@@ -40,11 +42,13 @@ class ProtocolService:
         processes: dict[str, type[Process]],
         configs: dict[str, type[BaseModel]],
         main_parameter_class: type[BaseModel],
+        device_state: DeviceStateStore | None = None,
     ) -> None:
         self._project_dir = project_dir
         self._processes = processes
         self._configs = configs
         self._main_parameter_class = main_parameter_class
+        self._device_state = device_state
 
     # ── Process introspection ────────────────────────────────────────────────
 
@@ -411,10 +415,12 @@ class ProtocolService:
     ) -> dict[str, Any]:
         """Issue an ad-hoc command directly against a component, any protocol.
 
-        Builds a throwaway, unlocked client (a fresh ``Platform`` read from
-        disk) rather than reusing whatever ``Platform`` a live protocol run
-        holds in memory — so an ad-hoc UI command never contends with an
-        in-progress run's per-device lock or pollutes its pool log.
+        Builds a throwaway client (a fresh ``Platform`` read from disk)
+        rather than reusing whatever ``Platform`` a live protocol run holds in
+        memory — so an ad-hoc UI command never trips the run's per-client
+        concurrency check or pollutes its pool log. Its requests still take
+        the device's shared lock (see ``device_locks``), and a PUT shows on
+        the live platform view like a run's commands.
 
         Note: ``timeout`` is accepted for API-contract compatibility but is
         not currently enforced against the underlying transport — none of
@@ -422,7 +428,15 @@ class ProtocolService:
         against an unresponsive device can block indefinitely. Known
         limitation, not fixed here.
         """
-        platform = Platform.from_project_dir(self._project_dir, error_resilient=True)
+        platform = Platform.from_project_dir(
+            self._project_dir,
+            error_resilient=True,
+            command_observer=(
+                self._device_state.observer()
+                if self._device_state is not None
+                else None
+            ),
+        )
         client: Any = None
         try:
             if component_name not in platform:

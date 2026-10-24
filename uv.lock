@@ -603,6 +603,9 @@ dependencies = [
 discovery = [
     { name = "zeroconf" },
 ]
+live = [
+    { name = "chemunited-core" },
+]
 opcua = [
     { name = "asyncua" },
 ]
@@ -619,6 +622,7 @@ test = [
 [package.metadata]
 requires-dist = [
     { name = "asyncua", marker = "extra == 'opcua'", specifier = ">=2.0,<3" },
+    { name = "chemunited-core", marker = "extra == 'live'", editable = "packages/chemunited-core" },
     { name = "chemunited-quantities", editable = "packages/chemunited-quantities" },
     { name = "click", specifier = ">=8.1" },
     { name = "fastapi", specifier = ">=0.115" },
@@ -641,7 +645,7 @@ requires-dist = [
     { name = "uvicorn", specifier = ">=0.29" },
     { name = "zeroconf", marker = "extra == 'discovery'", specifier = ">=0.131" },
 ]
-provides-extras = ["test", "discovery", "sila2", "opcua"]
+provides-extras = ["test", "discovery", "sila2", "opcua", "live"]
 
 [[package]]
 name = "click"

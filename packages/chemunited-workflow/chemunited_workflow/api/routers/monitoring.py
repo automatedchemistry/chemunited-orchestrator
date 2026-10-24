@@ -2,15 +2,31 @@
 
 from __future__ import annotations
 
+import json
+from typing import Any
+
 import requests
 from fastapi import APIRouter, Depends, HTTPException
 
-from ...exceptions import DeviceCommunicationError, MonitoringRunActiveError
+from ...exceptions import DeviceCommunicationError
 from ..dependencies import get_monitoring_service
 from ..schemas import MonitoringConfigIn, MonitoringStateOut
 from ..services.monitoring import MonitoringService
 
 router = APIRouter(prefix="/monitoring", tags=["monitoring"])
+
+
+def _parse_kwargs(kwargs: str | None) -> dict[str, Any] | None:
+    """The ``?kwargs=`` query parameter: a variable's parameters as a JSON object."""
+    if not kwargs:
+        return None
+    try:
+        parsed = json.loads(kwargs)
+    except json.JSONDecodeError as exc:
+        raise HTTPException(status_code=422, detail=f"kwargs is not JSON: {exc}")
+    if not isinstance(parsed, dict):
+        raise HTTPException(status_code=422, detail="kwargs must be a JSON object.")
+    return parsed
 
 
 @router.get("/discover/{component}")
@@ -72,16 +88,12 @@ async def get_state(svc: MonitoringService = Depends(get_monitoring_service)):
 async def start_monitoring(svc: MonitoringService = Depends(get_monitoring_service)):
     """Turn monitoring on manually using the current registered config.
 
-    Idempotent if already on. Returns 422 if no variables are registered,
-    409 if a protocol run currently has monitoring forced on — the manual
-    toggle isn't available while a run is active.
+    Idempotent if already on. This also makes the dashboard's platform view
+    live, so it works with no variables registered, and during a protocol
+    run: then it only sets `manual_on` (polling continues for the run, and
+    stays on after it).
     """
-    try:
-        svc.start()
-    except ValueError as exc:
-        raise HTTPException(status_code=422, detail=str(exc))
-    except MonitoringRunActiveError as exc:
-        raise HTTPException(status_code=409, detail=str(exc))
+    svc.start()
     return svc.get_state()
 
 
@@ -89,12 +101,10 @@ async def start_monitoring(svc: MonitoringService = Depends(get_monitoring_servi
 async def stop_monitoring(svc: MonitoringService = Depends(get_monitoring_service)):
     """Turn monitoring off manually. Idempotent if already off.
 
-    Returns 409 if a protocol run currently has monitoring forced on.
+    The platform view stops being live. During a protocol run only
+    `manual_on` changes: polling continues for the run and stops when it ends.
     """
-    try:
-        svc.stop()
-    except MonitoringRunActiveError as exc:
-        raise HTTPException(status_code=409, detail=str(exc))
+    svc.stop()
     return svc.get_state()
 
 
@@ -113,6 +123,7 @@ async def get_latest(svc: MonitoringService = Depends(get_monitoring_service)):
 async def get_history(
     component: str,
     command: str,
+    kwargs: str | None = None,
     svc: MonitoringService = Depends(get_monitoring_service),
 ):
     """Return the in-memory reading history for one variable, most recent last.
@@ -120,9 +131,10 @@ async def get_history(
     Bounded to a fixed number of readings — this is the live visualization
     buffer, not a full recorded profile. Returns `[]` for a variable that
     hasn't been polled yet (never 404 — there's no session resource to be
-    missing).
+    missing). For a variable with parameters, pass them as
+    `?kwargs={"channel": 2}` (JSON).
     """
-    return svc.get_history(component, command)
+    return svc.get_history(component, command, _parse_kwargs(kwargs))
 
 
 @router.get("/recordings/{run_id}/{component}/{command:path}")
@@ -131,6 +143,7 @@ async def get_recording(
     component: str,
     command: str,
     tail: int | None = None,
+    kwargs: str | None = None,
     svc: MonitoringService = Depends(get_monitoring_service),
 ):
     """Read back the recorded profile for one variable from a past run.
@@ -139,9 +152,12 @@ async def get_recording(
     failed/missed ticks with `error` set) for `component`/`command` in
     execution order, from `log/monitoring/{run_id}/`. Pass `?tail=N` to
     return only the last N readings. Only populated for runs started with
-    `record_monitoring: true`.
+    `record_monitoring: true`. For a variable with parameters, pass them as
+    `?kwargs={...}` (JSON), as for the history.
     """
     try:
-        return svc.read_recording(run_id, component, command, tail=tail)
+        return svc.read_recording(
+            run_id, component, command, tail=tail, kwargs=_parse_kwargs(kwargs)
+        )
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc))

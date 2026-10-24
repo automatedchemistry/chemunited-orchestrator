@@ -17,6 +17,7 @@ from chemunited_workflow.durations import parse_timeout_commands
 from chemunited_workflow.platform import Platform
 from chemunited_workflow.terminal import WorkflowLogger, create_run_log_path
 
+from ..device_state import DeviceStateStore
 from ..run_store import RunState, RunStore
 from .monitoring import MonitoringService
 
@@ -29,12 +30,14 @@ class RunnerService:
         configs: dict[str, type[BaseModel]],
         run_store: RunStore,
         monitoring_service: MonitoringService | None = None,
+        device_state: DeviceStateStore | None = None,
     ) -> None:
         self._project_dir = project_dir
         self._processes = processes
         self._configs = configs
         self._run_store = run_store
         self._monitoring_service = monitoring_service
+        self._device_state = device_state
 
     def start(
         self,
@@ -164,6 +167,11 @@ class RunnerService:
                     error_resilient=error_resilient,
                     cancellation_token=cancellation_token,
                     pause_event=pause_event,
+                    command_observer=(
+                        self._device_state.observer(run_id)
+                        if self._device_state is not None
+                        else None
+                    ),
                 )
                 if self._monitoring_service is not None:
                     self._monitoring_service.on_run_started(

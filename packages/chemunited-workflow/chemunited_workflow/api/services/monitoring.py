@@ -1,10 +1,12 @@
 """MonitoringService — a single, project-wide sensor-monitoring poll loop.
 
 Polling uses a throwaway ``Platform`` (a fresh read of
-``connectivity/associations.json``, unlocked, no ``pool_json_log``) rather
-than reusing whatever ``Platform`` a live protocol run holds in memory — so
-monitoring never contends with an in-progress run's per-device lock or
-pollutes its pool log. Note: none of the three client protocols currently
+``connectivity/associations.json``, no ``pool_json_log``) rather than reusing
+whatever ``Platform`` a live protocol run holds in memory — so monitoring never
+pollutes a run's pool log. Every request still takes the device's
+process-wide lock (see ``device_locks``), so a monitoring read never reaches a
+device at the same moment as a run command; a read that can't get the lock
+in time skips that tick. Note: none of the three client protocols currently
 has a timeout passthrough (see ``ProtocolService.send_component_command``'s
 docstring for the same caveat) — a hung device can stall a poll tick longer
 than ``request_timeout`` would suggest.
@@ -14,13 +16,20 @@ project. Every reading is kept in a bounded in-memory buffer (powers the
 live dashboard) and, only while a protocol run has opted in via
 ``on_run_started(run_id, record=True)``, is also appended to
 ``log/monitoring/{run_id}/{component}__{command}.jsonl`` for that run's
-duration.
+duration (``{component}__{command}__{params}.jsonl`` for a variable with
+parameters).
+
+Readings are keyed by ``monitoring_key``: device, command and parameters, so
+two variables on one command with different parameters (two ADC channels,
+say) keep their own readings.
 """
 
 from __future__ import annotations
 
+import hashlib
 import importlib.util
 import json
+import re
 import threading
 import time
 from concurrent.futures import ThreadPoolExecutor
@@ -33,7 +42,8 @@ import requests
 from loguru import logger
 
 from ...clients.base import _pop_thread_resilient_errors
-from ...clients.http import ComponentClient
+from ...clients.http import ComponentClient, device_not_served
+from ...exceptions import DeviceBusyError
 from ...monitoring_context import MonitoringContext
 from ...platform import Platform
 from ..monitoring_store import MonitoringStore
@@ -43,6 +53,43 @@ _DEFAULT_CONFIG: dict[str, Any] = {
     "request_timeout": 5.0,
     "variables": [],
 }
+
+
+def _canonical(value: Any) -> Any:
+    # Integral floats as ints: the dashboard writes 2.0 as 2 in its keys too.
+    if isinstance(value, float) and value.is_integer():
+        return int(value)
+    if isinstance(value, dict):
+        return {str(key): _canonical(item) for key, item in value.items()}
+    if isinstance(value, (list, tuple)):
+        return [_canonical(item) for item in value]
+    return value
+
+
+def canonical_kwargs(kwargs: dict[str, Any] | None) -> str:
+    """*kwargs* as canonical JSON (sorted keys, no spaces); ``""`` for none."""
+    if not kwargs:
+        return ""
+    return json.dumps(
+        _canonical(kwargs), sort_keys=True, separators=(",", ":"), ensure_ascii=False
+    )
+
+
+def monitoring_key(
+    component: str, command: str, kwargs: dict[str, Any] | None = None
+) -> str:
+    """The key of one monitored variable's readings.
+
+    ``component::command`` for a variable without parameters, as before
+    parameters were part of the key; ``component::command::{canonical
+    JSON}`` otherwise.
+    """
+    key = f"{component}::{command}"
+    params = canonical_kwargs(kwargs)
+    return f"{key}::{params}" if params else key
+
+
+_UNSAFE_FILENAME_CHARS = re.compile(r"[^A-Za-z0-9._+=,-]")
 
 
 def _safe_close(client: Any, component_name: str) -> None:
@@ -74,6 +121,9 @@ class MonitoringService:
         required, type}`` dicts for sila2/opcua). ``"custom"`` is a
         pseudo-component: its "commands" are the function names registered
         in the project's ``customizations/monitoring/monitoring_hook.py``.
+
+        Raises ``DeviceCommunicationError`` if a flowchem server serves nothing
+        at the component's URL, rather than returning an empty list.
         """
         if component == "custom":
             return [
@@ -98,9 +148,11 @@ class MonitoringService:
                 response.raise_for_status()
                 schema = response.json()
                 results = []
+                served = False
                 for path, methods in schema.get("paths", {}).items():
                     if not path.startswith(prefix) or not isinstance(methods, dict):
                         continue
+                    served = True
                     get_op = methods.get("get")
                     if get_op is None:
                         continue
@@ -111,6 +163,8 @@ class MonitoringService:
                             "parameters": get_op.get("parameters", []),
                         }
                     )
+                if not served:
+                    raise device_not_served(root, prefix)
                 return results
 
             return [
@@ -149,28 +203,21 @@ class MonitoringService:
     # ── Manual on/off ────────────────────────────────────────────────────────
 
     def start(self) -> None:
-        """Turn monitoring on manually. Raises ValueError if no variables are configured.
+        """Turn monitoring on manually; this also makes the platform view live.
 
-        Raises MonitoringRunActiveError if a protocol run currently has
-        monitoring forced on — checked first, so it takes precedence over a
-        config-validation error when both conditions hold, since the manual
-        endpoint isn't meaningful at all while a run controls monitoring.
+        Works with no variables registered (the view then goes live with
+        nothing to read) and during a run, when it only sets the manual
+        flag: polling continues for the run, and stays on after it.
         """
-        self._store.raise_if_run_active()
-        config = self.read_config()
-        if not config.get("variables"):
-            raise ValueError(
-                "No monitoring variables registered. PUT /monitoring/config first."
-            )
         stop_event = self._store.try_manual_start()
         if stop_event is not None:
             self._spawn_poll_thread(stop_event)
 
     def stop(self) -> None:
-        """Turn monitoring off manually.
+        """Turn monitoring off manually; the platform view stops being live.
 
-        Raises MonitoringRunActiveError (propagated from the store) if a
-        protocol run currently has monitoring forced on.
+        During a run only the manual flag changes: polling continues for the
+        run and stops when it ends.
         """
         self._store.try_manual_stop()
 
@@ -180,9 +227,13 @@ class MonitoringService:
     def get_latest(self) -> dict[str, Any]:
         return self._store.get_latest()
 
-    def get_history(self, component: str, command: str) -> list[dict[str, Any]]:
-        key = f"{component}::{command}"
-        return self._store.get_history(key)
+    def get_history(
+        self,
+        component: str,
+        command: str,
+        kwargs: dict[str, Any] | None = None,
+    ) -> list[dict[str, Any]]:
+        return self._store.get_history(monitoring_key(component, command, kwargs))
 
     # ── Run-lifecycle hooks (called by RunnerService) ───────────────────────
 
@@ -221,8 +272,11 @@ class MonitoringService:
         component: str,
         command: str,
         tail: int | None = None,
+        kwargs: dict[str, Any] | None = None,
     ) -> list[dict[str, Any]]:
-        path = self._run_dir(run_id) / self._variable_filename(component, command)
+        path = self._run_dir(run_id) / self._variable_filename(
+            component, command, kwargs
+        )
         if not path.exists():
             raise FileNotFoundError(
                 f"No recording for '{component}'/'{command}' in run '{run_id}'."
@@ -292,13 +346,15 @@ class MonitoringService:
                     }
                     for future in futures:
                         for var, reading in future.result():
+                            if reading.get("skipped"):
+                                continue
                             reading["tick"] = tick
-                            key = f"{var['component']}::{var['command']}"
+                            key = monitoring_key(
+                                var["component"], var["command"], var.get("kwargs")
+                            )
                             self._store.record_reading(key, reading)
                             if run_dir is not None:
-                                self._write_reading(
-                                    run_dir, var["component"], var["command"], reading
-                                )
+                                self._write_reading(run_dir, var, reading)
                     tick += 1
                     remaining = sample_time - (time.monotonic() - tick_start)
                     if remaining > 0:
@@ -413,6 +469,10 @@ class MonitoringService:
         _pop_thread_resilient_errors()  # discard stale entries from thread-pool reuse
         try:
             raw = client.get(command, params=kwargs or None, raw_response=is_http)
+        except DeviceBusyError:
+            # Another request to this device was in flight for too long: skip
+            # this tick and keep the last reading (see device_locks).
+            return {"time": now, "value": None, "error": None, "skipped": True}
         except Exception as exc:
             return {"time": now, "value": None, "error": str(exc)}
         if is_http:
@@ -437,15 +497,30 @@ class MonitoringService:
         return self._project_dir / "log" / "monitoring" / run_id
 
     @staticmethod
-    def _variable_filename(component: str, command: str) -> str:
+    def _variable_filename(
+        component: str, command: str, kwargs: dict[str, Any] | None = None
+    ) -> str:
         safe_command = command.strip("/").replace("/", "__")
-        return f"{component}__{safe_command}.jsonl"
+        if not kwargs:
+            return f"{component}__{safe_command}.jsonl"
+        # Readable where possible ("channel=2"), with a short hash whenever
+        # making the name file-safe lost something, so names never collide.
+        readable = ",".join(
+            f"{key}={value}" for key, value in sorted(_canonical(kwargs).items())
+        )
+        params = _UNSAFE_FILENAME_CHARS.sub("-", readable)[:60]
+        if params != readable:
+            digest = hashlib.sha256(canonical_kwargs(kwargs).encode()).hexdigest()
+            params = f"{params}-{digest[:8]}"
+        return f"{component}__{safe_command}__{params}.jsonl"
 
     def _write_reading(
-        self, run_dir: Path, component: str, command: str, reading: dict[str, Any]
+        self, run_dir: Path, var: dict[str, Any], reading: dict[str, Any]
     ) -> None:
         run_dir.mkdir(parents=True, exist_ok=True)
-        path = run_dir / self._variable_filename(component, command)
+        path = run_dir / self._variable_filename(
+            var["component"], var["command"], var.get("kwargs")
+        )
         with path.open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(reading) + "\n")
 

@@ -19,6 +19,7 @@ from loguru import logger
 
 from .background import STOP_TIMEOUT_SECONDS, BackgroundTasks
 from .clients import _pop_thread_resilient_errors
+from .command_events import set_current_node
 from .enums import NodeState, WorkflowEventType
 from .exceptions import RunCancelledError
 from .models import (
@@ -444,6 +445,7 @@ class WorkflowExecutor:
         )
 
         _pop_thread_resilient_errors()  # clear stale errors from thread pool reuse
+        set_current_node(node_id)  # lets device command events name their node
         try:
             result = method(ctx)
             if self._is_cancelled():
@@ -469,6 +471,7 @@ class WorkflowExecutor:
                 runtime.status_message = f"Method '{method_name}' failed: {exc}"
             raise
         finally:
+            set_current_node(None)
             with self._lock:
                 runtime.finished_at = perf_counter()
 

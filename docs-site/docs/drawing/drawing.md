@@ -52,6 +52,28 @@ Right-clicking gives you quick access to context-specific actions, depending on 
 
 This panel lists all components available for building your setup, organized into categories.
 
+## LCD readouts
+
+An LCD shows one device variable on the Dashboard's [live platform view](../dashboard/overview.md#live-view): the
+latest reading the [Monitoring](../dashboard/monitoring.md) page takes of it. LCDs are part of the drawing, not
+devices: they never read a device themselves, and don't appear in connectivity or the simulation.
+
+To add one, drag **LCD display** from the **Live View** category of the component panel onto the canvas, and fill
+in:
+
+| Field | Description |
+|---|---|
+| **Name** | Shown on the LCD. Each LCD in a project needs its own name. |
+| **Device** | One of the project's electronic components. |
+| **Variable** | One of the device's `GET` commands, from its protocol definition, so the device doesn't have to be connected. Variables already in the monitoring list are marked **● monitored**. |
+| **Parameters** | The command's parameters as JSON, e.g. `{"channel": "2"}`. |
+
+An LCD bound to a variable that isn't in the monitoring list shows `not monitored` on the Dashboard until the
+variable is added on the Monitoring page. Double-click an LCD, or right-click it, to change its **Properties**;
+select it and press **Delete**, or right-click **Delete**, to remove it. In the desktop app an LCD always reads `--`.
+
+LCDs are saved with the project. **Save** warns about an LCD whose device or variable no longer exists.
+
 ## Connections
 
 Connections define how components interact within the setup. Each connection begins and ends at a connection point,

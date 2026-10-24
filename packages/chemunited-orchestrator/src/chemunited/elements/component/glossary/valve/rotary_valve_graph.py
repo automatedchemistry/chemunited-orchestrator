@@ -3,9 +3,10 @@ from typing import Generic, TypeVar
 import numpy as np
 from PyQt5.QtCore import QPointF, QRectF, Qt
 from PyQt5.QtGui import QPainterPath, QPen
-from PyQt5.QtWidgets import QGraphicsObject, QGraphicsPathItem
+from PyQt5.QtWidgets import QGraphicsItem, QGraphicsObject, QGraphicsPathItem
 
 from chemunited.elements.component.graph_item import GraphComponent
+from chemunited_core.components.live_state import rotor_links
 from chemunited_core.components.valve import ValveComponentData
 
 ValveT = TypeVar("ValveT", bound=ValveComponentData)
@@ -25,34 +26,23 @@ class RotorChannel(QGraphicsObject):
             self.radius * 2,
         )
 
+    @property
+    def slot_count(self) -> int:
+        return len(self._data.rotor_ports[0])
+
+    def slot_point(self, slot: int) -> QPointF:
+        """Where rotor slot *slot* sits: 1 is the top one, clockwise; 0 is the hub."""
+        if slot == 0:
+            return QPointF(0, 0)
+        angle = -np.pi / 2 + (slot - 1) * 2 * np.pi / self.slot_count
+        return QPointF(self.radius * np.cos(angle), self.radius * np.sin(angle))
+
     def paint(self, painter, option, widget=None) -> None:
         painter.setPen(QPen(Qt.GlobalColor.black, 1))
         painter.setBrush(Qt.BrushStyle.NoBrush)
-        rotor_ports = [list(row) for row in self._data.rotor_ports]
-        angles = np.arange(-np.pi / 2, 3 * np.pi / 2, 2 * np.pi / len(rotor_ports[0]))
-        if 0 in self._data.ports_by_number:
-            for i, value in enumerate(self._data.rotor_ports[0]):
-                if value == self._data.rotor_ports[1][0]:
-                    rotor_ports[0][i] = None
-                    x2, y2 = (
-                        self.radius * np.cos(angles[i]),
-                        self.radius * np.sin(angles[i]),
-                    )
-                    painter.drawLine(QPointF(0, 0), QPointF(x2, y2))
-        for i, value in enumerate(self._data.rotor_ports[0]):
-            if value:
-                for j, value_2 in enumerate(rotor_ports[0]):
-                    if value == value_2 and j != i:
-                        x1, y1 = (
-                            self.radius * np.cos(angles[i]),
-                            self.radius * np.sin(angles[i]),
-                        )
-                        x2, y2 = (
-                            self.radius * np.cos(angles[j]),
-                            self.radius * np.sin(angles[j]),
-                        )
-                        painter.drawLine(QPointF(x1, y1), QPointF(x2, y2))
-                        break
+        # Shared with the dashboard's live view, so both draw the same rotor.
+        for a, b in rotor_links(self._data):
+            painter.drawLine(self.slot_point(a), self.slot_point(b))
 
 
 class RotaryValveGraph(GraphComponent[ValveT], Generic[ValveT]):
@@ -82,6 +72,23 @@ class RotaryValveGraph(GraphComponent[ValveT], Generic[ValveT]):
         # Rotor
         self._internal_channel = RotorChannel(self._data)
         self.addToGroup(self._internal_channel)
+
+    def live_items(self) -> tuple[QGraphicsItem, ...]:
+        return () if self._internal_channel is None else (self._internal_channel,)
+
+    def live_anchors(self) -> dict[str, dict[str, object]]:
+        channel = self._internal_channel
+        if channel is None:
+            return {}
+        return {
+            "rotor": {
+                "center": channel.mapToScene(channel.slot_point(0)),
+                "slots": [
+                    channel.mapToScene(channel.slot_point(slot))
+                    for slot in range(1, channel.slot_count + 1)
+                ],
+            }
+        }
 
     def sync_visuals(self) -> None:
         # RotorChannel.paint() reads self._data.rotor_ports live, so a repaint

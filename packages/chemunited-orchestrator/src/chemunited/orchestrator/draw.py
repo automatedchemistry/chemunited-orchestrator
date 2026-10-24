@@ -1,4 +1,6 @@
+import json
 import re
+from pathlib import Path
 
 from loguru import logger
 from pydantic import BaseModel
@@ -15,6 +17,12 @@ from chemunited.elements.connection import (
     HeatConnectionItem,
     HydraulicConnectionItem,
     MovementConnectionItem,
+)
+from chemunited.elements.display import (
+    LcdDisplay,
+    LcdDisplayDialog,
+    LcdDisplayItem,
+    device_variables,
 )
 from chemunited.elements.reactions import ReactionDefinition
 from chemunited.shared.widgets.base_mode_editor import BaseModeDialog
@@ -441,6 +449,146 @@ class OrchestratorDraw(OrchestratorCore):
         logger.bind(window=self.parent_ref.WINDOW_TYPE).info(
             f"Connection '{name}' properties updated."
         )
+
+    # ── LCD readouts (dashboard live platform view) ─────────────────
+
+    def _electronic_devices(self) -> dict[str, str]:
+        return {
+            name: component.inf.figure
+            for name, component in self.components.items()
+            if component.inf.is_electronic
+        }
+
+    def _monitored_variables(self) -> list[dict]:
+        working_dir = getattr(self, "working_dir", None)
+        if not working_dir:
+            return []
+        path = Path(working_dir) / "connectivity" / "monitoring.json"
+        try:
+            variables = json.loads(path.read_text(encoding="utf-8"))["variables"]
+        except (OSError, ValueError, KeyError, TypeError):
+            return []
+        return [variable for variable in variables if isinstance(variable, dict)]
+
+    def _suggest_display_name(self) -> str:
+        index = 1
+        while f"LCD {index}" in self.displays:
+            index += 1
+        return f"LCD {index}"
+
+    def request_add_display(self, position: tuple[float, float]) -> None:
+        devices = self._electronic_devices()
+        if not devices:
+            _log_draw_error(
+                self.parent_ref,
+                "Add a device first: an LCD shows one of a device's variables.",
+            )
+            return
+        dialog = LcdDisplayDialog(
+            devices=devices,
+            monitored=self._monitored_variables(),
+            taken_names=set(self.displays),
+            name=self._suggest_display_name(),
+            position=position,
+            creation=True,
+            parent=self.parent_ref,
+        )
+        if not dialog.exec():
+            return
+        display = dialog.get_result_instance()
+        if display is not None:
+            self.add_display(**display.model_dump())
+
+    def add_display(
+        self,
+        *,
+        name: str,
+        position: tuple[float, float],
+        component: str,
+        command: str,
+        kwargs: dict | None = None,
+    ) -> None:
+        if name in self.displays:
+            _log_draw_error(self.parent_ref, f"LCD '{name}' already exists.")
+            return
+        item = LcdDisplayItem(
+            LcdDisplay(
+                name=name,
+                position=position,
+                component=component,
+                command=command,
+                kwargs=kwargs or {},
+            )
+        )
+        self.displays[item.name] = item
+        self.parent_ref.scene_attribute.addItem(item)
+        self._apply_draw_layer_order()
+        logger.bind(window=self.parent_ref.WINDOW_TYPE).info(
+            f"LCD '{item.name}' was successfully created."
+        )
+
+    def remove_display(self, name: str) -> None:
+        item = self.displays.pop(name, None)
+        if item is None:
+            _log_draw_error(self.parent_ref, f"LCD '{name}' does not exist.")
+            return
+        self._prepare_item_for_removal(item)
+        self.parent_ref.scene_attribute.removeItem(item)
+        self.parent_ref.scene_attribute.update()
+        logger.bind(window=self.parent_ref.WINDOW_TYPE).info(
+            f"LCD '{name}' was successfully removed."
+        )
+
+    def show_display_properties(self, name: str) -> None:
+        item = self.displays.get(name)
+        if item is None:
+            _log_draw_error(self.parent_ref, f"LCD '{name}' does not exist.")
+            return
+        current = item.display
+        dialog = LcdDisplayDialog(
+            devices=self._electronic_devices(),
+            monitored=self._monitored_variables(),
+            taken_names=set(self.displays) - {name},
+            name=current.name,
+            position=current.position,
+            component=current.component,
+            command=current.command,
+            kwargs=current.kwargs,
+            creation=False,
+            parent=self.parent_ref,
+        )
+        if not dialog.exec():
+            return
+        display = dialog.get_result_instance()
+        if display is None:
+            return
+        if display.name != name:
+            self.displays[display.name] = self.displays.pop(name)
+        item.set_display(display)
+
+    def stale_display_bindings(self) -> list[str]:
+        """One line per LCD bound to a device or variable that no longer exists."""
+        problems = []
+        devices = self._electronic_devices()
+        for item in self.displays.values():
+            display = item.display
+            figure = devices.get(display.component)
+            if figure is None:
+                problems.append(
+                    f"LCD '{display.name}' shows device '{display.component}', "
+                    "which no longer exists."
+                )
+                continue
+            try:
+                variables = device_variables(figure, display.component)
+            except Exception:
+                variables = {}
+            if display.command not in variables:
+                problems.append(
+                    f"LCD '{display.name}' shows '{display.command}', which "
+                    f"'{display.component}' doesn't have."
+                )
+        return problems
 
     def fill_iventory(
         self,

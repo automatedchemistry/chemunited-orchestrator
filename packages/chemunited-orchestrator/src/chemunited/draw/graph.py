@@ -15,6 +15,7 @@ from chemunited.elements.connection.connection import (
     HydraulicConnectionItem,
     TemporaryConnectionItem,
 )
+from chemunited.elements.display import LcdDisplayItem
 from chemunited.shared.enums import SetupStepMode
 from chemunited.shared.graph import GraphCore, SceneCore
 from chemunited.shared.graph_objects.custom_path import DraggablePoint
@@ -29,6 +30,7 @@ if TYPE_CHECKING:
 QT_STRONG_FOCUS = getattr(Qt, "StrongFocus")
 BACK_SCENE_Z_VALUE = 0
 FRONT_SCENE_Z_VALUE = 1_000
+LCD_SCENE_Z_VALUE = FRONT_SCENE_Z_VALUE + 1  # LCDs stay readable over everything
 HANDLE_LOCAL_Z_VALUE = 1
 BRING_COMPONENT_TO_FRONT_ACTION_KEY = "bring_component_to_front"
 
@@ -95,6 +97,8 @@ class DrawGraphicView(GraphCore):
                 item.setZValue(connection_z)
             elif isinstance(item, DraggablePoint):
                 item.setZValue(HANDLE_LOCAL_Z_VALUE)
+            elif isinstance(item, LcdDisplayItem):
+                item.setZValue(LCD_SCENE_Z_VALUE)
 
         self._scene().update()
 
@@ -178,6 +182,16 @@ class DrawGraphicView(GraphCore):
 
     @override
     def mouseDoubleClickEvent(self, event):
+        display = self._display_at(self.itemAt(event.pos()))
+        if display is not None:
+            QTimer.singleShot(
+                0,
+                lambda name=display.name: self.parent_ref.orchestrator.show_display_properties(
+                    name
+                ),
+            )
+            event.accept()
+            return
         target = self._resolve_context_target(self.itemAt(event.pos()))
         if target is None:
             super().mouseDoubleClickEvent(event)
@@ -186,6 +200,9 @@ class DrawGraphicView(GraphCore):
         if isinstance(target, GraphComponent):
             self.parent_ref.orchestrator.show_properties(target.inf.name)
         event.accept()
+
+    def _display_at(self, item: QGraphicsItem | None) -> LcdDisplayItem | None:
+        return item if isinstance(item, LcdDisplayItem) else None
 
     @override
     def mouseMoveEvent(self, event):
@@ -242,6 +259,13 @@ class DrawGraphicView(GraphCore):
                                 name
                             ),
                         )
+                    elif isinstance(item, LcdDisplayItem):
+                        QTimer.singleShot(
+                            0,
+                            lambda name=item.name: self.parent_ref.orchestrator.remove_display(
+                                name
+                            ),
+                        )
             event.accept()
             return
         super().keyPressEvent(event)
@@ -273,6 +297,11 @@ class DrawGraphicView(GraphCore):
                 menu.addAction(toggle_action)
                 menu.exec_(event.globalPos())
             event.accept()
+            return
+
+        display = self._display_at(clicked_item)
+        if display is not None:
+            self._display_context_menu(display, event)
             return
 
         target = self._resolve_context_target(clicked_item)
@@ -374,6 +403,33 @@ class DrawGraphicView(GraphCore):
 
         event.accept()
 
+    def _display_context_menu(self, display: LcdDisplayItem, event) -> None:
+        orchestrator = self.parent_ref.orchestrator
+        menu = RoundMenu(parent=self)
+
+        properties_action = Action(menu)
+        properties_action.setText("Properties")
+        properties_action.setIcon(FluentIcon.EDIT.icon())
+        properties_action.triggered.connect(
+            lambda checked=False, name=display.name: QTimer.singleShot(
+                0, lambda: orchestrator.show_display_properties(name)
+            )
+        )
+        menu.addAction(properties_action)
+        menu.addSeparator()
+
+        delete_action = Action(menu)
+        delete_action.setText("Delete")
+        delete_action.setIcon(OrchestratorIcon.TRASH.icon())
+        delete_action.triggered.connect(
+            lambda checked=False, name=display.name: QTimer.singleShot(
+                0, lambda: orchestrator.remove_display(name)
+            )
+        )
+        menu.addAction(delete_action)
+        menu.exec_(event.globalPos())
+        event.accept()
+
     @override
     def dropEvent(self, event):
         if not event.mimeData().hasFormat(TreeAddItem.MIME):
@@ -390,11 +446,19 @@ class DrawGraphicView(GraphCore):
         group, component = data.split("|", 1)
 
         scene_pos = self.mapToScene(event.pos())
+        position = (scene_pos.x(), scene_pos.y())
 
         if self.parent_ref is not None:
-            self.parent_ref.orchestrator.request_add_component(
-                figure=component, position=(scene_pos.x(), scene_pos.y())
-            )
+            if group == TreeAddItem.DISPLAY_GROUP:
+                # After the drop finishes, so the dialog doesn't block the drag.
+                QTimer.singleShot(
+                    0,
+                    lambda: self.parent_ref.orchestrator.request_add_display(position),
+                )
+            else:
+                self.parent_ref.orchestrator.request_add_component(
+                    figure=component, position=position
+                )
 
         event.acceptProposedAction()
 

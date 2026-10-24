@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from PyQt5.QtCore import QByteArray, QFile, QMimeData, QSize, Qt
-from PyQt5.QtGui import QDrag, QIcon, QPainter, QPixmap
+from PyQt5.QtCore import QByteArray, QFile, QMimeData, QRectF, QSize, Qt
+from PyQt5.QtGui import QColor, QDrag, QFont, QIcon, QPainter, QPixmap
 from PyQt5.QtSvg import QSvgRenderer
 from PyQt5.QtWidgets import (
     QAbstractItemView,
@@ -61,6 +61,26 @@ def _component_icon(component_name: str) -> QIcon:
         return QIcon(OrchestratorIcon.COMPONENT_ICON.path())
 
     return _icon_from_svg_bytes(svg_bytes)
+
+
+def _lcd_icon(size: int = 64) -> QIcon:
+    """A small black LCD, drawn rather than loaded: it isn't a component figure."""
+    pixmap = QPixmap(size, size)
+    pixmap.fill(Qt.transparent)  # type: ignore[attr-defined]
+    painter = QPainter(pixmap)
+    painter.setRenderHint(QPainter.Antialiasing, True)
+    painter.setPen(Qt.NoPen)  # type: ignore[attr-defined]
+    painter.setBrush(QColor("#000000"))
+    body = QRectF(2, size * 0.25, size - 4, size * 0.5)
+    painter.drawRoundedRect(body, 6, 6)
+    font = QFont("Consolas")
+    font.setBold(True)
+    font.setPixelSize(int(size * 0.3))
+    painter.setFont(font)
+    painter.setPen(QColor("#39FF6A"))
+    painter.drawText(body, Qt.AlignCenter, "--")  # type: ignore[attr-defined]
+    painter.end()
+    return QIcon(pixmap)
 
 
 class AppCard(QFrame):
@@ -143,6 +163,8 @@ class TreeAddItem(TreeWidget):
     ROLE_KIND = Qt.UserRole + 1  # type: ignore[attr-defined]
     ROLE_PAYLOAD = Qt.UserRole + 2  # type: ignore[attr-defined]
     MIME = "application/x-chemunited-component"
+    # Payload group of the LCD readout, which is a view item, not a component.
+    DISPLAY_GROUP = "live_view"
 
     def __init__(self, parent=None, icon_size=64):
         super().__init__(parent=parent)
@@ -213,14 +235,52 @@ class TreeAddItem(TreeWidget):
                 )
                 self.setItemWidget(item, 0, card)
 
+        self._add_live_view_category()
         self.expandAll()
+
+    def _add_live_view_category(self) -> None:
+        category_item = QTreeWidgetItem(self)
+        category_item.setText(0, _humanize(self.DISPLAY_GROUP))
+        category_item.setData(0, self.ROLE_KIND, "category")
+        category_item.setData(0, self.ROLE_PAYLOAD, self.DISPLAY_GROUP)
+        category_item.setFlags(QT_ITEM_IS_ENABLED)
+
+        description = "Shows a monitored device variable on the dashboard"
+        card = AppCard(
+            icon=_lcd_icon(),
+            component="LCD display",
+            group=_humanize(self.DISPLAY_GROUP),
+            description=description,
+            parent=self,
+        )
+        item = QTreeWidgetItem(category_item)
+        item.setText(0, "")
+        item.setData(0, QT_DISPLAY_ROLE, "")
+        item.setData(0, self.ROLE_KIND, "display")
+        item.setData(0, self.ROLE_PAYLOAD, f"{self.DISPLAY_GROUP}|LCD display")
+        item.setToolTip(0, f"LCD display\n{description}")
+        item.setFlags(
+            QT_ITEM_IS_ENABLED | QT_ITEM_IS_SELECTABLE | QT_ITEM_IS_DRAG_ENABLED
+        )
+        item.setSizeHint(
+            0,
+            QSize(
+                max(240, self._icon_size.width() + 120),
+                max(72, self._icon_size.height() + 8),
+            ),
+        )
+        self.setItemWidget(item, 0, card)
 
     def mimeTypes(self) -> list[str]:
         return [self.MIME]
 
     def mimeData(self, items: list[QTreeWidgetItem]) -> QMimeData | None:
         component_item = next(
-            (item for item in items if item.data(0, self.ROLE_KIND) == "component"),
+            (
+                item
+                for item in items
+                if item.data(0, self.ROLE_KIND) in ("component", "display")
+            ),
             None,
         )
         if component_item is None:
@@ -237,7 +297,7 @@ class TreeAddItem(TreeWidget):
 
     def startDrag(self, supportedActions) -> None:
         item = self.currentItem()
-        if item is None or item.data(0, self.ROLE_KIND) != "component":
+        if item is None or item.data(0, self.ROLE_KIND) not in ("component", "display"):
             return
 
         mime_data = self.mimeData([item])

@@ -17,6 +17,7 @@ from chemunited_workflow.clients.base import _pop_thread_resilient_errors
 from chemunited_workflow.durations import parse_timeout_commands
 from chemunited_workflow.exceptions import (
     ConcurrentClientAccessError,
+    DeviceCommunicationError,
     RunCancelledError,
 )
 
@@ -694,6 +695,19 @@ def test_discover_commands_includes_get_and_put():
     assert commands["infuse_put"]["type"] == "put"
     assert commands["is-reachable_get"]["type"] == "get"
     assert "position" not in commands
+
+
+@resp_lib.activate
+def test_discover_commands_says_when_the_server_serves_no_such_device():
+    resp_lib.add(
+        resp_lib.GET, f"{BASE_URL}/openapi.json", json=_FAKE_OPENAPI_SCHEMA, status=200
+    )
+    client = ComponentClient(f"{BASE_URL}/sim/missing")
+
+    with pytest.raises(
+        DeviceCommunicationError, match="serves no device at /sim/missing"
+    ):
+        client.discover_commands()
 
 
 @resp_lib.activate

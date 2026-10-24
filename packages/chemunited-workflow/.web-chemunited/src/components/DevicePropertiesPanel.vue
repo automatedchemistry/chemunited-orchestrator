@@ -32,6 +32,9 @@ export function clearDeviceCommandsCache(): void {
 
 <script setup lang="ts">
 import { ref, watch } from 'vue'
+import { RouterLink } from 'vue-router'
+import type { LiveDevice } from '../composables/usePlatformLive'
+import { commandText, formatTime, statusLabel as liveStatusLabel } from './live/liveFormat'
 
 interface PlatformDevice {
   id: string
@@ -88,8 +91,21 @@ async function responseError(response: Response, fallback: string): Promise<stri
   return fallback
 }
 
-const props = defineProps<{ device: PlatformDevice }>()
+// `liveState` is the device's record on the live platform view, sent only
+// while the view is live (`liveOn`).
+const props = defineProps<{
+  device: PlatformDevice
+  liveState?: LiveDevice | null
+  liveOn?: boolean
+}>()
 defineEmits<{ close: [] }>()
+
+function commandSource(state: LiveDevice): string {
+  const command = state.command
+  if (!command) return ''
+  if (!command.run) return 'Sent from the device panel or a custom route'
+  return `Run ${command.run}${command.node ? ` · node ${command.node}` : ''}`
+}
 
 const loading = ref(false)
 const notConnected = ref(false)
@@ -273,6 +289,40 @@ watch(() => props.device, device => {
     </div>
 
     <div class="device-panel-body">
+      <section v-if="device.is_electronic !== false" class="state-block" aria-label="Device state">
+        <p class="state-title">State</p>
+        <p v-if="!liveOn" class="muted">
+          The platform view isn't live.
+          <RouterLink to="/monitoring">Start monitoring</RouterLink>
+          to see what this device was last told.
+        </p>
+        <template v-else-if="liveState">
+          <span class="status-badge" :class="`live-${liveState.status}`">
+            <span class="status-dot" aria-hidden="true"></span>
+            {{ liveStatusLabel(liveState.status) }}
+          </span>
+          <dl class="state-list">
+            <template v-if="liveState.command">
+              <dt>Last command</dt>
+              <dd><code>{{ commandText(liveState.command) }}</code></dd>
+              <dt>At</dt>
+              <dd>{{ formatTime(liveState.command.at) }}</dd>
+              <dt>From</dt>
+              <dd>{{ commandSource(liveState) }}</dd>
+            </template>
+            <template v-else>
+              <dt>Last command</dt>
+              <dd>None since the work-server started</dd>
+            </template>
+            <template v-if="liveState.error">
+              <dt>{{ liveState.status === 'failed' ? 'Reason' : 'Picture' }}</dt>
+              <dd>{{ liveState.error }}</dd>
+            </template>
+          </dl>
+        </template>
+        <p v-else class="muted">This component isn't connected to the work-server.</p>
+      </section>
+
       <p v-if="loading" class="muted">Checking connectivity…</p>
       <p v-else-if="notConnected" class="muted">No connectivity info for this component.</p>
       <p v-else-if="error" class="error-text">{{ error }}</p>
@@ -454,9 +504,59 @@ watch(() => props.device, device => {
   background: var(--color-danger-soft);
 }
 
-.status-badge.unknown {
+.status-badge.unknown,
+.status-badge.live-unknown {
   color: var(--color-text-muted);
   background: var(--color-background-mute);
+}
+
+.status-badge.live-running {
+  color: var(--color-primary);
+  background: var(--color-primary-soft);
+}
+
+.status-badge.live-done {
+  color: var(--color-success);
+  background: var(--color-success-soft);
+}
+
+.status-badge.live-failed {
+  color: var(--color-danger);
+  background: var(--color-danger-soft);
+}
+
+.state-block {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  margin-bottom: 0.9rem;
+  padding-bottom: 0.9rem;
+  border-bottom: 1px solid var(--color-border);
+}
+
+.state-title {
+  margin: 0;
+  color: var(--color-heading);
+  font-size: 0.78rem;
+  font-weight: 760;
+}
+
+.state-list {
+  display: grid;
+  grid-template-columns: max-content 1fr;
+  gap: 0.25rem 0.75rem;
+  margin: 0;
+  font-size: 0.8rem;
+}
+
+.state-list dt {
+  color: var(--color-text-muted);
+}
+
+.state-list dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
 }
 
 .commands-section {

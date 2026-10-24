@@ -17,7 +17,6 @@ from chemunited_workflow.api.services.custom_routes import (
 from chemunited_workflow.api.services.monitoring import MonitoringService
 from chemunited_workflow.api.services.protocol import ProtocolService
 from chemunited_workflow.api.services.runner import RunnerService
-from chemunited_workflow.exceptions import MonitoringRunActiveError
 from chemunited_workflow.project_loader import (
     ProjectLoadError,
     format_broken_project_error,
@@ -523,30 +522,27 @@ def register_tools(mcp: FastMCP, holder: ProjectHolder) -> None:
     def start_monitoring() -> dict:
         """Turn monitoring on manually using the current registered config.
 
-        Idempotent if already on. Fails if no variables are registered, or
-        if a protocol run currently has monitoring forced on — the manual
-        toggle isn't available while a run is active.
+        Idempotent if already on. This also makes the dashboard's platform
+        view live, so it works with no variables registered, and during a
+        protocol run: then it only sets the manual flag (polling continues
+        for the run, and stays on after it).
         """
         if not holder.is_loaded():
             return {"error": _NO_PROJECT}
-        try:
-            _monitoring(holder).start()
-        except (ValueError, MonitoringRunActiveError) as exc:
-            return {"error": str(exc)}
+        _monitoring(holder).start()
         return _monitoring(holder).get_state()
 
     @mcp.tool()
     def stop_monitoring() -> dict:
         """Turn monitoring off manually. Idempotent if already off.
 
-        Fails if a protocol run currently has monitoring forced on.
+        The dashboard's platform view stops being live. During a protocol run
+        only the manual flag changes: polling continues for the run and stops
+        when it ends.
         """
         if not holder.is_loaded():
             return {"error": _NO_PROJECT}
-        try:
-            _monitoring(holder).stop()
-        except MonitoringRunActiveError as exc:
-            return {"error": str(exc)}
+        _monitoring(holder).stop()
         return _monitoring(holder).get_state()
 
     @mcp.tool()
@@ -557,7 +553,9 @@ def register_tools(mcp: FastMCP, holder: ProjectHolder) -> None:
         return _monitoring(holder).get_latest()
 
     @mcp.tool()
-    def get_monitoring_history(component: str, command: str) -> list[dict]:
+    def get_monitoring_history(
+        component: str, command: str, kwargs: dict | None = None
+    ) -> list[dict]:
         """Return the in-memory reading history for one variable, most recent last.
 
         Bounded to a fixed number of readings — this is the live
@@ -570,10 +568,12 @@ def register_tools(mcp: FastMCP, holder: ProjectHolder) -> None:
             Component name as registered in the monitoring config.
         command:
             GET command/path as registered in the monitoring config.
+        kwargs:
+            The variable's parameters, as registered, if it has any.
         """
         if not holder.is_loaded():
             return [{"error": _NO_PROJECT}]
-        return _monitoring(holder).get_history(component, command)
+        return _monitoring(holder).get_history(component, command, kwargs)
 
     @mcp.tool()
     def get_monitoring_profile(
@@ -581,6 +581,7 @@ def register_tools(mcp: FastMCP, holder: ProjectHolder) -> None:
         component: str,
         command: str,
         tail: int | None = None,
+        kwargs: dict | None = None,
     ) -> list[dict]:
         """Read back the recorded profile for one variable from a past run.
 
@@ -600,12 +601,14 @@ def register_tools(mcp: FastMCP, holder: ProjectHolder) -> None:
             GET command/path as registered in the monitoring config.
         tail:
             If set, return only the last N readings.
+        kwargs:
+            The variable's parameters, as registered, if it has any.
         """
         if not holder.is_loaded():
             return [{"error": _NO_PROJECT}]
         try:
             return _monitoring(holder).read_recording(
-                run_id, component, command, tail=tail
+                run_id, component, command, tail=tail, kwargs=kwargs
             )
         except FileNotFoundError as exc:
             return [{"error": str(exc)}]
@@ -643,6 +646,11 @@ def register_tools(mcp: FastMCP, holder: ProjectHolder) -> None:
         if not holder.is_loaded():
             return {"error": _NO_PROJECT}
         try:
-            return _call_custom_route(_project_dir(holder), name, kwargs or {})
+            return _call_custom_route(
+                _project_dir(holder),
+                name,
+                kwargs or {},
+                command_observer=holder.command_observer(),
+            )
         except KeyError as exc:
             return {"error": str(exc)}

@@ -36,12 +36,15 @@ test = [
 discovery = ["zeroconf>=0.131"]
 sila2 = ["sila2>=0.14,<1"]
 opcua = ["asyncua>=2.0,<3"]
+# Device pictures on the dashboard's live platform view (rotor channels, badges, ...).
+live = ["chemunited-core>=0.0.7"]
 
 [project.scripts]
 chemunited-workflow = "chemunited_workflow.cli:main"
 
 [tool.uv.sources]
 chemunited-quantities = { workspace = true }
+chemunited-core = { workspace = true }
 
 [tool.pytest.ini_options]
 pythonpath = ["."]

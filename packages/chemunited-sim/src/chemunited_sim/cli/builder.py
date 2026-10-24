@@ -174,6 +174,9 @@ class PlatformBuilder:
         if "initial_temperature" in content:
             phase_content.initial_temperature = float(content["initial_temperature"])
 
+    def add_display(self, **kwargs) -> None:
+        """LCD readouts are view items for the dashboard: nothing to simulate."""
+
     def set_port_closed(self, component: str, port: int, closed: bool = True) -> None:
         """Cap (or uncap) a port; CAPPED ports are left out of the hydraulic graph."""
         data = self._components.get(component)

@@ -102,6 +102,21 @@ def test_discover_returns_get_commands(client, mocker):
     assert r.json() == [{"command": "value", "summary": "Read value", "parameters": []}]
 
 
+def test_discover_a_device_the_server_does_not_serve_502(client, mocker):
+    mock_resp = MagicMock()
+    mock_resp.raise_for_status.return_value = None
+    mock_resp.json.return_value = {
+        "paths": {"/peltier/temperature_control/temperature": {"get": {}}}
+    }
+    mocker.patch(
+        "chemunited_workflow.api.services.monitoring.requests.get",
+        return_value=mock_resp,
+    )
+    r = client.get("/monitoring/discover/pump")
+    assert r.status_code == 502
+    assert "serves no device at /sim-ml600/pump" in r.json()["detail"]
+
+
 def test_discover_unknown_component_404(client):
     r = client.get("/monitoring/discover/ghost")
     assert r.status_code == 404
@@ -180,9 +195,11 @@ def test_initial_state_is_off(client):
     }
 
 
-def test_start_without_config_422(client):
+def test_start_without_variables_turns_monitoring_on(client):
     r = client.post("/monitoring/start")
-    assert r.status_code == 422
+    assert r.status_code == 200
+    assert r.json()["manual_on"] is True
+    client.post("/monitoring/stop")
 
 
 @resp_lib.activate
@@ -258,15 +275,34 @@ def test_history_empty_for_unpolled_variable(client):
     assert r.json() == []
 
 
-def test_start_stop_409_while_run_active(client, holder):
+def test_start_and_stop_work_during_a_run(client, holder):
     holder.monitoring_service.on_run_started("run-1", record=False)
     try:
         start = client.post("/monitoring/start")
-        assert start.status_code == 409
+        assert start.status_code == 200
+        assert start.json()["manual_on"] is True
         stop = client.post("/monitoring/stop")
-        assert stop.status_code == 409
+        assert stop.status_code == 200
+        assert stop.json()["manual_on"] is False
+        assert stop.json()["effective_on"] is True  # still polling for the run
     finally:
         holder.monitoring_service.on_run_finished()
+
+
+def test_history_takes_the_parameters_as_json(client, holder):
+    holder.monitoring_store.record_reading(
+        'pump::read::{"channel":2}', {"time": "t", "value": 7, "error": None}
+    )
+    r = client.get("/monitoring/history/pump/read", params={"kwargs": '{"channel": 2}'})
+    assert r.status_code == 200
+    assert r.json()[-1]["value"] == 7
+    assert client.get("/monitoring/history/pump/read").json() == []
+
+
+@pytest.mark.parametrize("kwargs", ["not json", "[1, 2]"])
+def test_history_rejects_parameters_that_are_not_a_json_object(client, kwargs):
+    r = client.get("/monitoring/history/pump/read", params={"kwargs": kwargs})
+    assert r.status_code == 422
 
 
 # ── /monitoring/recordings ───────────────────────────────────────────────────

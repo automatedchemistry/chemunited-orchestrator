@@ -11,8 +11,11 @@ import requests
 import responses as resp_lib
 
 from chemunited_workflow.api.monitoring_store import MonitoringStore
-from chemunited_workflow.api.services.monitoring import MonitoringService
-from chemunited_workflow.exceptions import MonitoringRunActiveError
+from chemunited_workflow.api.services.monitoring import (
+    MonitoringService,
+    monitoring_key,
+)
+from chemunited_workflow.exceptions import DeviceCommunicationError
 from chemunited_workflow.monitoring_context import MonitoringContext
 from chemunited_workflow.platform import Platform
 
@@ -84,6 +87,23 @@ def test_discover_filters_to_component_get_paths(svc):
     with patch(f"{_MODULE}.get", return_value=_openapi_response(paths)):
         result = svc.discover("pump")
     assert result == [{"command": "value", "summary": "Read value", "parameters": []}]
+
+
+def test_discover_says_when_the_server_serves_no_such_device(svc):
+    # A device server running another project's devices: an empty list would
+    # read as "this device has no variables".
+    paths = {"/sim/valve/position": {"get": {"summary": "Read position"}}}
+    with patch(f"{_MODULE}.get", return_value=_openapi_response(paths)):
+        with pytest.raises(
+            DeviceCommunicationError, match="serves no device at /sim/pump"
+        ):
+            svc.discover("pump")
+
+
+def test_discover_a_device_without_get_commands_returns_an_empty_list(svc):
+    paths = {"/sim/pump/dose": {"put": {"summary": "Dose"}}}
+    with patch(f"{_MODULE}.get", return_value=_openapi_response(paths)):
+        assert svc.discover("pump") == []
 
 
 def test_discover_unknown_component_raises_keyerror(svc):
@@ -187,7 +207,7 @@ def test_discover_closes_client(svc, mocker):
     resp_lib.add(
         resp_lib.GET,
         "http://device-server:8000/openapi.json",
-        json={"paths": {}},
+        json={"paths": {"/sim/pump/value": {"get": {}}}},
         status=200,
     )
     close_spy = mocker.patch("chemunited_workflow.clients.http.BaseClient.close")
@@ -291,9 +311,12 @@ def test_fetch_one_sila2_device_error(mocker, svc, platform):
 # ── manual on/off ────────────────────────────────────────────────────────────
 
 
-def test_start_without_variables_raises(svc):
-    with pytest.raises(ValueError):
-        svc.start()
+def test_start_without_variables_still_turns_monitoring_on(svc):
+    svc.start()  # the platform view goes live with nothing to read
+    try:
+        assert svc.get_state()["manual_on"] is True
+    finally:
+        svc.stop()
 
 
 def _wait_until(predicate, timeout=2.0, interval=0.02):
@@ -429,30 +452,97 @@ def test_manual_toggle_closes_each_client_once_not_per_tick(svc, mocker):
     assert close_spy.call_count == 2
 
 
-def test_start_raises_while_run_active(svc):
+def test_start_during_a_run_keeps_monitoring_on_after_it(svc, mocker):
+    spawn = mocker.patch.object(svc, "_spawn_poll_thread")
     svc.on_run_started("run-1", record=False)
-    with pytest.raises(MonitoringRunActiveError):
-        svc.start()
+    assert spawn.call_count == 1
+
+    svc.start()
+    assert spawn.call_count == 1  # the run's poll loop carries on
     svc.on_run_finished()
+
+    assert svc.get_state()["effective_on"] is True
+    svc.stop()
+    assert svc.get_state()["effective_on"] is False
+
+
+def test_stop_during_a_run_keeps_polling_until_it_ends(svc, mocker):
+    mocker.patch.object(svc, "_spawn_poll_thread")
+    svc.start()
+    svc.on_run_started("run-1", record=False)
+
+    svc.stop()
+    state = svc.get_state()
+    assert (state["manual_on"], state["effective_on"]) == (False, True)
+
+    svc.on_run_finished()
+    assert svc.get_state()["effective_on"] is False
+
+
+# ── keys with parameters ─────────────────────────────────────────────────────
+
+
+def test_a_variable_without_parameters_keeps_its_key_and_file_name(svc):
+    assert monitoring_key("pump", "value") == "pump::value"
+    assert monitoring_key("pump", "value", {}) == "pump::value"
+    assert svc._variable_filename("pump", "value", {}) == "pump__value.jsonl"
+
+
+def test_parameters_join_the_key_as_canonical_json():
+    key = monitoring_key("adc", "read", {"gain": 4.0, "channel": "2"})
+    assert key == 'adc::read::{"channel":"2","gain":4}'
+    assert key == monitoring_key("adc", "read", {"channel": "2", "gain": 4})
+
+
+def test_parameters_join_the_recording_file_name(svc):
+    assert (
+        svc._variable_filename("adc", "read", {"channel": 2})
+        == "adc__read__channel=2.jsonl"
+    )
+    unsafe = svc._variable_filename("adc", "read", {"path": "a/b"})
+    assert unsafe.startswith("adc__read__path=a-b-") and unsafe.endswith(".jsonl")
+    assert unsafe != svc._variable_filename("adc", "read", {"path": "a:b"})
 
 
 @resp_lib.activate
-def test_stop_raises_while_run_active(svc):
+def test_two_channels_of_one_command_keep_separate_readings(svc, tmp_path):
     resp_lib.add(
-        resp_lib.GET, "http://device-server:8000/sim/pump/value", json=1.0, status=200
+        resp_lib.GET,
+        "http://device-server:8000/sim/pump/read",
+        json=1.0,
+        match=[resp_lib.matchers.query_param_matcher({"channel": "1"})],
+    )
+    resp_lib.add(
+        resp_lib.GET,
+        "http://device-server:8000/sim/pump/read",
+        json=2.0,
+        match=[resp_lib.matchers.query_param_matcher({"channel": "2"})],
     )
     svc.write_config(
         {
-            "sample_time": 1.0,
-            "variables": [{"component": "pump", "command": "value", "kwargs": {}}],
+            "sample_time": 0.05,
+            "variables": [
+                {"component": "pump", "command": "read", "kwargs": {"channel": "1"}},
+                {"component": "pump", "command": "read", "kwargs": {"channel": "2"}},
+            ],
         }
     )
-    svc.start()
-    svc.on_run_started("run-1", record=False)
-    with pytest.raises(MonitoringRunActiveError):
-        svc.stop()
+    svc.on_run_started("run-1", record=True)
+    one = monitoring_key("pump", "read", {"channel": "1"})
+    two = monitoring_key("pump", "read", {"channel": "2"})
+    assert _wait_until(lambda: {one, two} <= set(svc.get_latest()))
     svc.on_run_finished()
-    svc.stop()
+
+    latest = svc.get_latest()
+    assert (latest[one]["value"], latest[two]["value"]) == (1.0, 2.0)
+    assert svc.get_history("pump", "read", {"channel": "2"})[-1]["value"] == 2.0
+    assert svc.get_history("pump", "read") == []
+    assert _wait_until(
+        lambda: (tmp_path / "log" / "monitoring" / "run-1").exists()
+        and len(list((tmp_path / "log" / "monitoring" / "run-1").iterdir())) == 2
+    )
+    recorded = svc.read_recording("run-1", "pump", "read", kwargs={"channel": "1"})
+    assert {reading["value"] for reading in recorded} == {1.0}
 
 
 # ── run-lifecycle hooks ──────────────────────────────────────────────────────

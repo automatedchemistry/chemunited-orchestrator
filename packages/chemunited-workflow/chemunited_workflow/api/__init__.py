@@ -13,6 +13,7 @@ from .routers.custom import router as custom_router
 from .routers.export import router as export_router
 from .routers.logs import router as logs_router
 from .routers.monitoring import router as monitoring_router
+from .routers.platform import router as platform_router
 from .routers.processes import router as processes_router
 from .routers.project import router as project_router
 from .routers.protocols import read_router as protocols_read_router
@@ -83,6 +84,7 @@ def create_api(
     app.include_router(components_router)
     app.include_router(logs_router)
     app.include_router(monitoring_router)
+    app.include_router(platform_router)
     app.include_router(custom_router)
     app.include_router(export_router)
 

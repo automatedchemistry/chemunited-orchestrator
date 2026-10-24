@@ -121,8 +121,10 @@ To render live per-node feedback (progress bar + message), group events by `node
 A single, project-wide sensor-polling toggle — there is no session id. Config is persisted to `connectivity/monitoring.json`. Live readings are kept in a bounded in-memory buffer (a fixed cap per variable); nothing is written to disk unless a protocol run opts in via `record_monitoring: true` (see [Run control](#run-control)), in which case readings are persisted to `log/monitoring/{run_id}/` for that run's duration.
 
 Monitoring turns on in one of two ways:
-- **Manually** — `POST /monitoring/start` / `POST /monitoring/stop`, available whenever no protocol run is active.
-- **Automatically** — a protocol run started with `record_monitoring: true` (or any run, if monitoring was already manually on) forces monitoring on for its duration; the manual toggle is unavailable (`409`) while a run is active, and control reverts to whatever the manual setting already was once the run ends.
+- **Manually** — `POST /monitoring/start` / `POST /monitoring/stop`. This toggle also makes the [live platform view](#live-platform-view) live, so it works with no variables registered, and during a run: it then only sets `manual_on`, polling continues for the run either way, and `manual_on` decides whether monitoring stays on after it.
+- **Automatically** — a protocol run started with `record_monitoring: true` (or any run, if monitoring was already manually on) forces monitoring on for its duration; control reverts to whatever the manual setting is once the run ends.
+
+Readings are keyed by device, command and parameters: `pump::value` for a variable without parameters, `adc::read::{"channel":2}` (the parameters as JSON with sorted keys and no spaces) otherwise. Two variables on one command with different parameters keep their own readings.
 
 | Method | Path | Description |
 |--------|------|-------------|
@@ -130,11 +132,11 @@ Monitoring turns on in one of two ways:
 | `GET` | `/monitoring/config` | Return the current monitoring registration (`sample_time`, `request_timeout`, `variables`) |
 | `PUT` | `/monitoring/config` | Register which variables to poll and how often. Does not start polling. |
 | `GET` | `/monitoring/state` | Return `{manual_on, run_active, recording, run_id, effective_on}` |
-| `POST` | `/monitoring/start` | Turn monitoring on manually. `422` if no variables are registered, `409` if a run currently has monitoring forced on. Idempotent if already on. |
-| `POST` | `/monitoring/stop` | Turn monitoring off manually. `409` if a run currently has monitoring forced on. Idempotent if already off. |
-| `GET` | `/monitoring/latest` | Latest reading per registered variable — the live dashboard feed. `{}` if nothing has been polled yet. |
-| `GET` | `/monitoring/history/{component}/{command}` | Bounded in-memory reading history for one variable, most recent last. `[]` for a variable that hasn't been polled yet — never `404`. |
-| `GET` | `/monitoring/recordings/{run_id}/{component}/{command}` | Full recorded time-series for one variable from a past run started with `record_monitoring: true`. Pass `?tail=N` for the last N readings. `404` if that run never recorded this variable. |
+| `POST` | `/monitoring/start` | Turn monitoring on manually; the platform view goes live. During a run only `manual_on` changes. Idempotent if already on. |
+| `POST` | `/monitoring/stop` | Turn monitoring off manually; the platform view stops being live. During a run only `manual_on` changes, and polling stops when the run ends. Idempotent if already off. |
+| `GET` | `/monitoring/latest` | Latest reading per registered variable, by key — the live dashboard feed. `{}` if nothing has been polled yet. |
+| `GET` | `/monitoring/history/{component}/{command}` | Bounded in-memory reading history for one variable, most recent last. For a variable with parameters, add `?kwargs={"channel": 2}` (JSON). `[]` for a variable that hasn't been polled yet — never `404`. |
+| `GET` | `/monitoring/recordings/{run_id}/{component}/{command}` | Full recorded time-series for one variable from a past run started with `record_monitoring: true`. Pass `?tail=N` for the last N readings, and `?kwargs=` as for the history. `404` if that run never recorded this variable. |
 
 ### Custom sources
 
@@ -202,7 +204,34 @@ curl -X POST http://127.0.0.1:3116/run/ \
 curl http://127.0.0.1:3116/monitoring/recordings/suzuki_batch_2026-01-15T09-30-00_2026-08-19T10-00-00/reactor_01/temperature
 ```
 
-Each variable is polled concurrently using its own per-request timeout, so a hung device only delays its own reading. Recorded readings are stored as JSONL with one entry per tick: `{"tick": 0, "time": "...", "value": ..., "error": null}`.
+Each variable is polled concurrently using its own per-request timeout, so a hung device only delays its own reading. Recorded readings are stored as JSONL with one entry per tick: `{"tick": 0, "time": "...", "value": ..., "error": null}`, in `{component}__{command}.jsonl`, or `{component}__{command}__{params}.jsonl` for a variable with parameters (`adc__read__channel=2.jsonl`).
+
+Every request to a device, from a run, a monitoring read or the device panel, takes that device's process-wide lock for the request only. A pump infusing for ten minutes still answers monitoring reads between its idle-wait polls. A command that can't get the lock within 10 s fails with "device busy"; a monitoring read that can't get it skips that tick and keeps the last reading.
+
+## Live platform view
+
+The work-server keeps the latest state of every device in memory, built from the commands it sends: from protocol runs, the device panel (`POST /components/commands/...`) and custom routes. Every device starts `unknown` when the project loads. Each PUT/POST marks its device `running` with that command, then `done` once the device client's usual wait for the device to finish returns, or `failed` if the request fails or the wait times out. GETs aren't recorded. Commands sent outside the work-server never show.
+
+The view is **live** only while monitoring is on from the Monitoring page (`POST /monitoring/start`). A run doesn't make it live by itself. Device states are recorded either way but only sent while live.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/platform/state` | `{live, seq, pictures, devices, displays}`. `devices` maps each component to `{kind, status, command, picture, error}`, where `command` is `{name, params, at, run, node}` (`run` and `node` are `null` for a device-panel command). `devices` and `displays` are `{}` while not live. `503` if no project is loaded. |
+| `GET` | `/platform/stream` | Server-Sent Events. The first frame is `event: snapshot` with the same body as `/platform/state`. Then each change is an `event: update` frame, `{"seq": 7, "devices": {"pump": {...}}}`, with `id: <epoch>-<seq>`. A new snapshot follows whenever `live` changes, the project is reloaded, or the stream falls further behind than the server's change log. After 5 s without other frames, an `event: heartbeat` frame arrives. |
+
+With the `live` extra (`pip install chemunited-workflow[live]`, which adds chemunited-core), each command also updates the device's `picture`: `{"links": [[0, 3]]}` for a rotary valve (rotor slots: 1 is the top one, counting clockwise; 0 is the hub), `{"open": true}` for a solenoid valve, `{"position": 1}` for a 2-way solenoid valve, `{"active": true}` for an MFC, `{"channels": [true, null, ...]}` for a relay (`null`: not switched since the server started). A command the picture can't follow, such as an unknown command or a position the valve can't take, leaves the device `unknown` with the reason in `error`. The dashboard draws pictures where the desktop app's export says each part sits (`draw/platform-live.json`, served at `GET /project/platform-live` with `svg_matches`, which is false once `platform.svg` no longer matches it).
+
+`displays` holds the LCD readouts placed in the desktop app (saved in `draw/platform-live.json` and re-read on `PUT /project`): `{"Inlet pressure": {"value": "1.02 bar", "at": "...", "error": null, "monitored": true}}`. Each shows the latest monitoring reading of its variable, as text. `monitored` is false when the variable isn't in the monitoring list; LCDs never read a device themselves.
+
+A browser that reconnects sends `Last-Event-ID` automatically. The server then replays the updates it missed, or sends a new snapshot when they're no longer in its log, when the id belongs to an earlier server or project load, or when the panel wasn't live at that id.
+
+```
+id: 3f9c01ab-44
+event: update
+data: {"seq": 44, "devices": {"pump": {"kind": null, "status": "running", "picture": null, "error": null,
+       "command": {"name": "infuse", "params": {"volume": "1 ml"}, "at": "2026-10-23T10:31:02.512",
+                   "run": "dose_001_2026-10-23T10-30-55", "node": "start"}}}}
+```
 
 ## Export
 

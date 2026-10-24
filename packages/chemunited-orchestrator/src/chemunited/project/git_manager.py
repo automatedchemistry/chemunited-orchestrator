@@ -122,7 +122,12 @@ class GitManager:
 
     def commit_draw(self) -> None:
         self._auto_commit(
-            ["draw/setup.py", "draw/platform.svg", "draw/platform-devices.json"],
+            [
+                "draw/setup.py",
+                "draw/platform.svg",
+                "draw/platform-devices.json",
+                "draw/platform-live.json",
+            ],
             "Update platform layout",
         )
 

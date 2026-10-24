@@ -44,6 +44,11 @@ async def call_route(
     if holder.project_dir is None:
         raise HTTPException(status_code=503, detail=_NO_PROJECT_MSG)
     try:
-        return call_custom_route(holder.project_dir, name, body)
+        return call_custom_route(
+            holder.project_dir,
+            name,
+            body,
+            command_observer=holder.command_observer(),
+        )
     except KeyError as exc:
         raise HTTPException(status_code=404, detail=str(exc))

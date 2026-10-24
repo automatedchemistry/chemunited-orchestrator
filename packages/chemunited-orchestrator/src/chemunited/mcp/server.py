@@ -11,6 +11,8 @@ from loguru import logger
 from chemunited.mcp.project_files import ProjectFileAccess
 from chemunited.mcp.qt_bridge import QtMainThreadBridge
 from chemunited.project.platform_svg import (
+    PLATFORM_DEVICES_RELATIVE_PATH,
+    PLATFORM_LIVE_RELATIVE_PATH,
     PLATFORM_SVG_RELATIVE_PATH,
     export_platform_svg,
 )
@@ -152,7 +154,16 @@ class ProjectMcpService:
                 raise RuntimeError("No project is currently open.")
 
             path = working_dir / PLATFORM_SVG_RELATIVE_PATH
-            export_platform_svg(self._window.scene_attribute, path, scale=scale)
+            # The device and live maps are written with the SVG, so they
+            # always match it (the dashboard checks the live map's hash).
+            export_platform_svg(
+                self._window.scene_attribute,
+                path,
+                devices_path=working_dir / PLATFORM_DEVICES_RELATIVE_PATH,
+                live_path=working_dir / PLATFORM_LIVE_RELATIVE_PATH,
+                components=self._window.orchestrator.components.items(),
+                scale=scale,
+            )
             return {
                 "path": PLATFORM_SVG_RELATIVE_PATH.as_posix(),
                 "bytes": path.stat().st_size,
