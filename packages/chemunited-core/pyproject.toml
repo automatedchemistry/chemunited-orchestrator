@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "chemunited-core"
-version = "0.0.7"
+version = "0.0.8"
 description = "Core data models for orchestration, execution, and simulation of protocols in automated chemistry laboratory platforms."
 readme = "README.md"
 license = { file = "LICENSE" }

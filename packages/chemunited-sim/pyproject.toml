@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "chemunited-sim"
-version = "0.0.3"
+version = "0.0.4"
 description = "Dynamic simulation engine for fluidic automation platforms built on chemunited-core."
 license = { file = "LICENSE" }
 authors = [
