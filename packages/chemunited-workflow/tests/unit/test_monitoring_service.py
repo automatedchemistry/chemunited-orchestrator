@@ -953,8 +953,9 @@ def test_poll_loop_publishes_stop_run_that_cancels_the_active_run(
 
     controlled_svc.start()
     assert _wait_until(lambda: MonitoringContext._stop_run is not None)
-    assert MonitoringContext.stop_run() is True
+    assert MonitoringContext.stop_run("Overpressure: 3.2 bar > 3.0 bar") is True
     assert run_store.get().state == RunState.CANCELLED
+    assert run_store.get().cancel_reason == "Overpressure: 3.2 bar > 3.0 bar"
     assert MonitoringContext.stop_run() is False  # nothing left to stop
 
     controlled_svc.stop()
@@ -971,7 +972,7 @@ def test_custom_source_stops_the_active_run_end_to_end(
         "from chemunited_workflow import MonitoringContext\n"
         "\n"
         "def interlock(**kwargs):\n"
-        "    return MonitoringContext.stop_run()\n"
+        "    return MonitoringContext.stop_run('Overpressure')\n"
         "\n"
         "CUSTOM_SOURCES = {'interlock': interlock}\n",
     )
@@ -989,6 +990,7 @@ def test_custom_source_stops_the_active_run_end_to_end(
     assert _wait_until(lambda: run_store.get().state == RunState.CANCELLED)
     controlled_svc.stop()
 
+    assert run_store.get().cancel_reason == "Overpressure"
     history = controlled_svc.get_history("custom", "interlock")
     assert history[0]["value"] is True  # the tick that stopped the run
 

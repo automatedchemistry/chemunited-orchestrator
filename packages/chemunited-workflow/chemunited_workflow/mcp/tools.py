@@ -219,7 +219,9 @@ def register_tools(mcp: FastMCP, holder: ProjectHolder) -> None:
         call so you only get what's new. The read doesn't consume
         events — a dashboard or another caller polling the same run
         concurrently still sees everything. Call repeatedly until ``state``
-        is ``"finished"`` or ``"failed"``."""
+        is ``"finished"`` or ``"failed"``. ``reason`` says why a
+        ``cancelled`` run was stopped, when whoever stopped it gave one (a
+        safety interlock, say)."""
         if not holder.is_loaded():
             return {"error": _NO_PROJECT}
         rec = holder.run_store.get()
@@ -229,6 +231,7 @@ def register_tools(mcp: FastMCP, holder: ProjectHolder) -> None:
         return {
             "run_id": rec.run_id,
             "state": rec.state.value,
+            "reason": rec.cancel_reason,
             "events": [e.model_dump() for e in events],
             "cursor": cursor,
         }
@@ -236,7 +239,8 @@ def register_tools(mcp: FastMCP, holder: ProjectHolder) -> None:
     @mcp.tool()
     def get_run_report() -> dict:
         """Return the full execution report for the current or last completed run.
-        Returns one WorkflowResult per process step, in execution order."""
+        Returns one WorkflowResult per process step, in execution order, and
+        the ``reason`` a ``cancelled`` run was stopped for, if one was given."""
         if not holder.is_loaded():
             return {"error": _NO_PROJECT}
         rec = holder.run_store.get()
@@ -245,6 +249,7 @@ def register_tools(mcp: FastMCP, holder: ProjectHolder) -> None:
         return {
             "run_id": rec.run_id,
             "state": rec.state.value,
+            "reason": rec.cancel_reason,
             "results": [r.model_dump() for r in rec.results],
         }
 

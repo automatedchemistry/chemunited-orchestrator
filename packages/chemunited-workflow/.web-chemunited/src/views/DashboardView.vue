@@ -50,6 +50,7 @@ interface ActiveRunResponse {
 interface RunReport {
   run_id: string
   state: string
+  reason?: string | null
 }
 
 const isLoading = ref(true)
@@ -62,6 +63,9 @@ const processCount = ref<number | null>(null)
 const activeRunId = ref<string | null>(null)
 const activeRunState = ref<string | null>(null)
 const lastRun = ref<RunReport | null>(null)
+// A run stopped with a reason (a safety interlock, say) ended 'cancelled'
+// but reads as an error: "stopped", with the reason underneath.
+const lastRunLabel = computed(() => (lastRun.value?.reason ? 'stopped' : lastRun.value?.state ?? ''))
 const platformSvg = ref<string | null>(null)
 const platformDevices = ref<PlatformDevice[]>([])
 const selectedDeviceId = ref<string | null>(null)
@@ -136,7 +140,7 @@ function formatDate(iso: string): string {
 function runStateClass(state: string): string {
   const s = state.toLowerCase()
   if (s === 'finished' || s === 'success') return 'state-success'
-  if (s === 'failed' || s === 'error') return 'state-failed'
+  if (s === 'failed' || s === 'error' || s === 'stopped') return 'state-failed'
   if (s === 'running') return 'state-running'
   if (s === 'paused') return 'state-paused'
   return 'state-idle'
@@ -449,11 +453,14 @@ onBeforeUnmount(() => {
           </template>
           <template v-else-if="lastRun">
             <p class="stat-value">
-              <span class="run-badge" :class="runStateClass(lastRun.state)">
-                {{ lastRun.state }}
+              <span class="run-badge" :class="runStateClass(lastRunLabel)">
+                {{ lastRunLabel }}
               </span>
             </p>
             <p class="stat-sub">{{ lastRun.run_id.slice(0, 8) }}…</p>
+            <p v-if="lastRun.reason" class="stat-sub stat-reason" :title="lastRun.reason">
+              {{ lastRun.reason }}
+            </p>
           </template>
           <template v-else>
             <p class="stat-value muted">—</p>
@@ -763,6 +770,11 @@ onBeforeUnmount(() => {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.stat-reason {
+  margin-top: 0.2rem;
+  color: var(--color-danger);
 }
 
 .muted {

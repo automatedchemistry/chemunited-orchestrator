@@ -289,6 +289,33 @@ def test_cancel_when_no_run(client):
     assert r.status_code == 404
 
 
+def test_status_and_report_carry_the_reason_a_run_was_stopped_for(client, app):
+    from chemunited_workflow.api.dependencies import get_project_holder
+
+    holder = app.dependency_overrides[get_project_holder]()
+    # Seed RUNNING state without a background thread so there is no race.
+    holder.run_store.try_start("run_001.json")
+    assert holder.run_store.cancel("Overpressure: 3.2 bar > 3.0 bar") is True
+
+    status = client.get("/run/status").json()
+    assert status["state"] == "cancelled"
+    assert status["reason"] == "Overpressure: 3.2 bar > 3.0 bar"
+    report = client.get("/run/report").json()
+    assert report["state"] == "cancelled"
+    assert report["reason"] == "Overpressure: 3.2 bar > 3.0 bar"
+
+
+def test_plain_cancel_reports_no_reason(client, app):
+    from chemunited_workflow.api.dependencies import get_project_holder
+
+    holder = app.dependency_overrides[get_project_holder]()
+    holder.run_store.try_start("run_001.json")
+    assert client.delete("/run/").status_code == 204
+
+    assert client.get("/run/status").json()["reason"] is None
+    assert client.get("/run/report").json()["reason"] is None
+
+
 def test_pause_when_no_run(client):
     r = client.post("/run/pause")
     assert r.status_code == 404

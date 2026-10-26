@@ -193,7 +193,7 @@ const navItems = [
           <span>{{ item.label }}</span>
           <span
             v-if="item.icon === 'run' && runStatusStore.runState !== 'idle'"
-            :class="['nav-run-dot', runStatusStore.runState]"
+            :class="['nav-run-dot', runStatusStore.stateStyle]"
             :aria-label="`Run ${runStatusStore.runState}`"
           />
         </RouterLink>

@@ -90,6 +90,9 @@ class RunStatus(BaseModel):
     state: str
     events: list[dict[str, Any]]
     cursor: int
+    # Why a cancelled run was stopped, when whoever stopped it said (a safety
+    # interlock, say); null otherwise.
+    reason: str | None = None
 
 
 class RunInputIn(BaseModel):

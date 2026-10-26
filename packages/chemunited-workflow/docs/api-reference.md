@@ -43,8 +43,8 @@ Only one run can be active at a time (the physical platform enforces this constr
 |--------|------|-------------|
 | `POST` | `/run/` | Start a workflow run from a protocol file. Body: `{"protocol": "<filename>", "dry_run": false}`. `protocol` is required; `dry_run` defaults to `false`. Returns HTTP `202` with a derived `run_id`, `409` if a run is already active, or `422` if `record_monitoring: true` was passed with no monitoring variables registered (the run never starts). Pass `record_monitoring: true` to also persist every monitored variable's readings for this run — see [Monitoring](#monitoring). |
 | `GET` | `/run/active` | Return `{"active_run_id": ..., "state": ..., "pending_inputs": {...}, "protocol": ...}` without consuming queued events. `state` is `"running"` or `"paused"` while active, `null` if no run is active. `pending_inputs` maps `node_id -> prompt message` for every node currently blocked on `request_operator_input()` — lets a reconnecting dashboard client redraw an open prompt it missed on the live stream. `protocol` is the filename the active run was started from, so a client that didn't itself start the run can rebuild the process/node view before replaying events. |
-| `GET` | `/run/status` | Poll the current run state and events. Query param `after` (default `0`) is a cursor — returns every event recorded from that index onward plus a `cursor` field to pass as `after` next time. The read is non-destructive: any number of independent callers can poll concurrently, each tracking its own cursor, without stealing events from one another; `after=0` (or omitted) replays the full history. States are `running`, `paused`, and the terminal `finished`, `failed`, `cancelled`. Returns `404` if no run has been recorded. |
-| `GET` | `/run/report` | Full execution report for the current or last run. Returns `202` if the run has not finished yet (including while paused). |
+| `GET` | `/run/status` | Poll the current run state and events. Query param `after` (default `0`) is a cursor — returns every event recorded from that index onward plus a `cursor` field to pass as `after` next time. The read is non-destructive: any number of independent callers can poll concurrently, each tracking its own cursor, without stealing events from one another; `after=0` (or omitted) replays the full history. States are `running`, `paused`, and the terminal `finished`, `failed`, `cancelled`. `reason` says why a `cancelled` run was stopped when whoever stopped it gave one — a safety interlock calling [`MonitoringContext.stop_run(reason)`](#custom-sources), say — and is `null` otherwise, including after `DELETE /run/`. Returns `404` if no run has been recorded. |
+| `GET` | `/run/report` | Full execution report for the current or last run, with the same `reason` as `/run/status`. Returns `202` if the run has not finished yet (including while paused). |
 | `DELETE` | `/run/` | Cancel the active run. Sends a cooperative cancellation signal — the current in-flight device call completes, then execution stops at the next step checkpoint. Works from either `running` or `paused`. Also wakes any node currently blocked on `request_operator_input()`. Returns `404` if no run is active. |
 | `POST` | `/run/pause` | Pause the active run. Sends a cooperative pause signal — execution holds at the next checkpoint, which may be between individual device calls inside a node, not just between nodes. The physical hardware is left in whatever state it reached; nothing is moved to a "safe" position. Only valid from `running`. Returns `404` if no run is active, `409` if not currently running. |
 | `POST` | `/run/resume` | Resume a paused run, continuing execution from exactly where it held. Only valid from `paused`. Returns `404` if no run is active, `409` if not currently paused. |
@@ -97,7 +97,7 @@ Both `GET /run/status` (`events` array) and `GET /run/stream` (one SSE `data:` f
 | `input_value` | string \| null | Set only on `NODE_INPUT_RECEIVED` — the operator's reply delivered via `POST /run/input`. `null` on every other event, including `NODE_INPUT_REQUESTED` (the prompt text itself is carried in `message`) |
 | `timestamp` | float | Unix timestamp |
 
-`GET /run/stream` also emits non-`WorkflowExecutionEvent` `{"state": ...}` frames: a mid-stream `{"state": "paused"}` / `{"state": "running"}` pair on pause/resume (connection stays open — pausing doesn't produce a `WorkflowExecutionEvent` since nothing in the executor runs when the state flips), and a final one that closes the stream: `{"state": "finished" | "failed" | "cancelled"}`.
+`GET /run/stream` also emits non-`WorkflowExecutionEvent` `{"state": ...}` frames: a mid-stream `{"state": "paused"}` / `{"state": "running"}` pair on pause/resume (connection stays open — pausing doesn't produce a `WorkflowExecutionEvent` since nothing in the executor runs when the state flips), and a final one that closes the stream: `{"state": "finished" | "failed" | "cancelled"}` — `{"state": "cancelled", "reason": "..."}` for a run stopped with a reason (see `/run/status`).
 
 To render live per-node feedback (progress bar + message), group events by `node_key` — every event that carries one (`NODE_WAITING`, `NODE_RUNNING`, `NODE_PROGRESS`, `NODE_INPUT_REQUESTED`, `NODE_INPUT_RECEIVED`, `NODE_COMPLETED`, `NODE_INACTIVE`, `NODE_FAILED`) updates that node's latest `state`, `percentage`, and `message` in place. This is exactly what the bundled dashboard's Run Control page does — see [HTML UI → Live node progress](html-ui.md#live-node-progress) and [HTML UI → Operator input prompts](html-ui.md#operator-input-prompts).
 
@@ -163,20 +163,20 @@ def chiller_temperature_f():
 
 `MonitoringContext.platform` is `None` whenever no poll cycle is running. Reading a component another pool worker is mid-fetching in the same tick never deadlocks — `ComponentClient`'s per-device lock is non-blocking, so the loser gets a `ConcurrentClientAccessError` immediately, caught the same as any other exception raised inside a custom source and surfaced as that reading's `error`. Never call `.close()` or `.register()` on anything reached through `MonitoringContext.platform` — the poll loop owns its lifecycle for the whole ON-cycle. To unit-test a function that uses it, monkeypatch `MonitoringContext.platform` directly before calling the function.
 
-A custom source can also act as a safety interlock. `MonitoringContext.stop_run()` stops the active protocol run the same way the dashboard's Stop button (`DELETE /run/`) does — the run ends `cancelled` — and returns `True`, or returns `False` when no run is active. Monitoring is forced on for every run, so a check in a custom source runs on every tick of every run:
+A custom source can also act as a safety interlock. `MonitoringContext.stop_run(reason)` stops the active protocol run the same way the dashboard's Stop button (`DELETE /run/`) does — the run ends `cancelled` — and returns `True`, or returns `False` when no run is active. `reason` (optional) says why: it is reported with the cancelled run (`reason` on `/run/status` and `/run/report`, and on the closing frame of `/run/stream`), and the dashboard's Run Control page shows it in red as the run's outcome, where a plain cancel just reads "Run cancelled.". Monitoring is forced on for every run, so a check in a custom source runs on every tick of every run:
 
 ```python
 from chemunited_workflow import MonitoringContext
 
 def reactor_pressure():
     bar = MonitoringContext.platform["reactor"].get("pressure")
-    if bar > 3.0 and MonitoringContext.stop_run():
+    if bar > 3.0 and MonitoringContext.stop_run(f"Overpressure: {bar} bar > 3.0 bar"):
         MonitoringContext.platform["feed_valve"].put("close")
         raise RuntimeError(f"Overpressure ({bar} bar): protocol stopped")
     return bar
 ```
 
-Like `platform`, `stop_run()` is only wired up while a poll cycle runs inside the API server; anywhere else it returns `False`. To unit-test a function that uses it, set `MonitoringContext._stop_run` to a stand-in callable.
+Like `platform`, `stop_run()` is only wired up while a poll cycle runs inside the API server; anywhere else it returns `False`. To unit-test a function that uses it, set `MonitoringContext._stop_run` to a stand-in callable that takes the reason, such as `lambda reason: True`.
 
 Example workflow:
 

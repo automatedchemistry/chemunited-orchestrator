@@ -108,12 +108,13 @@ class MonitoringService:
         self,
         project_dir: Path,
         store: MonitoringStore,
-        stop_run: Callable[[], bool] | None = None,
+        stop_run: Callable[[str | None], bool] | None = None,
     ) -> None:
         self._project_dir = project_dir
         self._store = store
-        # Stops the active protocol run (``RunStore.cancel``); published to
-        # custom sources as ``MonitoringContext.stop_run`` while polling.
+        # Stops the active protocol run with a reason (``RunStore.cancel``);
+        # published to custom sources as ``MonitoringContext.stop_run`` while
+        # polling.
         self._stop_run = stop_run
 
     # ── Discovery ────────────────────────────────────────────────────────────

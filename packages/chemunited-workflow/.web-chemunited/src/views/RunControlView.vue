@@ -70,6 +70,15 @@ const stateText: Record<string, [string, string]> = {
   cancelled: ['Cancelled', 'Protocol cancellation requested.'],
 }
 
+// A run stopped with a reason (a safety interlock, say) reads "Stopped",
+// with the reason as its caption, instead of a plain "Cancelled".
+const stateLabel = computed(() =>
+  store.stoppedWithReason ? 'Stopped' : stateText[store.runState]?.[0] ?? store.runState,
+)
+const stateCaption = computed(() =>
+  store.stoppedWithReason ? store.stopReason : stateText[store.runState]?.[1] ?? '',
+)
+
 async function loadProtocols() {
   try {
     const res = await fetch('/protocols/')
@@ -257,8 +266,10 @@ function openStream() {
       }
     } else if ('state' in data) {
       const state = data.state as RunState
+      // Set on the closing frame of a run stopped with a reason.
+      const reason = typeof data.reason === 'string' ? data.reason : ''
       const wasPaused = store.runState === 'paused'
-      store.setRunState(state, runId.value)
+      store.setRunState(state, runId.value, reason)
 
       // Pausing/resuming is a mid-stream transition, not a terminal one —
       // the connection stays open and no card/node state changes.
@@ -283,7 +294,9 @@ function openStream() {
       closeStream({ markFailed: state === 'failed' || state === 'cancelled' })
       if (state === 'finished')  store.setMessage('Run finished. All processes completed.', 'success')
       else if (state === 'failed') store.setMessage('Run stopped with an error.', 'error')
+      else if (state === 'cancelled' && reason) store.setMessage(`Run stopped: ${reason}`, 'error')
       else if (state === 'cancelled') store.setMessage('Run cancelled.', '')
+      store.applyStopReason()
     }
   }
 
@@ -619,16 +632,16 @@ onUnmounted(() => {
             <h2>System State</h2>
             <p>Idle, running, and error states update from the live execution stream.</p>
           </div>
-          <span :class="['badge', store.runState]">
-            {{ stateText[store.runState]?.[0] ?? store.runState }}
+          <span :class="['badge', store.stateStyle]">
+            {{ stateLabel }}
           </span>
         </div>
 
         <div class="state-readout" :data-state="store.runState">
-          <span :class="['status-orb', store.runState]" aria-hidden="true" />
+          <span :class="['status-orb', store.stateStyle]" aria-hidden="true" />
           <span>
-            <span class="status-label">{{ stateText[store.runState]?.[0] ?? store.runState }}</span>
-            <span class="status-caption">{{ stateText[store.runState]?.[1] ?? '' }}</span>
+            <span class="status-label">{{ stateLabel }}</span>
+            <span :class="['status-caption', { error: store.stoppedWithReason }]">{{ stateCaption }}</span>
           </span>
         </div>
 
@@ -833,6 +846,10 @@ onUnmounted(() => {
   display: block;
   font-size: 0.79rem;
   color: var(--color-text-muted);
+}
+
+.status-caption.error {
+  color: var(--color-danger);
 }
 
 /* ── Run meta ───────────────────────────────────────── */

@@ -35,6 +35,12 @@ When a node calls `ctx.request_operator_input(message, timeout_seconds)` (see [C
 
 Reconnecting mid-wait (e.g. navigating back to Run Control after the live `NODE_INPUT_REQUESTED` event already streamed) still recovers the open prompt — `GET /run/active`'s `pending_inputs` field is read on mount and used to redraw it. This doesn't survive a full server restart: like the rest of run state, a pending prompt lives only in memory.
 
+## Stop reasons
+
+A run stopped with a reason — a safety interlock in a custom monitoring source calling `MonitoringContext.stop_run(reason)`, see [API Reference → Custom sources](api-reference.md#custom-sources) — still ends `cancelled`, but Run Control shows it as an error: a red **Stopped** state with the reason as its caption, a `Run stopped: <reason>` message, and the reason on the interrupted process card in place of the generic "Run was cancelled.". The navigation dot and the Dashboard's last-run card turn red too. A plain cancel (the Cancel Run button, `DELETE /run/`) has no reason and keeps the grey **Cancelled**.
+
+The reason arrives on the closing frame of `GET /run/stream`, and is read back from `GET /run/report` on page load, so reloading or coming back to Run Control after the stop still shows it.
+
 ## Per-project override
 
 A project can supply its own pre-built dashboard and the server will prefer it over the bundled one — no code changes to `chemunited_workflow` required. Drop a built SPA here:
