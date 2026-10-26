@@ -146,6 +146,7 @@ class ProjectHolder:
         new_monitoring = MonitoringService(
             project_dir=modules.project_dir,
             store=self._monitoring_store,
+            stop_run=self._run_store.cancel,
         )
         new_device_state = DeviceStateStore(
             _associated_components(modules.project_dir),

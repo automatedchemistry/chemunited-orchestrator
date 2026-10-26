@@ -32,6 +32,7 @@ import json
 import re
 import threading
 import time
+from collections.abc import Callable
 from concurrent.futures import ThreadPoolExecutor
 from datetime import datetime
 from pathlib import Path
@@ -103,9 +104,17 @@ def _safe_close(client: Any, component_name: str) -> None:
 
 
 class MonitoringService:
-    def __init__(self, project_dir: Path, store: MonitoringStore) -> None:
+    def __init__(
+        self,
+        project_dir: Path,
+        store: MonitoringStore,
+        stop_run: Callable[[], bool] | None = None,
+    ) -> None:
         self._project_dir = project_dir
         self._store = store
+        # Stops the active protocol run (``RunStore.cancel``); published to
+        # custom sources as ``MonitoringContext.stop_run`` while polling.
+        self._stop_run = stop_run
 
     # ── Discovery ────────────────────────────────────────────────────────────
 
@@ -314,6 +323,9 @@ class MonitoringService:
         # ON-cycle, so a custom source's device read can't double-connect to a
         # device another pool worker is mid-fetching in the same tick.
         MonitoringContext.platform = platform
+        # Published alongside it, so a custom source acting as a safety
+        # interlock can stop the active run (MonitoringContext.stop_run).
+        MonitoringContext._stop_run = self._stop_run
         # Reloaded fresh each ON-cycle, same lifetime as `platform` above — editing
         # monitoring_hook.py takes effect the next time monitoring is (re)started,
         # no server restart needed.
@@ -362,7 +374,12 @@ class MonitoringService:
         finally:
             # Cleared before closing clients so nothing reading MonitoringContext
             # from outside this ON-cycle can observe a half-torn-down Platform.
-            MonitoringContext.platform = None
+            # Only if still this cycle's: monitoring turned off and straight back
+            # on (one run ending as the next starts) has a new cycle publish
+            # before this one finishes its last tick.
+            if MonitoringContext.platform is platform:
+                MonitoringContext.platform = None
+                MonitoringContext._stop_run = None
             for component, client in platform.items():
                 _safe_close(client, component)
 

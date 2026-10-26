@@ -163,6 +163,21 @@ def chiller_temperature_f():
 
 `MonitoringContext.platform` is `None` whenever no poll cycle is running. Reading a component another pool worker is mid-fetching in the same tick never deadlocks — `ComponentClient`'s per-device lock is non-blocking, so the loser gets a `ConcurrentClientAccessError` immediately, caught the same as any other exception raised inside a custom source and surfaced as that reading's `error`. Never call `.close()` or `.register()` on anything reached through `MonitoringContext.platform` — the poll loop owns its lifecycle for the whole ON-cycle. To unit-test a function that uses it, monkeypatch `MonitoringContext.platform` directly before calling the function.
 
+A custom source can also act as a safety interlock. `MonitoringContext.stop_run()` stops the active protocol run the same way the dashboard's Stop button (`DELETE /run/`) does — the run ends `cancelled` — and returns `True`, or returns `False` when no run is active. Monitoring is forced on for every run, so a check in a custom source runs on every tick of every run:
+
+```python
+from chemunited_workflow import MonitoringContext
+
+def reactor_pressure():
+    bar = MonitoringContext.platform["reactor"].get("pressure")
+    if bar > 3.0 and MonitoringContext.stop_run():
+        MonitoringContext.platform["feed_valve"].put("close")
+        raise RuntimeError(f"Overpressure ({bar} bar): protocol stopped")
+    return bar
+```
+
+Like `platform`, `stop_run()` is only wired up while a poll cycle runs inside the API server; anywhere else it returns `False`. To unit-test a function that uses it, set `MonitoringContext._stop_run` to a stand-in callable.
+
 Example workflow:
 
 ```bash
