@@ -45,6 +45,7 @@ class FrameBase(QFrame):
         self._graph: QWidget | None = None
         self._workflow: QWidget | None = None
         self._option_pages: dict[str, QWidget] = {}
+        self._splitter_reset_pending = False
 
         self.navigationInterface = NavigationInterface(self, showMenuButton=True)
         self.contentSplitter = QSplitter(Qt.Orientation.Horizontal, self)  # type: ignore[call-arg]
@@ -200,7 +201,19 @@ class FrameBase(QFrame):
         self.navigationInterface.setCurrentItem(widget.objectName())
         QTimer.singleShot(0, self._restoreCollapsedSplitterSizes)
 
+    def showEvent(self, event) -> None:
+        super().showEvent(event)
+        if self._splitter_reset_pending:
+            QTimer.singleShot(0, self.resetSplitterSizes)
+
     def resetSplitterSizes(self) -> None:
+        if not self.isVisible():
+            # Off screen every pane reports hidden and would be collapsed to 0 px;
+            # showEvent() lays them out once the frame is shown.
+            self._splitter_reset_pending = True
+            return
+        self._splitter_reset_pending = False
+
         total_width = max(self.width(), 600)
         option_width = (
             max(total_width // 6, 220) if self.optionsFrame.isVisible() else 0

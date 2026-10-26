@@ -34,6 +34,8 @@ Four cards summarize the loaded project:
 **Refresh** re-reads all four cards from the server. Below them, the **Platform** card renders the project's
 platform diagram (the same layout you build in [Drawing](../drawing/drawing.md)), useful for a quick visual sanity
 check of the loaded setup. Click a component in the diagram to open its connectivity status and commands below it.
+A command you send from there returns as soon as the device accepts it: unlike a protocol run, the dashboard
+doesn't wait for the device to finish, so a thermostat may still be heating when the panel shows **OK**.
 At the bottom, four quick-navigation cards jump straight to Run Control, Protocols, Monitoring, and Logs.
 
 ### Navigating the platform diagram
@@ -67,7 +69,7 @@ On a live diagram:
 |---|---|
 | Valve rotor lines, open/closed badges, relay lights | The last command the device received. |
 | Turning ring, with the command above it | The device is running that command. |
-| Short flash | A command went to a device that doesn't report when it finishes. |
+| Short flash | A command went to a device that doesn't report when it finishes, or came from the device panel, which doesn't wait for the device. |
 | Grey **?** | Unknown: no command since the work-server started, or the last one failed or timed out. |
 | Black LCD with a value, e.g. `24.35 °C` | The latest monitoring reading of its variable. |
 | LCD showing `--` | Not live, no reading yet, or the last reading failed (hover for why). |

@@ -88,6 +88,7 @@ class OpcUaComponentClient(DeviceClientMixin):
         cancellation_token: threading.Event | None = None,
         pause_event: threading.Event | None = None,
         command_observer=None,
+        wait_for_completion: bool = True,
     ) -> None:
         self._endpoint = endpoint
         self._root_node_id = root_node_id
@@ -107,6 +108,7 @@ class OpcUaComponentClient(DeviceClientMixin):
             cancellation_token=cancellation_token,
             pause_event=pause_event,
             command_observer=command_observer,
+            wait_for_completion=wait_for_completion,
         )
 
     def _ensure_connected(self) -> Client:
@@ -198,11 +200,13 @@ class OpcUaComponentClient(DeviceClientMixin):
     # "opcua_idle_path"/"opcua_idle_value"). A put/post is a command that can
     # make the device busy, so we block until the configured node reports the
     # configured idle value — a get is a passive read and never triggers this.
+    # A client built with wait_for_completion=False skips the wait.
 
     def _execute_post_command(self, verb: str) -> None:
         if (
             verb in ("put", "post")
             and not self._dry_run
+            and self._wait_for_completion
             and self._idle_node_path is not None
         ):
             self._wait_until_idle()

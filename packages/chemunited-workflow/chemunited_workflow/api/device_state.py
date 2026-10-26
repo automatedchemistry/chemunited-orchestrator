@@ -3,7 +3,9 @@
 Fed by the command events the device clients report (see ``command_events``):
 ``started`` marks the device running and records the command, ``finished``
 marks it done, and ``failed`` marks it failed with its picture unknown — a
-command that failed or timed out may or may not have run. With a picture
+command that failed or timed out may or may not have run. A command from the
+device panel is done as soon as the device accepts it: the panel doesn't wait
+for the device to finish. With a picture
 deriver installed (``command_tracker``, which needs chemunited-core), each
 command also redraws the device's picture. Every record starts unknown when
 the project loads; nothing is assumed from the design state.

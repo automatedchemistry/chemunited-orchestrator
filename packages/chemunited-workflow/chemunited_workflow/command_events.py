@@ -2,9 +2,11 @@
 
 For each PUT/POST, the client reports ``started`` right before the request goes
 out, then ``finished`` once its usual wait for the device to finish returns, or
-``failed`` if the request fails or the wait times out. GETs are not reported.
-The events of one command share a ``call_id``. The live platform view is built
-from these events; protocol code doesn't change.
+``failed`` if the request fails or the wait times out. A client built with
+``wait_for_completion=False`` (the dashboard's device panel) skips the wait and
+reports ``finished`` as soon as the device accepts the command. GETs are not
+reported. The events of one command share a ``call_id``. The live platform view
+is built from these events; protocol code doesn't change.
 """
 
 from __future__ import annotations

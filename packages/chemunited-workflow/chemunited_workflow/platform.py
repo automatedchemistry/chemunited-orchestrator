@@ -126,6 +126,7 @@ class Platform(Mapping[str, ComponentClient]):
         cancellation_token: threading.Event | None = None,
         pause_event: threading.Event | None = None,
         command_observer: CommandObserver | None = None,
+        wait_for_completion: bool = True,
     ) -> "Platform":
         """Build a Platform from a connectivity/associations.json file.
 
@@ -147,6 +148,12 @@ class Platform(Mapping[str, ComponentClient]):
 
         ``command_observer``, if given, is told how each PUT/POST goes (see
         ``command_events``); the live platform view is built from it.
+
+        ``wait_for_completion=False`` makes each PUT/POST return as soon as the
+        device accepts it, skipping the usual wait for the device to finish
+        (flowchem's ``is-idle``, an OPC UA idle node, a SiLA2 observable
+        command). The dashboard's device panel wants that; protocol runs keep
+        the default, since their next command relies on the last one being done.
 
         Raises
         ------
@@ -171,6 +178,7 @@ class Platform(Mapping[str, ComponentClient]):
             cancellation_token=cancellation_token,
             pause_event=pause_event,
             command_observer=command_observer,
+            wait_for_completion=wait_for_completion,
         )
         components = {}
         for assoc in data["associations"]:
@@ -211,6 +219,7 @@ class Platform(Mapping[str, ComponentClient]):
         cancellation_token: threading.Event | None = None,
         pause_event: threading.Event | None = None,
         command_observer: CommandObserver | None = None,
+        wait_for_completion: bool = True,
     ) -> "Platform":
         """Shorthand: load from ``{project_dir}/connectivity/associations.json``."""
         return cls.from_connectivity(
@@ -222,4 +231,5 @@ class Platform(Mapping[str, ComponentClient]):
             cancellation_token=cancellation_token,
             pause_event=pause_event,
             command_observer=command_observer,
+            wait_for_completion=wait_for_completion,
         )

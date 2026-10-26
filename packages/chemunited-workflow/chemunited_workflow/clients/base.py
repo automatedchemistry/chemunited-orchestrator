@@ -85,6 +85,7 @@ class DeviceClientMixin(abc.ABC):
         cancellation_token: threading.Event | None = None,
         pause_event: threading.Event | None = None,
         command_observer: CommandObserver | None = None,
+        wait_for_completion: bool = True,
     ) -> None:
         self._dry_run = dry_run
         self._access_lock = threading.Lock()
@@ -96,6 +97,9 @@ class DeviceClientMixin(abc.ABC):
         self._cancellation_token = cancellation_token
         self._pause_event = pause_event
         self._command_observer = command_observer
+        # False: a PUT/POST returns once the device accepts it, without
+        # waiting for the device to finish (the dashboard's device panel).
+        self._wait_for_completion = wait_for_completion
 
     base_url: str
 

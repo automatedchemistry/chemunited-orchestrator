@@ -210,7 +210,7 @@ Every request to a device, from a run, a monitoring read or the device panel, ta
 
 ## Live platform view
 
-The work-server keeps the latest state of every device in memory, built from the commands it sends: from protocol runs, the device panel (`POST /components/commands/...`) and custom routes. Every device starts `unknown` when the project loads. Each PUT/POST marks its device `running` with that command, then `done` once the device client's usual wait for the device to finish returns, or `failed` if the request fails or the wait times out. GETs aren't recorded. Commands sent outside the work-server never show.
+The work-server keeps the latest state of every device in memory, built from the commands it sends: from protocol runs, the device panel (`POST /components/commands/...`) and custom routes. Every device starts `unknown` when the project loads. Each PUT/POST marks its device `running` with that command, then `done` once the device client's usual wait for the device to finish returns, or `failed` if the request fails or the wait times out. The device panel doesn't wait for the device to finish, so its commands are marked `done` as soon as the device accepts them. GETs aren't recorded. Commands sent outside the work-server never show.
 
 The view is **live** only while monitoring is on from the Monitoring page (`POST /monitoring/start`). A run doesn't make it live by itself. Device states are recorded either way but only sent while live.
 
