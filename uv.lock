@@ -399,7 +399,7 @@ wheels = [
 
 [[package]]
 name = "chemunited"
-version = "0.0.4"
+version = "0.0.5"
 source = { editable = "packages/chemunited-orchestrator" }
 dependencies = [
     { name = "black" },
@@ -459,7 +459,7 @@ provides-extras = ["compound-lookup", "dev"]
 
 [[package]]
 name = "chemunited-core"
-version = "0.0.7"
+version = "0.0.8"
 source = { editable = "packages/chemunited-core" }
 dependencies = [
     { name = "chemunited-quantities" },
@@ -531,7 +531,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "chemunited-sim"
-version = "0.0.3"
+version = "0.0.4"
 source = { editable = "packages/chemunited-sim" }
 dependencies = [
     { name = "chemunited-core" },
@@ -579,7 +579,7 @@ provides-extras = ["dev", "tray"]
 
 [[package]]
 name = "chemunited-workflow"
-version = "0.0.10"
+version = "0.0.11"
 source = { editable = "packages/chemunited-workflow" }
 dependencies = [
     { name = "chemunited-quantities" },
