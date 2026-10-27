@@ -64,11 +64,12 @@ def _signature(func: Callable[..., Any]) -> inspect.Signature | None:
     try:
         return inspect.signature(func, eval_str=True)
     except Exception:
-        pass
-    try:
-        return inspect.signature(func)
-    except (TypeError, ValueError):
-        return None
+        # An annotation that doesn't evaluate (say, a name imported only under
+        # TYPE_CHECKING): keep the annotations as strings instead.
+        try:
+            return inspect.signature(func)
+        except (TypeError, ValueError):
+            return None
 
 
 def _json_schema(annotation: Any) -> dict[str, Any]:
