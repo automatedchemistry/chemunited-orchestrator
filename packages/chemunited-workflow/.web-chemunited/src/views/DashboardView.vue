@@ -22,6 +22,8 @@ let _platformLiveCache: LiveMap | 'missing' | null = null
 import { computed, onBeforeUnmount, onMounted, ref, shallowRef, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import DevicePropertiesPanel, { clearDeviceCommandsCache } from '../components/DevicePropertiesPanel.vue'
+import ExtensionSlot from '../extensions/ExtensionSlot.vue'
+import PageActions from '../extensions/PageActions.vue'
 import PlatformLiveLayer from '../components/live/PlatformLiveLayer.vue'
 import type { Box } from '../components/live/liveFormat'
 import { createSvgPanZoom, type SvgPanZoom } from '../components/svgPanZoom'
@@ -468,6 +470,12 @@ onBeforeUnmount(() => {
           </template>
         </div>
       </div>
+
+      <PageActions page="dashboard" :context="{ project_dir: projectDir }" />
+      <ExtensionSlot
+        name="dashboard.cards"
+        :context="{ project_dir: projectDir, run_id: activeRunId, run_state: activeRunState }"
+      />
 
       <!-- Platform SVG (only shown when project_dir/draw/platform.svg exists) -->
       <div v-if="platformSvg" ref="platformBox" class="platform-box">

@@ -1,8 +1,10 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue'
+import { computed, onMounted, ref } from 'vue'
 import { RouterLink, RouterView } from 'vue-router'
 import { useApiToken } from './composables/useApiToken'
 import { useNotification } from './composables/useNotification'
+import { customization } from './extensions/manifest'
+import { buildNav, type NavEntry } from './extensions/nav'
 import { useRunStatusStore } from './stores/runStatus'
 
 const { message, type, notify, dismiss } = useNotification()
@@ -128,15 +130,38 @@ async function refreshProject() {
 
 applyTheme(theme.value)
 
-const navItems = [
-  { to: '/', label: 'Dashboard', icon: 'dashboard' },
-  { to: '/run-control', label: 'Run Control', icon: 'run' },
-  { to: '/protocols', label: 'Protocols', icon: 'protocols' },
-  { to: '/monitoring', label: 'Monitoring', icon: 'monitoring' },
-  { to: '/devices', label: 'Devices', icon: 'devices' },
-  { to: '/logs', label: 'Logs', icon: 'logs' },
-  { to: '/export', label: 'Export', icon: 'export' },
-]
+// Built-in pages plus the project's own (customizations/ui/ui_hook.py), and the
+// diagnostics page whenever the project customizes anything.
+const navItems = computed<NavEntry[]>(() => {
+  const manifest = customization.manifest
+  const items = buildNav(manifest)
+  if (manifest.active || customization.loadError) {
+    items.push({
+      to: '/customizations',
+      label: 'Customizations',
+      icon: 'customizations',
+      iconUrl: null,
+      custom: false,
+      order: Number.MAX_SAFE_INTEGER,
+      hidden: false,
+    })
+  }
+  return items
+})
+
+const customizationProblems = computed(
+  () => customization.manifest.errors.length > 0 || Boolean(customization.loadError),
+)
+
+const brand = computed(() => {
+  const custom = customization.manifest.brand
+  return {
+    title: custom?.title ?? 'Chemunited-Workflow',
+    subtitle: custom?.subtitle ?? 'Protocol Execution Layers',
+    monogram: custom?.monogram ?? null,
+    logoUrl: custom?.logo_url ?? null,
+  }
+})
 
 </script>
 
@@ -145,15 +170,21 @@ const navItems = [
     <aside class="sidebar">
       <div class="brand">
         <div class="brand-mark" aria-hidden="true">
-          <img src="/chemunited.ico" alt="" width="30" height="30" />
+          <img v-if="brand.logoUrl" :src="brand.logoUrl" alt="" width="30" height="30" />
+          <span v-else-if="brand.monogram" class="brand-monogram">{{ brand.monogram }}</span>
+          <img v-else src="/chemunited.ico" alt="" width="30" height="30" />
         </div>
         <div class="brand-copy">
-          <strong>Chemunited-Workflow</strong>
-          <span>Protocol Execution Layers</span>
+          <strong>{{ brand.title }}</strong>
+          <span>{{ brand.subtitle }}</span>
         </div>
       </div>
 
-      <nav class="primary-nav" aria-label="Primary navigation">
+      <nav
+        class="primary-nav"
+        aria-label="Primary navigation"
+        :style="{ '--nav-count': navItems.length }"
+      >
         <span
           v-for="item in navItems"
           :key="item.to"
@@ -162,7 +193,13 @@ const navItems = [
           :to="item.to"
           :title="item.label"
         >
-          <svg v-if="item.icon === 'dashboard'" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+          <i
+            v-if="item.iconUrl"
+            class="nav-icon-file"
+            :style="{ '--icon-url': `url(&quot;${item.iconUrl}&quot;)` }"
+            aria-hidden="true"
+          />
+          <svg v-else-if="item.icon === 'dashboard'" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <rect x="3" y="3" width="7" height="7" rx="2"/>
             <rect x="14" y="3" width="7" height="7" rx="2"/>
             <rect x="3" y="14" width="7" height="7" rx="2"/>
@@ -186,6 +223,15 @@ const navItems = [
             <path d="M12 3v12m0 0-4-4m4 4 4-4"/>
             <path d="M4 17v2a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-2"/>
           </svg>
+          <svg v-else-if="item.icon === 'custom'" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4 7h4a2 2 0 1 1 4 0h4v4a2 2 0 1 1 0 4v4H4V7Z"/>
+          </svg>
+          <svg v-else-if="item.icon === 'customizations'" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M4 6h10M18 6h2M4 12h4M12 12h8M4 18h12M20 18h0"/>
+            <circle cx="16" cy="6" r="2"/>
+            <circle cx="10" cy="12" r="2"/>
+            <circle cx="18" cy="18" r="2"/>
+          </svg>
           <svg v-else viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M6 3h12a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"/>
             <path d="M8 8h8M8 12h8M8 16h5"/>
@@ -195,6 +241,11 @@ const navItems = [
             v-if="item.icon === 'run' && runStatusStore.runState !== 'idle'"
             :class="['nav-run-dot', runStatusStore.stateStyle]"
             :aria-label="`Run ${runStatusStore.runState}`"
+          />
+          <span
+            v-if="item.icon === 'customizations' && customizationProblems"
+            class="nav-run-dot failed"
+            aria-label="Customization problems"
           />
         </RouterLink>
         </span>
@@ -325,6 +376,23 @@ const navItems = [
 .brand-mark svg {
   width: 30px;
   height: 30px;
+}
+
+.brand-monogram {
+  color: #62c7de;
+  font-size: 0.72rem;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+}
+
+/* An icon file from customizations/ui/, drawn in the link's colour. */
+.nav-icon-file {
+  width: 19px;
+  height: 19px;
+  flex: 0 0 auto;
+  background-color: currentColor;
+  -webkit-mask: var(--icon-url) center / contain no-repeat;
+  mask: var(--icon-url) center / contain no-repeat;
 }
 
 .brand-copy {
@@ -665,7 +733,7 @@ const navItems = [
   .primary-nav {
     min-width: 0;
     display: grid;
-    grid-template-columns: repeat(7, minmax(40px, 1fr));
+    grid-template-columns: repeat(var(--nav-count, 7), minmax(40px, 1fr));
     gap: 0.15rem;
   }
 

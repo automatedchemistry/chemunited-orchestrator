@@ -1,13 +1,9 @@
-# Custom dashboard example
+# Dashboard customization example
 
-This is a working example of the per-project dashboard override described in
-[`docs/html-ui.md`](../../../../docs/html-ui.md#per-project-override). It's a
-plain HTML/CSS/JS single-page app — no npm, no build step — that talks to the
-same REST API the bundled Vue dashboard uses.
-
-It's read-only: it only issues `GET` requests (plus `/components/ping`, which
-doesn't mutate anything), so it's safe to click around without starting a run
-or changing project state.
+This folder customizes the bundled dashboard for this project, with no build
+step: the dashboard reads [`ui_hook.py`](ui_hook.py) at start-up and compiles the
+`.vue` files in the browser. Nothing here needs Node or npm. The full guide is
+[`docs/html-ui.md`](../../../../docs/html-ui.md#runtime-customizations).
 
 ## Try it
 
@@ -15,25 +11,35 @@ or changing project state.
 chemunited-workflow serve examples/custom_project
 ```
 
-Open `http://127.0.0.1:3116/`. You should see the amber "Flow Synthesis
-Reactor" theme instead of the bundled blue Vue dashboard — confirming
-`{project_dir}/customizations/ui/dist/index.html` is being served in place
-of the package default. All six nav tabs (`/run-control`, `/protocols`,
-`/monitoring`, `/devices`, `/logs`) do a real navigation to that same
-overridden page; the JS in `assets/dashboard.js` reads `location.pathname`
-to decide which section to show, and its own `<link>`/`<script>` tags are
-served via `{project_dir}/customizations/ui/dist/assets/`.
+Open `http://127.0.0.1:3116/`. Compared with a project without this folder you get:
 
-To compare against the default, point the server at a project with no
-`customizations/ui/dist/` directory (or just delete this folder) and
-reload — you'll get the bundled Vue dashboard back automatically.
+- **Reactor** in the nav, after Monitoring: [`pages/ReactorPage.vue`](pages/ReactorPage.vue),
+  which reuses [`components/StatTile.vue`](components/StatTile.vue) and calls the
+  `residence_time_min` route from `customizations/routers/router_hook.py`.
+- **History** in the nav, after Logs: an HTML page that the `protocol_history()`
+  function in `ui_hook.py` renders in Python.
+- On the **Dashboard**: a "Residence time" button with two number fields, drawn
+  from that route's type hints, and [`widgets/RunCard.vue`](widgets/RunCard.vue) in
+  the `dashboard.cards` slot.
+- On **Export**: a "Summarize" button that sends the selected runs to the
+  `summarize_runs` route.
+- **Customizations** in the nav: compiles every file and lists any problems.
+
+Edit any file and reload the page to see the change. To rebrand and recolour
+the dashboard, uncomment the `brand=` and `theme_css=` lines in `ui_hook.py`.
 
 ## Layout
 
+```text
+customizations/ui/
+├── ui_hook.py              DASHBOARD = Dashboard(...): pages, actions, widgets
+├── theme.css               colour tokens, applied when ui_hook.py names it
+├── pages/ReactorPage.vue   a custom page
+├── components/StatTile.vue a part shared by pages
+├── widgets/RunCard.vue     a widget for a slot on a built-in page
+└── assets/flask.svg        the Reactor page's nav icon
 ```
-customizations/ui/dist/
-├── index.html          # one shell containing all 6 tab sections
-└── assets/
-    ├── dashboard.css
-    └── dashboard.js     # fetch() calls against /project/, /processes/, /protocols/, /logs/, /components/, /monitoring/, /run/
-```
+
+A project can instead replace the whole dashboard with its own prebuilt app in
+`customizations/ui/dist/`; that needs a build tool (see
+[`docs/html-ui.md`](../../../../docs/html-ui.md#per-project-override)).

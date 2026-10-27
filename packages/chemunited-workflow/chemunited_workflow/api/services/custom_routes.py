@@ -13,6 +13,7 @@ from pathlib import Path
 from typing import Any, Callable
 
 from loguru import logger
+from pydantic import TypeAdapter
 
 from ...command_events import CommandObserver
 from ...custom_route_context import CustomRouteContext
@@ -57,17 +58,47 @@ def load_custom_routes(project_dir: Path) -> dict[str, Callable[..., Any]]:
         return {}
 
 
+def _signature(func: Callable[..., Any]) -> inspect.Signature | None:
+    """The function's signature, with string annotations (``from __future__
+    import annotations``) resolved where possible."""
+    try:
+        return inspect.signature(func, eval_str=True)
+    except Exception:
+        pass
+    try:
+        return inspect.signature(func)
+    except (TypeError, ValueError):
+        return None
+
+
+def _json_schema(annotation: Any) -> dict[str, Any]:
+    """JSON schema for a parameter's type hint; empty when there is none or it
+    can't be described (an arbitrary class, an unresolved string)."""
+    if annotation is inspect.Parameter.empty or isinstance(annotation, str):
+        return {}
+    try:
+        return TypeAdapter(annotation).json_schema()
+    except Exception:
+        return {}
+
+
+def _summary(func: Callable[..., Any]) -> str | None:
+    """First paragraph of the function's docstring."""
+    doc = inspect.getdoc(func)
+    if not doc:
+        return None
+    return " ".join(doc.split("\n\n", 1)[0].split())
+
+
 def discover_custom_routes(project_dir: Path) -> list[dict[str, Any]]:
     """List the registered custom routes, with parameter hints introspected
-    from each function's signature."""
+    from each function's signature: whether each parameter is required, its
+    default, and a JSON schema built from its type hint."""
     routes = load_custom_routes(project_dir)
     result = []
     for name, func in routes.items():
         parameters: list[dict[str, Any]] = []
-        try:
-            sig = inspect.signature(func)
-        except (TypeError, ValueError):
-            sig = None
+        sig = _signature(func)
         if sig is not None:
             for pname, param in sig.parameters.items():
                 if param.kind in (
@@ -81,9 +112,12 @@ def discover_custom_routes(project_dir: Path) -> list[dict[str, Any]]:
                         "name": pname,
                         "required": not has_default,
                         "default": param.default if has_default else None,
+                        "json_schema": _json_schema(param.annotation),
                     }
                 )
-        result.append({"name": name, "parameters": parameters})
+        result.append(
+            {"name": name, "description": _summary(func), "parameters": parameters}
+        )
     return result
 
 

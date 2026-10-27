@@ -35,6 +35,7 @@ import { ref, watch } from 'vue'
 import { RouterLink } from 'vue-router'
 import type { LiveDevice } from '../composables/usePlatformLive'
 import { commandText, formatTime, statusLabel as liveStatusLabel } from './live/liveFormat'
+import ExtensionSlot from '../extensions/ExtensionSlot.vue'
 
 interface PlatformDevice {
   id: string
@@ -392,6 +393,11 @@ watch(() => props.device, device => {
           </template>
         </div>
       </div>
+
+      <ExtensionSlot
+        name="device.panel"
+        :context="{ device: { id: device.id, label: device.label, figure: device.figure ?? null } }"
+      />
     </div>
   </div>
 </template>

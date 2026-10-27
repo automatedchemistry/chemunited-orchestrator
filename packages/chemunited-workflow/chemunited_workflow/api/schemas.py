@@ -151,10 +151,14 @@ class CustomRouteParameter(BaseModel):
     name: str
     required: bool
     default: Any | None = None
+    # JSON schema from the parameter's type hint; empty when it has none.
+    json_schema: dict[str, Any] = Field(default_factory=dict)
 
 
 class CustomRouteInfo(BaseModel):
     name: str
+    # First paragraph of the function's docstring.
+    description: str | None = None
     parameters: list[CustomRouteParameter]
 
 

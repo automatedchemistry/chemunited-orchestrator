@@ -1,0 +1,197 @@
+/*
+ * Global classes for the project's customizations (custom pages, widgets,
+ * actions), plus the dashboard's parts that host them. The cu-* classes are
+ * part of the public UI API: custom pages may use them and they stay stable.
+ * Pages also share .page-shell, .page-header, .page-eyebrow, .page-title and
+ * .page-description from main.css.
+ */
+
+.cu-panel {
+  min-width: 0;
+  padding: 1.25rem 1.4rem;
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-lg);
+  background: var(--color-background-soft);
+  box-shadow: var(--shadow-sm);
+}
+
+.cu-panel-title {
+  margin: 0 0 0.25rem;
+  color: var(--color-heading);
+  font-size: 1rem;
+  font-weight: 700;
+}
+
+.cu-muted {
+  color: var(--color-text-muted);
+  font-size: 0.85rem;
+}
+
+.cu-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.55rem 0.95rem;
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-background-soft);
+  font: inherit;
+  font-size: 0.86rem;
+  font-weight: 650;
+  cursor: pointer;
+  transition: border-color 150ms ease, background-color 150ms ease;
+}
+
+.cu-button:hover:not(:disabled) {
+  border-color: var(--color-border-hover);
+}
+
+.cu-button.primary {
+  color: #fff;
+  border-color: transparent;
+  background: var(--color-primary);
+}
+
+.cu-button.primary:hover:not(:disabled) {
+  background: var(--color-primary-hover);
+}
+
+.cu-button.danger {
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+  background: var(--color-danger-soft);
+}
+
+.cu-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
+.cu-input {
+  min-width: 0;
+  padding: 0.5rem 0.65rem;
+  color: var(--color-text);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-sm);
+  background: var(--color-background);
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+.cu-input:focus {
+  outline: 2px solid var(--color-primary-soft);
+  border-color: var(--color-primary);
+}
+
+/* ── Hosted customizations ─────────────────────────────────────────────────── */
+
+.cu-error-card {
+  padding: 1rem 1.2rem;
+  color: var(--color-text);
+  border: 1px solid var(--color-danger);
+  border-radius: var(--radius-md);
+  background: var(--color-danger-soft);
+}
+
+.cu-error-card strong {
+  color: var(--color-danger);
+}
+
+.cu-error-card ul {
+  margin: 0.5rem 0 0.75rem;
+  padding-left: 1.1rem;
+}
+
+.cu-error-card code {
+  font-size: 0.82rem;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+
+.cu-error-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.9rem;
+}
+
+.cu-error-actions a {
+  color: var(--color-primary);
+  font-size: 0.86rem;
+  font-weight: 600;
+}
+
+.cu-loading {
+  margin: 0;
+  color: var(--color-text-muted);
+  font-size: 0.86rem;
+}
+
+.cu-slot {
+  display: grid;
+  gap: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.cu-slot[data-slot='dashboard.cards'] {
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+}
+
+.cu-slot[data-slot='device.panel'] {
+  margin: 0.75rem 0 0;
+}
+
+.cu-slot[data-slot='run-control.panels'],
+.cu-slot[data-slot='devices.panels'] {
+  margin-top: 1.25rem;
+}
+
+.cu-widget {
+  min-width: 0;
+}
+
+.cu-widget-title {
+  margin: 0 0 0.5rem;
+  color: var(--color-text-muted);
+  font-size: 0.72rem;
+  font-weight: 750;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.cu-page-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1.25rem;
+  margin: 0 0 1.25rem;
+}
+
+.cu-action {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 0.6rem;
+}
+
+.cu-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  color: var(--color-text-muted);
+  font-size: 0.74rem;
+  font-weight: 650;
+}
+
+.cu-field-check {
+  flex-direction: row-reverse;
+  align-items: center;
+  align-self: center;
+  gap: 0.4rem;
+}
+
+.cu-action-icon {
+  width: 18px;
+  height: 18px;
+  flex: 0 0 auto;
+}

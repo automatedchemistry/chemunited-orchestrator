@@ -2,6 +2,7 @@
 import { ref, computed, onMounted } from 'vue'
 import SchemaForm from '../components/SchemaForm.vue'
 import { useNotification } from '../composables/useNotification'
+import { customization } from '../extensions/manifest'
 
 const { notify } = useNotification()
 
@@ -28,10 +29,46 @@ interface ProtocolMeta {
 
 const processes = ref<Process[]>([])
 const protocols = ref<ProtocolMeta[]>([])
-
 const selectedLeftIdx = ref<number | null>(null)
+
+// Tabs grouping the process library by name prefix, when the project sets
+// ProtocolsPage(process_categories=...) in customizations/ui/ui_hook.py.
+const ALL = '\u0000all'
+const OTHER = '\u0000other'
+const categoryPrefixes = computed(() =>
+  Object.entries(customization.manifest.protocols.process_categories),
+)
+const activeCategory = ref(ALL)
+
+function categoryOf(name: string): string {
+  return categoryPrefixes.value.find(([prefix]) => name.startsWith(prefix))?.[0] ?? OTHER
+}
+
+const categoryTabs = computed(() => {
+  if (!categoryPrefixes.value.length) return []
+  const tabs = [
+    { value: ALL, label: 'All' },
+    ...categoryPrefixes.value.map(([prefix, label]) => ({ value: prefix, label })),
+  ]
+  if (processes.value.some(p => categoryOf(p.name) === OTHER)) {
+    tabs.push({ value: OTHER, label: customization.manifest.protocols.other_label })
+  }
+  return tabs
+})
+
+const filteredProcesses = computed(() =>
+  activeCategory.value === ALL
+    ? processes.value
+    : processes.value.filter(p => categoryOf(p.name) === activeCategory.value),
+)
+
+function selectCategory(value: string) {
+  activeCategory.value = value
+  selectedLeftIdx.value = null
+}
+
 const selectedLeftProcess = computed(() =>
-  selectedLeftIdx.value !== null ? processes.value[selectedLeftIdx.value] : null
+  selectedLeftIdx.value !== null ? filteredProcesses.value[selectedLeftIdx.value] : null
 )
 
 const protocolSteps = ref<string[]>([])
@@ -303,13 +340,28 @@ onMounted(() => {
             <span class="panel-index">01</span>
             <h2>Process library</h2>
           </div>
-          <span class="count-badge">{{ processes.length }}</span>
+          <span class="count-badge">{{ filteredProcesses.length }}</span>
         </div>
         <p class="panel-help">Select a process to add it to the protocol sequence.</p>
 
+        <div v-if="categoryTabs.length" class="category-tabs" role="tablist" aria-label="Process category">
+          <button
+            v-for="tab in categoryTabs"
+            :key="tab.value"
+            type="button"
+            class="category-tab"
+            :class="{ active: activeCategory === tab.value }"
+            role="tab"
+            :aria-selected="activeCategory === tab.value"
+            @click="selectCategory(tab.value)"
+          >
+            {{ tab.label }}
+          </button>
+        </div>
+
         <ul class="process-list" aria-label="Available processes">
           <li
-            v-for="(p, i) in processes"
+            v-for="(p, i) in filteredProcesses"
             :key="p.name"
             :class="{ active: selectedLeftIdx === i }"
             @click="selectedLeftIdx = i"
@@ -325,7 +377,7 @@ onMounted(() => {
             </span>
             <span class="selection-mark" aria-hidden="true">✓</span>
           </li>
-          <li v-if="processes.length === 0" class="empty-state">
+          <li v-if="filteredProcesses.length === 0" class="empty-state">
             <span>No processes found.</span>
           </li>
         </ul>
@@ -588,6 +640,35 @@ onMounted(() => {
   margin: 0.55rem 0 1rem;
   color: var(--color-text-muted);
   font-size: 0.8rem;
+}
+
+.category-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  margin: 0 0 0.85rem;
+}
+
+.category-tab {
+  padding: 0.28rem 0.65rem;
+  color: var(--color-text-muted);
+  border: 1px solid var(--color-border);
+  border-radius: 999px;
+  background: var(--color-background-mute);
+  font-size: 0.72rem;
+  font-weight: 680;
+  cursor: pointer;
+  transition: 150ms ease;
+}
+
+.category-tab:hover {
+  border-color: var(--color-border-hover);
+}
+
+.category-tab.active {
+  color: var(--color-primary);
+  border-color: var(--color-primary);
+  background: var(--color-primary-soft);
 }
 
 .process-list,

@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useNotification } from '../composables/useNotification'
+import PageActions from '../extensions/PageActions.vue'
 
 interface ProjectResponse {
   project_dir: string | null
@@ -239,6 +240,8 @@ onMounted(() => {
           logs and monitoring recordings; protocol history is always kept.
         </p>
       </div>
+
+      <PageActions page="export" :context="{ selection: [...selected] }" @refresh="loadPreview" />
 
       <section class="panel">
         <div v-if="rows.length === 0" class="muted">No executed runs yet.</div>

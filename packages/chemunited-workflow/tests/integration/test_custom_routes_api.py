@@ -106,7 +106,10 @@ def test_discover_lists_registered_routes(client, project):
     assert r.status_code == 200
     [info] = r.json()
     assert info["name"] == "double"
-    assert info["parameters"] == [{"name": "x", "required": True, "default": None}]
+    assert info["description"] is None
+    assert info["parameters"] == [
+        {"name": "x", "required": True, "default": None, "json_schema": {}}
+    ]
 
 
 # ── POST /custom/{name} ──────────────────────────────────────────────────────

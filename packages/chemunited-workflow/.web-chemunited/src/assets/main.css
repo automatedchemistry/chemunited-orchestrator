@@ -1,4 +1,5 @@
 @import './base.css';
+@import './extensions.css';
 
 #app {
   min-height: 100vh;

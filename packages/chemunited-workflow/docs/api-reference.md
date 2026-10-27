@@ -302,6 +302,8 @@ CUSTOM_ROUTES: dict[str, Callable[..., Any]] = {
 | `GET` | `/custom/discover` | List registered route names, with parameter hints introspected from each function's signature |
 | `POST` | `/custom/{name}` | Call a registered route by name; the request body is passed through as keyword arguments |
 
+Each discovered route has a `description` (the first paragraph of its docstring, or `null`) and, for each parameter, `name`, `required`, `default` and `json_schema`: a JSON schema built from the parameter's type hint (`{}` when it has none). The dashboard builds the forms of [page actions](#dashboard-customization) from these schemas, so typing a route's parameters (`flow_ml_min: float`, `mode: Literal["fast", "slow"]`) gives its form the right inputs.
+
 The file is optional and reloaded fresh on every call, so edits take effect immediately — no server restart, no "turning monitoring off and on" step needed. Calling an unregistered `name` returns `404`. A raised exception inside the registered function is not a `404`/`500` — it comes back as `{"name", "ok": false, "result": null, "error": "...", "latency_ms": ...}`, the same "the call itself succeeded, the action failed" contract `POST /components/commands/{component}/{command}` already uses for a device command.
 
 A registered function can reach a real device by importing `CustomRouteContext` and reading `CustomRouteContext.platform` — a throwaway `Platform` opened just for that one call and closed once it returns (unlike `MonitoringContext`, which stays open for an entire monitoring poll cycle, this is scoped to a single call and never shared):
@@ -331,6 +333,20 @@ curl -X POST http://127.0.0.1:3116/custom/purge_reactor \
 ```
 
 See `examples/custom_project/customizations/routers/` for a full working example.
+
+## Dashboard customization
+
+A project changes the dashboard through `{project_dir}/customizations/ui/ui_hook.py` and the files next to it; see [HTML UI → Runtime customizations](html-ui.md#runtime-customizations). These routes serve it. All are `GET`, so they are open to remote viewers like the rest of the read-only API.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/ui/manifest` | The checked `DASHBOARD` from `ui_hook.py`: brand, theme URL, pages, nav changes, actions (with their form fields), widgets, Protocols settings, the known slots and an `errors` list. Always `200`; with no project or no hook it customizes nothing (`"active": false`). Not cached. |
+| `GET` | `/ui/ext/{path}` | A file under `customizations/ui/`, subfolders allowed: `.vue` (as `text/plain`), `.js`, `.mjs`, `.css`, images, `.json`, `.csv`, `.txt`, `.woff2`. Never Python files, hidden files, `__pycache__` or `dist/`. Sent with an `ETag` and `Cache-Control: no-cache`, so an edited file shows on the next reload and an unchanged one costs a `304`. |
+| `GET` | `/ui/html/{path}` | The HTML an `HtmlPage.render()` function in `ui_hook.py` returns for page `/{path}`, with `Content-Security-Policy: sandbox allow-scripts`: its scripts run in an opaque origin, without the dashboard's rights. A `render()` that raises gives a `500` page with the error. |
+
+`ui_hook.py` is imported on every request, like the other hooks, so edits apply on the next page load. It never takes the server down: an import failure, or an entry that doesn't check out (a missing file, an unknown route or slot), lands in the manifest's `errors` (with the line, when known) while every other entry still applies.
+
+Besides the seven built-in page paths, the server answers a browser asking for any unknown one-segment path (`/sensors`) with the dashboard's `index.html`, so a custom page's URL survives a hard refresh; the dashboard shows its own "not found" page for paths it doesn't know. Requests that don't accept `text/html`, paths with more segments and file-like paths keep their `404`.
 
 Visit `/docs` for the interactive Swagger UI, or `/` for the HTML dashboard.
 

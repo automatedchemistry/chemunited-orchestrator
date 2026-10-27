@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { type NodeCard, type ProcessCard, type RunState, useRunStatusStore } from '../stores/runStatus'
+import ExtensionSlot from '../extensions/ExtensionSlot.vue'
+import PageActions from '../extensions/PageActions.vue'
 
 interface ProtocolMeta {
   filename: string
@@ -474,6 +476,8 @@ onUnmounted(() => {
       </div>
     </header>
 
+    <PageActions page="run-control" :context="{ run_id: runId, run_state: store.runState }" />
+
     <div class="control-grid">
       <!-- Control Panel -->
       <section class="panel">
@@ -657,6 +661,8 @@ onUnmounted(() => {
         </div>
       </section>
     </div>
+
+    <ExtensionSlot name="run-control.panels" :context="{ run_id: runId, run_state: store.runState }" />
 
     <!-- Process Cards -->
     <section v-if="store.processCards.length > 0" class="panel spaced-top">

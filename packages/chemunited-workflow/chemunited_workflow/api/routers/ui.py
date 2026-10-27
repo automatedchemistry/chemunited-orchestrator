@@ -1,4 +1,5 @@
-"""Routes: HTML UI pages and HTMX fragment endpoints."""
+"""Routes: HTML UI pages, the dashboard customization endpoints (``/ui/...``)
+and HTMX fragment endpoints."""
 
 from __future__ import annotations
 
@@ -7,11 +8,18 @@ import mimetypes
 from pathlib import Path
 from typing import Any
 
-from fastapi import APIRouter, Depends, HTTPException
-from fastapi.responses import FileResponse, HTMLResponse, Response
+from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse, Response
+from loguru import logger
+from markupsafe import escape
 
 from ..dependencies import get_project_holder
 from ..project_holder import ProjectHolder
+from ..services.ui_customization import (
+    EXTENSION_CONTENT_TYPES,
+    load_ui,
+    resolve_extension_file,
+)
 
 router = APIRouter(include_in_schema=False)
 
@@ -31,7 +39,7 @@ def _safe_join(base: Path, filename: str) -> Path | None:
     return candidate
 
 
-def _resolve_index(holder: ProjectHolder) -> Path:
+def resolve_dashboard_index(holder: ProjectHolder) -> Path:
     """Prefer a project-supplied dashboard build over the bundled one."""
     if holder.project_dir is not None:
         override = holder.project_dir / "customizations" / "ui" / "dist" / "index.html"
@@ -47,7 +55,7 @@ def _resolve_index(holder: ProjectHolder) -> Path:
 async def dashboard(
     holder: ProjectHolder = Depends(get_project_holder),
 ) -> FileResponse:
-    return FileResponse(_resolve_index(holder), headers=_NO_STORE_HEADERS)
+    return FileResponse(resolve_dashboard_index(holder), headers=_NO_STORE_HEADERS)
 
 
 @router.get("/run-control")
@@ -59,7 +67,7 @@ async def dashboard(
 async def vue_page(
     holder: ProjectHolder = Depends(get_project_holder),
 ) -> FileResponse:
-    return FileResponse(_resolve_index(holder), headers=_NO_STORE_HEADERS)
+    return FileResponse(resolve_dashboard_index(holder), headers=_NO_STORE_HEADERS)
 
 
 @router.get("/assets/{filename:path}")
@@ -77,6 +85,80 @@ async def dashboard_asset(
     if candidate is not None and candidate.is_file():
         return FileResponse(candidate)
     raise HTTPException(status_code=404, detail=f"Asset '{filename}' not found.")
+
+
+# ── Dashboard customization (customizations/ui/) ──────────────────────────────
+
+
+@router.get("/ui/manifest")
+async def ui_manifest(
+    holder: ProjectHolder = Depends(get_project_holder),
+) -> JSONResponse:
+    """The loaded project's checked ``ui_hook.py``, which the dashboard applies
+    at start-up. Always 200: with no project or no hook it customizes nothing."""
+    loaded = await asyncio.to_thread(load_ui, holder.project_dir)
+    return JSONResponse(loaded.manifest, headers=_NO_STORE_HEADERS)
+
+
+@router.get("/ui/ext/{path:path}")
+async def ui_extension_file(
+    path: str,
+    request: Request,
+    holder: ProjectHolder = Depends(get_project_holder),
+) -> Response:
+    """A file under ``customizations/ui/`` (pages, widgets, styles, images).
+
+    Revalidated on every use (ETag), so an edited file shows on the next
+    refresh while an unchanged one costs a 304.
+    """
+    project_dir = holder.project_dir
+    file_path = (
+        None if project_dir is None else resolve_extension_file(project_dir, path)
+    )
+    if file_path is None:
+        raise HTTPException(status_code=404, detail=f"File '{path}' not found.")
+    stat = file_path.stat()
+    headers = {
+        "ETag": f'"{stat.st_mtime_ns:x}-{stat.st_size:x}"',
+        "Cache-Control": "no-cache",
+        "X-Content-Type-Options": "nosniff",
+    }
+    if headers["ETag"] in request.headers.get("if-none-match", ""):
+        return Response(status_code=304, headers=headers)
+    media_type = EXTENSION_CONTENT_TYPES[file_path.suffix.lower()]
+    return FileResponse(file_path, media_type=media_type, headers=headers)
+
+
+_HTML_PAGE_HEADERS = {
+    "Cache-Control": "no-store",
+    # Even when opened directly, the page gets an opaque origin: it can't read
+    # the dashboard's stored API token or act with the dashboard's rights.
+    "Content-Security-Policy": "sandbox allow-scripts",
+    "X-Content-Type-Options": "nosniff",
+}
+
+
+@router.get("/ui/html/{path:path}")
+def ui_html_page(
+    path: str,
+    holder: ProjectHolder = Depends(get_project_holder),
+) -> HTMLResponse:
+    """A page whose HTML an ``HtmlPage.render`` function in ``ui_hook.py`` returns."""
+    page = load_ui(holder.project_dir).html_pages.get(f"/{path}")
+    if page is None:
+        raise HTTPException(status_code=404, detail=f"No HTML page '/{path}'.")
+    try:
+        html = page.render()
+        if not isinstance(html, str):
+            raise TypeError(f"render() returned {type(html).__name__}, not str")
+    except Exception as exc:
+        logger.exception("HTML page '{}' failed to render", page.path)
+        body = (
+            f"<h1>{escape(page.label)} failed to render</h1>"
+            f"<pre>{escape(f'{type(exc).__name__}: {exc}')}</pre>"
+        )
+        return HTMLResponse(body, status_code=500, headers=_HTML_PAGE_HEADERS)
+    return HTMLResponse(html, headers=_HTML_PAGE_HEADERS)
 
 
 # ── HTMX fragments ────────────────────────────────────────────────────────────
@@ -109,8 +191,6 @@ async def fragment_log(
         content = svc.read_log(filename, tail=200)
     except FileNotFoundError:
         raise HTTPException(status_code=404, detail=f"Log '{filename}' not found.")
-    from markupsafe import escape
-
     return HTMLResponse(content=str(escape(content)))
 
 
