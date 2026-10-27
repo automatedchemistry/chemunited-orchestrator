@@ -310,6 +310,10 @@ class OrchestratorDraw(OrchestratorCore):
             length = ChemUnitQuantity("0 mm")
             diameter = ChemUnitQuantity("0 mm")
 
+        fixed_volume = ChemUnitQuantity.from_any(
+            kwargs.get("fixed_volume", ChemUnitQuantity("0 ul")), default_unit="ul"
+        )
+
         mode = EdgeMode(
             origin=origin,
             destination=destiny,
@@ -318,6 +322,7 @@ class OrchestratorDraw(OrchestratorCore):
             classification=classification,
             length=length,
             diameter=diameter,
+            fixed_volume=fixed_volume,
             straight_path=kwargs.get("straight_path", True),
             air_pressure_line=kwargs.get("air_pressure_line", False),
             inflection_points=kwargs.get("inflection_points", []),
