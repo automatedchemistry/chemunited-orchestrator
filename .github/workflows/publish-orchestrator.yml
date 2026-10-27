@@ -57,7 +57,9 @@ jobs:
           PY
 
       - name: Run tests
-        run: python -m pytest --tb=short -q
+        # tests/qt is skipped like in pre-commit.yml: PyQt5 teardown segfaults
+        # on headless Linux runners that don't reproduce on a real machine.
+        run: python -m pytest --tb=short -q --ignore=tests/qt
         env:
           QT_QPA_PLATFORM: offscreen
 
