@@ -1446,5 +1446,3 @@ export declare const render: RootRenderFunction<Element | ShadowRoot>;
 export declare const hydrate: RootHydrateFunction;
 export declare const createApp: CreateAppFunction<Element>;
 export declare const createSSRApp: CreateAppFunction<Element>;
-
-

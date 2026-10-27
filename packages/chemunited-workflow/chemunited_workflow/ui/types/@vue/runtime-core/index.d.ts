@@ -1048,15 +1048,15 @@ export interface App<HostElement = any> {
     component<T extends Component | DefineComponent>(name: string, component: T): this;
     directive<HostElement = any, Value = any, Modifiers extends string = string, Arg = any>(name: string): Directive<HostElement, Value, Modifiers, Arg> | undefined;
     directive<HostElement = any, Value = any, Modifiers extends string = string, Arg = any>(name: string, directive: Directive<HostElement, Value, Modifiers, Arg>): this;
-    mount(rootContainer: HostElement | string, 
+    mount(rootContainer: HostElement | string,
     /**
      * @internal
      */
-    isHydrate?: boolean, 
+    isHydrate?: boolean,
     /**
      * @internal
      */
-    namespace?: boolean | ElementNamespace, 
+    namespace?: boolean | ElementNamespace,
     /**
      * @internal
      */
