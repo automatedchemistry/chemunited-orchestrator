@@ -80,9 +80,11 @@ type VOnDirective = Directive<any, any, VOnModifiers>;
 
 type AssignerFn = (value: any) => void;
 declare const assignKey: unique symbol;
+declare const initialValueKey: unique symbol;
 type ModelDirective<T, Modifiers extends string = string> = ObjectDirective<T & {
     [assignKey]: AssignerFn;
-    _assigning?: boolean;
+    [initialValueKey]?: string;
+    _pendingValue?: [multiple: boolean, value: any];
 }, any, Modifiers>;
 export declare const vModelText: ModelDirective<HTMLInputElement | HTMLTextAreaElement, 'trim' | 'number' | 'lazy'>;
 export declare const vModelCheckbox: ModelDirective<HTMLInputElement>;

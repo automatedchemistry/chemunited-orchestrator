@@ -54,8 +54,9 @@ interface SchedulerJob extends Function {
     /**
      * Attached by renderer.ts when setting up a component's render effect
      * Used to obtain component information when reporting max recursive updates.
+     * Also set on watcher jobs: null marks a watcher without an owner component.
      */
-    i?: ComponentInternalInstance;
+    i?: ComponentInternalInstance | null;
 }
 type SchedulerJobs = SchedulerJob | SchedulerJob[];
 export declare function nextTick(): Promise<void>;
@@ -80,13 +81,11 @@ type PropConstructor<T = any> = {
 } | {
     (): T;
 } | PropMethod<T>;
-type PropMethod<T, TConstructor = any> = [T] extends [
-    ((...args: any) => any) | undefined
-] ? {
+type PropMethod<T, TConstructor = any> = {
     new (): TConstructor;
     (): T;
     readonly prototype: TConstructor;
-} : never;
+};
 type RequiredKeys<T> = {
     [K in keyof T]: T[K] extends {
         required: true;
@@ -119,7 +118,7 @@ type InferPropType<T, NullAsAny = true> = [T] extends [null] ? NullAsAny extends
     type: DateConstructor;
 }] ? Date : [T] extends [(infer U)[] | {
     type: (infer U)[];
-}] ? U extends DateConstructor ? Date | InferPropType<U, false> : InferPropType<U, false> : [T] extends [Prop<infer V, infer D>] ? unknown extends V ? keyof V extends never ? IfAny<V, V, D> : V : V : T;
+}] ? U extends DateConstructor ? Date | InferPropType<U, false> : InferPropType<U, false> : [T] extends [Prop<infer V, infer D>] ? unknown extends V ? keyof V extends never ? IfAny<V, V, unknown extends D ? V : D> : V : V : T;
 /**
  * Extract prop types from a runtime props options object.
  * The extracted types are **internal** - i.e. the resolved props received by
@@ -296,6 +295,8 @@ type DefineModelOptions<T = any, G = T, S = T> = {
     get?: (v: T) => G;
     set?: (v: S) => any;
 };
+type DefineModelRuntimeOptions<T, G, S> = Omit<PropOptions<T>, 'default'> & DefineModelOptions<T, G, S>;
+type DefineModelDefault<T> = InferDefault<Data, T>;
 /**
  * Vue `<script setup>` compiler macro for declaring a
  * two-way binding prop that can be consumed via `v-model` from the parent
@@ -329,18 +330,18 @@ type DefineModelOptions<T = any, G = T, S = T> = {
  * const count = defineModel<number>('count', { default: 0 })
  * ```
  */
-export declare function defineModel<T, M extends PropertyKey = string, G = T, S = T>(options: ({
-    default: any;
+export declare function defineModel<T, M extends PropertyKey = string, G = T, S = T>(options: DefineModelRuntimeOptions<T, G, S> & ({
+    default: DefineModelDefault<T>;
 } | {
     required: true;
-}) & PropOptions<T> & DefineModelOptions<T, G, S>): ModelRef<T, M, G, S>;
-export declare function defineModel<T, M extends PropertyKey = string, G = T, S = T>(options?: PropOptions<T> & DefineModelOptions<T, G, S>): ModelRef<T | undefined, M, G | undefined, S | undefined>;
-export declare function defineModel<T, M extends PropertyKey = string, G = T, S = T>(name: string, options: ({
-    default: any;
+})): ModelRef<T, M, G, S>;
+export declare function defineModel<T, M extends PropertyKey = string, G = T, S = T>(options?: DefineModelRuntimeOptions<T, G, S>): ModelRef<T | undefined, M, G | undefined, S | undefined>;
+export declare function defineModel<T, M extends PropertyKey = string, G = T, S = T>(name: string, options: DefineModelRuntimeOptions<T, G, S> & ({
+    default: DefineModelDefault<T>;
 } | {
     required: true;
-}) & PropOptions<T> & DefineModelOptions<T, G, S>): ModelRef<T, M, G, S>;
-export declare function defineModel<T, M extends PropertyKey = string, G = T, S = T>(name: string, options?: PropOptions<T> & DefineModelOptions<T, G, S>): ModelRef<T | undefined, M, G | undefined, S | undefined>;
+})): ModelRef<T, M, G, S>;
+export declare function defineModel<T, M extends PropertyKey = string, G = T, S = T>(name: string, options?: DefineModelRuntimeOptions<T, G, S>): ModelRef<T | undefined, M, G | undefined, S | undefined>;
 type NotUndefined<T> = T extends undefined ? never : T;
 type MappedOmit<T, K extends keyof any> = {
     [P in keyof T as P extends K ? never : P]: T[P];
@@ -379,12 +380,12 @@ export declare function withDefaults<T, BKeys extends keyof T, Defaults extends 
 export declare function useSlots(): SetupContext['slots'];
 export declare function useAttrs(): SetupContext['attrs'];
 
-export type ObjectEmitsOptions = Record<string, ((...args: any[]) => any) | null>;
+export type ObjectEmitsOptions = Record<string, ((...args: any[]) => any) | null | any[]>;
 export type EmitsOptions = ObjectEmitsOptions | string[];
 export type EmitsToProps<T extends EmitsOptions | ComponentTypeEmits> = T extends string[] ? {
     [K in `on${Capitalize<T[number]>}`]?: (...args: any[]) => any;
 } : T extends ObjectEmitsOptions ? {
-    [K in string & keyof T as `on${Capitalize<K>}`]?: (...args: T[K] extends (...args: infer P) => any ? P : T[K] extends null ? any[] : never) => any;
+    [K in string & keyof T as `on${Capitalize<K>}`]?: (...args: T[K] extends (...args: infer P) => any ? P : T[K] extends null ? any[] : T[K] extends any[] ? T[K] : never) => any;
 } : {};
 type TypeEmitsToOptions<T extends ComponentTypeEmits> = {
     [K in keyof T & string]: T[K] extends [...args: infer Args] ? (...args: Args) => any : () => any;
@@ -496,12 +497,12 @@ export type CreateComponentPublicInstance<P = {}, B = {}, D = {}, C extends Comp
  * inference everywhere internally, but it has to be a new type to avoid
  * breaking types that relies on previous arguments order (#10842)
  */
-export type CreateComponentPublicInstanceWithMixins<P = {}, B = {}, D = {}, C extends ComputedOptions = {}, M extends MethodOptions = {}, Mixin extends ComponentOptionsMixin = ComponentOptionsMixin, Extends extends ComponentOptionsMixin = ComponentOptionsMixin, E extends EmitsOptions = {}, PublicProps = P, Defaults = {}, MakeDefaultsOptional extends boolean = false, I extends ComponentInjectOptions = {}, S extends SlotsType = {}, LC extends Record<string, Component> = {}, Directives extends Record<string, Directive> = {}, Exposed extends string = string, TypeRefs extends Data = {}, TypeEl extends Element = any, Provide extends ComponentProvideOptions = ComponentProvideOptions, PublicMixin = IntersectionMixin<Mixin> & IntersectionMixin<Extends>, PublicP = UnwrapMixinsType<PublicMixin, 'P'> & EnsureNonVoid<P>, PublicB = UnwrapMixinsType<PublicMixin, 'B'> & EnsureNonVoid<B>, PublicD = UnwrapMixinsType<PublicMixin, 'D'> & EnsureNonVoid<D>, PublicC extends ComputedOptions = UnwrapMixinsType<PublicMixin, 'C'> & EnsureNonVoid<C>, PublicM extends MethodOptions = UnwrapMixinsType<PublicMixin, 'M'> & EnsureNonVoid<M>, PublicDefaults = UnwrapMixinsType<PublicMixin, 'Defaults'> & EnsureNonVoid<Defaults>> = ComponentPublicInstance<PublicP, PublicB, PublicD, PublicC, PublicM, E, PublicProps, PublicDefaults, MakeDefaultsOptional, ComponentOptionsBase<P, B, D, C, M, Mixin, Extends, E, string, Defaults, {}, string, S, LC, Directives, Exposed, Provide>, I, S, Exposed, TypeRefs, TypeEl>;
+export type CreateComponentPublicInstanceWithMixins<P = {}, B = {}, D = {}, C extends ComputedOptions = {}, M extends MethodOptions = {}, Mixin extends ComponentOptionsMixin = ComponentOptionsMixin, Extends extends ComponentOptionsMixin = ComponentOptionsMixin, E extends EmitsOptions = {}, PublicProps = P, Defaults = {}, MakeDefaultsOptional extends boolean = false, I extends ComponentInjectOptions = {}, S extends SlotsType = {}, LC extends Record<string, Component> = {}, Directives extends Record<string, Directive> = {}, Exposed extends string = string, TypeRefs extends Data = {}, TypeEl = any, Provide extends ComponentProvideOptions = ComponentProvideOptions, PublicMixin = IntersectionMixin<Mixin> & IntersectionMixin<Extends>, PublicP = UnwrapMixinsType<PublicMixin, 'P'> & EnsureNonVoid<P>, PublicB = UnwrapMixinsType<PublicMixin, 'B'> & EnsureNonVoid<B>, PublicD = UnwrapMixinsType<PublicMixin, 'D'> & EnsureNonVoid<D>, PublicC extends ComputedOptions = UnwrapMixinsType<PublicMixin, 'C'> & EnsureNonVoid<C>, PublicM extends MethodOptions = UnwrapMixinsType<PublicMixin, 'M'> & EnsureNonVoid<M>, PublicDefaults = UnwrapMixinsType<PublicMixin, 'Defaults'> & EnsureNonVoid<Defaults>> = ComponentPublicInstance<PublicP, PublicB, PublicD, PublicC, PublicM, E, PublicProps, PublicDefaults, MakeDefaultsOptional, ComponentOptionsBase<P, B, D, C, M, Mixin, Extends, E, string, Defaults, {}, string, S, LC, Directives, Exposed, Provide>, I, S, Exposed, TypeRefs, TypeEl>;
 type ExposedKeys<T, Exposed extends string & keyof T> = '' extends Exposed ? T : Pick<T, Exposed>;
 export type ComponentPublicInstance<P = {}, // props type extracted from props option
 B = {}, // raw bindings returned from setup()
 D = {}, // return from data()
-C extends ComputedOptions = {}, M extends MethodOptions = {}, E extends EmitsOptions = {}, PublicProps = {}, Defaults = {}, MakeDefaultsOptional extends boolean = false, Options = ComponentOptionsBase<any, any, any, any, any, any, any, any, any>, I extends ComponentInjectOptions = {}, S extends SlotsType = {}, Exposed extends string = '', TypeRefs extends Data = {}, TypeEl extends Element = any> = {
+C extends ComputedOptions = {}, M extends MethodOptions = {}, E extends EmitsOptions = {}, PublicProps = {}, Defaults = {}, MakeDefaultsOptional extends boolean = false, Options = ComponentOptionsBase<any, any, any, any, any, any, any, any, any>, I extends ComponentInjectOptions = {}, S extends SlotsType = {}, Exposed extends string = '', TypeRefs extends Data = {}, TypeEl = any> = {
     $: ComponentInternalInstance;
     $data: D;
     $props: MakeDefaultsOptional extends true ? Partial<Defaults> & Omit<Prettify<P> & PublicProps, keyof Defaults> : Prettify<P> & PublicProps;
@@ -590,7 +591,7 @@ export interface SuspenseBoundary {
     fallback(fallbackVNode: VNode): void;
     move(container: RendererElement, anchor: RendererNode | null, type: MoveType): void;
     next(): RendererNode | null;
-    registerDep(instance: ComponentInternalInstance, setupRenderEffect: SetupRenderEffectFn, optimized: boolean): void;
+    registerDep(instance: ComponentInternalInstance, setupRenderEffect: SetupRenderEffectFn, optimized: boolean, namespace: ElementNamespace): void;
     unmount(parentSuspense: SuspenseBoundary | null, doRemove?: boolean): void;
 }
 declare function hydrateSuspense(node: Node, vnode: VNode, parentComponent: ComponentInternalInstance | null, parentSuspense: SuspenseBoundary | null, namespace: ElementNamespace, slotScopeIds: string[] | null, optimized: boolean, rendererInternals: RendererInternals, hydrateNode: (node: Node, vnode: VNode, parentComponent: ComponentInternalInstance | null, parentSuspense: SuspenseBoundary | null, slotScopeIds: string[] | null, optimized: boolean) => Node | null): Node | null;
@@ -1002,7 +1003,7 @@ export declare function hasInjectionContext(): boolean;
 
 export type PublicProps = VNodeProps & AllowedComponentProps & ComponentCustomProps;
 type ResolveProps<PropsOrPropOptions, E extends EmitsOptions> = Readonly<PropsOrPropOptions extends ComponentPropsOptions ? ExtractPropTypes<PropsOrPropOptions> : PropsOrPropOptions> & ({} extends E ? {} : EmitsToProps<E>);
-export type DefineComponent<PropsOrPropOptions = {}, RawBindings = {}, D = {}, C extends ComputedOptions = ComputedOptions, M extends MethodOptions = MethodOptions, Mixin extends ComponentOptionsMixin = ComponentOptionsMixin, Extends extends ComponentOptionsMixin = ComponentOptionsMixin, E extends EmitsOptions = {}, EE extends string = string, PP = PublicProps, Props = ResolveProps<PropsOrPropOptions, E>, Defaults = ExtractDefaultPropTypes<PropsOrPropOptions>, S extends SlotsType = {}, LC extends Record<string, Component> = {}, Directives extends Record<string, Directive> = {}, Exposed extends string = string, Provide extends ComponentProvideOptions = ComponentProvideOptions, MakeDefaultsOptional extends boolean = true, TypeRefs extends Record<string, unknown> = {}, TypeEl extends Element = any> = ComponentPublicInstanceConstructor<CreateComponentPublicInstanceWithMixins<Props, RawBindings, D, C, M, Mixin, Extends, E, PP, Defaults, MakeDefaultsOptional, {}, S, LC & GlobalComponents, Directives & GlobalDirectives, Exposed, TypeRefs, TypeEl>> & ComponentOptionsBase<Props, RawBindings, D, C, M, Mixin, Extends, E, EE, Defaults, {}, string, S, LC & GlobalComponents, Directives & GlobalDirectives, Exposed, Provide> & PP;
+export type DefineComponent<PropsOrPropOptions = {}, RawBindings = {}, D = {}, C extends ComputedOptions = ComputedOptions, M extends MethodOptions = MethodOptions, Mixin extends ComponentOptionsMixin = ComponentOptionsMixin, Extends extends ComponentOptionsMixin = ComponentOptionsMixin, E extends EmitsOptions = {}, EE extends string = string, PP = PublicProps, Props = ResolveProps<PropsOrPropOptions, E>, Defaults = ExtractDefaultPropTypes<PropsOrPropOptions>, S extends SlotsType = {}, LC extends Record<string, Component> = {}, Directives extends Record<string, Directive> = {}, Exposed extends string = string, Provide extends ComponentProvideOptions = ComponentProvideOptions, MakeDefaultsOptional extends boolean = true, TypeRefs extends Record<string, unknown> = {}, TypeEl = any> = ComponentPublicInstanceConstructor<CreateComponentPublicInstanceWithMixins<Props, RawBindings, D, C, M, Mixin, Extends, E, PP, Defaults, MakeDefaultsOptional, {}, S, LC & GlobalComponents, Directives & GlobalDirectives, Exposed, TypeRefs, TypeEl>> & ComponentOptionsBase<Props, RawBindings, D, C, M, Mixin, Extends, E, EE, Defaults, {}, string, S, LC & GlobalComponents, Directives & GlobalDirectives, Exposed, Provide> & PP;
 export type DefineSetupFnComponent<P extends Record<string, any>, E extends EmitsOptions = {}, S extends SlotsType = SlotsType, Props = P & EmitsToProps<E>, PP = PublicProps> = new (props: Props & PP) => CreateComponentPublicInstanceWithMixins<Props, {}, {}, {}, {}, ComponentOptionsMixin, ComponentOptionsMixin, E, PP, {}, false, {}, S>;
 type ToResolvedProps<Props, Emits extends EmitsOptions> = Readonly<Props> & Readonly<EmitsToProps<Emits>>;
 export declare function defineComponent<Props extends Record<string, any>, E extends EmitsOptions = {}, EE extends string = string, S extends SlotsType = {}>(setup: (props: Props, ctx: SetupContext<E, S>) => RenderFunction | Promise<RenderFunction>, options?: Pick<ComponentOptions, 'name' | 'inheritAttrs'> & {
@@ -1017,7 +1018,7 @@ export declare function defineComponent<Props extends Record<string, any>, E ext
 }): DefineSetupFnComponent<Props, E, S>;
 export declare function defineComponent<TypeProps, RuntimePropsOptions extends ComponentObjectPropsOptions = ComponentObjectPropsOptions, RuntimePropsKeys extends string = string, TypeEmits extends ComponentTypeEmits = {}, RuntimeEmitsOptions extends EmitsOptions = {}, RuntimeEmitsKeys extends string = string, Data = {}, SetupBindings = {}, Computed extends ComputedOptions = {}, Methods extends MethodOptions = {}, Mixin extends ComponentOptionsMixin = ComponentOptionsMixin, Extends extends ComponentOptionsMixin = ComponentOptionsMixin, InjectOptions extends ComponentInjectOptions = {}, InjectKeys extends string = string, Slots extends SlotsType = {}, LocalComponents extends Record<string, Component> = {}, Directives extends Record<string, Directive> = {}, Exposed extends string = string, Provide extends ComponentProvideOptions = ComponentProvideOptions, ResolvedEmits extends EmitsOptions = {} extends RuntimeEmitsOptions ? TypeEmitsToOptions<TypeEmits> : RuntimeEmitsOptions, InferredProps = IsKeyValues<TypeProps> extends true ? TypeProps : string extends RuntimePropsKeys ? ComponentObjectPropsOptions extends RuntimePropsOptions ? {} : ExtractPropTypes<RuntimePropsOptions> : {
     [key in RuntimePropsKeys]?: any;
-}, TypeRefs extends Record<string, unknown> = {}, TypeEl extends Element = any>(options: {
+}, TypeRefs extends Record<string, unknown> = {}, TypeEl = any>(options: {
     props?: (RuntimePropsOptions & ThisType<void>) | RuntimePropsKeys[];
     /**
      * @private for language-tools use only
@@ -1715,7 +1716,7 @@ export declare function toHandlers(obj: Record<string, any>, preserveCaseIfNeces
  * Compiler runtime helper for rendering `<slot/>`
  * @private
  */
-export declare function renderSlot(slots: Slots, name: string, props?: Data, fallback?: () => VNodeArrayChildren, noSlotted?: boolean): VNode;
+export declare function renderSlot(slots: Slots, name: string, props?: Data | null, fallback?: () => VNodeArrayChildren, noSlotted?: boolean, branchKey?: PropertyKey): VNode;
 
 type SSRSlot = (...args: any[]) => VNode[] | undefined;
 interface CompiledSlotDescriptor {
