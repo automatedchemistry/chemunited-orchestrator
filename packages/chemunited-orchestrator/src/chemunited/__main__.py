@@ -6,7 +6,15 @@ from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication
 
+# PyQt5 requires QtWebEngineWidgets to be imported before QApplication exists.
+# Import it early (guarded) so the Monaco script editor can be created later.
+try:
+    import PyQt5.QtWebEngineWidgets  # noqa: F401
+except ImportError:
+    pass
+
 from chemunited.setup import SetupWindow
+from chemunited.shared.widgets.app_theme import init_theme
 from chemunited.shared.widgets.logo_window import show_waiting
 
 _APP_ID = "org.chemunited.orchestrator"
@@ -34,10 +42,16 @@ def main(project_file: str | None = None, overwrite: bool = False) -> None:
     )
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)  # type: ignore[attr-defined]
     QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps)  # type: ignore[attr-defined]
+    # Required for QtWebEngine (Monaco editor) even if imported late
+    QApplication.setAttribute(Qt.AA_ShareOpenGLContexts)  # type: ignore[attr-defined]
 
     app = QApplication(sys.argv)
 
     app.setWindowIcon(QIcon(_ICON_PATH))
+
+    # Load the persisted theme mode (default: follow the system theme)
+    # and start broadcasting theme changes to open windows.
+    init_theme()
 
     show_waiting(3)
 

@@ -27,6 +27,7 @@ dependencies = [
     "chemunited-sim[tray]>=0.0.3",
     "PyQt-Fluent-Widgets>=1.7.0,<2.0",  # Qt UI
     "QScintilla>=2.14.0",
+    "PyQtWebEngine>=5.15",  # Monaco script editor (must be imported before QApplication)
     "platformdirs>=4.0",
     "gitpython>=3.1.41",
     "zeroconf>=0.131.0",

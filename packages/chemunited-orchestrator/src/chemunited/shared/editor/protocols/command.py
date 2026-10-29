@@ -9,6 +9,7 @@ from qframelesswindow import FramelessDialog
 
 from chemunited.shared.editor.protocols.node_metadata import NodeMetadataEditor
 from chemunited.shared.editor.protocols.param_ref_card import ParamRefCard
+from chemunited.shared.widgets.app_theme import ThemedChromeMixin
 from chemunited.shared.widgets.base_mode_editor import BaseModeEditorWidget
 from chemunited_core.protocols import CommandSignature
 
@@ -24,7 +25,7 @@ _HIDDEN_COMMAND_FIELDS = {
 }
 
 
-class CommandEditorDialog(FramelessDialog):
+class CommandEditorDialog(ThemedChromeMixin, FramelessDialog):
     saved = pyqtSignal(object)
     metadata_saved = pyqtSignal(str, str, str)
 

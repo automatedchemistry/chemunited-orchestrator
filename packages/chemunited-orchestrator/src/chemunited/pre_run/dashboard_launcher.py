@@ -40,6 +40,7 @@ from qfluentwidgets import (
     StrongBodyLabel,
     SwitchButton,
     TransparentPushButton,
+    isDarkTheme,
 )
 
 if TYPE_CHECKING:
@@ -72,7 +73,14 @@ class _SectionSeparator(QFrame):
         self.setFrameShape(QFrame.HLine)
         self.setFrameShadow(QFrame.Sunken)
         self.setFixedHeight(1)
-        self.setStyleSheet("QFrame { border: none; background: rgba(0, 0, 0, 0.08); }")
+        if isDarkTheme():
+            self.setStyleSheet(
+                "QFrame { border: none; background: rgba(255, 255, 255, 0.12); }"
+            )
+        else:
+            self.setStyleSheet(
+                "QFrame { border: none; background: rgba(0, 0, 0, 0.08); }"
+            )
 
 
 class _OptionRow(QWidget):
@@ -123,11 +131,12 @@ class _StatusBadge(QWidget):
 
     def set_running(self, running: bool) -> None:
         if running:
-            self._dot.setStyleSheet("border-radius: 5px; background: #0f7b0f;")
+            color = "#66BB6A" if isDarkTheme() else "#0f7b0f"
             self._label.setText("Running")
         else:
-            self._dot.setStyleSheet("border-radius: 5px; background: #888;")
+            color = "#9CA3AF" if isDarkTheme() else "#888"
             self._label.setText("Not Running")
+        self._dot.setStyleSheet(f"border-radius: 5px; background: {color};")
 
 
 # ---------------------------------------------------------------------------

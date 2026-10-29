@@ -15,6 +15,7 @@ from qfluentwidgets import (
 )
 from qframelesswindow import FramelessDialog
 
+from chemunited.shared.widgets.app_theme import ThemedChromeMixin
 from chemunited.shared.widgets.base_mode_editor.cards.base_card import BaseFieldCard
 from chemunited.shared.widgets.base_mode_editor.cards.bool_card import BoolFieldCard
 from chemunited.shared.widgets.base_mode_editor.cards.float_card import FloatFieldCard
@@ -124,7 +125,7 @@ class _ParameterRow(QWidget):
         return self._card.validate()
 
 
-class NodeParametersDialog(FramelessDialog):
+class NodeParametersDialog(ThemedChromeMixin, FramelessDialog):
     """Right-click "Edit parameters" dialog for a single workflow block.
 
     Builds the ``dict[str, str | int | float | bool]`` that ends up on

@@ -18,10 +18,12 @@ from qfluentwidgets import (
     PrimaryPushButton,
     PushButton,
     StrongBodyLabel,
+    isDarkTheme,
 )
 
 from chemunited.orchestrator.inventory_state import inventory_uses_compound
 from chemunited.orchestrator.protocols import is_valid_name
+from chemunited.shared.widgets.app_theme import register_theme_observer
 from chemunited_core.compounds import COMPOUNDS, ChemicalEntity
 
 from .compound_dialog import CompoundDialog
@@ -62,6 +64,19 @@ class CompoundList(QWidget):
 
         self._add_button = PrimaryPushButton(FluentIcon.ADD, "Add compound", self)
         layout.addWidget(self._add_button, alignment=Qt.AlignLeft)  # type: ignore[arg-type, attr-defined]
+
+        # Row labels carry no color of their own; re-style them on theme
+        # changes while live (new rows are styled by sync()/_CompoundRowWidget).
+        self._apply_theme_text()
+        register_theme_observer(self._apply_theme_text)
+
+    def _apply_theme_text(self) -> None:
+        """Re-style compound-name labels of existing rows on a theme change."""
+        dark = isDarkTheme()
+        for i in range(self.list_widget.count()):
+            row = self.list_widget.itemWidget(self.list_widget.item(i))
+            if isinstance(row, _CompoundRowWidget):
+                row.apply_theme_text(dark)
 
     def _connect_signals(self) -> None:
         self._add_button.clicked.connect(self._open_add_dialog)  # type: ignore[attr-defined]
@@ -246,7 +261,19 @@ class _CompoundRowWidget(QWidget):
         label = QLabel(entity.name, self)
         label.setObjectName("compound-name-label")
         label.setAlignment(Qt.AlignVCenter | Qt.AlignLeft)  # type: ignore[arg-type, attr-defined]
+        label.setStyleSheet(_name_label_qss(isDarkTheme()))
         layout.addWidget(label, stretch=1, alignment=Qt.AlignVCenter)  # type: ignore[arg-type, attr-defined]
+
+    def apply_theme_text(self, dark: bool) -> None:
+        """Re-color the compound-name label for the given theme."""
+        label = self.findChild(QLabel, "compound-name-label")
+        if label is not None:
+            label.setStyleSheet(_name_label_qss(dark))
+
+
+def _name_label_qss(dark: bool) -> str:
+    color = "#F3F3F3" if dark else "rgba(0, 0, 0, 0.87)"
+    return f"QLabel#compound-name-label {{ color: {color}; background: transparent; }}"
 
 
 def _swatch_stylesheet(entity: ChemicalEntity) -> str:

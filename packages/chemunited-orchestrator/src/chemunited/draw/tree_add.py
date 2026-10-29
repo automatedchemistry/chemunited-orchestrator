@@ -13,10 +13,11 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from qfluentwidgets import TreeWidget
+from qfluentwidgets import TreeWidget, isDarkTheme
 
 from chemunited.elements.component import list_components
 from chemunited.shared.icon import OrchestratorIcon
+from chemunited.shared.widgets.app_theme import register_theme_observer
 from chemunited_core.components.enums import ComponentType
 from chemunited_core.figure_registry import COMPONENTS, get_figure_path
 
@@ -138,24 +139,33 @@ class AppCard(QFrame):
         root.addWidget(self.iconLabel, alignment=Qt.AlignTop)  # type: ignore[attr-defined]
         root.addLayout(text_layout, stretch=1)
 
-        self.setStyleSheet("""
-            QFrame#appCard {
+        self.apply_theme_text()
+
+    def apply_theme_text(self) -> None:
+        """Re-apply theme-dependent text colors (labels have no inherited color)."""
+        if isDarkTheme():
+            title, muted = "#F3F3F3", "rgba(160, 160, 160, 0.95)"
+        else:
+            title, muted = "rgba(0, 0, 0, 0.87)", "rgba(120, 120, 120, 0.95)"
+        self.setStyleSheet(f"""
+            QFrame#appCard {{
                 background: transparent;
                 border: none;
-            }
-            QLabel#appCardTitle {
+            }}
+            QLabel#appCardTitle {{
                 font-size: 13px;
                 font-weight: 600;
-            }
-            QLabel#appCardGroup {
+                color: {title};
+            }}
+            QLabel#appCardGroup {{
                 font-size: 11px;
-                color: rgba(120, 120, 120, 0.95);
+                color: {muted};
                 text-transform: uppercase;
-            }
-            QLabel#appCardDescription {
+            }}
+            QLabel#appCardDescription {{
                 font-size: 11px;
-                color: rgba(120, 120, 120, 0.95);
-            }
+                color: {muted};
+            }}
             """)
 
 
@@ -185,6 +195,20 @@ class TreeAddItem(TreeWidget):
         self.setExpandsOnDoubleClick(True)
 
         self.reload_components()
+        # Re-apply card text colors when the theme changes; held weakly, so
+        # a destroyed tree is pruned automatically by the broadcast.
+        register_theme_observer(self._on_theme_changed)
+
+    def _on_theme_changed(self) -> None:
+        for top in range(self.topLevelItemCount()):
+            category_item = self.topLevelItem(top)
+            for row in range(category_item.childCount()):
+                card = self.itemWidget(category_item.child(row), 0)
+                if isinstance(card, AppCard):
+                    card.apply_theme_text()
+            top_card = self.itemWidget(category_item, 0)
+            if isinstance(top_card, AppCard):
+                top_card.apply_theme_text()
 
     def reload_components(self) -> None:
         self.clear()

@@ -27,6 +27,7 @@ from qfluentwidgets import (
     SpinBox,
     SwitchButton,
     TransparentToolButton,
+    isDarkTheme,
 )
 
 from chemunited.shared.widgets.base_mode_editor.cards.builder_models import (
@@ -53,6 +54,23 @@ _BADGE: dict[str, tuple[str, str]] = {
     "ChoiceVariableBuildMode": ("#F1EFE8", "#5F5E5A"),
     "BoolVariableBuildMode": ("#EEEDFE", "#534AB7"),
 }
+
+# Dark variants: translucent tint of the type colour + a lightened foreground.
+_BADGE_DARK: dict[str, tuple[str, str]] = {
+    "IntVariableBuildMode": ("rgba(56, 132, 221, 0.25)", "#A3C7F7"),
+    "FloatVariableBuildMode": ("rgba(34, 160, 125, 0.25)", "#9BDCC6"),
+    "PhysicalQuantitiesMode": ("rgba(210, 80, 130, 0.25)", "#E5A7C0"),
+    "StringVariableBuildMode": ("rgba(215, 150, 45, 0.25)", "#E7C088"),
+    "ListVariableBuildMode": ("rgba(210, 95, 45, 0.25)", "#E8A98B"),
+    "ChoiceVariableBuildMode": ("rgba(150, 148, 140, 0.28)", "#C2C0B9"),
+    "BoolVariableBuildMode": ("rgba(110, 95, 215, 0.28)", "#B4ACF0"),
+}
+
+
+def _top_border_qss(scope: str) -> str:
+    border = "rgba(255, 255, 255, 0.12)" if isDarkTheme() else "rgba(0, 0, 0, 0.07)"
+    return f"{scope} {{ border-top: 1px solid {border}; }}"
+
 
 _SHORT: dict[str, str] = {
     "IntVariableBuildMode": "int",
@@ -221,7 +239,10 @@ class TypeBadge(QLabel):
     ) -> None:
         super().__init__(parent)
         cls = type(mode).__name__
-        bg, fg = _BADGE.get(cls, ("#eeeeee", "#333333"))
+        if isDarkTheme():
+            bg, fg = _BADGE_DARK.get(cls, ("rgba(255, 255, 255, 0.08)", "#CFD3D8"))
+        else:
+            bg, fg = _BADGE.get(cls, ("#eeeeee", "#333333"))
         short = _SHORT.get(cls, cls)
         self.setText(short.upper())
         self.setAlignment(QT_ALIGN_CENTER)
@@ -279,7 +300,10 @@ class VariableCard(QWidget):
         self._message.hide()
         self._message.setWordWrap(True)
         self._message.setContentsMargins(12, 0, 12, 12)
-        self._message.setStyleSheet("color:#a1271f; font-size:11px; line-height:1.3;")
+        self._message.setStyleSheet(
+            f"color:{'#f28b82' if isDarkTheme() else '#a1271f'};"
+            " font-size:11px; line-height:1.3;"
+        )
 
         fl = QVBoxLayout(self._frame)
         fl.setContentsMargins(0, 0, 0, 0)
@@ -348,7 +372,7 @@ class VariableCard(QWidget):
     def _build_body(self) -> QWidget:
         body = QWidget()
         body.setObjectName("cardBody")
-        body.setStyleSheet("#cardBody { border-top:1px solid rgba(0,0,0,0.08); }")
+        body.setStyleSheet(_top_border_qss("#cardBody"))
 
         layout = QVBoxLayout(body)
         layout.setContentsMargins(12, 10, 12, 12)
@@ -501,7 +525,7 @@ class VariableCard(QWidget):
     @staticmethod
     def _section_separator(title: str) -> QWidget:
         sep = QFrame()
-        sep.setStyleSheet("QFrame { border-top:1px solid rgba(0,0,0,0.07); }")
+        sep.setStyleSheet(_top_border_qss("QFrame"))
         layout = QVBoxLayout(sep)
         layout.setContentsMargins(0, 8, 0, 4)
         lbl = CaptionLabel(title.upper())
@@ -513,7 +537,7 @@ class VariableCard(QWidget):
 
     def _build_behavior_section(self) -> QWidget:
         section = QFrame()
-        section.setStyleSheet("QFrame { border-top:1px solid rgba(0,0,0,0.07); }")
+        section.setStyleSheet(_top_border_qss("QFrame"))
         layout = QVBoxLayout(section)
         layout.setContentsMargins(0, 10, 0, 0)
         layout.setSpacing(8)
@@ -562,7 +586,18 @@ class VariableCard(QWidget):
     # ------------------------------------------------------------------
 
     def _set_border(self, *, error: bool) -> None:
-        if error:
+        if isDarkTheme():
+            if error:
+                self._frame.setStyleSheet(
+                    "#varCard { border:1px solid rgba(242,139,130,0.55);"
+                    " border-radius:8px; background:rgba(242,139,130,0.10); }"
+                )
+            else:
+                self._frame.setStyleSheet(
+                    "#varCard { border:1px solid rgba(255,255,255,0.14);"
+                    " border-radius:8px; background:rgba(255,255,255,0.05); }"
+                )
+        elif error:
             self._frame.setStyleSheet(
                 "#varCard { border:1px solid #e8b4af;"
                 " border-radius:8px; background:#fdf5f5; }"

@@ -15,8 +15,11 @@ from qfluentwidgets import (
     LineEdit,
     PrimaryPushButton,
     PushButton,
+    isDarkTheme,
 )
 from qframelesswindow import FramelessDialog
+
+from chemunited.shared.widgets.app_theme import ThemedChromeMixin
 
 from .model import LcdDisplay, device_variables
 
@@ -27,7 +30,7 @@ def _same_variable(variable: Mapping[str, Any], component: str, command: str) ->
     return variable.get("component") == component and variable.get("command") == command
 
 
-class LcdDisplayDialog(FramelessDialog):
+class LcdDisplayDialog(ThemedChromeMixin, FramelessDialog):
     """Form for an LCD: its name, device, variable and the variable's parameters.
 
     The variables are the device's GET commands from its protocol definition;
@@ -79,7 +82,9 @@ class LcdDisplayDialog(FramelessDialog):
 
         self.error_label = BodyLabel("", self)
         self.error_label.setWordWrap(True)
-        self.error_label.setStyleSheet("color: #c42b1c;")
+        self.error_label.setStyleSheet(
+            "color: #f28b82;" if isDarkTheme() else "color: #c42b1c;"
+        )
         self.error_label.hide()
 
         cancel_button = PushButton("Cancel", self)

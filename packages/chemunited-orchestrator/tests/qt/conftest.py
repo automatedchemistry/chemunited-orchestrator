@@ -1,4 +1,14 @@
 import pytest
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QApplication
+
+# Monaco editor tests need QtWebEngine; it must be imported (or
+# AA_ShareOpenGLContexts set) before the qapp fixture creates QApplication.
+QApplication.setAttribute(Qt.AA_ShareOpenGLContexts)  # type: ignore[attr-defined]
+try:
+    import PyQt5.QtWebEngineWidgets  # noqa: F401
+except ImportError:
+    pass
 
 
 @pytest.fixture(autouse=True)

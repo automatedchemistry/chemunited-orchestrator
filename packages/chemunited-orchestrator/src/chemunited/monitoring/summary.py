@@ -29,6 +29,7 @@ from qfluentwidgets import (
     TextBrowser,
     TitleLabel,
     TransparentToolButton,
+    isDarkTheme,
 )
 
 from chemunited.pre_run.summary_window import SummaryParametersFrame
@@ -48,9 +49,27 @@ STATE_COLORS = {
     "NOT_VISITED": ("#F3F4F6", "#374151", "#9CA3AF"),
 }
 
+# Dark variants: translucent tinted fills with lightened text/border.
+STATE_COLORS_DARK = {
+    "RUNNING": ("rgba(249, 168, 37, 0.18)", "#E7C979", "#F9A825"),
+    "WAITING": ("rgba(59, 130, 246, 0.18)", "#93C5FD", "#3B82F6"),
+    "COMPLETED": ("rgba(46, 125, 50, 0.22)", "#A5D6A7", "#66BB6A"),
+    "FINISHED": ("rgba(46, 125, 50, 0.22)", "#A5D6A7", "#66BB6A"),
+    "FAILED": ("rgba(211, 47, 47, 0.20)", "#F28B82", "#E57373"),
+    "ERROR": ("rgba(211, 47, 47, 0.20)", "#F28B82", "#E57373"),
+    "CANCELLED": ("rgba(255, 255, 255, 0.08)", "#D1D5DB", "#6B7280"),
+    "CANCELED": ("rgba(255, 255, 255, 0.08)", "#D1D5DB", "#6B7280"),
+    "STOPPED": ("rgba(255, 255, 255, 0.08)", "#D1D5DB", "#6B7280"),
+    "NOT_VISITED": ("rgba(255, 255, 255, 0.08)", "#D1D5DB", "#9CA3AF"),
+}
+
 
 def _state_style(state: str) -> tuple[str, str, str]:
     key = state.strip().upper()
+    if isDarkTheme():
+        return STATE_COLORS_DARK.get(
+            key, ("rgba(255, 255, 255, 0.08)", "#F3F4F6", "#6B7280")
+        )
     return STATE_COLORS.get(key, ("#F3F4F6", "#111827", "#6B7280"))
 
 
@@ -591,13 +610,23 @@ class ReportFrame(QWidget):
     def _build_errors_card(self, errors: dict[str, Any], parent: QWidget) -> QWidget:
         frame = QFrame(parent)
         frame.setObjectName("report_errors_frame")
-        frame.setStyleSheet("""
+        frame.setStyleSheet(
+            """
+            QFrame#report_errors_frame {
+                background: rgba(211, 47, 47, 0.16);
+                border: 1px solid rgba(229, 115, 115, 0.55);
+                border-radius: 7px;
+            }
+            """
+            if isDarkTheme()
+            else """
             QFrame#report_errors_frame {
                 background: #FDECEA;
                 border: 1px solid #D32F2F;
                 border-radius: 7px;
             }
-            """)
+            """
+        )
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(12, 8, 12, 8)
         layout.setSpacing(4)

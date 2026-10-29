@@ -10,6 +10,7 @@ from qfluentwidgets import (
     FluentIcon,
     NavigationItemPosition,
     RoundMenu,
+    Theme,
 )
 
 from .connectivity.graph import ConnectivityGraphicView
@@ -30,6 +31,7 @@ from .shared.editor.protocols.command_list import CommandList, CommandListPanel
 from .shared.enums import SetupStepMode, WindowCategory
 from .shared.graph import SceneCore
 from .shared.icon import OrchestratorIcon
+from .shared.widgets.app_theme import current_theme_mode, set_theme_mode
 from .shared.widgets.frame_base import FrameBase
 from .shared.widgets.main_window import MainWindowBase
 from .shared.widgets.segment_widget import SegmentWindow
@@ -211,6 +213,52 @@ class SetupWindow(MainWindowBase):
         )
         self.project_menu.exec(pos)
 
+    def _init_theme_menu(self) -> None:
+        """Appearance override: bottom nav item opening a theme menu."""
+        self.theme_menu = RoundMenu(parent=self)
+        self.theme_menu_button = self.navigationInterface.addItem(
+            routeKey="theme_menu",
+            icon=FluentIcon.PALETTE,
+            text="Theme",
+            onClick=self._show_theme_menu,
+            selectable=True,
+            position=NavigationItemPosition.BOTTOM,
+            tooltip="App appearance: follow the system theme, or force dark or light",
+        )
+
+        self._theme_actions: dict[Theme, Action] = {}
+        for mode, label in (
+            (Theme.AUTO, "Follow System"),
+            (Theme.LIGHT, "Light"),
+            (Theme.DARK, "Dark"),
+        ):
+            action = Action(label, self)
+            action.setCheckable(True)
+            action.triggered.connect(  # type: ignore[attr-defined]
+                lambda _checked=False, _mode=mode: self._on_theme_mode_selected(_mode)
+            )
+            self.theme_menu.addAction(action)
+            self._theme_actions[mode] = action
+
+    def _show_theme_menu(self) -> None:
+        # Selecting the nav item would highlight "Theme"; keep the actual
+        # page highlighted while the menu is open (same as the Project menu).
+        current_widget = self.stackWidget.currentWidget()
+        if current_widget is not None:
+            self.navigationInterface.setCurrentItem(current_widget.objectName())
+
+        mode = current_theme_mode()
+        for theme_mode, action in self._theme_actions.items():
+            action.setChecked(theme_mode == mode)
+
+        pos = self.theme_menu_button.mapToGlobal(
+            self.theme_menu_button.rect().bottomRight()
+        )
+        self.theme_menu.exec(pos)
+
+    def _on_theme_mode_selected(self, mode: Theme) -> None:
+        set_theme_mode(mode)
+
     def refresh_recent_projects_menu(self) -> None:
         self.recent_projects_menu.clear()
 
@@ -263,7 +311,7 @@ class SetupWindow(MainWindowBase):
             widget=self.drawFrame,
             objectName="drawFrame",
             text="Draw",
-            icon=FluentIcon.EDIT.path(),
+            icon=FluentIcon.EDIT,
         )
 
         self.protocolFrame.setGraphWidget(self.protocolGraph)
@@ -398,6 +446,8 @@ class SetupWindow(MainWindowBase):
         )
         self._update_nav_item.setEnabled(False)
         self._pending_updates: list = []
+
+        self._init_theme_menu()
 
     _SAVE_COMMENTS = {
         SetupStepMode.DESIGN: "Save: design updated",

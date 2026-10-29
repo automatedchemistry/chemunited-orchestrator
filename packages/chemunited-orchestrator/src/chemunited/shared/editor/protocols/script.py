@@ -25,6 +25,7 @@ from chemunited.shared.editor.protocols.command_list import (
 )
 from chemunited.shared.editor.protocols.node_metadata import NodeMetadataEditor
 from chemunited.shared.icon import OrchestratorIcon
+from chemunited.shared.widgets.app_theme import ThemedChromeMixin
 
 if TYPE_CHECKING:
     pass
@@ -172,7 +173,7 @@ class ScriptEditor(EditorBase):
             self.drop_accepted.emit()  # type: ignore[attr-defined]
 
 
-class ScriptEditorWindow(QMainWindow):
+class ScriptEditorWindow(ThemedChromeMixin, QMainWindow):
     metadata_saved = pyqtSignal(str, str, str)
 
     def __init__(
