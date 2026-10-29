@@ -213,19 +213,6 @@ class ScriptEditorWindow(ThemedChromeMixin, QMainWindow):
 
         self.parent_ref = parent
 
-        # Apply theme-aware styling to dock widgets
-        if isDarkTheme():
-            dock_style = (
-                "QDockWidget { background-color: rgb(39, 39, 39); color: rgba(255, 255, 255, 0.85); }"
-                "QDockWidget::title { color: rgba(255, 255, 255, 0.85); background-color: rgb(39, 39, 39); }"
-                "QDockWidget > QWidget { background-color: rgb(39, 39, 39); color: rgba(255, 255, 255, 0.85); }"
-                "QDockWidget > QWidget > QWidget { background-color: rgb(39, 39, 39); color: rgba(255, 255, 255, 0.85); }"
-                "QDockWidget > QWidget > QWidget > QWidget { background-color: rgb(39, 39, 39); color: rgba(255, 255, 255, 0.85); }"
-                "QLabel { color: rgba(255, 255, 255, 0.85); }"
-                "QDockWidget QToolBar { background-color: rgb(39, 39, 39); }"
-            )
-            self.setStyleSheet(dock_style)
-
         # --- central widget ---
         self.initlayout()
 
@@ -240,6 +227,11 @@ class ScriptEditorWindow(ThemedChromeMixin, QMainWindow):
         self.command_dock.setAllowedAreas(
             Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea
         )  # type: ignore[attr-defined]
+        if isDarkTheme():
+            self.command_dock.setStyleSheet(
+                "QDockWidget { color: rgba(255, 255, 255, 0.85); }"
+                "QDockWidget::title { color: rgba(255, 255, 255, 0.85); background-color: rgb(39, 39, 39); }"
+            )
         self.addDockWidget(Qt.RightDockWidgetArea, self.command_dock)  # type: ignore[attr-defined]
         self.command_dock.hide()
 
@@ -256,6 +248,11 @@ class ScriptEditorWindow(ThemedChromeMixin, QMainWindow):
         self.process_parameter_dock.setAllowedAreas(
             Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea
         )  # type: ignore[attr-defined]
+        if isDarkTheme():
+            self.process_parameter_dock.setStyleSheet(
+                "QDockWidget { color: rgba(255, 255, 255, 0.85); }"
+                "QDockWidget::title { color: rgba(255, 255, 255, 0.85); background-color: rgb(39, 39, 39); }"
+            )
         self.addDockWidget(Qt.RightDockWidgetArea, self.process_parameter_dock)  # type: ignore[attr-defined]
         self.process_parameter_dock.hide()
 
@@ -273,6 +270,11 @@ class ScriptEditorWindow(ThemedChromeMixin, QMainWindow):
             self.main_parameter_dock.setAllowedAreas(
                 Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea
             )  # type: ignore[attr-defined]
+            if isDarkTheme():
+                self.main_parameter_dock.setStyleSheet(
+                    "QDockWidget { color: rgba(255, 255, 255, 0.85); }"
+                    "QDockWidget::title { color: rgba(255, 255, 255, 0.85); background-color: rgb(39, 39, 39); }"
+                )
             self.addDockWidget(Qt.RightDockWidgetArea, self.main_parameter_dock)  # type: ignore[attr-defined]
             self.main_parameter_dock.hide()
         else:
