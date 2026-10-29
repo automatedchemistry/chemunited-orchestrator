@@ -218,6 +218,11 @@ class ScriptEditorWindow(ThemedChromeMixin, QMainWindow):
             dock_style = (
                 "QDockWidget { background-color: rgb(39, 39, 39); color: rgba(255, 255, 255, 0.85); }"
                 "QDockWidget::title { color: rgba(255, 255, 255, 0.85); background-color: rgb(39, 39, 39); }"
+                "QDockWidget > QWidget { background-color: rgb(39, 39, 39); color: rgba(255, 255, 255, 0.85); }"
+                "QDockWidget > QWidget > QWidget { background-color: rgb(39, 39, 39); color: rgba(255, 255, 255, 0.85); }"
+                "QDockWidget > QWidget > QWidget > QWidget { background-color: rgb(39, 39, 39); color: rgba(255, 255, 255, 0.85); }"
+                "QLabel { color: rgba(255, 255, 255, 0.85); }"
+                "QDockWidget QToolBar { background-color: rgb(39, 39, 39); }"
             )
             self.setStyleSheet(dock_style)
 

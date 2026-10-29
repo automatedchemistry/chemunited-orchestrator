@@ -439,12 +439,19 @@ class CommandListPanel(QWidget):
         self.search_edit.setClearButtonEnabled(True)
         self.search_edit.textChanged.connect(self.command_list.filter_commands)
 
+        # Apply theme-aware styling to search field
+        if isDarkTheme():
+            self.search_edit.setStyleSheet(
+                "color: rgba(255, 255, 255, 0.85); background-color: rgb(59, 59, 59);"
+            )
+
         # Apply theme-aware styling
         if isDarkTheme():
             self.setStyleSheet(
-                "CommandListPanel { background-color: rgb(39, 39, 39); }"
-                "TreeWidget { background-color: rgb(39, 39, 39); }"
+                "CommandListPanel { background-color: rgb(39, 39, 39); color: rgba(255, 255, 255, 0.85); }"
+                "TreeWidget { background-color: rgb(39, 39, 39); color: rgba(255, 255, 255, 0.85); }"
                 "QLabel { color: rgba(255, 255, 255, 0.85); }"
+                "LineEdit { color: rgba(255, 255, 255, 0.85); background-color: rgb(59, 59, 59); }"
             )
 
         layout = QVBoxLayout(self)
