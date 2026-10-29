@@ -16,8 +16,12 @@ class NodeMetadataEditor(QWidget):
         # Ensure text color is visible in dark mode
         if isDarkTheme():
             text_color = "rgba(255, 255, 255, 0.85)"
-            self.label_edit.setStyleSheet(f"color: {text_color};")
-            self.description_edit.setStyleSheet(f"color: {text_color};")
+            label_style = f"color: {text_color};"
+            desc_style = f"color: {text_color};"
+            # LineEdit doesn't support placeholder color directly via stylesheet
+            # in all Qt versions, so we set the main text color
+            self.label_edit.setStyleSheet(label_style)
+            self.description_edit.setStyleSheet(desc_style)
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
@@ -30,7 +34,10 @@ class NodeMetadataEditor(QWidget):
         layout = QVBoxLayout(field)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(4)
-        layout.addWidget(CaptionLabel(title, field))
+        caption = CaptionLabel(title, field)
+        if isDarkTheme():
+            caption.setStyleSheet("color: rgba(255, 255, 255, 0.85);")
+        layout.addWidget(caption)
         layout.addWidget(editor)
         return field
 

@@ -213,6 +213,14 @@ class ScriptEditorWindow(ThemedChromeMixin, QMainWindow):
 
         self.parent_ref = parent
 
+        # Apply theme-aware styling to dock widgets
+        if isDarkTheme():
+            dock_style = (
+                "QDockWidget { background-color: rgb(39, 39, 39); color: rgba(255, 255, 255, 0.85); }"
+                "QDockWidget::title { color: rgba(255, 255, 255, 0.85); background-color: rgb(39, 39, 39); }"
+            )
+            self.setStyleSheet(dock_style)
+
         # --- central widget ---
         self.initlayout()
 
