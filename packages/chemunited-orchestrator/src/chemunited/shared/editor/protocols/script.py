@@ -15,7 +15,12 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from qfluentwidgets import FluentIcon, NavigationInterface, NavigationItemPosition
+from qfluentwidgets import (
+    FluentIcon,
+    NavigationInterface,
+    NavigationItemPosition,
+    isDarkTheme,
+)
 
 from chemunited.shared.editor.base import EditorBase
 from chemunited.shared.editor.parameters.drag_list import ParameterDragableList
@@ -198,6 +203,14 @@ class ScriptEditorWindow(ThemedChromeMixin, QMainWindow):
 
         self.navigationInterface = NavigationInterface(self, showMenuButton=True)
 
+        # Apply theme-aware styling to navigation interface
+        if isDarkTheme():
+            self.navigationInterface.setStyleSheet(
+                "NavigationInterface { background-color: rgb(39, 39, 39); }"
+                "NavigationItem { color: rgba(255, 255, 255, 0.85); }"
+                "NavigationItem:hover { color: white; }"
+            )
+
         self.parent_ref = parent
 
         # --- central widget ---
@@ -211,7 +224,9 @@ class ScriptEditorWindow(ThemedChromeMixin, QMainWindow):
 
         self.command_dock = QDockWidget("Commands", self)
         self.command_dock.setWidget(self.command_list_panel)
-        self.command_dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)  # type: ignore[attr-defined]
+        self.command_dock.setAllowedAreas(
+            Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea
+        )  # type: ignore[attr-defined]
         self.addDockWidget(Qt.RightDockWidgetArea, self.command_dock)  # type: ignore[attr-defined]
         self.command_dock.hide()
 
@@ -225,7 +240,9 @@ class ScriptEditorWindow(ThemedChromeMixin, QMainWindow):
         )
         self.process_parameter_dock = QDockWidget("Process Parameters", self)
         self.process_parameter_dock.setWidget(self.process_parameter_editor)
-        self.process_parameter_dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)  # type: ignore[attr-defined]
+        self.process_parameter_dock.setAllowedAreas(
+            Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea
+        )  # type: ignore[attr-defined]
         self.addDockWidget(Qt.RightDockWidgetArea, self.process_parameter_dock)  # type: ignore[attr-defined]
         self.process_parameter_dock.hide()
 
@@ -240,7 +257,9 @@ class ScriptEditorWindow(ThemedChromeMixin, QMainWindow):
             )
             self.main_parameter_dock = QDockWidget("Main Parameters", self)
             self.main_parameter_dock.setWidget(self.main_parameter_editor)
-            self.main_parameter_dock.setAllowedAreas(Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea)  # type: ignore[attr-defined]
+            self.main_parameter_dock.setAllowedAreas(
+                Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea
+            )  # type: ignore[attr-defined]
             self.addDockWidget(Qt.RightDockWidgetArea, self.main_parameter_dock)  # type: ignore[attr-defined]
             self.main_parameter_dock.hide()
         else:

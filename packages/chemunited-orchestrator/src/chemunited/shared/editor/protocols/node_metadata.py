@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
-from qfluentwidgets import CaptionLabel, LineEdit
+from qfluentwidgets import CaptionLabel, LineEdit, isDarkTheme
 
 
 class NodeMetadataEditor(QWidget):
@@ -12,6 +12,12 @@ class NodeMetadataEditor(QWidget):
         self.label_edit.setPlaceholderText("Block label")
         self.description_edit = LineEdit(self)
         self.description_edit.setPlaceholderText("Block description")
+
+        # Ensure text color is visible in dark mode
+        if isDarkTheme():
+            text_color = "rgba(255, 255, 255, 0.85)"
+            self.label_edit.setStyleSheet(f"color: {text_color};")
+            self.description_edit.setStyleSheet(f"color: {text_color};")
 
         layout = QHBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)

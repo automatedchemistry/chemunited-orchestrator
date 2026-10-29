@@ -439,6 +439,14 @@ class CommandListPanel(QWidget):
         self.search_edit.setClearButtonEnabled(True)
         self.search_edit.textChanged.connect(self.command_list.filter_commands)
 
+        # Apply theme-aware styling
+        if isDarkTheme():
+            self.setStyleSheet(
+                "CommandListPanel { background-color: rgb(39, 39, 39); }"
+                "TreeWidget { background-color: rgb(39, 39, 39); }"
+                "QLabel { color: rgba(255, 255, 255, 0.85); }"
+            )
+
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(6)

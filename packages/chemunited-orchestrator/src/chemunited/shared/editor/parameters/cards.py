@@ -340,13 +340,23 @@ class VariableCard(QWidget):
             init_name = default_name.default
         init_name = init_name or "unnamed"
         self._name_label = BodyLabel(init_name, header)
-        self._name_label.setStyleSheet("font-weight:500;")
+        if isDarkTheme():
+            self._name_label.setStyleSheet(
+                "font-weight:500; color:rgba(255,255,255,0.85);"
+            )
+        else:
+            self._name_label.setStyleSheet("font-weight:500;")
         h.addWidget(self._name_label)
 
         h.addStretch()
 
         self._default_label = CaptionLabel("", header)
-        self._default_label.setStyleSheet("color:#aaa; font-family:monospace;")
+        if isDarkTheme():
+            self._default_label.setStyleSheet(
+                "color:rgba(255,255,255,0.55); font-family:monospace;"
+            )
+        else:
+            self._default_label.setStyleSheet("color:#aaa; font-family:monospace;")
         h.addWidget(self._default_label)
 
         dup = TransparentToolButton(FluentIcon.COPY, header)
@@ -569,7 +579,10 @@ class VariableCard(QWidget):
             self._editors[key] = sw
 
             lbl = BodyLabel(key, section)
-            lbl.setStyleSheet("font-size:11px;")
+            if isDarkTheme():
+                lbl.setStyleSheet("font-size:11px; color:rgba(255,255,255,0.85);")
+            else:
+                lbl.setStyleSheet("font-size:11px;")
 
             pair = QHBoxLayout()
             pair.setSpacing(6)
