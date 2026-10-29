@@ -64,7 +64,8 @@ class LcdDisplayItem(QGraphicsObject):
         display = self._display
         params = ", ".join(f"{key}={value}" for key, value in display.kwargs.items())
         variable = f"{display.command}({params})" if params else display.command
-        self.setToolTip(f"{display.name}\n{display.component} → {variable}")
+        unit = f" ({display.unit})" if display.unit else ""
+        self.setToolTip(f"{display.name}\n{display.component} → {variable}{unit}")
 
     def boundingRect(self) -> QRectF:
         return QRectF(-LCD_WIDTH / 2, -LCD_HEIGHT / 2, LCD_WIDTH, LCD_HEIGHT)

@@ -28,19 +28,24 @@ def _associated_components(project_dir: Path) -> list[str]:
         return []
 
 
-def _display_bindings(project_dir: Path) -> dict[str, str]:
-    """Each LCD's name -> the monitoring key it shows, from the desktop export."""
+def _display_bindings(project_dir: Path) -> tuple[dict[str, str], dict[str, str]]:
+    """Each LCD's monitoring key and unit, by name, from the desktop export."""
     path = project_dir / "draw" / "platform-live.json"
     try:
         displays = json.loads(path.read_text(encoding="utf-8")).get("displays", {})
-        return {
+        keys = {
             str(name): monitoring_key(
                 display["component"], display["command"], display.get("kwargs")
             )
             for name, display in displays.items()
         }
+        units = {
+            str(name): str(display.get("unit") or "")
+            for name, display in displays.items()
+        }
+        return keys, units
     except (OSError, ValueError, KeyError, TypeError, AttributeError):
-        return {}
+        return {}, {}
 
 
 def _monitored_keys(monitoring: MonitoringService) -> set[str]:
@@ -159,10 +164,12 @@ class ProjectHolder:
             store=self._monitoring_store,
             stop_run=self._run_store.cancel,
         )
+        display_keys, display_units = _display_bindings(modules.project_dir)
         new_device_state = DeviceStateStore(
             _associated_components(modules.project_dir),
             deriver=_picture_deriver(modules.project_dir),
-            displays=_display_bindings(modules.project_dir),
+            displays=display_keys,
+            display_units=display_units,
             monitored_keys=lambda: _monitored_keys(new_monitoring),
         )
         new_protocol = ProtocolService(

@@ -251,6 +251,54 @@ def test_a_failed_reading_shows_no_value_and_the_reason():
     assert (display["value"], display["error"]) == (None, "timeout")
 
 
+@pytest.mark.parametrize(
+    ("value", "text"),
+    [
+        (1.5, "1.5 bar"),
+        (3, "3 bar"),
+        ("24.3", "24.3 bar"),
+        ("24.3 degC", "24.3 degC"),
+        (True, "true"),
+        ([1.02, 0.98], "[1.02, 0.98]"),
+        (None, None),
+    ],
+)
+def test_an_lcd_shows_its_unit_after_a_numeric_reading(value, text):
+    store = DeviceStateStore(
+        displays={"Pressure": "custom::pressure"},
+        display_units={"Pressure": "bar"},
+    )
+
+    store.record_reading(
+        "custom::pressure", {"time": "t1", "value": value, "error": None}
+    )
+
+    assert store.snapshot()["displays"]["Pressure"]["value"] == text
+    (change,) = store.changes_since(0)
+    assert change["displays"]["Pressure"]["value"] == text
+
+
+def test_lcds_on_one_variable_each_show_their_own_unit():
+    store = DeviceStateStore(
+        displays={"Pressure": "custom::pressure", "Raw": "custom::pressure"},
+        display_units={"Pressure": "bar"},
+    )
+
+    store.record_reading(
+        "custom::pressure", {"time": "t1", "value": 1.5, "error": None}
+    )
+    store.record_reading(
+        "custom::pressure", {"time": "t2", "value": None, "error": "x"}
+    )
+
+    first, second, failed, _ = store.changes_since(0)
+    assert first["displays"] == {
+        "Pressure": {"value": "1.5 bar", "at": "t1", "error": None, "monitored": True}
+    }
+    assert second["displays"]["Raw"]["value"] == "1.5"
+    assert failed["displays"]["Pressure"]["value"] is None
+
+
 def test_readings_of_variables_no_lcd_shows_change_nothing():
     store = _lcd_store()
 

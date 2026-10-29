@@ -19,9 +19,11 @@ from chemunited.elements.connection import (
     MovementConnectionItem,
 )
 from chemunited.elements.display import (
+    CUSTOM_COMPONENT,
     LcdDisplay,
     LcdDisplayDialog,
     LcdDisplayItem,
+    custom_sources,
     device_variables,
 )
 from chemunited.elements.reactions import ReactionDefinition
@@ -475,6 +477,19 @@ class OrchestratorDraw(OrchestratorCore):
             return []
         return [variable for variable in variables if isinstance(variable, dict)]
 
+    def _hook_sources(self) -> tuple[str, ...] | None:
+        working_dir = getattr(self, "working_dir", None)
+        return custom_sources(Path(working_dir)) if working_dir else ()
+
+    def _custom_sources(self) -> list[str]:
+        """The custom monitoring sources: the hook's, and any in the monitoring list."""
+        monitored = {
+            str(variable.get("command"))
+            for variable in self._monitored_variables()
+            if variable.get("component") == CUSTOM_COMPONENT and variable.get("command")
+        }
+        return sorted(monitored.union(self._hook_sources() or ()))
+
     def _suggest_display_name(self) -> str:
         index = 1
         while f"LCD {index}" in self.displays:
@@ -483,14 +498,17 @@ class OrchestratorDraw(OrchestratorCore):
 
     def request_add_display(self, position: tuple[float, float]) -> None:
         devices = self._electronic_devices()
-        if not devices:
+        sources = self._custom_sources()
+        if not devices and not sources:
             _log_draw_error(
                 self.parent_ref,
-                "Add a device first: an LCD shows one of a device's variables.",
+                "Add a device or a custom monitoring source first: an LCD shows "
+                "one of their variables.",
             )
             return
         dialog = LcdDisplayDialog(
             devices=devices,
+            custom_sources=sources,
             monitored=self._monitored_variables(),
             taken_names=set(self.displays),
             name=self._suggest_display_name(),
@@ -512,6 +530,7 @@ class OrchestratorDraw(OrchestratorCore):
         component: str,
         command: str,
         kwargs: dict | None = None,
+        unit: str = "",
     ) -> None:
         if name in self.displays:
             _log_draw_error(self.parent_ref, f"LCD '{name}' already exists.")
@@ -523,6 +542,7 @@ class OrchestratorDraw(OrchestratorCore):
                 component=component,
                 command=command,
                 kwargs=kwargs or {},
+                unit=unit,
             )
         )
         self.displays[item.name] = item
@@ -550,8 +570,13 @@ class OrchestratorDraw(OrchestratorCore):
             _log_draw_error(self.parent_ref, f"LCD '{name}' does not exist.")
             return
         current = item.display
+        sources = self._custom_sources()
+        if current.component == CUSTOM_COMPONENT and current.command not in sources:
+            # Kept on offer, so opening Properties never rebinds the LCD.
+            sources.append(current.command)
         dialog = LcdDisplayDialog(
             devices=self._electronic_devices(),
+            custom_sources=sources,
             monitored=self._monitored_variables(),
             taken_names=set(self.displays) - {name},
             name=current.name,
@@ -559,6 +584,7 @@ class OrchestratorDraw(OrchestratorCore):
             component=current.component,
             command=current.command,
             kwargs=current.kwargs,
+            unit=current.unit,
             creation=False,
             parent=self.parent_ref,
         )
@@ -572,11 +598,25 @@ class OrchestratorDraw(OrchestratorCore):
         item.set_display(display)
 
     def stale_display_bindings(self) -> list[str]:
-        """One line per LCD bound to a device or variable that no longer exists."""
+        """One line per LCD bound to a device, variable or source that no longer exists.
+
+        A custom source counts as gone when neither the monitoring hook nor the
+        monitoring list has it; nothing is said when the hook's names can't be
+        read without running it.
+        """
         problems = []
         devices = self._electronic_devices()
+        sources = None if self._hook_sources() is None else self._custom_sources()
         for item in self.displays.values():
             display = item.display
+            if display.component == CUSTOM_COMPONENT:
+                if sources is not None and display.command not in sources:
+                    problems.append(
+                        f"LCD '{display.name}' shows custom source "
+                        f"'{display.command}', which isn't in "
+                        "customizations/monitoring/monitoring_hook.py."
+                    )
+                continue
             figure = devices.get(display.component)
             if figure is None:
                 problems.append(

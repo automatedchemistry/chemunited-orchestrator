@@ -187,8 +187,9 @@ def _export_platform_live(
     command text), plus the geometry of each part the SVG leaves out, from
     ``GraphComponent.live_anchors()``: ``rotor`` (``center``, and ``slots``
     from slot 1), ``badge`` (``box``) or ``lights`` (``points`` and ``r``).
-    ``displays`` maps each LCD's name to its ``box`` and the variable it
-    shows: ``component``, ``command`` and ``kwargs``. ``svg_sha256`` is the
+    ``displays`` maps each LCD's name to its ``box``, the variable it shows
+    (``component``, ``command`` and ``kwargs``) and its ``unit``, shown
+    after a numeric reading (``""`` for none). ``svg_sha256`` is the
     hash of the SVG written alongside, so a map that no longer matches the
     SVG can be told apart.
     """
@@ -215,6 +216,7 @@ def _export_platform_live(
                         "component": item.display.component,  # type: ignore[attr-defined]
                         "command": item.display.command,  # type: ignore[attr-defined]
                         "kwargs": item.display.kwargs,  # type: ignore[attr-defined]
+                        "unit": item.display.unit,  # type: ignore[attr-defined]
                     }
                     for item in displays
                 },
