@@ -43,7 +43,7 @@ def window(qtbot: QtBot):
 def project(window: SetupWindow, tmp_path):
     working_dir = tmp_path / "demo"
     session = ProjectSession()
-    session.new(name="demo", location=tmp_path, init_git=False)
+    session.new(name="demo", location=tmp_path)
     window.orchestrator.working_dir = working_dir
     window.orchestrator._session = session
     return working_dir

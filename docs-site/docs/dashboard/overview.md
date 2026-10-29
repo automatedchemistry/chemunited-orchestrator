@@ -6,7 +6,7 @@ connectivity — from any browser, without the desktop orchestrator app open. St
 [Dashboard Launcher](launcher.md), or run `chemunited-workflow serve` directly; either way it opens at
 `http://127.0.0.1:<port>/` (default port `3116`).
 
-The dashboard has six pages, reachable from the sidebar on the left of every page:
+The dashboard has seven pages, reachable from the sidebar on the left of every page:
 
 * **Dashboard** (this page) — project status at a glance and quick navigation.
 * **[Run Control](run_control.md)** — start or cancel a run, and watch it execute live.
@@ -14,6 +14,7 @@ The dashboard has six pages, reachable from the sidebar on the left of every pag
 * **[Monitoring](monitoring.md)** — poll live device variables outside of a run.
 * **[Logs](logs.md)** — browse and tail execution log files.
 * **[Devices](devices.md)** — check connectivity for every component in the project.
+* **[Export](export.md)** — download past runs with their manifests, and clean them out of the project.
 
 At the bottom of the sidebar: **Refresh project** (reload project state from disk), **API Docs** (opens the
 work-server's OpenAPI docs — see [API & MCP Tools](api_and_mcp.md)), and a **Dark theme** toggle.

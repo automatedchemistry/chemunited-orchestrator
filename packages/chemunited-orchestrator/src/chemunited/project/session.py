@@ -3,7 +3,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import TYPE_CHECKING
 
-from .git_manager import GitManager, ensure_gitignore
+from .gitignore import ensure_gitignore
 from .manifest import ProjectManifest
 from .storage import (
     delete_process,
@@ -31,12 +31,17 @@ if TYPE_CHECKING:
 
 
 class ProjectSession:
+    """An open project folder.
+
+    Versioning is up to the user: a project folder can be (or sit inside) a
+    git repository, which ChemUnited never writes to. The work-server records
+    the repository's commit in each run's manifest.
+    """
 
     def __init__(self) -> None:
         self.working_dir: Path | None = None
         self.source_file: Path | None = None
         self.manifest: ProjectManifest | None = None
-        self.git: GitManager | None = None
 
     def _require_working_dir(self) -> Path:
         if self.working_dir is None:
@@ -50,9 +55,7 @@ class ProjectSession:
 
     # ── Lifecycle (unchanged) ──────────────────────────────────────────────────
 
-    def new(
-        self, name: str, location: Path, description: str = "", init_git: bool = True
-    ) -> None:
+    def new(self, name: str, location: Path, description: str = "") -> None:
         self.working_dir = location / name
         self.working_dir.mkdir(parents=True, exist_ok=True)
         ensure_protocols_historic_dir(self.working_dir)
@@ -64,8 +67,6 @@ class ProjectSession:
             description=description,
         )
         self.manifest.save(self.working_dir)
-        if init_git:
-            self.git = GitManager.init(self.working_dir)
 
     def open_directory(self, working_dir: Path) -> None:
         self.working_dir = working_dir
@@ -73,7 +74,6 @@ class ProjectSession:
         ensure_protocols_historic_dir(working_dir)
         ensure_log_dir(working_dir)
         ensure_gitignore(working_dir)
-        self.git = GitManager.open(working_dir)
 
     def import_chemunited(
         self,
@@ -101,7 +101,6 @@ class ProjectSession:
                     f"{target}"
                 )
 
-        has_existing_git = (target / ".git").is_dir()
         unpack(chemunited_file, target)
         ensure_protocols_historic_dir(target)
         ensure_log_dir(target)
@@ -109,10 +108,6 @@ class ProjectSession:
         self.working_dir = target
         self.source_file = chemunited_file
         self.manifest = ProjectManifest.load(target)
-        if has_existing_git:
-            self.git = GitManager.open(target)
-        else:
-            self.git = GitManager.init_from_import(target, chemunited_file.name)
 
     def export_chemunited(self, destination: Path | None = None) -> Path:
         working_dir = self._require_working_dir()
@@ -130,8 +125,6 @@ class ProjectSession:
 
     def save_draw(self, draw_data: dict) -> None:
         save_draw(self._require_working_dir(), draw_data)
-        if self.git:
-            self.git.commit_draw()
 
     def load_draw(self) -> dict:
         return load_draw(self._require_working_dir())
@@ -140,14 +133,9 @@ class ProjectSession:
 
     def save_process(self, process_name: str, content: str) -> None:
         save_process(self._require_working_dir(), process_name, content)
-        if self.git:
-            self.git.commit_process(process_name)
 
     def sync_process(self, process_name: str, workflow: ProcessWorkflow) -> bool:
-        synced = sync_process(self._require_working_dir(), process_name, workflow)
-        if synced and self.git:
-            self.git.commit_process(process_name)
-        return synced
+        return sync_process(self._require_working_dir(), process_name, workflow)
 
     def load_process(self, process_name: str) -> str:
         return load_process(self._require_working_dir(), process_name)
@@ -160,8 +148,6 @@ class ProjectSession:
             p for p in manifest.processes_order if p != process_name
         ]
         manifest.save(working_dir)
-        if self.git:
-            self.git.commit_process(process_name, deleted=True)
 
     def rename_process(self, old_name: str, new_name: str) -> None:
         working_dir = self._require_working_dir()
@@ -178,8 +164,6 @@ class ProjectSession:
         duplicate_process(working_dir, source_name, new_name)
         manifest.processes_order.append(new_name)
         manifest.save(working_dir)
-        if self.git:
-            self.git.commit_process(new_name, created=True)
 
     def list_processes(self) -> list[str]:
         return list_processes(self._require_working_dir())
@@ -191,8 +175,6 @@ class ProjectSession:
 
     def save_main_parameters(self, content: str) -> None:
         save_main_parameters(self._require_working_dir(), content)
-        if self.git:
-            self.git.commit_main_parameters()
 
     def load_main_parameters(self) -> str:
         return load_main_parameters(self._require_working_dir())
@@ -204,14 +186,3 @@ class ProjectSession:
 
     def load_connectivity(self) -> dict:
         return load_connectivity(self._require_working_dir())
-
-    # ── Git ────────────────────────────────────────────────────────────────────
-
-    def git_snapshot(self, message: str) -> bool:
-        return self.git.snapshot(message) if self.git else False
-
-    def git_status(self) -> dict | None:
-        return self.git.status() if self.git else None
-
-    def git_log(self) -> list[dict]:
-        return self.git.log() if self.git else []

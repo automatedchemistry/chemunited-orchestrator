@@ -8,8 +8,10 @@ All endpoints except `GET /project/` return HTTP `503` if no project has been lo
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/project/` | Return the currently loaded project directory, or `null` if none is loaded. Always returns `200` — use this as a readiness probe. |
+| `GET` | `/project/` | Return the currently loaded project directory, or `null` if none is loaded, and its `git` state (below). Always returns `200` — use this as a readiness probe. |
 | `PUT` | `/project/` | Load or switch the active project. Body: `{"project_dir": "/path/to/project"}`. Returns `409` if a run is currently active. |
+
+Both return `{"project_dir", "git"}`. `git` is `{"commit", "branch", "dirty", "changed", "captured_at"}`, read when the project was loaded — when its process code was imported — or `null` when git isn't on `PATH`, the project isn't in a git repository (its own or one in a parent folder), the repository has no commit yet, or git refuses to read it. `branch` is `null` for a detached HEAD; `dirty` says whether files in the project folder differ from the commit (`null` if `git status` failed), and `changed` lists them relative to the project folder. What the work-server writes into the project itself never counts: `log/`, `run.lock`, and the `__pycache__` folders of the process code it imports. chemunited-workflow only reads the repository: it never commits or changes anything. Every run's manifest records this state (see [Export](#export)).
 
 ## Processes
 
@@ -250,17 +252,42 @@ data: {"seq": 44, "devices": {"pump": {"kind": null, "status": "running", "pictu
 
 ## Export
 
-One row per executed run — the run's log file, its correlated monitoring recording (if any), and its source protocol (if it still exists) — that can be zipped up for download and/or permanently cleaned out of the project. Downloading and cleaning are two separate actions; downloading never deletes anything.
+One row per executed run — the run's log file, its manifest (if any), its correlated monitoring recording (if any), and its source protocol (if it still exists) — that can be zipped up for download and/or permanently cleaned out of the project. Downloading and cleaning are two separate actions; downloading never deletes anything.
 
-Rows are correlated purely by filename convention (there is no stored link): a log is written as `{protocol_stem}_executed_{timestamp}.log`, its monitoring recording lives at `log/monitoring/{protocol_stem}_{timestamp}/`, and its source protocol is `protocols_historic/{protocol_stem}.json`. A row only exists if its log file exists — a saved-but-never-run protocol produces no row, and a monitoring recording whose log was removed some other way is not shown. Because the same protocol can be run more than once, **the log filename is each row's identity**, not the protocol name.
+Rows are correlated purely by filename convention (there is no stored link): a run's `run_id` is `{protocol_stem}_{timestamp}`, with the run's start time as `timestamp`. Its log is written as `log/{protocol_stem}_executed_{timestamp}.log`, its manifest as `log/manifests/{run_id}.json`, its monitoring recording lives at `log/monitoring/{run_id}/`, and its source protocol is `protocols_historic/{protocol_stem}.json`. A row only exists if its log file exists — a saved-but-never-run protocol produces no row, and a monitoring recording whose log was removed some other way is not shown. Because the same protocol can be run more than once, **the log filename is each row's identity**, not the protocol name.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/export/preview` | List every row: `{"log": {...}, "monitoring": {"run_id", "files": [...], "total_size_bytes"} \| null, "protocol": {...} \| null}`, most recently modified log first. |
+| `GET` | `/export/preview` | List every row: `{"log": {...}, "manifest": {..., "commit", "dirty"} \| null, "monitoring": {"run_id", "files": [...], "total_size_bytes"} \| null, "protocol": {...} \| null}`, most recently modified log first. `manifest.commit` and `manifest.dirty` are the git state the manifest recorded (`null` without git). |
 | `GET` | `/export/download?log={filename}` | Zip the selected runs (repeat `log` for more than one) and return it as a file download (`Content-Disposition: attachment`). Never deletes anything. `422` if no `log` is given. |
-| `POST` | `/export/clean` | Body `{"logs": ["{filename}", ...]}`. Permanently delete the selected runs' log files and monitoring recordings. Returns `{"deleted": [...], "count": N}`. `protocols_historic/` is never touched — a run's protocol is always copied into its export, never removed by clean. `422` if `logs` is empty. |
+| `POST` | `/export/clean` | Body `{"logs": ["{filename}", ...]}`. Permanently delete the selected runs' log files, manifests and monitoring recordings. Returns `{"deleted": [...], "count": N}`. `protocols_historic/` is never touched — a run's protocol is always copied into its export, never removed by clean. `422` if `logs` is empty. |
 
-A zip's members are `log/{filename}`, `log/monitoring/{run_id}/{filename}`, and `protocols_historic/{filename}`. Selecting two runs of the same protocol writes that protocol file into the zip only once. An unknown or already-deleted filename passed to `download`/`clean` is skipped silently rather than erroring the whole request.
+A zip's members are `log/{filename}`, `log/manifests/{run_id}.json`, `log/monitoring/{run_id}/{filename}`, `protocols_historic/{filename}`, and an `export_manifest.json` index at the root: `{"schema": "chemunited-export/1", "exported_at", "project", "runs": [{"run_id", "log", "manifest", "monitoring": [...], "protocol"}]}`, giving each run's paths inside the zip (`null` / `[]` for what it doesn't have). It isn't named `manifest.json` because the zip mirrors the project's layout, which has its own `manifest.json`. Selecting two runs of the same protocol writes that protocol file into the zip only once. An unknown or already-deleted filename passed to `download`/`clean` is skipped silently rather than erroring the whole request.
+
+### Run manifests
+
+Every run writes `log/manifests/{run_id}.json` when it starts (`"state": "running"`) and rewrites it when it ends, so it survives work-server restarts and later runs, unlike `/run/report`:
+
+```json
+{
+  "schema": "chemunited-run-manifest/1",
+  "run_id": "React_2026-10-28T09-12-00_2026-10-28T14-00-00",
+  "state": "finished",
+  "reason": null,
+  "started_at": "2026-10-28T14:00:00+01:00",
+  "finished_at": "2026-10-28T14:20:31+01:00",
+  "protocol": {"filename": "React_2026-10-28T09-12-00.json", "content": {"main_parameter": {}, "React_0": {}}},
+  "options": {"dry_run": false, "timeout_commands": "10 s", "error_resilient": false, "record_monitoring": true},
+  "project": {
+    "name": "AGA",
+    "git": {"commit": "a1b2c3…", "branch": "main", "dirty": false, "changed": [], "captured_at": "2026-10-28T09:00:00+01:00"}
+  },
+  "software": {"python": "3.13.5", "chemunited-workflow": "0.1.0", "chemunited-quantities": "0.0.3"},
+  "results": []
+}
+```
+
+`protocol.content` is the protocol exactly as it ran. `project.git` is the project's state when it was loaded (see [Project management](#project-management)), or `null`. If HEAD moved after the project was loaded, the run still executes the process code that was loaded; the manifest then adds `project.head_at_start`, the commit HEAD pointed at when the run started, and the run log warns. `results` has the same shape as `/run/report`'s `results`. A manifest that can't be written is logged and never stops the run. The manifest stores no absolute paths and no hostname.
 
 ### Custom export behavior
 
@@ -281,6 +308,8 @@ EXPORT_HOOKS = {
     "clean": clean,          # optional — omit to keep the default clean behavior
 }
 ```
+
+A `build_zip` hook replaces the whole zip, so it only carries run manifests and the `export_manifest.json` index if it builds on `chemunited_workflow.api.services.export.default_build_zip(project_dir, logs)`.
 
 The file is optional and reloaded fresh on every call. A missing file or one that fails to import (or doesn't export an `EXPORT_HOOKS` dict) falls back to the default behavior for both actions — a broken hook file never breaks `/export/preview`, `/export/download`, or `/export/clean`. Once a hook function is found and called, though, its own exception is *not* swallowed — it comes back as HTTP `500`, so a buggy custom `clean()` never silently reports success (or silently falls back to deleting a different set of files than the one it promised).
 

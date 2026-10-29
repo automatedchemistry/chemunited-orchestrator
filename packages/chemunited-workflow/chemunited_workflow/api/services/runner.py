@@ -5,7 +5,9 @@ from __future__ import annotations
 import json
 import re
 import threading
+from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from loguru import logger
 from pydantic import BaseModel
@@ -15,9 +17,16 @@ from chemunited_workflow.background import STOP_TIMEOUT_SECONDS, BackgroundTasks
 from chemunited_workflow.cancellation import wait_for_operator_input, wait_while_paused
 from chemunited_workflow.durations import parse_timeout_commands
 from chemunited_workflow.platform import Platform
+from chemunited_workflow.provenance import GitState, read_head
 from chemunited_workflow.terminal import WorkflowLogger, create_run_log_path
 
 from ..device_state import DeviceStateStore
+from ..run_manifest import (
+    build_run_manifest,
+    finish_run_manifest,
+    manifest_path,
+    write_run_manifest,
+)
 from ..run_store import RunState, RunStore
 from .monitoring import MonitoringService
 
@@ -31,6 +40,7 @@ class RunnerService:
         run_store: RunStore,
         monitoring_service: MonitoringService | None = None,
         device_state: DeviceStateStore | None = None,
+        git_state: GitState | None = None,
     ) -> None:
         self._project_dir = project_dir
         self._processes = processes
@@ -38,6 +48,8 @@ class RunnerService:
         self._run_store = run_store
         self._monitoring_service = monitoring_service
         self._device_state = device_state
+        # The project's git state when it was loaded, and so its process code.
+        self._git_state = git_state
 
     def start(
         self,
@@ -126,7 +138,13 @@ class RunnerService:
         error_resilient: bool,
         record_monitoring: bool,
     ) -> None:
-        log_path = create_run_log_path(self._project_dir, protocol_filename)
+        # This run's record, kept rather than looked up again at the end: once
+        # the run has ended, another one can start and replace it in the store.
+        run_record = self._run_store.get()
+        if run_record is not None and run_record.run_id != run_id:
+            run_record = None
+        started_at = run_record.started_at if run_record is not None else datetime.now()
+        log_path = create_run_log_path(self._project_dir, protocol_filename, started_at)
         log_path.parent.mkdir(parents=True, exist_ok=True)
         sink_id = logger.add(
             log_path,
@@ -135,10 +153,28 @@ class RunnerService:
             colorize=False,
             encoding="utf-8",
         )
+        manifest_file = manifest_path(self._project_dir, run_id)
+        manifest: dict[str, Any] | None = None
         background = BackgroundTasks()
         cancellation_token: threading.Event | None = None
         try:
             try:
+                manifest = build_run_manifest(
+                    run_id=run_id,
+                    started_at=started_at,
+                    protocol_filename=protocol_filename,
+                    protocol=data,
+                    options={
+                        "dry_run": dry_run,
+                        "timeout_commands": timeout_commands,
+                        "error_resilient": error_resilient,
+                        "record_monitoring": record_monitoring,
+                    },
+                    project_name=self._project_dir.name,
+                    git=self._git_state,
+                    head_at_start=self._head_if_moved(),
+                )
+                write_run_manifest(manifest_file, manifest)
                 pool_dir = self._project_dir / "log" / "pool"
                 if pool_dir.exists():
                     for f in pool_dir.glob("*.jsonl"):
@@ -228,7 +264,27 @@ class RunnerService:
         finally:
             if self._monitoring_service is not None:
                 self._monitoring_service.on_run_finished()
+            if manifest is not None and run_record is not None:
+                write_run_manifest(
+                    manifest_file, finish_run_manifest(manifest, run_record)
+                )
             logger.remove(sink_id)
+
+    def _head_if_moved(self) -> str | None:
+        """HEAD now, if it moved since the project was loaded; None otherwise."""
+        if self._git_state is None:
+            return None
+        head = read_head(self._project_dir)
+        if head is None or head == self._git_state.commit:
+            return None
+        logger.warning(
+            "The project's git HEAD moved to {} after the project was loaded: this "
+            "run executes the process code loaded at {}. Refresh the project to run "
+            "the new code.",
+            head[:7],
+            self._git_state.commit[:7],
+        )
+        return head
 
     @staticmethod
     def _stop_background(

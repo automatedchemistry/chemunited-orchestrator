@@ -174,8 +174,32 @@ class ProjectIn(BaseModel):
     project_dir: str
 
 
+class GitStateOut(BaseModel):
+    """The loaded project's git state, read when the project was loaded."""
+
+    commit: str
+    branch: str | None = Field(default=None, description="None when HEAD is detached.")
+    dirty: bool | None = Field(
+        default=None,
+        description="Uncommitted changes in the project folder; None if git status failed.",
+    )
+    changed: list[str] = Field(
+        default_factory=list,
+        description="Uncommitted files, relative to the project folder.",
+    )
+    captured_at: str
+
+
 class ProjectOut(BaseModel):
     project_dir: str | None = None
+    git: GitStateOut | None = Field(
+        default=None,
+        description=(
+            "The project's git commit when it was loaded, which every run's manifest "
+            "records. None without a project, without git on PATH, or outside a "
+            "git repository."
+        ),
+    )
 
 
 class PlatformDevice(BaseModel):
@@ -240,10 +264,18 @@ class ExportMonitoringGroup(BaseModel):
     total_size_bytes: int
 
 
+class ExportManifestEntry(ExportEntry):
+    """A run's manifest, with the git state it recorded."""
+
+    commit: str | None = None
+    dirty: bool | None = None
+
+
 class ExportRow(BaseModel):
     log: ExportEntry
     monitoring: ExportMonitoringGroup | None = None
     protocol: ExportEntry | None = None
+    manifest: ExportManifestEntry | None = None
 
 
 class ExportCleanRequest(BaseModel):

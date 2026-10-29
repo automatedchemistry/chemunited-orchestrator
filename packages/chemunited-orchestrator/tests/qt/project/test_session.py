@@ -1,18 +1,50 @@
 from __future__ import annotations
 
 import json
+import shutil
+import subprocess
 import zipfile
 from textwrap import dedent
 
 import pytest
 
 from chemunited.orchestrator.project_file import OrchestratorProjectFile
-from chemunited.project.git_manager import ensure_gitignore
+from chemunited.project.gitignore import ensure_gitignore
 from chemunited.project.manifest import ProjectManifest
 from chemunited.project.session import ProjectSession
 from chemunited.protocols.workflows import ProcessWorkflow
 from chemunited.shared.enums.protocols_enum import ProtocolBlock
 from chemunited.utils.files import load_class
+
+needs_git = pytest.mark.skipif(shutil.which("git") is None, reason="git is not on PATH")
+
+
+def _git(cwd, *args: str) -> str:
+    result = subprocess.run(
+        [
+            "git",
+            "-c",
+            "user.name=Test",
+            "-c",
+            "user.email=test@example.com",
+            "-c",
+            "commit.gpgsign=false",
+            *args,
+        ],
+        cwd=cwd,
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    return result.stdout.strip()
+
+
+def _version_by_hand(working_dir) -> str:
+    """Commit the project as a user would, returning the commit."""
+    _git(working_dir, "init")
+    _git(working_dir, "add", "-A")
+    _git(working_dir, "commit", "-m", "versioned by hand")
+    return _git(working_dir, "rev-parse", "HEAD")
 
 
 def _write_project(working_dir, draw_content: str) -> None:
@@ -71,7 +103,7 @@ def test_import_chemunited_does_not_overwrite_existing_non_project_path(tmp_path
 
 def test_protocols_historic_directory_is_created_and_exported(tmp_path):
     session = ProjectSession()
-    session.new(name="demo", location=tmp_path, init_git=False)
+    session.new(name="demo", location=tmp_path)
     working_dir = tmp_path / "demo"
     history_dir = working_dir / "protocols_historic"
     history_file = history_dir / "react.json"
@@ -89,7 +121,7 @@ def test_protocols_historic_directory_is_created_and_exported(tmp_path):
 
 def test_log_directory_is_created_ignored_and_not_exported(tmp_path):
     session = ProjectSession()
-    session.new(name="demo", location=tmp_path, init_git=False)
+    session.new(name="demo", location=tmp_path)
     working_dir = tmp_path / "demo"
     log_dir = working_dir / "log"
     log_file = log_dir / "react_2026-03-27T16-18-00__2026-03-27T19-20-00.log"
@@ -106,7 +138,7 @@ def test_log_directory_is_created_ignored_and_not_exported(tmp_path):
 
 def test_simulations_directory_is_ignored_and_not_exported(tmp_path):
     session = ProjectSession()
-    session.new(name="demo", location=tmp_path, init_git=False)
+    session.new(name="demo", location=tmp_path)
     working_dir = tmp_path / "demo"
     simulations_dir = working_dir / "simulations"
 
@@ -135,6 +167,61 @@ def test_existing_gitignore_gains_missing_local_output_rules(tmp_path):
     lines = gitignore.read_text(encoding="utf-8").splitlines()
     assert lines.count("log/") == 1
     assert lines.count("simulations/") == 1
+    assert lines.count("run.lock") == 1
+
+
+def test_a_new_project_gets_a_gitignore_but_no_git_repository(tmp_path):
+    session = ProjectSession()
+    session.new(name="demo", location=tmp_path)
+    working_dir = tmp_path / "demo"
+    assert not (working_dir / ".git").exists()
+    lines = (working_dir / ".gitignore").read_text(encoding="utf-8").splitlines()
+    assert "run.lock" in lines
+
+
+def test_importing_an_archive_creates_no_git_repository(tmp_path):
+    archive_path = tmp_path / "demo.chemunited"
+    _write_archive(archive_path, "demo", "# archived export\n")
+    session = ProjectSession()
+    session.import_chemunited(archive_path)
+    assert (tmp_path / "demo" / "draw" / "setup.py").exists()
+    assert not (tmp_path / "demo" / ".git").exists()
+
+
+@needs_git
+def test_saving_a_project_versioned_by_hand_leaves_its_history_alone(tmp_path):
+    working_dir = tmp_path / "demo"
+    _write_project(working_dir, "# local project folder\n")
+    head = _version_by_hand(working_dir)
+
+    session = ProjectSession()
+    session.open_directory(working_dir)
+    session.save_main_parameters("class MainParameter:\n    pass\n")
+    archive_path = session.export_chemunited(tmp_path / "demo")
+
+    assert _git(working_dir, "rev-parse", "HEAD") == head
+    assert _git(working_dir, "rev-list", "--count", "HEAD") == "1"
+    # The change is there for the user to commit.
+    assert "protocols/" in _git(working_dir, "status", "--porcelain")
+    with zipfile.ZipFile(archive_path, "r") as zf:
+        assert not any(name.startswith(".git") for name in zf.namelist())
+
+
+@needs_git
+def test_importing_over_a_project_versioned_by_hand_keeps_its_history(tmp_path):
+    archive_path = tmp_path / "demo.chemunited"
+    working_dir = tmp_path / "demo"
+    _write_archive(archive_path, "demo", "# archived export\n")
+    _write_project(working_dir, "# local project folder\n")
+    head = _version_by_hand(working_dir)
+
+    session = ProjectSession()
+    session.import_chemunited(archive_path, overwrite=True)
+
+    draw = (working_dir / "draw" / "setup.py").read_text(encoding="utf-8")
+    assert draw == "# archived export\n"
+    assert _git(working_dir, "rev-parse", "HEAD") == head
+    assert _git(working_dir, "rev-list", "--count", "HEAD") == "1"
 
 
 def test_process_load_parameters_uses_process_file_stem(tmp_path):
@@ -190,7 +277,7 @@ def test_process_load_parameters_uses_process_file_stem(tmp_path):
 
 def test_sync_process_creates_new_process_file(tmp_path):
     session = ProjectSession()
-    session.new(name="demo", location=tmp_path, init_git=False)
+    session.new(name="demo", location=tmp_path)
     workflow = ProcessWorkflow("React")
     workflow.add_block(
         node_id="script_1",
@@ -226,7 +313,7 @@ def test_sync_process_creates_new_process_file(tmp_path):
 
 def test_sync_process_updates_existing_file_in_place(tmp_path):
     session = ProjectSession()
-    session.new(name="demo", location=tmp_path, init_git=False)
+    session.new(name="demo", location=tmp_path)
     working_dir = tmp_path / "demo"
     process_path = working_dir / "protocols" / "React.py"
     process_path.parent.mkdir(parents=True, exist_ok=True)
@@ -374,7 +461,7 @@ def test_sync_process_updates_existing_file_in_place(tmp_path):
 
 def test_sync_process_leaves_invalid_existing_file_unchanged(tmp_path):
     session = ProjectSession()
-    session.new(name="demo", location=tmp_path, init_git=False)
+    session.new(name="demo", location=tmp_path)
     working_dir = tmp_path / "demo"
     process_path = working_dir / "protocols" / "React.py"
     process_path.parent.mkdir(parents=True, exist_ok=True)
@@ -390,7 +477,7 @@ def test_sync_process_leaves_invalid_existing_file_unchanged(tmp_path):
 
 def test_sync_process_writes_node_label_and_description(tmp_path):
     session = ProjectSession()
-    session.new(name="demo", location=tmp_path, init_git=False)
+    session.new(name="demo", location=tmp_path)
     working_dir = tmp_path / "demo"
 
     workflow = ProcessWorkflow("React")
@@ -417,7 +504,7 @@ def test_sync_process_writes_node_label_and_description(tmp_path):
 
 def test_sync_process_roundtrip_preserves_special_block_types_and_loopback(tmp_path):
     session = ProjectSession()
-    session.new(name="demo", location=tmp_path, init_git=False)
+    session.new(name="demo", location=tmp_path)
 
     workflow = ProcessWorkflow("React")
     workflow.add_block(
@@ -492,7 +579,7 @@ def test_sync_process_roundtrip_preserves_special_block_types_and_loopback(tmp_p
 
 def test_restore_workflow_infers_legacy_block_types_when_not_explicitly_saved(tmp_path):
     session = ProjectSession()
-    session.new(name="demo", location=tmp_path, init_git=False)
+    session.new(name="demo", location=tmp_path)
     session.save_process(
         "React",
         dedent("""

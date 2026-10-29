@@ -29,6 +29,8 @@ _ACTIVE_STATES = (RunState.RUNNING, RunState.PAUSED)
 class RunRecord:
     run_id: str
     protocol_filename: str = ""
+    # The run ID, the log filename and the manifest all carry this timestamp.
+    started_at: datetime = field(default_factory=datetime.now)
     state: RunState = RunState.RUNNING
     # Why the run was cancelled, when whoever cancelled it said — a safety
     # interlock (MonitoringContext.stop_run), say. None for a plain cancel.
@@ -120,9 +122,13 @@ class RunStore:
             if self._record is not None and self._record.state in _ACTIVE_STATES:
                 return None
             stem = Path(protocol_filename).stem
-            now = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
-            run_id = f"{stem}_{now}"
-            self._record = RunRecord(run_id=run_id, protocol_filename=protocol_filename)
+            started_at = datetime.now()
+            run_id = f"{stem}_{started_at:%Y-%m-%dT%H-%M-%S}"
+            self._record = RunRecord(
+                run_id=run_id,
+                protocol_filename=protocol_filename,
+                started_at=started_at,
+            )
         self._write_lockfile(run_id, protocol_filename)
         return run_id
 

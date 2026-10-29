@@ -12,7 +12,7 @@ When the FastAPI server is running, open `http://127.0.0.1:3116/` to access the 
 | Monitoring | `/monitoring` | Live sensor monitoring sessions and time-series profiles |
 | Devices | `/devices` | Component connectivity map and ping check |
 | Logs | `/logs` | Browse and tail log files |
-| Export | `/export` | Download a zip of logs/monitoring/protocol history, and clean the source files out of the project |
+| Export | `/export` | Download a zip of runs' logs, manifests (the protocol that ran and the project's git commit), monitoring recordings and protocols, and clean the source files out of the project |
 | Customizations | `/customizations` | Shown when the project customizes the dashboard: problems in `ui_hook.py`, a compile check of every custom page and widget, and what is applied where (see [Runtime customizations](#runtime-customizations)) |
 
 Every route above is served by the same `index.html` (see `chemunited_workflow/api/routers/ui.py`); Vue Router handles client-side navigation between pages, and Pinia (`stores/runStatus.ts`) tracks shared run state across them.

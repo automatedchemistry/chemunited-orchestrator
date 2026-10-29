@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+from dataclasses import asdict
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, HTTPException
@@ -17,19 +18,29 @@ from chemunited_workflow.project_loader import (
 
 from ..dependencies import get_project_holder
 from ..project_holder import ProjectHolder
-from ..schemas import PlatformDevice, ProjectIn, ProjectOut
+from ..schemas import GitStateOut, PlatformDevice, ProjectIn, ProjectOut
 
 router = APIRouter(prefix="/project", tags=["project"])
+
+
+def _project_out(holder: ProjectHolder) -> ProjectOut:
+    pd = holder.project_dir
+    git = holder.git_state
+    return ProjectOut(
+        project_dir=str(pd) if pd is not None else None,
+        git=GitStateOut(**asdict(git)) if git is not None else None,
+    )
 
 
 @router.get("/", response_model=ProjectOut)
 async def get_project(holder: ProjectHolder = Depends(get_project_holder)):
     """Return the currently loaded project directory, or null if none is loaded.
 
-    Always returns 200 — use this as a readiness probe.
+    Always returns 200 — use this as a readiness probe. `git` is the
+    project's commit, branch and uncommitted files as read when the project
+    was loaded — what every run's manifest records — or null without git.
     """
-    pd = holder.project_dir
-    return ProjectOut(project_dir=str(pd) if pd is not None else None)
+    return _project_out(holder)
 
 
 @router.put("/", response_model=ProjectOut)
@@ -67,7 +78,7 @@ async def put_project(
                 f"Failed to initialize services for project '{project_path}'",
             ),
         ) from exc
-    return ProjectOut(project_dir=str(holder.project_dir))
+    return _project_out(holder)
 
 
 @router.get("/platform-svg", include_in_schema=False)

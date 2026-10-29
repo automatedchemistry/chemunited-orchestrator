@@ -25,8 +25,9 @@ def _project_dir(holder: ProjectHolder) -> Path:
 async def preview(
     holder: ProjectHolder = Depends(get_project_holder),
 ):
-    """One row per executed run — log file, correlated monitoring recording
-    (if any), and source protocol (if it still exists)."""
+    """One row per executed run — log file, run manifest (if any, with the
+    git commit it recorded), correlated monitoring recording (if any), and
+    source protocol (if it still exists)."""
     return export_service.preview(_project_dir(holder))
 
 
@@ -35,9 +36,10 @@ async def download(
     log: list[str] = Query(min_length=1),
     holder: ProjectHolder = Depends(get_project_holder),
 ):
-    """Build a zip of the selected runs (log + monitoring recording + source
-    protocol) and return it as a file download. Never deletes anything —
-    see POST /export/clean for that."""
+    """Build a zip of the selected runs (log + run manifest + monitoring
+    recording + source protocol, with an `export_manifest.json` index at the
+    root) and return it as a file download. Never deletes anything — see
+    POST /export/clean for that."""
     project_dir = _project_dir(holder)
     try:
         content = export_service.build_zip(project_dir, log)
@@ -56,8 +58,8 @@ async def clean(
     body: ExportCleanRequest,
     holder: ProjectHolder = Depends(get_project_holder),
 ):
-    """Permanently delete the selected runs' log files and monitoring
-    recordings. protocols_historic/ is never touched."""
+    """Permanently delete the selected runs' log files, run manifests and
+    monitoring recordings. protocols_historic/ is never touched."""
     project_dir = _project_dir(holder)
     try:
         return export_service.clean(project_dir, body.logs)

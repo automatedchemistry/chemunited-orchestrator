@@ -18,8 +18,8 @@ my_experiment/                       ← working directory (source of truth)
 ├── __init__.py                      ← top-level package marker
 ├── main.py                          ← entry point: run the configured sequence
 │
-├── .git/                            ← version history (never packed)
-├── .gitignore                       ← excludes __pycache__, connectivity, etc.
+├── .git/                            ← the user's own version history, if any (never packed)
+├── .gitignore                       ← excludes __pycache__, connectivity, log/, run.lock, etc.
 │
 ├── draw/
 │   ├── setup.py                     ← Python draw setup script
@@ -266,8 +266,14 @@ from the protocol history snapshot and the execution timestamp:
 
 ```
 log/
-└── react_2026-03-27T16-18-00__2026-03-27T19-20-00.log
+├── react_2026-03-27T16-18-00_executed_2026-03-27T19-20-00.log
+└── manifests/
+    └── react_2026-03-27T16-18-00_2026-03-27T19-20-00.json
 ```
+
+Each run also writes a manifest to `log/manifests/`: the protocol that ran, its
+options and outcome, the software versions and, when the project is in a git
+repository, its commit. The dashboard's Export page zips it with the run's log.
 
 The `log/` folder is local runtime output. It is created with the project, but
 it is excluded from Git and from `.chemunited` exports.
@@ -394,7 +400,7 @@ Create log/  (local execution logs, ignored by Git/export)
 Create draw/setup.py  (empty canvas)
 Create draw/platform.svg  (generated platform drawing)
 Create connectivity/associations.json  (empty)
-Init Git repo → first commit "Initialize ChemUnited project"
+Write .gitignore  (for users who version the project with git)
 ```
 
 ### Open existing project (directory)
@@ -403,7 +409,6 @@ Init Git repo → first commit "Initialize ChemUnited project"
 User selects a directory
         ↓
 Load manifest.json
-Open Git repo if .git/ present
 Load draw/setup.py → call build_draw(platform) and reconstruct ComponentData / EdgeData
 Load protocols via import protocols.PROCESSES / protocols.CONFIGS
 Ensure protocols_historic/ exists
@@ -420,7 +425,6 @@ If my_experiment/ already contains manifest.json, open that directory
         ↓
 Otherwise unpack ZIP → my_experiment/ (next to the .chemunited file)
 Load manifest.json
-Open existing Git repo, or init fresh Git repo after unpacking
 Continue as open existing project
 ```
 
@@ -461,34 +465,24 @@ not inputs.
 
 ---
 
-## Git Integration
+## Versioning
 
-The `.git` folder lives in the working directory and is **never** packed
-into the `.chemunited` file. When a project is imported from a
-`.chemunited` file, a fresh Git repo is initialised — history does not
-transfer through the archive.
+ChemUnited doesn't version projects: it never creates a repository or
+commits. Users who want history keep the working directory, or a folder
+above it, in a git repository of their own and commit with git. Projects
+that already have a `.git` folder (older ChemUnited versions created one)
+keep it untouched.
 
-Auto-commits are created silently on every save:
+Every project gets a `.gitignore` (`project/gitignore.py`), so such a
+repository leaves out what belongs to one machine or one run:
+`connectivity/associations.json` (device addresses), `log/`, `run.lock` and
+`simulations/`. The `.git` folder is **never** packed into the `.chemunited`
+file, so history doesn't travel through the archive.
 
-| User action | Commit message |
-|---|---|
-| Save Draw canvas | `Update platform layout` (`draw/setup.py` + `draw/platform.svg`) |
-| Save process file | `Update process: react` |
-| Add new process | `Add process: react` |
-| Delete process | `Remove process: react` |
-| Save main parameters | `Update main parameters` |
-
-Manual snapshots (user-facing) stage everything and commit with a
-user-provided message, producing clean meaningful history entries like:
-
-```
-* 8b1d4f2  Optimized flow rate for acceptor step   (today)
-* 3c9a7e0  Working calibration — first clean run   (yesterday)
-* 1e4c5a9  Initial platform layout                 (3 days ago)
-```
-
-`connectivity/associations.json` is excluded from Git by `.gitignore`
-because device addresses are machine-specific.
+The work-server (`chemunited-workflow`) reads the repository's commit when it
+loads the project, and records it in every run's manifest under
+`log/manifests/`, so a run can be traced back to the project version that
+ran it.
 
 ---
 
@@ -499,7 +493,7 @@ because device addresses are machine-specific.
 | `project/manifest.py` | Read / write `manifest.json` |
 | `project/storage.py` | All file I/O — pack, unpack, draw, process sync/update, parameters, connectivity |
 | `project/platform_svg.py` | Export the current Qt platform scene to `draw/platform.svg` |
-| `project/git_manager.py` | All Git operations — init, commit, snapshot, status, remote |
-| `project/session.py` | Single entry point for the GUI — orchestrates storage + Git |
+| `project/gitignore.py` | Write the project's `.gitignore`, and add missing rules to an existing one |
+| `project/session.py` | Single entry point for the GUI — orchestrates storage |
 | `project/writer.py` | Generate new `.py` files from Qt resource templates |
 | `shared/resources/scripts/process.txt` | Template for new process files |

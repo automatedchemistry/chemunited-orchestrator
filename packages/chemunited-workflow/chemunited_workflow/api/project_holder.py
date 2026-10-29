@@ -8,6 +8,7 @@ from pathlib import Path
 
 from chemunited_workflow.command_events import CommandObserver
 from chemunited_workflow.project_loader import ProjectModules
+from chemunited_workflow.provenance import GitState, read_git_state
 
 from .device_state import DeviceStateStore, PictureDeriver
 from .monitoring_store import MonitoringStore
@@ -78,6 +79,7 @@ class ProjectHolder:
         self._runner_service: RunnerService | None = None
         self._monitoring_service: MonitoringService | None = None
         self._device_state: DeviceStateStore | None = None
+        self._git_state: GitState | None = None
 
     # ── Read accessors ────────────────────────────────────────────────────────
 
@@ -106,6 +108,12 @@ class ProjectHolder:
         """The live state of the loaded project's devices (see ``device_state``)."""
         with self._lock:
             return self._device_state
+
+    @property
+    def git_state(self) -> GitState | None:
+        """The loaded project's git state when it was loaded (None without git)."""
+        with self._lock:
+            return self._git_state
 
     @property
     def run_store(self) -> RunStore:
@@ -141,8 +149,11 @@ class ProjectHolder:
 
         Builds fresh ``ProtocolService`` and ``RunnerService`` instances (reusing
         the same ``RunStore``) and a fresh device state store, in which every
-        device starts unknown, then swaps them under the lock.
+        device starts unknown, then swaps them under the lock. The project's
+        git commit is read now, as its process code was just imported: every
+        run's manifest records it.
         """
+        git_state = read_git_state(modules.project_dir)
         new_monitoring = MonitoringService(
             project_dir=modules.project_dir,
             store=self._monitoring_store,
@@ -168,6 +179,7 @@ class ProjectHolder:
             run_store=self._run_store,
             monitoring_service=new_monitoring,
             device_state=new_device_state,
+            git_state=git_state,
         )
         self._run_store.set_project_dir(modules.project_dir)
         self._monitoring_store.set_reading_listener(new_device_state.record_reading)
@@ -177,3 +189,4 @@ class ProjectHolder:
             self._runner_service = new_runner
             self._monitoring_service = new_monitoring
             self._device_state = new_device_state
+            self._git_state = git_state

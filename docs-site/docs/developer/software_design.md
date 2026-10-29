@@ -29,8 +29,10 @@ save as: <code>docs/_static/suite_architecture.svg</code>, then replace this blo
 
 ## The Project Directory
 
-Every ChemUnited project is a plain, git-versioned directory — there is no hidden database. A `.chemunited` file
-is simply this directory zipped up for sharing or backup.
+Every ChemUnited project is a plain directory — there is no hidden database. A `.chemunited` file is simply this
+directory zipped up for sharing or backup. ChemUnited doesn't version it: users who want history keep the directory
+in a git repository of their own, and the work-server then records the repository's commit in each run's manifest
+(`log/manifests/<run_id>.json`, see [Export](../dashboard/export.md)).
 
 ```text
 my_project/

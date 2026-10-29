@@ -399,18 +399,8 @@ class SetupWindow(MainWindowBase):
         self._update_nav_item.setEnabled(False)
         self._pending_updates: list = []
 
-    _SAVE_COMMENTS = {
-        SetupStepMode.DESIGN: "Save: design updated",
-        SetupStepMode.PROTOCOLS: "Save: protocols updated",
-        SetupStepMode.CONNECTIVITY: "Save: connectivity updated",
-    }
-
     def save(self) -> None:
-        current_widget = self.SegmentWindow.stackedWidget.currentWidget()
-        classification = getattr(current_widget, "classification", SetupStepMode.DESIGN)
-        step = self._setup_step_mode(classification)
-        comment = self._SAVE_COMMENTS.get(step, "Save: project updated")  # type: ignore[arg-type]
-        self.orchestrator.save(comment)
+        self.orchestrator.save()
         self.update_project_actions()
 
     def add_project(self):

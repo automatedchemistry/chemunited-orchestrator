@@ -14,6 +14,7 @@ from fastapi.testclient import TestClient
 from tests.helpers import LOOPBACK_CLIENT, make_project_tree
 
 from chemunited_workflow.api import create_api
+from chemunited_workflow.provenance import GitState
 
 FIXTURES = Path(__file__).parent.parent / "fixtures"
 
@@ -332,6 +333,9 @@ def test_pause_active_run(client):
     pr = client.post("/run/pause")
     # 409 if the run raced to a terminal state before the pause landed.
     assert pr.status_code in (204, 409)
+    # A paused run never ends on its own: left behind, its thread outlives the
+    # test and slows every later one.
+    client.delete("/run/")
 
 
 def test_pause_when_already_paused_returns_409(app, client):
@@ -1138,6 +1142,45 @@ def test_put_project_success(tmp_path):
         r = bare_client.put("/project/", json={"project_dir": str(tmp_path)})
     assert r.status_code == 200
     assert r.json()["project_dir"] == str(tmp_path.resolve())
+
+
+def test_project_reports_the_git_state_read_at_load(tmp_path, mocker):
+    _write_valid_protocols_package(tmp_path)
+    mocker.patch(
+        "chemunited_workflow.api.project_holder.read_git_state",
+        return_value=GitState(
+            commit="a" * 40,
+            branch="main",
+            dirty=True,
+            changed=("protocols/react.py",),
+            captured_at="2026-10-28T09:00:00+01:00",
+        ),
+    )
+    app = create_api()
+    with TestClient(app, client=LOOPBACK_CLIENT) as bare_client:
+        put = bare_client.put("/project/", json={"project_dir": str(tmp_path)})
+        get = bare_client.get("/project/")
+    expected = {
+        "commit": "a" * 40,
+        "branch": "main",
+        "dirty": True,
+        "changed": ["protocols/react.py"],
+        "captured_at": "2026-10-28T09:00:00+01:00",
+    }
+    assert put.json()["git"] == expected
+    assert get.json()["git"] == expected
+
+
+def test_project_without_git_reports_no_git_state(tmp_path, mocker):
+    _write_valid_protocols_package(tmp_path)
+    mocker.patch(
+        "chemunited_workflow.api.project_holder.read_git_state", return_value=None
+    )
+    app = create_api()
+    with TestClient(app, client=LOOPBACK_CLIENT) as bare_client:
+        assert bare_client.get("/project/").json()["git"] is None
+        r = bare_client.put("/project/", json={"project_dir": str(tmp_path)})
+    assert r.json()["git"] is None
 
 
 def test_put_project_missing_files(tmp_path):
