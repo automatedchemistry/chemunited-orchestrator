@@ -21,7 +21,6 @@ CONNECTION_NAME = "PumpA_2_PumpB_1"
 
 
 class TestAddConnection:
-
     @pytest.fixture
     def window(self, qtbot: QtBot):
         w = SetupWindow()

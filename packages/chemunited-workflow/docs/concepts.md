@@ -77,8 +77,8 @@ Use `ChemUnitQuantity` from `chemunited-quantities` for values that carry SI uni
 from chemunited_quantities import ChemUnitQuantity
 
 volume = ChemUnitQuantity.parse("500 ul")
-double = volume * 2          # 1000 ul
-in_ml  = volume.to("ml")     # 0.5 ml
+double = volume * 2  # 1000 ul
+in_ml = volume.to("ml")  # 0.5 ml
 ```
 
 Units are validated and propagated through arithmetic. Import

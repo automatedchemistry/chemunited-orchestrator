@@ -9,7 +9,6 @@ from chemunited_core.components import JunctionData
 
 
 class Body(SceneItem):
-
     def __init__(self, data: JunctionData, parent=None):
 
         radius = int(40 * max(7, data.number_ports) / 10)
@@ -26,7 +25,6 @@ class Body(SceneItem):
         x1, y1 = 0, 0
 
         for port in self._data.ports_by_number.values():
-
             x2, y2 = port.relative_position
 
             p1 = QPointF(x1, y1)

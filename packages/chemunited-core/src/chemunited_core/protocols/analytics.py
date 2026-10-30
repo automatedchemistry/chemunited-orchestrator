@@ -35,7 +35,6 @@ class HPLCRunSampleParameter(CommandSignature):
 
 
 class HPLCControlProtocols(ComponentProtocol):
-
     def __init__(self, name: str):
         super().__init__(name)
         self.commands["send-method"] = HPLCSendMethodParameter
@@ -57,7 +56,6 @@ class MSRunSampleParameter(CommandSignature):
 
 
 class MSControlProtocols(ComponentProtocol):
-
     def __init__(self, name: str):
         super().__init__(name)
         self.commands["run-sample"] = MSRunSampleParameter
@@ -120,7 +118,6 @@ class NMRStopParameter(CommandSignature):
 
 
 class NMRControlProtocols(ComponentProtocol):
-
     def __init__(self, name: str):
         super().__init__(name)
         self.commands["solvent"] = NMRSolventParameter
@@ -146,7 +143,6 @@ class IRStartExperimentParameter(CommandSignature):
 
 
 class IRControlProtocols(ComponentProtocol):
-
     def __init__(self, name: str):
         super().__init__(name)
         self.commands["acquire-spectrum"] = IRAcquireSpectrumParameter

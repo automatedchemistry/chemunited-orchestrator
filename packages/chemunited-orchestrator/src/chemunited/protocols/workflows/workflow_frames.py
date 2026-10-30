@@ -27,6 +27,7 @@ from chemunited.protocols.workflows.naming import (
     process_class_name,
     process_config_class_name,
 )
+from chemunited.shared.editor import get_process_editor_window_class
 from chemunited.shared.editor.parameters.main import MainParametersEditor
 from chemunited.shared.editor.protocols.command import CommandEditorDialog
 from chemunited.shared.editor.protocols.command_list import CommandList
@@ -607,12 +608,28 @@ class WorkflowGraph(GraphCore):
             return
 
         class_name = process_class_name(data.process)
-        if (
-            self._script_editor is None
-            or self._script_editor.editor.path != script_path
-        ):
-            self._dispose_auxiliary_window("_script_editor")
-            self._script_editor = ProcessScriptEditorWindow(
+        # Reuse the Monaco editor window across process blocks (tabs);
+        # QScintilla windows stay one-file-per-window (dispose + recreate).
+        if self._script_editor is not None:
+            if self._script_editor.editor.path != script_path:
+                if hasattr(self._script_editor, "open_file"):
+                    self._script_editor.open_file(script_path, class_name=class_name)
+                else:
+                    self._dispose_auxiliary_window("_script_editor")
+                    editor_cls = get_process_editor_window_class()
+                    self._script_editor = editor_cls(
+                        path=script_path,
+                        class_name=class_name,
+                        main_parameters_path=script_path.parent / "main_parameters.py",
+                        parent=self,
+                    )
+                    self._script_editor.metadata_saved.connect(
+                        self._update_block_metadata
+                    )
+        else:
+            # Respects USE_MONACO_EDITOR: returns Monaco or QScintilla window
+            editor_cls = get_process_editor_window_class()
+            self._script_editor = editor_cls(
                 path=script_path,
                 class_name=class_name,
                 main_parameters_path=script_path.parent / "main_parameters.py",
@@ -1327,6 +1344,22 @@ class WorkflowGraph(GraphCore):
         self._clear_selected_port()
         self.controller.clear_workflow()
 
+    def _push_script_to_editor(self, script_path: Path, source: str) -> None:
+        """Refresh the text of an already-open script window (QScintilla or Monaco).
+
+        QScintilla windows keep a protected zone whose line numbers would
+        drift after a full rewrite, so clear it when the API is present.
+        """
+        editor_window = self._script_editor
+        if editor_window is None or not editor_window.isVisible():
+            return
+        if editor_window.editor.path != script_path:
+            return
+        clear_zone = getattr(editor_window.editor, "clear_protected_zone", None)
+        if clear_zone is not None:
+            clear_zone()
+        editor_window.editor.setText(source)
+
     def _sync_process_script(self) -> bool:
         orchestrator = getattr(self.parent_ref, "orchestrator", None)
         working_dir = getattr(orchestrator, "working_dir", None)
@@ -1356,8 +1389,7 @@ class WorkflowGraph(GraphCore):
             and self._script_editor.editor.path == script_path
         ):
             source = script_path.read_text(encoding="utf-8")
-            self._script_editor.editor.clear_protected_zone()
-            self._script_editor.editor.setText(source)
+            self._push_script_to_editor(script_path, source)
         return True
 
     def _ensure_loop_iteration_guidance(self, method_name: str) -> bool:
@@ -1387,8 +1419,7 @@ class WorkflowGraph(GraphCore):
             and self._script_editor.isVisible()
             and self._script_editor.editor.path == script_path
         ):
-            self._script_editor.editor.clear_protected_zone()
-            self._script_editor.editor.setText(updated)
+            self._push_script_to_editor(script_path, updated)
         return True
 
     def sync_script(self, method_name: str = "", removed: bool = False) -> bool:
@@ -1518,8 +1549,7 @@ class WorkflowGraph(GraphCore):
             and self._script_editor.isVisible()
             and self._script_editor.editor.path == script_path
         ):
-            self._script_editor.editor.clear_protected_zone()
-            self._script_editor.editor.setText(new_source)
+            self._push_script_to_editor(script_path, new_source)
         return True
 
     def _update_command_script(self, method_name: str, sig: CommandSignature) -> None:
@@ -1555,8 +1585,7 @@ class WorkflowGraph(GraphCore):
             and self._script_editor.isVisible()
             and self._script_editor.editor.path == script_path
         ):
-            self._script_editor.editor.clear_protected_zone()
-            self._script_editor.editor.setText(new_source)
+            self._push_script_to_editor(script_path, new_source)
 
     def _update_block_metadata(
         self,

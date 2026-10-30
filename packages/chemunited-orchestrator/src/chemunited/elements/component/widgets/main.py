@@ -17,6 +17,8 @@ if TYPE_CHECKING:
 
 
 class ComponentWidget(WindowBase):
+    QSS_FILE: str = "main_window.qss"
+
     def __init__(
         self, component: Union[UtensilManager, ElectronicManager], parent=None
     ):

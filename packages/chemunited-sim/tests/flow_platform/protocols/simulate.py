@@ -18,7 +18,6 @@ class ProcessConfig(BaseModel):
 
 
 class CustomProcess(Process[ProcessConfig]):
-
     def build_workflow(self) -> nx.DiGraph:
         G = nx.DiGraph()
 

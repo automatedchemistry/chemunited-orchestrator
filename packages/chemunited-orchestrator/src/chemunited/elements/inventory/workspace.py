@@ -38,6 +38,7 @@ from qfluentwidgets import (
     SwitchButton,
     TableWidget,
     ToolButton,
+    isDarkTheme,
 )
 
 from chemunited.orchestrator.inventory_state import ensure_air_defaults
@@ -192,7 +193,7 @@ class _CapacityBar(QWidget):
             painter.drawRect(gas_rect)
         if total > capacity + _CAPACITY_TOLERANCE_M3:
             painter.setBrush(Qt.NoBrush)  # type: ignore[arg-type, attr-defined]
-            painter.setPen(QPen(QColor("#dc2626"), 2))
+            painter.setPen(QPen(QColor("#f28b82" if isDarkTheme() else "#dc2626"), 2))
             painter.drawRoundedRect(rect, 4, 4)
 
 
@@ -870,7 +871,9 @@ class InventoryWorkspace(QWidget):
                 item = QTableWidgetItem(value)
                 item.setData(Qt.UserRole, entry.identity)  # type: ignore[attr-defined]
                 if column == 6 and self._is_over_capacity(entry):
-                    item.setForeground(QColor("#dc2626"))
+                    item.setForeground(
+                        QColor("#f28b82" if isDarkTheme() else "#dc2626")
+                    )
                 self.table.setItem(row, column, item)
         self.table.blockSignals(False)
         self.empty_overview_label.setVisible(not self._entries)
@@ -1050,7 +1053,9 @@ class InventoryWorkspace(QWidget):
             self.capacity_detail.setText(
                 f"Over capacity by {_format_volume(-remaining)}"
             )
-            self.capacity_detail.setStyleSheet("color: #dc2626;")
+            self.capacity_detail.setStyleSheet(
+                "color: #f28b82;" if isDarkTheme() else "color: #dc2626;"
+            )
         else:
             self.capacity_detail.setText(
                 f"Liquid {_format_volume(liquid)} · Gas {_format_volume(gas)} · "

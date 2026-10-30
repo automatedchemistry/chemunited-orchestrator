@@ -10,7 +10,6 @@ QIODEVICE_TEXT = getattr(QIODevice, "Text")
 
 
 class ThemedLexerPython(QsciLexerPython):
-
     TOKEN_MAP = {
         "Default": QsciLexerPython.Default,
         "Comment": QsciLexerPython.Comment,

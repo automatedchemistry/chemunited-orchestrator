@@ -299,7 +299,11 @@ class ApiProcess(QObject):
             logger.error(
                 "API subprocess exited unexpectedly: exit_code={}, status={}.",
                 exit_code,
-                "CrashExit" if exit_status == QProcess.ExitStatus.CrashExit else "NormalExit",  # type: ignore[attr-defined]
+                (
+                    "CrashExit"
+                    if exit_status == QProcess.ExitStatus.CrashExit
+                    else "NormalExit"
+                ),  # type: ignore[attr-defined]
             )
             if not self._stopped:
                 self.api_alive.emit(False)

@@ -97,8 +97,7 @@ class ProjectSession:
                 )
             if any(target.iterdir()) and not ProjectManifest.exists(target):
                 raise FileExistsError(
-                    "Cannot import archive into an existing non-project path: "
-                    f"{target}"
+                    f"Cannot import archive into an existing non-project path: {target}"
                 )
 
         unpack(chemunited_file, target)

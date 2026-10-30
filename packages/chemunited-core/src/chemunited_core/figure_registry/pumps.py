@@ -31,7 +31,6 @@ def _finite_pump_duration(rate: object, volume: object) -> float:
 
 @dataclass
 class HPLCPumpData(PumpData):
-
     @override
     def apply(self, command: str, **kwargs) -> PutResult:
         if command == "infuse":

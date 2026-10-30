@@ -137,9 +137,7 @@ def test_call_custom_route_exception_is_captured_not_raised(tmp_path):
     _write_associations(tmp_path)
     _write_hook(
         tmp_path,
-        "def boom():\n"
-        "    raise ValueError('nope')\n"
-        "CUSTOM_ROUTES = {'boom': boom}\n",
+        "def boom():\n    raise ValueError('nope')\nCUSTOM_ROUTES = {'boom': boom}\n",
     )
     result = call_custom_route(tmp_path, "boom", {})
     assert result["ok"] is False

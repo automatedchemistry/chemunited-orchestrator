@@ -257,9 +257,9 @@ liq_content = reactor.internal_inventory.liq_content
 gas_content = reactor.internal_inventory.gas_content
 print(
     f"\nReactor initial inventory:"
-    f"\n  Liquid {liq_content.volume*1e6:.1f} mL  "
+    f"\n  Liquid {liq_content.volume * 1e6:.1f} mL  "
     f"reagent_a={liq_content.initial_species['reagent_a']:.2e} mol"
-    f"\n  Gas    {gas_content.volume*1e6:.1f} mL  "
+    f"\n  Gas    {gas_content.volume * 1e6:.1f} mL  "
     f"nitrogen={gas_content.initial_species['nitrogen']:.3f} mol"
 )
 
@@ -555,15 +555,14 @@ worker = Worker(
 T_VALVE_SWITCH = 20.0  # time to rotate the valve (seconds)
 valve_switched = False
 
-print(f"\n{'-'*58}")
+print(f"\n{'-' * 58}")
 print(f" Running:  dt={cfg.dt} s,  t_end={cfg.t_end} s")
 print(" Valve starts in COLLECT position (port 0 <-> port 1)")
-print(f"{'-'*58}")
+print(f"{'-' * 58}")
 
 _REPORT_AT = {10.0, 20.0, 30.0, 40.0, 50.0, 60.0}
 
 while round(worker.t / cfg.dt) <= round(cfg.t_end / cfg.dt):
-
     # Switch valve at T_VALVE_SWITCH
     if not valve_switched and worker.t >= T_VALVE_SWITCH - cfg.dt * 0.5:
         divertvalve.rotor_ports = rotate_rotor(divertvalve.rotor_ports, clockwise=True)
@@ -597,9 +596,9 @@ while round(worker.t / cfg.dt) <= round(cfg.t_end / cfg.dt):
 # Close recorder (Worker.step() does not close it; only Worker.run() does)
 recorder.close()
 
-print(f"\n{'-'*58}")
+print(f"\n{'-' * 58}")
 print(" Simulation complete")
-print(f"{'-'*58}")
+print(f"{'-' * 58}")
 
 
 # ---------------------------------------------------------------------------
@@ -616,8 +615,8 @@ conv_pct = (n_a_init - n_a_final) / n_a_init * 100 if n_a_init > 0 else 0.0
 print("\n-- Reactor final inventory --")
 print(f"  Pressure   : {inv.pressure / ATMOSPHERE_PRESSURE_PA:.4f} bar")
 print(f"  Temperature: {inv.temperature:.3f} K")
-print(f"  Liq volume : {inv.liq_volume*1e6:.3f} mL")
-print(f"  Gas volume : {inv.gas_volume*1e6:.3f} mL")
+print(f"  Liq volume : {inv.liq_volume * 1e6:.3f} mL")
+print(f"  Gas volume : {inv.gas_volume * 1e6:.3f} mL")
 print(f"  reagent_a  : {n_a_final:.4e} mol  (init {n_a_init:.4e})")
 print(f"  product_b  : {n_b_final:.4e} mol")
 print(f"  Conversion : {conv_pct:.1f} %")
@@ -671,7 +670,7 @@ if hyd is not None:
     for eid in key_edges:
         q_flow = hyd.flows.get(eid)
         if q_flow is not None:
-            print(f"  {eid:<28s}: {q_flow*1e9:+.3f} nL/s")
+            print(f"  {eid:<28s}: {q_flow * 1e9:+.3f} nL/s")
 
 # SQLite summary
 print(f"\n-- SQLite: {db_path.name} --")
@@ -708,9 +707,9 @@ try:
 finally:
     conn.close()
 
-print(f"\n{'='*58}")
+print(f"\n{'=' * 58}")
 print(" Example finished successfully.")
-print(f"{'='*58}")
+print(f"{'=' * 58}")
 
 
 html_path = _sim_dir / f"fullplatform_{_ts}.html"

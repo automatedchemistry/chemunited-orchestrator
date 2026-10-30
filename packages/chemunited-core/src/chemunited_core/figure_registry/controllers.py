@@ -8,7 +8,6 @@ from chemunited_quantities import ChemUnitQuantity
 
 @dataclass
 class MFCComponentData(MassFlowControllerData):
-
     @override
     def apply(self, command: str, **kwargs) -> PutResult:
         if command == "set-flow-rate":

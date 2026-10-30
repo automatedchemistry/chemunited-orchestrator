@@ -28,7 +28,9 @@ class FlaskContent(SceneItem):
 
     def content_color(self, iventory=DEFAULT_INVENTORY_KEY) -> QColor:
         if getattr(self.parent_ref, "inf", None) and getattr(
-            self.parent_ref.inf, "internal_inventories", None  # type: ignore
+            self.parent_ref.inf,
+            "internal_inventories",
+            None,  # type: ignore
         ):
             volume_content: VolumeContentBase
             for key, volume_content in self.parent_ref.inf.internal_inventories.items():  # type: ignore

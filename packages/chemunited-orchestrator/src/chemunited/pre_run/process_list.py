@@ -207,7 +207,9 @@ class ProcessDoubleList(QWidget):
     def connect_signals(self) -> None:
         self.available_list.activate_requested.connect(self._activate_process)  # type: ignore[attr-defined]
         self.active_list.remove_requested.connect(self._remove_active_process)  # type: ignore[attr-defined]
-        self.active_list.access_parameters_requested.connect(self.process_parameters_dialog)  # type: ignore[attr-defined]
+        self.active_list.access_parameters_requested.connect(
+            self.process_parameters_dialog
+        )  # type: ignore[attr-defined]
         self.main_params_button.clicked.connect(self.main_parameters_dialog)  # type: ignore[attr-defined]
         self.save_button.clicked.connect(self.save_protocols)  # type: ignore[attr-defined]
 

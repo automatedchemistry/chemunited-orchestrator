@@ -188,12 +188,17 @@ from __future__ import annotations
 import networkx as nx
 from pydantic import BaseModel, ConfigDict
 from chemunited_workflow import (
-    NodeExecutionContext, Process, WorkflowEdgeSpec, WorkflowNodeSpec,
+    NodeExecutionContext,
+    Process,
+    WorkflowEdgeSpec,
+    WorkflowNodeSpec,
 )
+
 
 class ProcessConfig(BaseModel):
     model_config = ConfigDict(frozen=True)
     # Add process-level fields here using the same Field() pattern as MainParameter
+
 
 class CustomProcess(Process[ProcessConfig]):
     def build_workflow(self) -> nx.DiGraph:
@@ -203,6 +208,7 @@ class CustomProcess(Process[ProcessConfig]):
 
     def start(self, ctx: NodeExecutionContext) -> bool: ...
     def finish(self, ctx: NodeExecutionContext) -> bool: ...
+
     # one method per node ...
 ```
 
@@ -212,12 +218,12 @@ graph.add_node(
     "<node_id>",
     **WorkflowNodeSpec(
         node_id="<node_id>",
-        method="<method_name>",   # must match a method of CustomProcess
+        method="<method_name>",  # must match a method of CustomProcess
         label="Optional label",
         description="Optional tooltip",
-        position=(x, y),          # canvas layout only, no effect on execution
+        position=(x, y),  # canvas layout only, no effect on execution
     ).model_dump(exclude_none=True),
-    block_tag="<tag>",            # "start" | "end" | "script" | "if" | "loop" | "command"
+    block_tag="<tag>",  # "start" | "end" | "script" | "if" | "loop" | "command"
 )
 ```
 
@@ -228,7 +234,8 @@ Every graph requires exactly two special nodes:
 **Workflow edges — `graph.add_edge()`:**
 ```python
 graph.add_edge(
-    "<from_node>", "<to_node>",
+    "<from_node>",
+    "<to_node>",
     **WorkflowEdgeSpec(condition=True).model_dump(exclude_none=True),
 )
 ```

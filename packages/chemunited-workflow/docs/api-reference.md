@@ -158,6 +158,7 @@ A registered function can read a real device by importing `MonitoringContext` an
 ```python
 from chemunited_workflow import MonitoringContext
 
+
 def chiller_temperature_f():
     celsius = MonitoringContext.platform["chiller"].get("temperature")
     return celsius * 9 / 5 + 32
@@ -169,6 +170,7 @@ A custom source can also act as a safety interlock. `MonitoringContext.stop_run(
 
 ```python
 from chemunited_workflow import MonitoringContext
+
 
 def reactor_pressure():
     bar = MonitoringContext.platform["reactor"].get("pressure")
@@ -314,15 +316,20 @@ The same extensibility shape as [custom routes](#custom-routes): an optional `{p
 # customizations/export/export_hook.py
 from pathlib import Path
 
-def build_zip(project_dir: Path, logs: list[str]) -> bytes:
-    ...  # build and return your own zip bytes for the selected runs
 
-def clean(project_dir: Path, logs: list[str]) -> dict:
-    ...  # delete whatever you like for the selected runs, return {"deleted": [...], "count": N}
+def build_zip(
+    project_dir: Path, logs: list[str]
+) -> bytes: ...  # build and return your own zip bytes for the selected runs
+
+
+def clean(
+    project_dir: Path, logs: list[str]
+) -> dict: ...  # delete whatever you like for the selected runs, return {"deleted": [...], "count": N}
+
 
 EXPORT_HOOKS = {
     "build_zip": build_zip,  # optional — omit to keep the default zip contents
-    "clean": clean,          # optional — omit to keep the default clean behavior
+    "clean": clean,  # optional — omit to keep the default clean behavior
 }
 ```
 
@@ -356,6 +363,7 @@ A registered function can reach a real device by importing `CustomRouteContext` 
 
 ```python
 from chemunited_workflow import CustomRouteContext
+
 
 def purge_reactor(volume_ml: float) -> dict:
     platform = CustomRouteContext.platform

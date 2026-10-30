@@ -63,26 +63,51 @@ Only `ui_hook.py` is required; the folder names are conventions. Start with `che
 
 ```python
 from chemunited_workflow.ui import (
-    ActionField, Brand, Dashboard, HtmlPage, NavItem, PageAction, ProtocolsPage, VuePage, Widget,
+    ActionField,
+    Brand,
+    Dashboard,
+    HtmlPage,
+    NavItem,
+    PageAction,
+    ProtocolsPage,
+    VuePage,
+    Widget,
 )
 
 DASHBOARD = Dashboard(
-    brand=Brand(title="Auto Glycan Assembly", subtitle="Protocol Execution Layers", monogram="AGA"),
+    brand=Brand(
+        title="Auto Glycan Assembly",
+        subtitle="Protocol Execution Layers",
+        monogram="AGA",
+    ),
     theme_css="theme.css",
     pages=[
-        VuePage(path="/sensors", label="Sensors", component="pages/SensorsView.vue",
-                icon="assets/sensors.svg", after="/monitoring"),
-        HtmlPage(path="/report", label="Report", render=build_report, refresh_seconds=30),
+        VuePage(
+            path="/sensors",
+            label="Sensors",
+            component="pages/SensorsView.vue",
+            icon="assets/sensors.svg",
+            after="/monitoring",
+        ),
+        HtmlPage(
+            path="/report", label="Report", render=build_report, refresh_seconds=30
+        ),
     ],
     nav=[NavItem(path="/logs", label="Run logs")],
     actions=[
-        PageAction(page="export", route="save_to_chemotion", label="Save to Chemotion",
-                   context={"logs": "selection"},
-                   fields=[ActionField("username", label="Chemotion username", remember=True)]),
+        PageAction(
+            page="export",
+            route="save_to_chemotion",
+            label="Save to Chemotion",
+            context={"logs": "selection"},
+            fields=[ActionField("username", label="Chemotion username", remember=True)],
+        ),
     ],
     widgets=[Widget(slot="dashboard.cards", component="widgets/ReactorCard.vue")],
-    protocols=ProtocolsPage(process_categories={"command_": "Commands", "module_": "Modules"},
-                            other_label="Processes"),
+    protocols=ProtocolsPage(
+        process_categories={"command_": "Commands", "module_": "Modules"},
+        other_label="Processes",
+    ),
 )
 ```
 

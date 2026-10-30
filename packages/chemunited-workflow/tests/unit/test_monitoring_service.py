@@ -385,8 +385,9 @@ def test_one_device_failing_does_not_block_other(svc):
     )
     svc.start()
     assert _wait_until(
-        lambda: "pump::value" in svc.get_latest()
-        and "valve::position" in svc.get_latest()
+        lambda: (
+            "pump::value" in svc.get_latest() and "valve::position" in svc.get_latest()
+        )
     )
     svc.stop()
 
@@ -803,8 +804,9 @@ def test_custom_source_does_not_block_real_component_poll(svc, tmp_path):
     )
     svc.start()
     assert _wait_until(
-        lambda: "pump::value" in svc.get_latest()
-        and "custom::derived" in svc.get_latest()
+        lambda: (
+            "pump::value" in svc.get_latest() and "custom::derived" in svc.get_latest()
+        )
     )
     svc.stop()
 

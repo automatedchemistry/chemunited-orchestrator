@@ -1,0 +1,736 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monaco Editor</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+            font-size: 13px;
+        }
+
+        /* ---------- theme variables ---------- */
+        body.theme-dark {
+            --chrome-bg: #1e1e1e;
+            --chrome-fg: #cccccc;
+            --chrome-border: #2b2b2b;
+            --chrome-hover: #2a2d2e;
+            --chrome-active: #37373d;
+            --tab-active-bg: #1e1e1e;
+            --tab-inactive-bg: #2d2d2d;
+            --tab-active-fg: #ffffff;
+            --tab-inactive-fg: #969696;
+            --accent: #0e639c;
+            --accent-text: #ffffff;
+            --dirty-dot: #e2c08d;
+            --scrollbar: #4f4f4f;
+        }
+        body.theme-light {
+            --chrome-bg: #f3f3f3;
+            --chrome-fg: #333333;
+            --chrome-border: #d4d4d4;
+            --chrome-hover: #e4e4e4;
+            --chrome-active: #d6ebff;
+            --tab-active-bg: #ffffff;
+            --tab-inactive-bg: #ececec;
+            --tab-active-fg: #1e1e1e;
+            --tab-inactive-fg: #616161;
+            --accent: #0078d4;
+            --accent-text: #ffffff;
+            --dirty-dot: #b8860b;
+            --scrollbar: #c0c0c0;
+        }
+
+        /* ---------- layout ---------- */
+        #app {
+            display: flex;
+            width: 100%;
+            height: 100%;
+        }
+
+        /* ---------- main column ---------- */
+        #main {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            min-width: 0;
+        }
+
+        /* ---------- tab bar ---------- */
+        #tabbar {
+            display: flex;
+            flex-direction: row;
+            align-items: stretch;
+            height: 34px;
+            background: var(--chrome-bg);
+            border-bottom: 1px solid var(--chrome-border);
+            overflow-x: auto;
+            overflow-y: hidden;
+            flex: none;
+        }
+        #tabbar::-webkit-scrollbar { height: 4px; }
+        #tabbar::-webkit-scrollbar-thumb { background: var(--scrollbar); border-radius: 2px; }
+        .tab {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 0 10px;
+            max-width: 220px;
+            background: var(--tab-inactive-bg);
+            color: var(--tab-inactive-fg);
+            border-right: 1px solid var(--chrome-border);
+            cursor: pointer;
+            flex: none;
+            font-size: 12px;
+            position: relative;
+        }
+        .tab.active {
+            background: var(--tab-active-bg);
+            color: var(--tab-active-fg);
+        }
+        .tab.active::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            height: 2px;
+            background: var(--accent);
+        }
+        .tab .tab-name {
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .tab .dirty-dot {
+            color: var(--dirty-dot);
+            font-size: 14px;
+            line-height: 1;
+            flex: none;
+            visibility: hidden;
+        }
+        .tab.dirty .dirty-dot {
+            visibility: visible;
+        }
+        .tab .close {
+            flex: none;
+            width: 16px;
+            height: 16px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border-radius: 3px;
+            font-size: 14px;
+            line-height: 1;
+            opacity: 0.6;
+        }
+        .tab .close:hover {
+            background: var(--chrome-hover);
+            opacity: 1;
+        }
+
+        /* ---------- editor ---------- */
+        #container {
+            flex: 1;
+            min-height: 0;
+        }
+    </style>
+</head>
+<body class="theme-dark">
+    <div id="app">
+        <div id="main">
+            <div id="tabbar"></div>
+            <div id="container"></div>
+        </div>
+    </div>
+
+    <script src="qrc:///qtwebchannel/qwebchannel.js"></script>
+    <script src="vs/loader.js"></script>
+    <script>
+        // Configure Monaco loader
+        require.config({ paths: { vs: 'vs' } });
+
+        // Python <-> JS bridge (provided by QWebChannel when available)
+        window.pybridge = null;
+        if (typeof qt !== 'undefined' && qt.webChannelTransport) {
+            new QWebChannel(qt.webChannelTransport, function(channel) {
+                window.pybridge = channel.objects.pybridge;
+                console.log('QWebChannel bridge connected');
+            });
+        }
+
+        // Global JS error log (visible to Python-side diagnostics)
+        window.jsErrors = [];
+        window.addEventListener('error', function (e) {
+            window.jsErrors.push(String(e.message) + ' @' + String(e.filename || '') + ':' + String(e.lineno || -1));
+        });
+
+        let editor = null;
+
+        // ---- multi-file state ------------------------------------------------
+        // files: Map path -> { model, dirty, viewState }
+        const files = new Map();
+        let activePath = null;
+        let autosaveEnabled = true;
+        let autosaveTimer = null;
+        const AUTOSAVE_DELAY_MS = 2000;
+
+        const LANGUAGE_BY_EXT = {
+            '.py': 'python',
+            '.json': 'json',
+            '.md': 'markdown',
+            '.js': 'javascript',
+            '.ts': 'typescript',
+            '.html': 'html',
+            '.css': 'css',
+            '.yml': 'yaml',
+            '.yaml': 'yaml',
+        };
+
+        function languageFor(path) {
+            const dot = path.lastIndexOf('.');
+            if (dot === -1) return 'plaintext';
+            return LANGUAGE_BY_EXT[path.slice(dot).toLowerCase()] || 'plaintext';
+        }
+
+        function basename(path) {
+            const i = Math.max(path.lastIndexOf('/'), path.lastIndexOf('\\'));
+            return i === -1 ? path : path.slice(i + 1);
+        }
+
+        function modelUriFor(path) {
+            return monaco.Uri.file(path);
+        }
+
+        // ---- theme configurations --------------------------------------------
+        const themes = {
+            light: {
+                base: 'vs',
+                inherit: true,
+                rules: [
+                    { token: 'comment', foreground: '6a9955', fontStyle: 'italic' },
+                    { token: 'string', foreground: 'ce9178' },
+                    { token: 'keyword', foreground: '569cd6' },
+                    { token: 'number', foreground: 'b5cea8' },
+                    { token: 'type', foreground: '4ec9b0' },
+                    { token: 'class', foreground: '4ec9b0' },
+                    { token: 'function', foreground: 'dcdcaa' },
+                    { token: 'variable', foreground: '9cdcfe' },
+                    { token: 'operator', foreground: 'd4d4d4' },
+                ],
+                colors: {
+                    'editor.background': '#ffffff',
+                    'editor.foreground': '#1e1e1e',
+                    'editor.lineHighlightBackground': '#f0f0f0',
+                    'editorLineNumber.foreground': '#858585',
+                    'editorLineNumber.activeForeground': '#1e1e1e',
+                    'editorCursor.foreground': '#000000',
+                    'editor.selectionBackground': '#add6ff',
+                    'editor.inactiveSelectionBackground': '#e5ebf1',
+                    'editorIndentGuide.background': '#d3d3d3',
+                    'editorIndentGuide.activeBackground': '#939393',
+                    'scrollbarSlider.background': '#cfcfcf80',
+                    'scrollbarSlider.hoverBackground': '#cfcfcfb3',
+                    'scrollbarSlider.activeBackground': '#cfcfcf',
+                    'minimap.background': '#f0f0f0',
+                }
+            },
+            dark: {
+                base: 'vs-dark',
+                inherit: true,
+                rules: [
+                    { token: 'comment', foreground: '6a9955', fontStyle: 'italic' },
+                    { token: 'string', foreground: 'ce9178' },
+                    { token: 'keyword', foreground: '569cd6' },
+                    { token: 'number', foreground: 'b5cea8' },
+                    { token: 'type', foreground: '4ec9b0' },
+                    { token: 'class', foreground: '4ec9b0' },
+                    { token: 'function', foreground: 'dcdcaa' },
+                    { token: 'variable', foreground: '9cdcfe' },
+                    { token: 'operator', foreground: 'd4d4d4' },
+                ],
+                colors: {
+                    'editor.background': '#1e1e1e',
+                    'editor.foreground': '#d4d4d4',
+                    'editor.lineHighlightBackground': '#2d2d30',
+                    'editorLineNumber.foreground': '#858585',
+                    'editorLineNumber.activeForeground': '#c6c6c6',
+                    'editorCursor.foreground': '#aeafad',
+                    'editor.selectionBackground': '#264f78',
+                    'editor.inactiveSelectionBackground': '#3a3d41',
+                    'editorIndentGuide.background': '#404040',
+                    'editorIndentGuide.activeBackground': '#707070',
+                    'scrollbarSlider.background': '#79797966',
+                    'scrollbarSlider.hoverBackground': '#646464b3',
+                    'scrollbarSlider.activeBackground': '#bfbfbf66',
+                    'minimap.background': '#1e1e1e',
+                }
+            }
+        };
+
+        // ---- tabs ------------------------------------------------------------
+        function renderTabs() {
+            const bar = document.getElementById('tabbar');
+            bar.innerHTML = '';
+            for (const [path, f] of files) {
+                const tab = document.createElement('div');
+                tab.className = 'tab' + (path === activePath ? ' active' : '') + (f.dirty ? ' dirty' : '');
+                tab.dataset.path = path;
+                tab.title = path;
+
+                const dot = document.createElement('span');
+                dot.className = 'dirty-dot';
+                dot.textContent = '\u25cf'; // ●
+
+                const name = document.createElement('span');
+                name.className = 'tab-name';
+                name.textContent = basename(path);
+
+                const close = document.createElement('span');
+                close.className = 'close';
+                close.textContent = '\u00d7'; // ×
+                close.title = 'Close';
+                close.dataset.close = path;
+
+                tab.appendChild(dot);
+                tab.appendChild(name);
+                tab.appendChild(close);
+                bar.appendChild(tab);
+            }
+            // keep active tab visible
+            const activeTab = bar.querySelector('.tab.active');
+            if (activeTab && activeTab.scrollIntoView) {
+                activeTab.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+            }
+        }
+
+        document.getElementById('tabbar').addEventListener('click', function (e) {
+            const closePath = e.target.dataset ? e.target.dataset.close : null;
+            if (closePath) {
+                e.stopPropagation();
+                closeFile(closePath);
+                return;
+            }
+            const tab = e.target.closest('.tab');
+            if (tab && tab.dataset.path) {
+                activateFile(tab.dataset.path);
+            }
+        });
+
+        // middle-click closes a tab
+        document.getElementById('tabbar').addEventListener('mousedown', function (e) {
+            if (e.button !== 1) return;
+            const tab = e.target.closest('.tab');
+            if (tab && tab.dataset.path) {
+                e.preventDefault();
+                closeFile(tab.dataset.path);
+            }
+        });
+
+        function createModel(path, content) {
+            let model = monaco.editor.getModel(modelUriFor(path));
+            if (!model) {
+                model = monaco.editor.createModel(content, languageFor(path), modelUriFor(path));
+            } else {
+                model.setValue(content);
+            }
+            return model;
+        }
+
+        function addTab(path) {
+            if (!files.has(path)) {
+                files.set(path, {
+                    model: null,
+                    dirty: false,
+                    viewState: null,
+                });
+            }
+        }
+
+        function openFileInitial(path, content) {
+            addTab(path);
+            const f = files.get(path);
+            if (!f.model) {
+                f.model = createModel(path, content);
+            } else {
+                f.model.setValue(content);
+            }
+            f.dirty = false;
+            activateFile(path);
+        }
+
+        function openFile(path) {
+            if (files.has(path) && files.get(path).model) {
+                activateFile(path);
+                return;
+            }
+            if (!window.pybridge || !window.pybridge.readFile) return;
+            window.pybridge.readFile(path).then(function (json) {
+                let res;
+                try { res = JSON.parse(json); } catch (e) { res = { ok: false, error: String(e) }; }
+                if (!res.ok) {
+                    console.error('readFile failed:', res.error);
+                    return;
+                }
+                addTab(path);
+                const f = files.get(path);
+                if (!f.model) {
+                    f.model = createModel(path, res.content);
+                }
+                f.dirty = false;
+                activateFile(path);
+            }).catch(function (err) {
+                console.error('readFile rejected:', err);
+            });
+        }
+
+        function activateFile(path) {
+            const f = files.get(path);
+            if (!f || !f.model) return;
+            if (activePath === path) {
+                if (editor) editor.focus();
+                return;
+            }
+            // save view state of previous tab
+            if (activePath && files.has(activePath) && editor) {
+                files.get(activePath).viewState = editor.saveViewState();
+            }
+            activePath = path;
+            editor.setModel(f.model);
+            if (f.viewState) {
+                editor.restoreViewState(f.viewState);
+            }
+            renderTabs();
+            // notify Python so its caches track the active file
+            if (window.pybridge && window.pybridge.onActiveFileChanged) {
+                window.pybridge.onActiveFileChanged(path, f.model.getValue());
+            }
+            editor.focus();
+        }
+
+        function closeFile(path) {
+            // never close the last tab: keeps Python's path binding safe
+            if (files.size <= 1) return;
+            const f = files.get(path);
+            if (!f) return;
+            // flush dirty content before disposing the model
+            if (f.dirty) {
+                savePath(path, f.model.getValue());
+            }
+            const wasActive = activePath === path;
+            f.model.dispose();
+            files.delete(path);
+            if (wasActive) {
+                const nextPath = files.keys().next().value;
+                activePath = null; // force activateFile to run
+                activateFile(nextPath);
+            } else {
+                renderTabs();
+            }
+        }
+
+        // ---- save / autosave (per path) ---------------------------------------
+        function savePath(path, content) {
+            const f = files.get(path);
+            if (!f) return;
+            if (window.pybridge && window.pybridge.saveFile) {
+                window.pybridge.saveFile(content, path).then(function (ok) {
+                    if (ok) {
+                        f.dirty = false;
+                        renderTabs();
+                        console.log('Saved', path);
+                    }
+                }).catch(function (err) {
+                    console.error('Save failed:', err);
+                });
+            }
+        }
+
+        function saveActive() {
+            if (!activePath) return;
+            const f = files.get(activePath);
+            if (!f || !f.model) return;
+            savePath(activePath, f.model.getValue());
+        }
+
+        function saveAllDirty() {
+            for (const [path, f] of files) {
+                if (f.dirty && f.model) {
+                    savePath(path, f.model.getValue());
+                }
+            }
+        }
+
+        // ---- init editor ------------------------------------------------------
+        require(['vs/editor/editor.main'], function() {
+            // Register Python language features
+            monaco.languages.registerCompletionItemProvider('python', {
+                provideCompletionItems: function(model, position) {
+                    const suggestions = [
+                        { label: 'def', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'def ${1:function_name}(${2:args}):\n    ${0:pass}', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet },
+                        { label: 'class', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'class ${1:ClassName}:\n    ${0:pass}', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet },
+                        { label: 'for', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'for ${1:item} in ${2:iterable}:\n    ${0:pass}', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet },
+                        { label: 'if', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'if ${1:condition}:\n    ${0:pass}', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet },
+                        { label: 'while', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'while ${1:condition}:\n    ${0:pass}', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet },
+                        { label: 'try', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'try:\n    ${1:pass}\nexcept ${2:Exception} as ${3:e}:\n    ${0:pass}', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet },
+                        { label: 'with', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'with ${1:resource} as ${2:var}:\n    ${0:pass}', insertTextRules: monaco.languages.CompletionItemInsertTextRule.InsertAsSnippet },
+                        { label: 'return', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'return ${1:value}' },
+                        { label: 'import', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'import ${1:module}' },
+                        { label: 'from', kind: monaco.languages.CompletionItemKind.Keyword, insertText: 'from ${1:module} import ${2:name}' },
+                    ];
+                    return { suggestions: suggestions };
+                }
+            });
+
+            // Create editor instance (no model yet; Python pushes openFileInitial)
+            editor = monaco.editor.create(document.getElementById('container'), {
+                value: '',
+                language: 'python',
+                theme: 'custom-dark',
+                automaticLayout: true,
+                fontSize: 14,
+                fontFamily: 'Consolas, "Courier New", monospace',
+                minimap: { enabled: true },
+                folding: true,
+                foldingStrategy: 'indentation',
+                showFoldingControls: 'always',
+                lineNumbers: 'on',
+                renderWhitespace: 'none',
+                cursorStyle: 'line',
+                cursorBlinking: 'smooth',
+                smoothScrolling: true,
+                contextmenu: true,
+                quickSuggestions: true,
+                suggestOnTriggerCharacters: true,
+                acceptSuggestionOnEnter: 'on',
+                tabCompletion: 'on',
+                formatOnPaste: true,
+                formatOnType: true,
+                autoIndent: 'full',
+                wordWrap: 'off',
+                scrollbar: {
+                    vertical: 'auto',
+                    horizontal: 'auto',
+                    useShadows: false,
+                    verticalScrollbarSize: 10,
+                    horizontalScrollbarSize: 10,
+                },
+                padding: { top: 10, bottom: 10 },
+                rulers: [],
+            });
+
+            // Track changes (fires only for the ACTIVE model)
+            editor.onDidChangeModelContent(function () {
+                if (!activePath) return;
+                const f = files.get(activePath);
+                if (!f) return;
+                f.dirty = true;
+                renderTabs();
+                if (autosaveEnabled) {
+                    clearTimeout(autosaveTimer);
+                    autosaveTimer = setTimeout(saveAllDirty, AUTOSAVE_DELAY_MS);
+                }
+                // Notify Python: path + full content of the changed (active) file
+                if (window.pybridge && window.pybridge.onTextChanged) {
+                    window.pybridge.onTextChanged(activePath, editor.getValue());
+                }
+            });
+
+            // Track cursor position for Python-side queries
+            editor.onDidChangeCursorPosition(function (e) {
+                if (window.pybridge && window.pybridge.onCursorPositionChanged) {
+                    window.pybridge.onCursorPositionChanged(
+                        e.position.lineNumber - 1,
+                        e.position.column - 1
+                    );
+                }
+            });
+
+            // Track selection for Python-side queries
+            editor.onDidChangeCursorSelection(function (e) {
+                if (window.pybridge && window.pybridge.onSelectionChanged) {
+                    const s = e.selection;
+                    window.pybridge.onSelectionChanged(
+                        s.startLineNumber - 1,
+                        s.startColumn - 1,
+                        s.endLineNumber - 1,
+                        s.endColumn - 1
+                    );
+                }
+            });
+
+            // Handle focus changes
+            editor.onDidFocusEditorText(function () {
+                if (window.pybridge && window.pybridge.onEditorFocused) {
+                    window.pybridge.onEditorFocused();
+                }
+            });
+
+            // ---- helper: entry of the ACTIVE file -------------------------------
+            function activeFileEntry() {
+                if (!activePath) return null;
+                return files.get(activePath) || null;
+            }
+
+            // ---- expose functions to Python -----------------------------------
+            window.monacoEditor = {
+                // --- tabs / files ---
+                openFileInitial: openFileInitial,
+                openFile: openFile,
+                getFilePath: function () { return activePath; },
+                setFilePath: function (path) {
+                    // legacy shim: try to activate, otherwise ignore
+                    if (files.has(path)) activateFile(path);
+                },
+                listOpenFiles: function () { return Array.from(files.keys()); },
+
+                // --- active-model text API (QScintilla-compatible surface) ---
+                getText: function () { return editor.getValue(); },
+                setText: function (text) {
+                    const pos = editor.getPosition();
+                    editor.setValue(text);
+                    if (pos) editor.setPosition(pos);
+                    const f = activeFileEntry();
+                    if (f) { f.dirty = false; renderTabs(); }
+                },
+                getCursorPosition: function () {
+                    const pos = editor.getPosition();
+                    return pos ? { line: pos.lineNumber - 1, column: pos.column - 1 } : { line: 0, column: 0 };
+                },
+                setCursorPosition: function (line, column) {
+                    editor.setPosition({ lineNumber: line + 1, column: column + 1 });
+                    editor.revealPositionInCenter({ lineNumber: line + 1, column: column + 1 });
+                    editor.focus();
+                },
+                getSelection: function () {
+                    const sel = editor.getSelection();
+                    if (!sel) return null;
+                    const model = editor.getModel();
+                    return {
+                        startLine: sel.startLineNumber - 1,
+                        startColumn: sel.startColumn - 1,
+                        endLine: sel.endLineNumber - 1,
+                        endColumn: sel.endColumn - 1,
+                        text: model ? model.getValueInRange(sel) : ''
+                    };
+                },
+                insertAt: function (text, line, column) {
+                    const range = new monaco.Range(line + 1, column + 1, line + 1, column + 1);
+                    editor.executeEdits('python-bridge', [{ range: range, text: text }]);
+                },
+                replaceSelection: function (text) {
+                    const sel = editor.getSelection();
+                    if (sel) {
+                        editor.executeEdits('python-bridge', [{ range: sel, text: text }]);
+                    }
+                },
+                undo: function () { editor.trigger('python-bridge', 'undo', undefined); },
+                redo: function () { editor.trigger('python-bridge', 'redo', undefined); },
+                find: function () { editor.trigger('python-bridge', 'actions.find', undefined); },
+                focus: function () { editor.focus(); },
+                getLineCount: function () {
+                    const m = editor.getModel();
+                    return m ? m.getLineCount() : 0;
+                },
+                getLineLength: function (line) {
+                    const m = editor.getModel();
+                    return m ? m.getLineLength(line + 1) : 0;
+                },
+
+                // --- theme / chrome ---
+                setTheme: function (themeName) {
+                    const theme = themes[themeName] || themes.dark;
+                    monaco.editor.defineTheme('custom-' + themeName, theme);
+                    monaco.editor.setTheme('custom-' + themeName);
+                    document.body.classList.remove('theme-light', 'theme-dark');
+                    document.body.classList.add('theme-' + (themes[themeName] ? themeName : 'dark'));
+                },
+
+                // --- autosave / dirty ---
+                setAutosave: function (enabled) {
+                    autosaveEnabled = enabled;
+                    if (!enabled) clearTimeout(autosaveTimer);
+                },
+                saveFile: saveActive,
+                isDirty: function () {
+                    const f = activeFileEntry();
+                    return f ? f.dirty : false;
+                },
+                setDirty: function (dirty) {
+                    const f = activeFileEntry();
+                    if (f) {
+                        f.dirty = !!dirty;
+                        renderTabs();
+                    }
+                },
+
+                // --- folding ---
+                setFolding: function (enabled) {
+                    editor.updateOptions({ folding: enabled });
+                },
+                collapseAll: function () { editor.trigger('python-bridge', 'editor.foldAll', undefined); },
+                expandAll: function () { editor.trigger('python-bridge', 'editor.unfoldAll', undefined); },
+                foldLevel: function (level) { editor.trigger('python-bridge', 'editor.foldLevel', { level: level }); },
+            };
+
+            console.log('Monaco Editor initialized');
+        });
+
+        // ---- keyboard shortcuts ------------------------------------------------
+        document.addEventListener('keydown', function (e) {
+            // Ctrl+S / Cmd+S to save active file
+            if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+                e.preventDefault();
+                saveActive();
+            }
+            // Ctrl+F / Cmd+F to find
+            if ((e.ctrlKey || e.metaKey) && e.key === 'f') {
+                e.preventDefault();
+                if (editor) editor.trigger('python-bridge', 'actions.find', undefined);
+            }
+        });
+
+        // ---- drag and drop -----------------------------------------------------
+        document.addEventListener('dragover', function (e) {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'copy';
+        });
+
+        document.addEventListener('drop', function (e) {
+            e.preventDefault();
+            if (!window.pybridge || !window.pybridge.handleDrop) return;
+            if (!editor) return;
+            const dropData = {
+                types: Array.from(e.dataTransfer.types),
+                data: {}
+            };
+            dropData.types.forEach(function (type) {
+                const data = e.dataTransfer.getData(type);
+                if (data) {
+                    dropData.data[type] = data;
+                }
+            });
+            // Get drop position (guard: method exists in Monaco 0.22+, but be safe)
+            try {
+                if (typeof editor.getScrolledVisiblePositionAtCoordinate === 'function') {
+                    const pos = editor.getScrolledVisiblePositionAtCoordinate(e.clientX, e.clientY);
+                    if (pos) {
+                        dropData.line = pos.lineNumber - 1;
+                        dropData.column = pos.column - 1;
+                    }
+                }
+            } catch (err) {
+                console.warn('drop position unavailable:', err);
+            }
+            window.pybridge.handleDrop(dropData);
+        });
+    </script>
+</body>
+</html>

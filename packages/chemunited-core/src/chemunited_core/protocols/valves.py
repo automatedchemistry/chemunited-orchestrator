@@ -145,7 +145,6 @@ class SolenoidIsOpenParameter(CommandSignature):
 
 
 class SolenoidValveProtocols(ComponentProtocol):
-
     def __init__(self, name: str):
         super().__init__(name)
         self.commands["open"] = SolenoidOpenParameter
