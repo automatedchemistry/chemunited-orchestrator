@@ -34,7 +34,6 @@ class SetTemperatureParameter(CommandSignature):
 
 
 class TemperatureControlProtocols(ComponentProtocol):
-
     def __init__(self, name: str):
         super().__init__(name)
         self.commands["temperature"] = GetTemperatureParameter
@@ -93,7 +92,6 @@ class GetTemperatureControlMode(CommandSignature):
 
 
 class HeiConnectTemperatureControlProtocols(TemperatureControlProtocols):
-
     def __init__(self, name: str):
         super().__init__(name)
         self.commands["temperature-setpoint"] = TemperatureSetPoint
@@ -129,7 +127,6 @@ class SetPositionParameter(CommandSignature):
 
 
 class LengthControlProtocols(ComponentProtocol):
-
     def __init__(self, name: str):
         super().__init__(name)
         self.commands["get_position"] = GetPositionParameter
@@ -157,7 +154,6 @@ class ReadAllChannelsParameter(CommandSignature):
 
 
 class MultiChannelADCProtocols(ComponentProtocol):
-
     def __init__(self, name: str):
         super().__init__(name)
         self.commands["read"] = ReadChannelParameter
@@ -185,7 +181,6 @@ class SetChannelVoltageParameter(CommandSignature):
 
 
 class MultiChannelDACProtocols(ComponentProtocol):
-
     def __init__(self, name: str):
         super().__init__(name)
         self.commands["read"] = ReadChannelParameter  # reuse — identical structure
@@ -249,7 +244,6 @@ class ReadChannelsSetPointParameter(CommandSignature):
 
 
 class MultiChannelRelayProtocols(ComponentProtocol):
-
     def __init__(self, name: str):
         super().__init__(name)
         self.commands["power-on"] = RelayChannelOnParameter
@@ -290,7 +284,6 @@ class DevicePowerOffParameter(CommandSignature):
 
 
 class PhotoReactorProtocols(ComponentProtocol):
-
     def __init__(self, name: str):
         super().__init__(name)
         self.commands["read_intensity"] = ReadIntensityParameter
@@ -303,7 +296,6 @@ class PhotoReactorProtocols(ComponentProtocol):
 
 
 class PowerSwitchProtocols(ComponentProtocol):
-
     def __init__(self, name: str):
         super().__init__(name)
         self.commands["power-on"] = DevicePowerOnParameter
@@ -344,7 +336,6 @@ class SetVoltageParameter(CommandSignature):
 
 
 class PowerControlProtocols(PowerSwitchProtocols):
-
     def __init__(self, name: str):
         super().__init__(name)
         self.commands["read_current"] = ReadCurrentParameter
@@ -398,7 +389,6 @@ class ReadStirringPowerState(CommandSignature):
 
 
 class StirringControlProtocols(ComponentProtocol):
-
     def __init__(self, name: str):
         super().__init__(name)
         self.commands["speed"] = SetSpeed

@@ -55,6 +55,7 @@ class SilaComponentClient(DeviceClientMixin):
         cancellation_token: threading.Event | None = None,
         pause_event: threading.Event | None = None,
         command_observer=None,
+        wait_for_completion: bool = True,
     ) -> None:
         self._host = host
         self._port = port
@@ -71,6 +72,7 @@ class SilaComponentClient(DeviceClientMixin):
             cancellation_token=cancellation_token,
             pause_event=pause_event,
             command_observer=command_observer,
+            wait_for_completion=wait_for_completion,
         )
 
     def _ensure_connected(self) -> SilaClient:
@@ -143,7 +145,11 @@ class SilaComponentClient(DeviceClientMixin):
             command = client._features[feature_id]._client_commands[member_id]
             result = command(**kwargs)
             if isinstance(result, ClientObservableCommandInstance):
-                result = self._await_observable_command(result)
+                if self._wait_for_completion:
+                    result = self._await_observable_command(result)
+                else:
+                    # Still running on the server: say which execution it is.
+                    result = {"execution_uuid": str(result.execution_uuid)}
         except Exception as exc:
             return self._handle_native_error(exc)
         value = result._asdict() if hasattr(result, "_asdict") else result
@@ -180,7 +186,9 @@ class SilaComponentClient(DeviceClientMixin):
         observable *properties* are still skipped — this client does not yet
         subscribe to value updates). Properties -> ``{Feature}.{Member}_get``;
         commands -> ``{Feature}.{Member}_put``. Calling a ``put`` for an
-        observable command blocks until the SiLA server reports completion.
+        observable command blocks until the SiLA server reports completion,
+        unless the client was built with ``wait_for_completion=False``: it then
+        returns the command's ``execution_uuid`` as soon as the command starts.
         ``summary`` is each Command/Property's Feature Definition
         ``Description`` (mandatory in the FDL, unlike OpenAPI's optional
         ``summary``).

@@ -22,7 +22,6 @@ QGRAPHICS_ITEM_SENDS_GEOMETRY_CHANGES = getattr(
 
 
 class PathElementItem(QGraphicsPathItem):
-
     DEFAULT_COLOR: QColor = QColor("black")
     DEFAULT_LINE_WIDTH: float = 2.0
     DEFAULT_PATH_STYLE = QT_SOLID_LINE
@@ -75,7 +74,6 @@ class PathElementItem(QGraphicsPathItem):
 
 
 class DraggablePoint(QGraphicsEllipseItem):
-
     RADIUS: float = 6.0
 
     def __init__(self, x: float, y: float, callback=None, parent=None):
@@ -99,7 +97,6 @@ class DraggablePoint(QGraphicsEllipseItem):
 
 
 class MovablePathItem(PathElementItem):
-
     def __init__(
         self,
         origin: tuple[float, float],

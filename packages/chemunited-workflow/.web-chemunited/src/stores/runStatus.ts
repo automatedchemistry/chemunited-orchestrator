@@ -1,5 +1,5 @@
 import { defineStore } from 'pinia'
-import { ref } from 'vue'
+import { computed, ref } from 'vue'
 
 export type RunState = 'idle' | 'running' | 'paused' | 'finished' | 'failed' | 'cancelled'
 
@@ -36,6 +36,7 @@ interface ActiveRunResponse {
 interface RunReport {
   run_id: string
   state: string
+  reason?: string | null
   results?: Array<{
     process: string
     errors: Record<string, string>
@@ -46,6 +47,17 @@ export const useRunStatusStore = defineStore('runStatus', () => {
   // --- Global run state (shared with nav badge) ---
   const activeRunId = ref<string | null>(null)
   const runState = ref<RunState>('idle')
+  // Why the run was stopped, when it ended 'cancelled' with a reason — a
+  // safety interlock calling MonitoringContext.stop_run(reason), say.
+  const stopReason = ref('')
+  // A run stopped with a reason ends 'cancelled' like a plain cancel, but is
+  // shown as an error: badges and dots take the 'failed' style.
+  const stoppedWithReason = computed(
+    () => runState.value === 'cancelled' && Boolean(stopReason.value),
+  )
+  const stateStyle = computed<RunState>(() =>
+    stoppedWithReason.value ? 'failed' : runState.value,
+  )
   const pendingInputs = ref<Record<string, string>>({})
 
   // --- Run control view state (persisted across navigation) ---
@@ -66,6 +78,7 @@ export const useRunStatusStore = defineStore('runStatus', () => {
         if (data.active_run_id) {
           activeRunId.value = data.active_run_id
           runState.value = data.state === 'paused' ? 'paused' : 'running'
+          stopReason.value = ''
           pendingInputs.value = data.pending_inputs ?? {}
           // Lets a viewer who didn't start the run rebuild the process/node
           // view from the same protocol, instead of relying on their own
@@ -80,11 +93,13 @@ export const useRunStatusStore = defineStore('runStatus', () => {
         if (report && report.state && report.state !== 'running') {
           activeRunId.value = report.run_id
           runState.value = report.state as RunState
+          stopReason.value = report.reason ?? ''
           return
         }
       }
       activeRunId.value = null
       runState.value = 'idle'
+      stopReason.value = ''
     } catch {
       // leave unchanged on network error
     }
@@ -102,11 +117,25 @@ export const useRunStatusStore = defineStore('runStatus', () => {
         if (!card || card.status !== 'running') continue
         card.status = Object.keys(result.errors ?? {}).length > 0 ? 'failed' : 'completed'
       }
+      applyStopReason()
     } catch { /* ignore */ }
   }
 
-  function setRunState(state: RunState, id?: string | null) {
+  // The node a stop interrupted fails with the executor's generic "Run was
+  // cancelled." — on a run stopped with a reason, show the reason instead.
+  function applyStopReason() {
+    if (!stopReason.value) return
+    for (const card of processCards.value) {
+      if (card.status !== 'failed') continue
+      if (!card.errorMessage || card.errorMessage.endsWith('Run was cancelled.')) {
+        card.errorMessage = stopReason.value
+      }
+    }
+  }
+
+  function setRunState(state: RunState, id?: string | null, reason = '') {
     runState.value = state
+    stopReason.value = reason
     if (id !== undefined) activeRunId.value = id
   }
 
@@ -119,9 +148,13 @@ export const useRunStatusStore = defineStore('runStatus', () => {
     // global
     activeRunId,
     runState,
+    stopReason,
+    stoppedWithReason,
+    stateStyle,
     pendingInputs,
     checkActiveRun,
     setRunState,
+    applyStopReason,
     // view state
     selectedProtocol,
     processCards,

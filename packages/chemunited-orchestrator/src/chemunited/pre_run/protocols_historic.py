@@ -172,7 +172,9 @@ class ProtocolsManageList(ScrollArea):
         self.vBoxLayout.setSpacing(10)
         self.vBoxLayout.setContentsMargins(0, 0, 10, 30)
         self.vBoxLayout.addWidget(
-            self.FileCard, 0, Qt.AlignTop  # type: ignore[attr-defined]
+            self.FileCard,
+            0,
+            Qt.AlignTop,  # type: ignore[attr-defined]
         )
 
     def fill_cards(self):

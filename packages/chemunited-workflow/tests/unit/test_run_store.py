@@ -99,6 +99,37 @@ def test_cancel_after_finished_returns_false():
     assert store.cancel() is False
 
 
+def test_cancel_records_its_reason():
+    store = RunStore()
+    store.try_start("p_2026-01-01T00-00-00.json")
+    assert store.cancel("Overpressure: 3.2 bar > 3.0 bar") is True
+    assert store.get().cancel_reason == "Overpressure: 3.2 bar > 3.0 bar"
+
+
+def test_plain_cancel_has_no_reason():
+    store = RunStore()
+    store.try_start("p_2026-01-01T00-00-00.json")
+    assert store.cancel() is True
+    assert store.get().cancel_reason is None
+
+
+def test_first_cancel_reason_sticks():
+    store = RunStore()
+    store.try_start("p_2026-01-01T00-00-00.json")
+    assert store.cancel("Overpressure") is True
+    # The operator clicking Cancel right after can't erase why it stopped.
+    assert store.cancel() is False
+    assert store.get().cancel_reason == "Overpressure"
+
+
+def test_new_run_starts_without_a_reason():
+    store = RunStore()
+    store.try_start("p_2026-01-01T00-00-00.json")
+    store.cancel("Overpressure")
+    store.try_start("p_2026-01-01T00-00-01.json")
+    assert store.get().cancel_reason is None
+
+
 def test_pause_running_returns_true_and_sets_state_and_event():
     store = RunStore()
     store.try_start("p_2026-01-01T00-00-00.json")

@@ -11,7 +11,7 @@ def test_editor_base_enables_native_qscintilla_folding(
 ) -> None:
     path = tmp_path / "script.py"
     path.write_text(
-        "class Process:\n" "    def check_pressure(self):\n" "        return True\n",
+        "class Process:\n    def check_pressure(self):\n        return True\n",
         encoding="utf-8",
     )
 

@@ -145,7 +145,6 @@ class _StatusBadge(QWidget):
 
 
 class DashBoardLauncherFrame(QFrame):
-
     def __init__(self, parent: "PreRunFrame") -> None:
         super().__init__(parent)
         self._pre_run_ref = parent

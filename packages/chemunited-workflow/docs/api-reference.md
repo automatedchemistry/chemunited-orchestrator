@@ -8,8 +8,10 @@ All endpoints except `GET /project/` return HTTP `503` if no project has been lo
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/project/` | Return the currently loaded project directory, or `null` if none is loaded. Always returns `200` — use this as a readiness probe. |
+| `GET` | `/project/` | Return the currently loaded project directory, or `null` if none is loaded, and its `git` state (below). Always returns `200` — use this as a readiness probe. |
 | `PUT` | `/project/` | Load or switch the active project. Body: `{"project_dir": "/path/to/project"}`. Returns `409` if a run is currently active. |
+
+Both return `{"project_dir", "git"}`. `git` is `{"commit", "branch", "dirty", "changed", "captured_at"}`, read when the project was loaded — when its process code was imported — or `null` when git isn't on `PATH`, the project isn't in a git repository (its own or one in a parent folder), the repository has no commit yet, or git refuses to read it. `branch` is `null` for a detached HEAD; `dirty` says whether files in the project folder differ from the commit (`null` if `git status` failed), and `changed` lists them relative to the project folder. What the work-server writes into the project itself never counts: `log/`, `run.lock`, and the `__pycache__` folders of the process code it imports. chemunited-workflow only reads the repository: it never commits or changes anything. Every run's manifest records this state (see [Export](#export)).
 
 ## Processes
 
@@ -43,8 +45,8 @@ Only one run can be active at a time (the physical platform enforces this constr
 |--------|------|-------------|
 | `POST` | `/run/` | Start a workflow run from a protocol file. Body: `{"protocol": "<filename>", "dry_run": false}`. `protocol` is required; `dry_run` defaults to `false`. Returns HTTP `202` with a derived `run_id`, `409` if a run is already active, or `422` if `record_monitoring: true` was passed with no monitoring variables registered (the run never starts). Pass `record_monitoring: true` to also persist every monitored variable's readings for this run — see [Monitoring](#monitoring). |
 | `GET` | `/run/active` | Return `{"active_run_id": ..., "state": ..., "pending_inputs": {...}, "protocol": ...}` without consuming queued events. `state` is `"running"` or `"paused"` while active, `null` if no run is active. `pending_inputs` maps `node_id -> prompt message` for every node currently blocked on `request_operator_input()` — lets a reconnecting dashboard client redraw an open prompt it missed on the live stream. `protocol` is the filename the active run was started from, so a client that didn't itself start the run can rebuild the process/node view before replaying events. |
-| `GET` | `/run/status` | Poll the current run state and events. Query param `after` (default `0`) is a cursor — returns every event recorded from that index onward plus a `cursor` field to pass as `after` next time. The read is non-destructive: any number of independent callers can poll concurrently, each tracking its own cursor, without stealing events from one another; `after=0` (or omitted) replays the full history. States are `running`, `paused`, and the terminal `finished`, `failed`, `cancelled`. Returns `404` if no run has been recorded. |
-| `GET` | `/run/report` | Full execution report for the current or last run. Returns `202` if the run has not finished yet (including while paused). |
+| `GET` | `/run/status` | Poll the current run state and events. Query param `after` (default `0`) is a cursor — returns every event recorded from that index onward plus a `cursor` field to pass as `after` next time. The read is non-destructive: any number of independent callers can poll concurrently, each tracking its own cursor, without stealing events from one another; `after=0` (or omitted) replays the full history. States are `running`, `paused`, and the terminal `finished`, `failed`, `cancelled`. `reason` says why a `cancelled` run was stopped when whoever stopped it gave one — a safety interlock calling [`MonitoringContext.stop_run(reason)`](#custom-sources), say — and is `null` otherwise, including after `DELETE /run/`. Returns `404` if no run has been recorded. |
+| `GET` | `/run/report` | Full execution report for the current or last run, with the same `reason` as `/run/status`. Returns `202` if the run has not finished yet (including while paused). |
 | `DELETE` | `/run/` | Cancel the active run. Sends a cooperative cancellation signal — the current in-flight device call completes, then execution stops at the next step checkpoint. Works from either `running` or `paused`. Also wakes any node currently blocked on `request_operator_input()`. Returns `404` if no run is active. |
 | `POST` | `/run/pause` | Pause the active run. Sends a cooperative pause signal — execution holds at the next checkpoint, which may be between individual device calls inside a node, not just between nodes. The physical hardware is left in whatever state it reached; nothing is moved to a "safe" position. Only valid from `running`. Returns `404` if no run is active, `409` if not currently running. |
 | `POST` | `/run/resume` | Resume a paused run, continuing execution from exactly where it held. Only valid from `paused`. Returns `404` if no run is active, `409` if not currently paused. |
@@ -97,7 +99,7 @@ Both `GET /run/status` (`events` array) and `GET /run/stream` (one SSE `data:` f
 | `input_value` | string \| null | Set only on `NODE_INPUT_RECEIVED` — the operator's reply delivered via `POST /run/input`. `null` on every other event, including `NODE_INPUT_REQUESTED` (the prompt text itself is carried in `message`) |
 | `timestamp` | float | Unix timestamp |
 
-`GET /run/stream` also emits non-`WorkflowExecutionEvent` `{"state": ...}` frames: a mid-stream `{"state": "paused"}` / `{"state": "running"}` pair on pause/resume (connection stays open — pausing doesn't produce a `WorkflowExecutionEvent` since nothing in the executor runs when the state flips), and a final one that closes the stream: `{"state": "finished" | "failed" | "cancelled"}`.
+`GET /run/stream` also emits non-`WorkflowExecutionEvent` `{"state": ...}` frames: a mid-stream `{"state": "paused"}` / `{"state": "running"}` pair on pause/resume (connection stays open — pausing doesn't produce a `WorkflowExecutionEvent` since nothing in the executor runs when the state flips), and a final one that closes the stream: `{"state": "finished" | "failed" | "cancelled"}` — `{"state": "cancelled", "reason": "..."}` for a run stopped with a reason (see `/run/status`).
 
 To render live per-node feedback (progress bar + message), group events by `node_key` — every event that carries one (`NODE_WAITING`, `NODE_RUNNING`, `NODE_PROGRESS`, `NODE_INPUT_REQUESTED`, `NODE_INPUT_RECEIVED`, `NODE_COMPLETED`, `NODE_INACTIVE`, `NODE_FAILED`) updates that node's latest `state`, `percentage`, and `message` in place. This is exactly what the bundled dashboard's Run Control page does — see [HTML UI → Live node progress](html-ui.md#live-node-progress) and [HTML UI → Operator input prompts](html-ui.md#operator-input-prompts).
 
@@ -149,12 +151,13 @@ CUSTOM_SOURCES: dict[str, Callable[..., Any]] = {
 }
 ```
 
-Register and poll it exactly like a real variable — `{"component": "custom", "command": "reactor_fill_pct", "kwargs": {...}}` in `PUT /monitoring/config`. `GET /monitoring/discover/custom` lists the registered function names instead of querying a device. Each distinct custom source polls independently and never shares a poll-tick worker with a real component or a different custom source; a broken or missing hook file, or a raised exception inside a registered function, shows up as `error` on that reading and never stops the rest of the poll tick. The file is optional and reloaded fresh each time monitoring turns on, so edits take effect on the next start without a server restart.
+Register and poll it exactly like a real variable — `{"component": "custom", "command": "reactor_fill_pct", "kwargs": {...}}` in `PUT /monitoring/config`. `GET /monitoring/discover/custom` lists the registered function names instead of querying a device. Each distinct custom source polls independently and never shares a poll-tick worker with a real component or a different custom source; a broken or missing hook file, or a raised exception inside a registered function, shows up as `error` on that reading and never stops the rest of the poll tick. The file is optional and reloaded fresh each time monitoring turns on, so edits take effect on the next start without a server restart. An LCD on the platform drawing can show a custom source like any device variable (see [Live platform view](#live-platform-view)); it shows whatever the function returns, so return one value for an LCD.
 
 A registered function can read a real device by importing `MonitoringContext` and reading `MonitoringContext.platform` — the exact `Platform` (and its `ComponentClient` instances/locks) real-component readings use for that ON-cycle:
 
 ```python
 from chemunited_workflow import MonitoringContext
+
 
 def chiller_temperature_f():
     celsius = MonitoringContext.platform["chiller"].get("temperature")
@@ -162,6 +165,22 @@ def chiller_temperature_f():
 ```
 
 `MonitoringContext.platform` is `None` whenever no poll cycle is running. Reading a component another pool worker is mid-fetching in the same tick never deadlocks — `ComponentClient`'s per-device lock is non-blocking, so the loser gets a `ConcurrentClientAccessError` immediately, caught the same as any other exception raised inside a custom source and surfaced as that reading's `error`. Never call `.close()` or `.register()` on anything reached through `MonitoringContext.platform` — the poll loop owns its lifecycle for the whole ON-cycle. To unit-test a function that uses it, monkeypatch `MonitoringContext.platform` directly before calling the function.
+
+A custom source can also act as a safety interlock. `MonitoringContext.stop_run(reason)` stops the active protocol run the same way the dashboard's Stop button (`DELETE /run/`) does — the run ends `cancelled` — and returns `True`, or returns `False` when no run is active. `reason` (optional) says why: it is reported with the cancelled run (`reason` on `/run/status` and `/run/report`, and on the closing frame of `/run/stream`), and the dashboard's Run Control page shows it in red as the run's outcome, where a plain cancel just reads "Run cancelled.". Monitoring is forced on for every run, so a check in a custom source runs on every tick of every run:
+
+```python
+from chemunited_workflow import MonitoringContext
+
+
+def reactor_pressure():
+    bar = MonitoringContext.platform["reactor"].get("pressure")
+    if bar > 3.0 and MonitoringContext.stop_run(f"Overpressure: {bar} bar > 3.0 bar"):
+        MonitoringContext.platform["feed_valve"].put("close")
+        raise RuntimeError(f"Overpressure ({bar} bar): protocol stopped")
+    return bar
+```
+
+Like `platform`, `stop_run()` is only wired up while a poll cycle runs inside the API server; anywhere else it returns `False`. To unit-test a function that uses it, set `MonitoringContext._stop_run` to a stand-in callable that takes the reason, such as `lambda reason: True`.
 
 Example workflow:
 
@@ -210,7 +229,7 @@ Every request to a device, from a run, a monitoring read or the device panel, ta
 
 ## Live platform view
 
-The work-server keeps the latest state of every device in memory, built from the commands it sends: from protocol runs, the device panel (`POST /components/commands/...`) and custom routes. Every device starts `unknown` when the project loads. Each PUT/POST marks its device `running` with that command, then `done` once the device client's usual wait for the device to finish returns, or `failed` if the request fails or the wait times out. GETs aren't recorded. Commands sent outside the work-server never show.
+The work-server keeps the latest state of every device in memory, built from the commands it sends: from protocol runs, the device panel (`POST /components/commands/...`) and custom routes. Every device starts `unknown` when the project loads. Each PUT/POST marks its device `running` with that command, then `done` once the device client's usual wait for the device to finish returns, or `failed` if the request fails or the wait times out. The device panel doesn't wait for the device to finish, so its commands are marked `done` as soon as the device accepts them. GETs aren't recorded. Commands sent outside the work-server never show.
 
 The view is **live** only while monitoring is on from the Monitoring page (`POST /monitoring/start`). A run doesn't make it live by itself. Device states are recorded either way but only sent while live.
 
@@ -221,7 +240,7 @@ The view is **live** only while monitoring is on from the Monitoring page (`POST
 
 With the `live` extra (`pip install chemunited-workflow[live]`, which adds chemunited-core), each command also updates the device's `picture`: `{"links": [[0, 3]]}` for a rotary valve (rotor slots: 1 is the top one, counting clockwise; 0 is the hub), `{"open": true}` for a solenoid valve, `{"position": 1}` for a 2-way solenoid valve, `{"active": true}` for an MFC, `{"channels": [true, null, ...]}` for a relay (`null`: not switched since the server started). A command the picture can't follow, such as an unknown command or a position the valve can't take, leaves the device `unknown` with the reason in `error`. The dashboard draws pictures where the desktop app's export says each part sits (`draw/platform-live.json`, served at `GET /project/platform-live` with `svg_matches`, which is false once `platform.svg` no longer matches it).
 
-`displays` holds the LCD readouts placed in the desktop app (saved in `draw/platform-live.json` and re-read on `PUT /project`): `{"Inlet pressure": {"value": "1.02 bar", "at": "...", "error": null, "monitored": true}}`. Each shows the latest monitoring reading of its variable, as text. `monitored` is false when the variable isn't in the monitoring list; LCDs never read a device themselves.
+`displays` holds the LCD readouts placed in the desktop app (saved in `draw/platform-live.json` and re-read on `PUT /project`): `{"Inlet pressure": {"value": "1.02 bar", "at": "...", "error": null, "monitored": true}}`. Each shows the latest monitoring reading of its variable, as text: a device's variable, or a [custom source](#custom-sources) (`component: "custom"`). An LCD's `unit` in `platform-live.json`, if it has one, follows a reading that is a number (`1.02` shows as `"1.02 bar"`); any other reading is shown as it is, so a value that carries its own unit never shows two. `monitored` is false when the variable isn't in the monitoring list; LCDs never read a device themselves.
 
 A browser that reconnects sends `Last-Event-ID` automatically. The server then replays the updates it missed, or sends a new snapshot when they're no longer in its log, when the id belongs to an earlier server or project load, or when the panel wasn't live at that id.
 
@@ -235,17 +254,42 @@ data: {"seq": 44, "devices": {"pump": {"kind": null, "status": "running", "pictu
 
 ## Export
 
-One row per executed run — the run's log file, its correlated monitoring recording (if any), and its source protocol (if it still exists) — that can be zipped up for download and/or permanently cleaned out of the project. Downloading and cleaning are two separate actions; downloading never deletes anything.
+One row per executed run — the run's log file, its manifest (if any), its correlated monitoring recording (if any), and its source protocol (if it still exists) — that can be zipped up for download and/or permanently cleaned out of the project. Downloading and cleaning are two separate actions; downloading never deletes anything.
 
-Rows are correlated purely by filename convention (there is no stored link): a log is written as `{protocol_stem}_executed_{timestamp}.log`, its monitoring recording lives at `log/monitoring/{protocol_stem}_{timestamp}/`, and its source protocol is `protocols_historic/{protocol_stem}.json`. A row only exists if its log file exists — a saved-but-never-run protocol produces no row, and a monitoring recording whose log was removed some other way is not shown. Because the same protocol can be run more than once, **the log filename is each row's identity**, not the protocol name.
+Rows are correlated purely by filename convention (there is no stored link): a run's `run_id` is `{protocol_stem}_{timestamp}`, with the run's start time as `timestamp`. Its log is written as `log/{protocol_stem}_executed_{timestamp}.log`, its manifest as `log/manifests/{run_id}.json`, its monitoring recording lives at `log/monitoring/{run_id}/`, and its source protocol is `protocols_historic/{protocol_stem}.json`. A row only exists if its log file exists — a saved-but-never-run protocol produces no row, and a monitoring recording whose log was removed some other way is not shown. Because the same protocol can be run more than once, **the log filename is each row's identity**, not the protocol name.
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/export/preview` | List every row: `{"log": {...}, "monitoring": {"run_id", "files": [...], "total_size_bytes"} \| null, "protocol": {...} \| null}`, most recently modified log first. |
+| `GET` | `/export/preview` | List every row: `{"log": {...}, "manifest": {..., "commit", "dirty"} \| null, "monitoring": {"run_id", "files": [...], "total_size_bytes"} \| null, "protocol": {...} \| null}`, most recently modified log first. `manifest.commit` and `manifest.dirty` are the git state the manifest recorded (`null` without git). |
 | `GET` | `/export/download?log={filename}` | Zip the selected runs (repeat `log` for more than one) and return it as a file download (`Content-Disposition: attachment`). Never deletes anything. `422` if no `log` is given. |
-| `POST` | `/export/clean` | Body `{"logs": ["{filename}", ...]}`. Permanently delete the selected runs' log files and monitoring recordings. Returns `{"deleted": [...], "count": N}`. `protocols_historic/` is never touched — a run's protocol is always copied into its export, never removed by clean. `422` if `logs` is empty. |
+| `POST` | `/export/clean` | Body `{"logs": ["{filename}", ...]}`. Permanently delete the selected runs' log files, manifests and monitoring recordings. Returns `{"deleted": [...], "count": N}`. `protocols_historic/` is never touched — a run's protocol is always copied into its export, never removed by clean. `422` if `logs` is empty. |
 
-A zip's members are `log/{filename}`, `log/monitoring/{run_id}/{filename}`, and `protocols_historic/{filename}`. Selecting two runs of the same protocol writes that protocol file into the zip only once. An unknown or already-deleted filename passed to `download`/`clean` is skipped silently rather than erroring the whole request.
+A zip's members are `log/{filename}`, `log/manifests/{run_id}.json`, `log/monitoring/{run_id}/{filename}`, `protocols_historic/{filename}`, and an `export_manifest.json` index at the root: `{"schema": "chemunited-export/1", "exported_at", "project", "runs": [{"run_id", "log", "manifest", "monitoring": [...], "protocol"}]}`, giving each run's paths inside the zip (`null` / `[]` for what it doesn't have). It isn't named `manifest.json` because the zip mirrors the project's layout, which has its own `manifest.json`. Selecting two runs of the same protocol writes that protocol file into the zip only once. An unknown or already-deleted filename passed to `download`/`clean` is skipped silently rather than erroring the whole request.
+
+### Run manifests
+
+Every run writes `log/manifests/{run_id}.json` when it starts (`"state": "running"`) and rewrites it when it ends, so it survives work-server restarts and later runs, unlike `/run/report`:
+
+```json
+{
+  "schema": "chemunited-run-manifest/1",
+  "run_id": "React_2026-10-28T09-12-00_2026-10-28T14-00-00",
+  "state": "finished",
+  "reason": null,
+  "started_at": "2026-10-28T14:00:00+01:00",
+  "finished_at": "2026-10-28T14:20:31+01:00",
+  "protocol": {"filename": "React_2026-10-28T09-12-00.json", "content": {"main_parameter": {}, "React_0": {}}},
+  "options": {"dry_run": false, "timeout_commands": "10 s", "error_resilient": false, "record_monitoring": true},
+  "project": {
+    "name": "AGA",
+    "git": {"commit": "a1b2c3…", "branch": "main", "dirty": false, "changed": [], "captured_at": "2026-10-28T09:00:00+01:00"}
+  },
+  "software": {"python": "3.13.5", "chemunited-workflow": "0.1.0", "chemunited-quantities": "0.0.3"},
+  "results": []
+}
+```
+
+`protocol.content` is the protocol exactly as it ran. `project.git` is the project's state when it was loaded (see [Project management](#project-management)), or `null`. If HEAD moved after the project was loaded, the run still executes the process code that was loaded; the manifest then adds `project.head_at_start`, the commit HEAD pointed at when the run started, and the run log warns. `results` has the same shape as `/run/report`'s `results`. A manifest that can't be written is logged and never stops the run. The manifest stores no absolute paths and no hostname.
 
 ### Custom export behavior
 
@@ -255,17 +299,24 @@ The same extensibility shape as [custom routes](#custom-routes): an optional `{p
 # customizations/export/export_hook.py
 from pathlib import Path
 
-def build_zip(project_dir: Path, logs: list[str]) -> bytes:
-    ...  # build and return your own zip bytes for the selected runs
 
-def clean(project_dir: Path, logs: list[str]) -> dict:
-    ...  # delete whatever you like for the selected runs, return {"deleted": [...], "count": N}
+def build_zip(
+    project_dir: Path, logs: list[str]
+) -> bytes: ...  # build and return your own zip bytes for the selected runs
+
+
+def clean(
+    project_dir: Path, logs: list[str]
+) -> dict: ...  # delete whatever you like for the selected runs, return {"deleted": [...], "count": N}
+
 
 EXPORT_HOOKS = {
     "build_zip": build_zip,  # optional — omit to keep the default zip contents
-    "clean": clean,          # optional — omit to keep the default clean behavior
+    "clean": clean,  # optional — omit to keep the default clean behavior
 }
 ```
+
+A `build_zip` hook replaces the whole zip, so it only carries run manifests and the `export_manifest.json` index if it builds on `chemunited_workflow.api.services.export.default_build_zip(project_dir, logs)`.
 
 The file is optional and reloaded fresh on every call. A missing file or one that fails to import (or doesn't export an `EXPORT_HOOKS` dict) falls back to the default behavior for both actions — a broken hook file never breaks `/export/preview`, `/export/download`, or `/export/clean`. Once a hook function is found and called, though, its own exception is *not* swallowed — it comes back as HTTP `500`, so a buggy custom `clean()` never silently reports success (or silently falls back to deleting a different set of files than the one it promised).
 
@@ -287,12 +338,15 @@ CUSTOM_ROUTES: dict[str, Callable[..., Any]] = {
 | `GET` | `/custom/discover` | List registered route names, with parameter hints introspected from each function's signature |
 | `POST` | `/custom/{name}` | Call a registered route by name; the request body is passed through as keyword arguments |
 
+Each discovered route has a `description` (the first paragraph of its docstring, or `null`) and, for each parameter, `name`, `required`, `default` and `json_schema`: a JSON schema built from the parameter's type hint (`{}` when it has none). The dashboard builds the forms of [page actions](#dashboard-customization) from these schemas, so typing a route's parameters (`flow_ml_min: float`, `mode: Literal["fast", "slow"]`) gives its form the right inputs.
+
 The file is optional and reloaded fresh on every call, so edits take effect immediately — no server restart, no "turning monitoring off and on" step needed. Calling an unregistered `name` returns `404`. A raised exception inside the registered function is not a `404`/`500` — it comes back as `{"name", "ok": false, "result": null, "error": "...", "latency_ms": ...}`, the same "the call itself succeeded, the action failed" contract `POST /components/commands/{component}/{command}` already uses for a device command.
 
 A registered function can reach a real device by importing `CustomRouteContext` and reading `CustomRouteContext.platform` — a throwaway `Platform` opened just for that one call and closed once it returns (unlike `MonitoringContext`, which stays open for an entire monitoring poll cycle, this is scoped to a single call and never shared):
 
 ```python
 from chemunited_workflow import CustomRouteContext
+
 
 def purge_reactor(volume_ml: float) -> dict:
     platform = CustomRouteContext.platform
@@ -316,6 +370,20 @@ curl -X POST http://127.0.0.1:3116/custom/purge_reactor \
 ```
 
 See `examples/custom_project/customizations/routers/` for a full working example.
+
+## Dashboard customization
+
+A project changes the dashboard through `{project_dir}/customizations/ui/ui_hook.py` and the files next to it; see [HTML UI → Runtime customizations](html-ui.md#runtime-customizations). These routes serve it. All are `GET`, so they are open to remote viewers like the rest of the read-only API.
+
+| Method | Path | Description |
+|--------|------|-------------|
+| `GET` | `/ui/manifest` | The checked `DASHBOARD` from `ui_hook.py`: brand, theme URL, pages, nav changes, actions (with their form fields), widgets, Protocols settings, the known slots and an `errors` list. Always `200`; with no project or no hook it customizes nothing (`"active": false`). Not cached. |
+| `GET` | `/ui/ext/{path}` | A file under `customizations/ui/`, subfolders allowed: `.vue` (as `text/plain`), `.js`, `.mjs`, `.css`, images, `.json`, `.csv`, `.txt`, `.woff2`. Never Python files, hidden files, `__pycache__` or `dist/`. Sent with an `ETag` and `Cache-Control: no-cache`, so an edited file shows on the next reload and an unchanged one costs a `304`. |
+| `GET` | `/ui/html/{path}` | The HTML an `HtmlPage.render()` function in `ui_hook.py` returns for page `/{path}`, with `Content-Security-Policy: sandbox allow-scripts`: its scripts run in an opaque origin, without the dashboard's rights. A `render()` that raises gives a `500` page with the error. |
+
+`ui_hook.py` is imported on every request, like the other hooks, so edits apply on the next page load. It never takes the server down: an import failure, or an entry that doesn't check out (a missing file, an unknown route or slot), lands in the manifest's `errors` (with the line, when known) while every other entry still applies.
+
+Besides the seven built-in page paths, the server answers a browser asking for any unknown one-segment path (`/sensors`) with the dashboard's `index.html`, so a custom page's URL survives a hard refresh; the dashboard shows its own "not found" page for paths it doesn't know. Requests that don't accept `text/html`, paths with more segments and file-like paths keep their `404`.
 
 Visit `/docs` for the interactive Swagger UI, or `/` for the HTML dashboard.
 

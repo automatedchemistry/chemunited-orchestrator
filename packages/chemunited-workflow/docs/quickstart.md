@@ -7,28 +7,34 @@ from chemunited_workflow import Process, Platform
 import networkx as nx
 from pydantic import BaseModel
 
+
 class MyConfig(BaseModel):
     volume_ul: float
     temperature_c: float
 
+
 class MyWorkflow(Process[MyConfig]):
     def build_workflow(self) -> nx.DiGraph:
         G = nx.DiGraph()
-        G.add_node("dispense",  method="dispense_step")
-        G.add_node("heat",      method="heat_step")
-        G.add_node("verify",    method="verify_step")
-        G.add_edge("dispense",  "heat",   condition=True)
-        G.add_edge("heat",      "verify", condition=True)
+        G.add_node("dispense", method="dispense_step")
+        G.add_node("heat", method="heat_step")
+        G.add_node("verify", method="verify_step")
+        G.add_edge("dispense", "heat", condition=True)
+        G.add_edge("heat", "verify", condition=True)
         return G
 
     def dispense_step(self, ctx):
         client = self.platform["pump_01"]
-        r = client.post("dispense", json={"volume": self.config.volume_ul}, raw_response=True)
+        r = client.post(
+            "dispense", json={"volume": self.config.volume_ul}, raw_response=True
+        )
         return r.status_code == 200
 
     def heat_step(self, ctx):
         client = self.platform["reactor_01"]
-        r = client.post("set_temp", json={"temp": self.config.temperature_c}, raw_response=True)
+        r = client.post(
+            "set_temp", json={"temp": self.config.temperature_c}, raw_response=True
+        )
         return r.status_code == 200
 
     def verify_step(self, ctx):
@@ -90,7 +96,7 @@ my_project/
 from .my_workflow import MyWorkflow, MyConfig
 
 PROCESSES = {"my_workflow": MyWorkflow}
-CONFIGS   = {"my_workflow": MyConfig}
+CONFIGS = {"my_workflow": MyConfig}
 ```
 
 ---

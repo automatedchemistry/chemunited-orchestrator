@@ -313,6 +313,10 @@ def _ordered_payload(payload: dict, payload_type: str) -> dict:
         if "destination_port" in normalized and "destiny_port" not in normalized:
             normalized["destiny_port"] = normalized.pop("destination_port")
 
+    if payload_type == "display" and not normalized.get("unit"):
+        # An LCD without a unit keeps the call it had before LCDs had units.
+        normalized.pop("unit", None)
+
     preferred = {
         "compound": (
             "name",
@@ -336,7 +340,7 @@ def _ordered_payload(payload: dict, payload_type: str) -> dict:
             "phase",
             "delta_temperature_per_mol_converted",
         ),
-        "display": ("name", "position", "component", "command", "kwargs"),
+        "display": ("name", "position", "component", "command", "kwargs", "unit"),
     }[payload_type]
     ordered = {key: normalized.pop(key) for key in preferred if key in normalized}
     ordered.update({key: normalized[key] for key in sorted(normalized)})

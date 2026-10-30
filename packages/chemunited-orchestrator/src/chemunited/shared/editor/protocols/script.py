@@ -225,8 +225,8 @@ class ScriptEditorWindow(ThemedChromeMixin, QMainWindow):
         self.command_dock = QDockWidget("Commands", self)
         self.command_dock.setWidget(self.command_list_panel)
         self.command_dock.setAllowedAreas(
-            Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea
-        )  # type: ignore[attr-defined]
+            Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea  # type: ignore[attr-defined]
+        )
         if isDarkTheme():
             self.command_dock.setStyleSheet(
                 "QDockWidget { color: rgba(255, 255, 255, 0.85); }"
@@ -246,8 +246,8 @@ class ScriptEditorWindow(ThemedChromeMixin, QMainWindow):
         self.process_parameter_dock = QDockWidget("Process Parameters", self)
         self.process_parameter_dock.setWidget(self.process_parameter_editor)
         self.process_parameter_dock.setAllowedAreas(
-            Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea
-        )  # type: ignore[attr-defined]
+            Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea  # type: ignore[attr-defined]
+        )
         if isDarkTheme():
             self.process_parameter_dock.setStyleSheet(
                 "QDockWidget { color: rgba(255, 255, 255, 0.85); }"
@@ -268,8 +268,8 @@ class ScriptEditorWindow(ThemedChromeMixin, QMainWindow):
             self.main_parameter_dock = QDockWidget("Main Parameters", self)
             self.main_parameter_dock.setWidget(self.main_parameter_editor)
             self.main_parameter_dock.setAllowedAreas(
-                Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea
-            )  # type: ignore[attr-defined]
+                Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea  # type: ignore[attr-defined]
+            )
             if isDarkTheme():
                 self.main_parameter_dock.setStyleSheet(
                     "QDockWidget { color: rgba(255, 255, 255, 0.85); }"

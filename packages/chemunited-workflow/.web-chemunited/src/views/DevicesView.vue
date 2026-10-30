@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { useNotification } from '../composables/useNotification'
+import ExtensionSlot from '../extensions/ExtensionSlot.vue'
+import PageActions from '../extensions/PageActions.vue'
 
 interface ProjectResponse {
   project_dir: string | null
@@ -257,6 +259,12 @@ onMounted(() => {
       </button>
     </header>
 
+    <PageActions
+      v-if="projectLoaded"
+      page="devices"
+      :context="{ components: associations.map(assoc => assoc.component) }"
+    />
+
     <section v-if="isLoadingPage" class="state-card" aria-live="polite">
       <span class="spinner" aria-hidden="true"></span>
       <h2>Loading devices</h2>
@@ -341,6 +349,12 @@ onMounted(() => {
         </table>
       </div>
     </section>
+
+    <ExtensionSlot
+      v-if="projectLoaded"
+      name="devices.panels"
+      :context="{ components: associations.map(assoc => assoc.component) }"
+    />
   </div>
 </template>
 

@@ -18,7 +18,7 @@ A NetworkX-based workflow execution engine for conditional automation of chemist
 - **Single-run execution model** — only one experiment at a time; `POST /run/` returns HTTP 409 if a run is already active, preventing accidental double-dispatch on physical hardware
 - **Browser-based dashboard** (Vue SPA) with live run monitoring, per-node progress bars, log viewer, and device status — its built assets ship with the package, no build step required to use it
 - **Human-in-the-loop checkpoints** — a node can pause and wait for an operator to reply on the dashboard before continuing, with a mandatory timeout so a run never blocks forever
-- **Customisable per-project dashboard** — drop a pre-built SPA into `{project}/customizations/ui/dist/` to override the bundled UI; falls back automatically when absent
+- **Customisable per-project dashboard, no build step** — `{project}/customizations/ui/ui_hook.py` rebrands the dashboard, adds pages (`.vue` files compiled in the browser, or HTML rendered by Python), widgets and buttons that call the project's Python functions; only Python and pip are needed (`chemunited-workflow ui init`). A pre-built SPA in `{project}/customizations/ui/dist/` can still replace the whole UI
 - **Standalone sensor monitoring** — register device variables, start polling sessions independent of protocol runs, and read back time-series profiles
 
 ## Documentation
@@ -26,7 +26,7 @@ A NetworkX-based workflow execution engine for conditional automation of chemist
 - [Installation](docs/installation.md)
 - [Quick Start & Project Structure](docs/quickstart.md)
 - [Deployment Modes](docs/deployment.md) — FastAPI, MCP, Windows tray
-- [HTML UI](docs/html-ui.md) — dashboard pages, per-project overrides, and how the Vue SPA is built
+- [HTML UI](docs/html-ui.md) — dashboard pages, runtime customizations, per-project overrides, and how the Vue SPA is built
 - [API Reference](docs/api-reference.md)
 - [MCP Tools](docs/mcp-tools.md)
 - [Concepts](docs/concepts.md) — execution model, physical units, dry-run, human-in-the-loop input

@@ -1,0 +1,20 @@
+/*
+ * Example theme: plain CSS, no build step. Uncomment theme_css="theme.css" in
+ * ui_hook.py to apply it. It overrides the dashboard's colour tokens (see
+ * .web-chemunited/src/assets/base.css for all 21 --color-* tokens) for the
+ * light theme on :root and for the dark theme on :root[data-theme='dark'].
+ */
+:root {
+  --color-primary: #b45309;
+  --color-primary-hover: #92400e;
+  --color-primary-soft: #fef3c7;
+  --color-accent: #d97706;
+  --color-sidebar: #1c1206;
+}
+
+:root[data-theme='dark'] {
+  --color-primary: #d97706;
+  --color-primary-hover: #b45309;
+  --color-primary-soft: #3b2a10;
+  --color-accent: #f59e0b;
+}

@@ -72,8 +72,8 @@ my_project/
 │   └── <process>_<timestamp>.json # saved protocol script snapshots (from Pre-Running)
 ├── connectivity/
 │   └── associations.json          # device connections — machine-specific
-├── log/                           # execution logs (local only, never shared)
-└── .git/                          # full version history, initialized automatically
+├── log/                           # execution logs and run manifests (local only, never shared)
+└── .gitignore                     # leaves machine- and run-specific files out of a git repository
 ```
 
 You do not need to create or edit most of these files by hand — the GUI writes and updates them as you draw,
@@ -82,9 +82,11 @@ build protocols, and run. A full technical breakdown of each file is in
 
 <div class="info-block">
   <strong>💡 Note</strong><br>
-  A project is automatically initialized as a Git repository, and ChemUnited creates a commit every time you save
-  (platform layout, a process, main parameters). This is the version history mentioned in the tip above — you get
-  it for free without doing anything extra.
+  ChemUnited doesn't version projects itself: to keep a history, make the project folder (or a folder above it) a
+  Git repository and commit your changes with Git. ChemUnited never commits or changes the repository. In return,
+  every run records the project's commit in its <strong>run manifest</strong>, together with the protocol that ran,
+  so an exported run can be traced back to the exact version of the project that ran it (see
+  <a href="../dashboard/export.md">Export</a>).
 </div>
 
 ## The `.chemunited` File
@@ -94,8 +96,8 @@ colleague, back up, or archive, without needing them to have Git or the exact sa
 
 * `.git/`, `.gitignore`, and the local `log/` folder are **excluded** from the export — history and local run logs
   don't travel with it.
-* Opening a `.chemunited` file unpacks it next to the archive (into a folder named after the project) and
-  initializes a fresh Git history there — the archive itself carries no version history.
+* Opening a `.chemunited` file unpacks it next to the archive (into a folder named after the project). The archive
+  carries no version history; to share history, share the Git repository instead.
 * The working directory is always the source of truth; `.chemunited` is only ever a snapshot used for sharing or
   archiving, never something you work out of directly.
 

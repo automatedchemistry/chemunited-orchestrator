@@ -12,7 +12,6 @@ from chemunited_core.components import PlugFlowComponentData
 
 
 class PathSpring(PathElementItem):
-
     DEFAULT_COLOR = QColor("#000000")
     DEFAULT_LINE_WIDTH = 5.0
     LENGTH = PATTERN_DIMENSION * 2

@@ -186,8 +186,8 @@ class DrawGraphicView(GraphCore):
         if display is not None:
             QTimer.singleShot(
                 0,
-                lambda name=display.name: self.parent_ref.orchestrator.show_display_properties(
-                    name
+                lambda name=display.name: (
+                    self.parent_ref.orchestrator.show_display_properties(name)
                 ),
             )
             event.accept()
@@ -248,22 +248,22 @@ class DrawGraphicView(GraphCore):
                     if isinstance(item, GraphComponent):
                         QTimer.singleShot(
                             0,
-                            lambda name=item.inf.name: self.parent_ref.orchestrator.remove_component(
-                                name
+                            lambda name=item.inf.name: (
+                                self.parent_ref.orchestrator.remove_component(name)
                             ),
                         )
                     elif isinstance(item, BaseConnectionItem):
                         QTimer.singleShot(
                             0,
-                            lambda name=item.inf.name: self.parent_ref.orchestrator.remove_connection(
-                                name
+                            lambda name=item.inf.name: (
+                                self.parent_ref.orchestrator.remove_connection(name)
                             ),
                         )
                     elif isinstance(item, LcdDisplayItem):
                         QTimer.singleShot(
                             0,
-                            lambda name=item.name: self.parent_ref.orchestrator.remove_display(
-                                name
+                            lambda name=item.name: (
+                                self.parent_ref.orchestrator.remove_display(name)
                             ),
                         )
             event.accept()
@@ -290,8 +290,8 @@ class DrawGraphicView(GraphCore):
                     FluentIcon.LINK.icon() if is_capped else FluentIcon.CANCEL.icon()
                 )
                 toggle_action.triggered.connect(
-                    lambda checked=False, c=component, n=port_num, closed=not is_capped: QTimer.singleShot(
-                        0, lambda: c.set_port_closed(n, closed)
+                    lambda checked=False, c=component, n=port_num, closed=not is_capped: (
+                        QTimer.singleShot(0, lambda: c.set_port_closed(n, closed))
                     )
                 )
                 menu.addAction(toggle_action)
@@ -394,8 +394,8 @@ class DrawGraphicView(GraphCore):
         delete_action.setText("Delete")
         delete_action.setIcon(OrchestratorIcon.TRASH.icon())
         delete_action.triggered.connect(
-            lambda checked=False, comps=component_names, conns=connection_names: QTimer.singleShot(
-                0, lambda: self._delete_snapshot(comps, conns)
+            lambda checked=False, comps=component_names, conns=connection_names: (
+                QTimer.singleShot(0, lambda: self._delete_snapshot(comps, conns))
             )
         )
         menu.addAction(delete_action)

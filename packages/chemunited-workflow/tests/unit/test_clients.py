@@ -229,6 +229,25 @@ def test_put_waits_for_is_idle_before_returning(mocker):
     assert calls == ["is-idle", "is-idle", "is-idle"]
 
 
+def test_put_without_wait_for_completion_does_not_poll_is_idle(mocker):
+    calls = []
+
+    def fake_get(self, path):
+        calls.append(path)
+        response = requests.Response()
+        response.status_code = 200
+        response._content = b"false"
+        return response
+
+    mocker.patch.object(BaseClient, "get", new=fake_get)
+    mocker.patch.object(BaseClient, "put", return_value=_ok_json_response())
+
+    client = ComponentClient(BASE_URL, wait_for_completion=False)
+    client.put("/dose", volume=5)
+
+    assert calls == []
+
+
 def test_get_does_not_poll_is_idle(mocker):
     calls = []
 

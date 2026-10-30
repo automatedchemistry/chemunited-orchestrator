@@ -1,4 +1,4 @@
-"""LcdDisplayDialog — name an LCD and bind it to a device variable."""
+"""LcdDisplayDialog — name an LCD and bind it to a device variable or custom source."""
 
 from __future__ import annotations
 
@@ -19,9 +19,7 @@ from qfluentwidgets import (
 )
 from qframelesswindow import FramelessDialog
 
-from chemunited.shared.widgets.app_theme import ThemedChromeMixin
-
-from .model import LcdDisplay, device_variables
+from .model import CUSTOM_COMPONENT, LcdDisplay, device_variables
 
 MONITORED_SUFFIX = "  ● monitored"
 
@@ -30,12 +28,13 @@ def _same_variable(variable: Mapping[str, Any], component: str, command: str) ->
     return variable.get("component") == component and variable.get("command") == command
 
 
-class LcdDisplayDialog(ThemedChromeMixin, FramelessDialog):
-    """Form for an LCD: its name, device, variable and the variable's parameters.
+class LcdDisplayDialog(FramelessDialog):
+    """Form for an LCD: its name, device, variable, the variable's parameters and unit.
 
-    The variables are the device's GET commands from its protocol definition;
-    the ones in the project's monitoring list are marked. An LCD can still be
-    bound to one that isn't: the dashboard then shows "not monitored".
+    The variables are the device's GET commands from its protocol definition,
+    or, for ``custom``, the project's custom monitoring sources; the ones in
+    the project's monitoring list are marked. An LCD can still be bound to one
+    that isn't: the dashboard then shows "not monitored".
     """
 
     def __init__(
@@ -46,9 +45,11 @@ class LcdDisplayDialog(ThemedChromeMixin, FramelessDialog):
         taken_names: Collection[str],
         name: str,
         position: tuple[float, float],
+        custom_sources: Collection[str] = (),
         component: str = "",
         command: str = "",
         kwargs: Mapping[str, Any] | None = None,
+        unit: str = "",
         creation: bool = True,
         parent=None,
     ) -> None:
@@ -56,6 +57,7 @@ class LcdDisplayDialog(ThemedChromeMixin, FramelessDialog):
         self.setWindowTitle("Add LCD" if creation else "LCD Properties")
         self.setResizeEnabled(False)
         self._devices = dict(devices)  # name -> figure
+        self._custom_sources = sorted(custom_sources)
         self._monitored = list(monitored)
         self._taken_names = set(taken_names)
         self._position = position
@@ -65,12 +67,20 @@ class LcdDisplayDialog(ThemedChromeMixin, FramelessDialog):
         self.name_edit = LineEdit(self)
         self.name_edit.setText(name)
         self.device_combo = ComboBox(self)
-        self.device_combo.addItems(sorted(self._devices))
+        for device in sorted(self._devices):
+            self.device_combo.addItem(device, userData=device)
+        if self._custom_sources:
+            # Named as on the dashboard's Monitoring page.
+            self.device_combo.addItem(CUSTOM_COMPONENT, userData=CUSTOM_COMPONENT)
         self.variable_combo = ComboBox(self)
         self.params_edit = LineEdit(self)
         self.params_edit.setPlaceholderText('{"channel": "1"}')
         self.monitoring_hint = CaptionLabel("", self)
         self.monitoring_hint.setWordWrap(True)
+        self.unit_edit = LineEdit(self)
+        self.unit_edit.setText(unit)
+        self.unit_edit.setPlaceholderText("bar, °C")
+        unit_hint = CaptionLabel("Shown after the reading when it's a number.", self)
 
         form = QFormLayout()
         form.setSpacing(12)
@@ -79,6 +89,8 @@ class LcdDisplayDialog(ThemedChromeMixin, FramelessDialog):
         form.addRow("Variable", self.variable_combo)
         form.addRow("Parameters", self.params_edit)
         form.addRow("", self.monitoring_hint)
+        form.addRow("Unit", self.unit_edit)
+        form.addRow("", unit_hint)
 
         self.error_label = BodyLabel("", self)
         self.error_label.setWordWrap(True)
@@ -111,8 +123,9 @@ class LcdDisplayDialog(ThemedChromeMixin, FramelessDialog):
         layout.addLayout(actions)
         self.setMinimumWidth(520)
 
-        if component in self._devices:
-            self.device_combo.setCurrentText(component)
+        index = self.device_combo.findData(component)
+        if index >= 0:
+            self.device_combo.setCurrentIndex(index)
         self._load_variables(select=command, params=kwargs)
         self.device_combo.currentIndexChanged.connect(  # type: ignore[attr-defined]
             lambda _: self._load_variables()
@@ -126,15 +139,34 @@ class LcdDisplayDialog(ThemedChromeMixin, FramelessDialog):
 
     # ── variables ───────────────────────────────────────────────────────────
 
+    def _component(self) -> str:
+        return str(self.device_combo.currentData() or "")
+
+    def _custom_defaults(self, source: str) -> dict[str, Any]:
+        """The parameters of *source*'s first entry in the monitoring list.
+
+        Never guessed from the function: other parameters would make another
+        variable than the one monitored.
+        """
+        for variable in self._monitored:
+            if _same_variable(variable, CUSTOM_COMPONENT, source):
+                return dict(variable.get("kwargs") or {})
+        return {}
+
     def _load_variables(
         self, select: str = "", params: Mapping[str, Any] | None = None
     ) -> None:
-        component = self.device_combo.currentText()
-        figure = self._devices.get(component)
-        try:
-            self._variables = device_variables(figure, component) if figure else {}
-        except Exception:
-            self._variables = {}
+        component = self._component()
+        if component == CUSTOM_COMPONENT:
+            self._variables = {
+                source: self._custom_defaults(source) for source in self._custom_sources
+            }
+        else:
+            figure = self._devices.get(component)
+            try:
+                self._variables = device_variables(figure, component) if figure else {}
+            except Exception:
+                self._variables = {}
         self.variable_combo.blockSignals(True)
         self.variable_combo.clear()
         for command in sorted(self._variables):
@@ -173,7 +205,7 @@ class LcdDisplayDialog(ThemedChromeMixin, FramelessDialog):
         return parsed
 
     def _update_monitoring_hint(self) -> None:
-        component, command = self.device_combo.currentText(), self._command()
+        component, command = self._component(), self._command()
         try:
             params = self._params()
         except ValueError:
@@ -203,7 +235,7 @@ class LcdDisplayDialog(ThemedChromeMixin, FramelessDialog):
             self._fail(f"Another LCD is already called '{name}'.")
             return
         if not self._command():
-            self._fail("Pick a device with a variable to show.")
+            self._fail("Pick a device or custom source with a variable to show.")
             return
         try:
             params = self._params()
@@ -214,9 +246,10 @@ class LcdDisplayDialog(ThemedChromeMixin, FramelessDialog):
             self._result = LcdDisplay(
                 name=name,
                 position=self._position,
-                component=self.device_combo.currentText(),
+                component=self._component(),
                 command=self._command(),
                 kwargs=params,
+                unit=self.unit_edit.text(),
             )
         except ValidationError as exc:
             error = exc.errors()[0]

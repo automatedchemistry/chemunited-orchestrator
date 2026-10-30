@@ -82,6 +82,7 @@ dashboard/run_control.md
 dashboard/protocols.md
 dashboard/monitoring.md
 dashboard/logs.md
+dashboard/export.md
 dashboard/devices.md
 dashboard/api_and_mcp.md
 ```

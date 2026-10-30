@@ -117,7 +117,6 @@ def flowchem_addresses_dict(
 
 
 class flowchem_servers:
-
     def __init__(self):
 
         self.servers: dict[str, dict[str, list[str]]] = {}
@@ -157,7 +156,6 @@ class flowchem_servers:
     def get_matched_component(self, url) -> str | None:
 
         if url in self.correspondent:
-
             return self.correspondent[url]
 
         return None

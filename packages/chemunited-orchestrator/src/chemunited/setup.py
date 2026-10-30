@@ -456,11 +456,7 @@ class SetupWindow(MainWindowBase):
     }
 
     def save(self) -> None:
-        current_widget = self.SegmentWindow.stackedWidget.currentWidget()
-        classification = getattr(current_widget, "classification", SetupStepMode.DESIGN)
-        step = self._setup_step_mode(classification)
-        comment = self._SAVE_COMMENTS.get(step, "Save: project updated")  # type: ignore[arg-type]
-        self.orchestrator.save(comment)
+        self.orchestrator.save()
         self.update_project_actions()
 
     def add_project(self):

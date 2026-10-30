@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import threading
 import time
 from unittest.mock import MagicMock, patch
 
@@ -11,6 +12,7 @@ import requests
 import responses as resp_lib
 
 from chemunited_workflow.api.monitoring_store import MonitoringStore
+from chemunited_workflow.api.run_store import RunState, RunStore
 from chemunited_workflow.api.services.monitoring import (
     MonitoringService,
     monitoring_key,
@@ -26,6 +28,7 @@ _MODULE = "chemunited_workflow.api.services.monitoring.requests"
 def _reset_monitoring_context():
     yield
     MonitoringContext.platform = None
+    MonitoringContext._stop_run = None
 
 
 @pytest.fixture
@@ -378,8 +381,9 @@ def test_one_device_failing_does_not_block_other(svc):
     )
     svc.start()
     assert _wait_until(
-        lambda: "pump::value" in svc.get_latest()
-        and "valve::position" in svc.get_latest()
+        lambda: (
+            "pump::value" in svc.get_latest() and "valve::position" in svc.get_latest()
+        )
     )
     svc.stop()
 
@@ -538,8 +542,10 @@ def test_two_channels_of_one_command_keep_separate_readings(svc, tmp_path):
     assert svc.get_history("pump", "read", {"channel": "2"})[-1]["value"] == 2.0
     assert svc.get_history("pump", "read") == []
     assert _wait_until(
-        lambda: (tmp_path / "log" / "monitoring" / "run-1").exists()
-        and len(list((tmp_path / "log" / "monitoring" / "run-1").iterdir())) == 2
+        lambda: (
+            (tmp_path / "log" / "monitoring" / "run-1").exists()
+            and len(list((tmp_path / "log" / "monitoring" / "run-1").iterdir())) == 2
+        )
     )
     recorded = svc.read_recording("run-1", "pump", "read", kwargs={"channel": "1"})
     assert {reading["value"] for reading in recorded} == {1.0}
@@ -796,8 +802,9 @@ def test_custom_source_does_not_block_real_component_poll(svc, tmp_path):
     )
     svc.start()
     assert _wait_until(
-        lambda: "pump::value" in svc.get_latest()
-        and "custom::derived" in svc.get_latest()
+        lambda: (
+            "pump::value" in svc.get_latest() and "custom::derived" in svc.get_latest()
+        )
     )
     svc.stop()
 
@@ -910,3 +917,110 @@ def test_manual_start_custom_source_reads_real_component_end_to_end(svc, tmp_pat
     latest = svc.get_latest()
     assert latest["custom::pump_value_doubled"]["value"] == 42.0
     assert latest["custom::pump_value_doubled"]["error"] is None
+
+
+# ── MonitoringContext.stop_run (run control for interlock sources) ─────────
+
+_PUMP_CONFIG = {
+    "sample_time": 0.05,
+    "variables": [{"component": "pump", "command": "value", "kwargs": {}}],
+}
+
+
+@pytest.fixture
+def run_store():
+    return RunStore()
+
+
+@pytest.fixture
+def controlled_svc(svc, run_store):
+    """A service that can stop `run_store`'s run, as ProjectHolder wires it."""
+    return MonitoringService(
+        project_dir=svc._project_dir, store=MonitoringStore(), stop_run=run_store.cancel
+    )
+
+
+def test_stop_run_false_when_not_published():
+    assert MonitoringContext._stop_run is None
+    assert MonitoringContext.stop_run() is False
+
+
+@resp_lib.activate
+def test_poll_loop_publishes_stop_run_that_cancels_the_active_run(
+    controlled_svc, run_store
+):
+    resp_lib.add(
+        resp_lib.GET, "http://device-server:8000/sim/pump/value", json=1.0, status=200
+    )
+    controlled_svc.write_config(_PUMP_CONFIG)
+    assert run_store.try_start("proto.json") is not None
+
+    controlled_svc.start()
+    assert _wait_until(lambda: MonitoringContext._stop_run is not None)
+    assert MonitoringContext.stop_run("Overpressure: 3.2 bar > 3.0 bar") is True
+    assert run_store.get().state == RunState.CANCELLED
+    assert run_store.get().cancel_reason == "Overpressure: 3.2 bar > 3.0 bar"
+    assert MonitoringContext.stop_run() is False  # nothing left to stop
+
+    controlled_svc.stop()
+    assert _wait_until(lambda: MonitoringContext._stop_run is None)
+    assert MonitoringContext.stop_run() is False
+
+
+@resp_lib.activate
+def test_custom_source_stops_the_active_run_end_to_end(
+    controlled_svc, run_store, tmp_path
+):
+    _write_hook(
+        tmp_path,
+        "from chemunited_workflow import MonitoringContext\n"
+        "\n"
+        "def interlock(**kwargs):\n"
+        "    return MonitoringContext.stop_run('Overpressure')\n"
+        "\n"
+        "CUSTOM_SOURCES = {'interlock': interlock}\n",
+    )
+    controlled_svc.write_config(
+        {
+            "sample_time": 0.05,
+            "variables": [
+                {"component": "custom", "command": "interlock", "kwargs": {}}
+            ],
+        }
+    )
+    assert run_store.try_start("proto.json") is not None
+
+    controlled_svc.start()
+    assert _wait_until(lambda: run_store.get().state == RunState.CANCELLED)
+    controlled_svc.stop()
+
+    assert run_store.get().cancel_reason == "Overpressure"
+    history = controlled_svc.get_history("custom", "interlock")
+    assert history[0]["value"] is True  # the tick that stopped the run
+
+
+@resp_lib.activate
+def test_old_cycle_cleanup_keeps_a_newer_cycles_context(controlled_svc):
+    """Monitoring turned off and straight back on (one run ending as the next
+    starts) has the new cycle publish before the old one finishes its last
+    tick — the old cycle's cleanup must not unpublish the new cycle."""
+    resp_lib.add(
+        resp_lib.GET, "http://device-server:8000/sim/pump/value", json=1.0, status=200
+    )
+    controlled_svc.write_config(_PUMP_CONFIG)
+    old_stop, new_stop = threading.Event(), threading.Event()
+
+    controlled_svc._spawn_poll_thread(old_stop)
+    assert _wait_until(lambda: MonitoringContext.platform is not None)
+    old_platform = MonitoringContext.platform
+    controlled_svc._spawn_poll_thread(new_stop)
+    assert _wait_until(lambda: MonitoringContext.platform is not old_platform)
+
+    old_stop.set()
+    time.sleep(0.5)  # the old cycle wakes, leaves its loop and cleans up
+    assert MonitoringContext.platform is not None
+    assert MonitoringContext._stop_run is not None
+
+    new_stop.set()
+    assert _wait_until(lambda: MonitoringContext.platform is None)
+    assert MonitoringContext._stop_run is None

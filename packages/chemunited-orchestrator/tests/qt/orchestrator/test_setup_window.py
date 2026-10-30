@@ -445,7 +445,7 @@ class TestAddComponent:
         self, window: SetupWindow, tmp_path
     ):
         session = ProjectSession()
-        session.new(name="demo", location=tmp_path, init_git=False)
+        session.new(name="demo", location=tmp_path)
         session.save_draw(
             {
                 "components": [
@@ -485,7 +485,7 @@ class TestAddComponent:
         """New associations.json format: no top-level server_url,
         component_url is already a full absolute URL."""
         session = ProjectSession()
-        session.new(name="demo", location=tmp_path, init_git=False)
+        session.new(name="demo", location=tmp_path)
         session.save_draw(
             {
                 "components": [
@@ -525,7 +525,7 @@ class TestAddComponent:
         through open -> (unrelated save) -> rebuild, not get clobbered by
         the flowchem-only connectivity writer."""
         session = ProjectSession()
-        session.new(name="demo", location=tmp_path, init_git=False)
+        session.new(name="demo", location=tmp_path)
         session.save_draw(
             {
                 "components": [
@@ -552,7 +552,7 @@ class TestAddComponent:
         self, window: SetupWindow, tmp_path
     ):
         session = ProjectSession()
-        session.new(name="demo", location=tmp_path, init_git=False)
+        session.new(name="demo", location=tmp_path)
         session.save_draw({"components": [], "connections": []})
         opcua_association = {
             "component": "Valve16",
@@ -571,7 +571,7 @@ class TestAddComponent:
         self, window: SetupWindow, tmp_path
     ):
         session = ProjectSession()
-        session.new(name="demo", location=tmp_path, init_git=False)
+        session.new(name="demo", location=tmp_path)
         session.save_draw(
             {
                 "components": [
@@ -637,7 +637,7 @@ class TestAddComponent:
         self, window: SetupWindow, tmp_path, monkeypatch, qtbot: QtBot
     ):
         session = ProjectSession()
-        session.new(name="demo", location=tmp_path, init_git=False)
+        session.new(name="demo", location=tmp_path)
         session.save_draw(
             {
                 "components": [
@@ -683,7 +683,7 @@ class TestAddComponent:
         self, window: SetupWindow, tmp_path, monkeypatch, qtbot: QtBot
     ):
         session = ProjectSession()
-        session.new(name="demo", location=tmp_path, init_git=False)
+        session.new(name="demo", location=tmp_path)
         session.save_draw(
             {
                 "components": [
@@ -728,7 +728,7 @@ class TestAddComponent:
         self, window: SetupWindow, tmp_path, qtbot: QtBot
     ):
         session = ProjectSession()
-        session.new(name="demo", location=tmp_path, init_git=False)
+        session.new(name="demo", location=tmp_path)
         session.save_draw(
             {
                 "components": [
@@ -757,7 +757,7 @@ class TestAddComponent:
 
     def test_failed_refresh_keeps_current_project(self, window: SetupWindow, tmp_path):
         session = ProjectSession()
-        session.new(name="demo", location=tmp_path, init_git=False)
+        session.new(name="demo", location=tmp_path)
         session.save_draw(
             {
                 "components": [
@@ -804,7 +804,7 @@ class TestAddComponent:
         self, window: SetupWindow, tmp_path, monkeypatch
     ):
         session = ProjectSession()
-        session.new(name="demo", location=tmp_path, init_git=False)
+        session.new(name="demo", location=tmp_path)
         session.save_draw(
             {
                 "components": [
@@ -845,7 +845,7 @@ class TestAddComponent:
     def test_mcp_exports_platform_svg(self, window: SetupWindow, tmp_path):
         working_dir = tmp_path / "demo"
         session = ProjectSession()
-        session.new(name="demo", location=tmp_path, init_git=False)
+        session.new(name="demo", location=tmp_path)
         window.orchestrator.working_dir = working_dir
         window.orchestrator._session = session
         window.orchestrator.add_component(
@@ -937,7 +937,7 @@ class TestAddComponent:
     ):
         working_dir = tmp_path / "demo"
         session = ProjectSession()
-        session.new(name="demo", location=tmp_path, init_git=False)
+        session.new(name="demo", location=tmp_path)
         window.orchestrator.working_dir = working_dir
         window.orchestrator._session = session
 
@@ -960,7 +960,7 @@ class TestAddComponent:
     def test_save_exports_process_workflow_svg(self, window: SetupWindow, tmp_path):
         working_dir = tmp_path / "demo"
         session = ProjectSession()
-        session.new(name="demo", location=tmp_path, init_git=False)
+        session.new(name="demo", location=tmp_path)
         window.orchestrator.working_dir = working_dir
         window.orchestrator._session = session
 
@@ -980,7 +980,7 @@ class TestAddComponent:
     ):
         working_dir = tmp_path / "demo"
         session = ProjectSession()
-        session.new(name="demo", location=tmp_path, init_git=False)
+        session.new(name="demo", location=tmp_path)
         window.orchestrator.working_dir = working_dir
         window.orchestrator._session = session
 
@@ -1000,7 +1000,7 @@ class TestAddComponent:
     ):
         working_dir = tmp_path / "demo"
         session = ProjectSession()
-        session.new(name="demo", location=tmp_path, init_git=False)
+        session.new(name="demo", location=tmp_path)
         main_parameters_path = working_dir / "protocols" / "main_parameters.py"
         main_parameters_path.parent.mkdir(parents=True, exist_ok=True)
         custom_content = (
@@ -1027,7 +1027,7 @@ class TestAddComponent:
     ):
         working_dir = tmp_path / "demo"
         session = ProjectSession()
-        session.new(name="demo", location=tmp_path, init_git=False)
+        session.new(name="demo", location=tmp_path)
         main_parameters_path = working_dir / "protocols" / "main_parameters.py"
         if main_parameters_path.exists():
             main_parameters_path.unlink()
@@ -1046,7 +1046,7 @@ class TestAddComponent:
     ):
         working_dir = tmp_path / "demo"
         session = ProjectSession()
-        session.new(name="demo", location=tmp_path, init_git=False)
+        session.new(name="demo", location=tmp_path)
         existing_process = working_dir / "protocols" / "React.py"
         existing_process.parent.mkdir(parents=True, exist_ok=True)
         existing_process.write_text(
@@ -1153,7 +1153,7 @@ class CustomProcess(Process[ProcessConfig]):
     ):
         working_dir = tmp_path / "demo"
         session = ProjectSession()
-        session.new(name="demo", location=tmp_path, init_git=False)
+        session.new(name="demo", location=tmp_path)
         window.orchestrator.working_dir = working_dir
         window.orchestrator._session = session
         window.orchestrator.add_process("React")
@@ -1170,7 +1170,7 @@ class CustomProcess(Process[ProcessConfig]):
     ):
         working_dir = tmp_path / "demo"
         session = ProjectSession()
-        session.new(name="demo", location=tmp_path, init_git=False)
+        session.new(name="demo", location=tmp_path)
         window.orchestrator.working_dir = working_dir
         window.orchestrator._session = session
         window.orchestrator.add_process("React")
@@ -1208,7 +1208,7 @@ class CustomProcess(Process[ProcessConfig]):
     ):
         working_dir = tmp_path / "demo"
         session = ProjectSession()
-        session.new(name="demo", location=tmp_path, init_git=False)
+        session.new(name="demo", location=tmp_path)
         window.orchestrator.working_dir = working_dir
         window.orchestrator._session = session
         window.orchestrator.add_process("React")
@@ -1225,7 +1225,7 @@ class CustomProcess(Process[ProcessConfig]):
     ):
         working_dir = tmp_path / "demo"
         session = ProjectSession()
-        session.new(name="demo", location=tmp_path, init_git=False)
+        session.new(name="demo", location=tmp_path)
         window.orchestrator.working_dir = working_dir
         window.orchestrator._session = session
         window.orchestrator.add_process("React")
@@ -1310,7 +1310,7 @@ class CustomProcess(Process[ProcessConfig]):
 
     def test_open_project_restores_compounds(self, window: SetupWindow, tmp_path):
         session = ProjectSession()
-        session.new(name="demo", location=tmp_path, init_git=False)
+        session.new(name="demo", location=tmp_path)
         session.save_draw(
             {
                 "compounds": [
@@ -1346,7 +1346,7 @@ class CustomProcess(Process[ProcessConfig]):
         self, window: SetupWindow, tmp_path
     ):
         session = ProjectSession()
-        session.new(name="demo", location=tmp_path, init_git=False)
+        session.new(name="demo", location=tmp_path)
         session.save_draw(
             {
                 "compounds": [
@@ -1426,7 +1426,7 @@ class CustomProcess(Process[ProcessConfig]):
         COMPOUNDS.clear()
         COMPOUNDS.register(ChemicalEntity(name="stale", molecular_weight=10.0))
         session = ProjectSession()
-        session.new(name="demo", location=tmp_path, init_git=False)
+        session.new(name="demo", location=tmp_path)
         session.save_draw({"components": [], "connections": []})
 
         window.orchestrator.open_project(tmp_path / "demo")
@@ -1436,7 +1436,7 @@ class CustomProcess(Process[ProcessConfig]):
 
     def test_refresh_project_restores_compounds(self, window: SetupWindow, tmp_path):
         session = ProjectSession()
-        session.new(name="demo", location=tmp_path, init_git=False)
+        session.new(name="demo", location=tmp_path)
         session.save_draw({"compounds": [], "components": [], "connections": []})
         window.orchestrator.open_project(tmp_path / "demo")
 
@@ -1548,7 +1548,7 @@ class CustomProcess(Process[ProcessConfig]):
         customizations/components/ folder must refresh the tree so the
         "Custom" category actually appears."""
         session = ProjectSession()
-        session.new(name="demo", location=tmp_path, init_git=False)
+        session.new(name="demo", location=tmp_path)
         session.save_draw({"components": [], "connections": []})
 
         working_dir = tmp_path / "demo"
@@ -1592,7 +1592,7 @@ class CustomProcess(Process[ProcessConfig]):
         already catches per-item errors for compounds/components/reactions/
         connections; the sync_visuals() reconciliation loop must too."""
         session = ProjectSession()
-        session.new(name="demo", location=tmp_path, init_git=False)
+        session.new(name="demo", location=tmp_path)
 
         working_dir = tmp_path / "demo"
         components_dir = working_dir / "customizations" / "components"
@@ -1661,7 +1661,7 @@ class CustomProcess(Process[ProcessConfig]):
         rectangle fallback (see figure_registry.project_loader's auxiliary-SVG
         auto-discovery)."""
         session = ProjectSession()
-        session.new(name="demo", location=tmp_path, init_git=False)
+        session.new(name="demo", location=tmp_path)
 
         working_dir = tmp_path / "demo"
         components_dir = working_dir / "customizations" / "components"

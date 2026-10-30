@@ -89,7 +89,6 @@ class SetZPositionParameter(CommandSignature):
 
 
 class Gantry1DProtocols(ComponentProtocol):
-
     def __init__(self, name: str):
         super().__init__(name)
         self.commands["get:position"] = GetPositionParameter
@@ -102,7 +101,6 @@ class Gantry1DProtocols(ComponentProtocol):
 
 
 class Gantry3DProtocols(ComponentProtocol):
-
     def __init__(self, name: str):
         super().__init__(name)
         self.commands["set_x_position"] = SetXPositionParameter

@@ -346,8 +346,7 @@ class LoadProjectRequest(BaseModel):
 class StartSimRequest(BaseModel):
     execution_id: str = Field(
         description=(
-            "Unique identifier for this run. Used as the filename: "
-            "`<execution_id>.db`."
+            "Unique identifier for this run. Used as the filename: `<execution_id>.db`."
         )
     )
     dt: float = Field(

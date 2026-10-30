@@ -279,6 +279,7 @@ class ComponentClient(DeviceClientMixin, BaseClient):
         cancellation_token=None,
         pause_event=None,
         command_observer=None,
+        wait_for_completion: bool = True,
     ) -> None:
         BaseClient.__init__(self, url, dry_run=dry_run)
         self._init_device_semantics(
@@ -290,6 +291,7 @@ class ComponentClient(DeviceClientMixin, BaseClient):
             cancellation_token=cancellation_token,
             pause_event=pause_event,
             command_observer=command_observer,
+            wait_for_completion=wait_for_completion,
         )
         self._is_idle_supported: bool | None = None
 
@@ -327,10 +329,11 @@ class ComponentClient(DeviceClientMixin, BaseClient):
     # Every flowchem component exposes GET /is-idle (flowchem >= 1.1.3). A
     # put/post is a command that can make the device busy, so we block until
     # it reports idle again before returning — a get is a passive read and
-    # can't make the device busy, so it never triggers this.
+    # can't make the device busy, so it never triggers this. A client built
+    # with wait_for_completion=False skips the wait.
 
     def _execute_post_command(self, verb: str) -> None:
-        if verb in ("put", "post") and not self._dry_run:
+        if verb in ("put", "post") and not self._dry_run and self._wait_for_completion:
             self._wait_until_idle()
 
     def _wait_until_idle(self) -> None:

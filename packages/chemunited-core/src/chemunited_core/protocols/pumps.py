@@ -36,7 +36,6 @@ class StopPumpParameter(CommandSignature):
 
 
 class PumpProtocols(ComponentProtocol):
-
     def __init__(self, name: str):
         super().__init__(name)
         self.commands["is-pumping"] = IsPumpingParameter
@@ -77,7 +76,6 @@ class WithdrawParameter(CommandSignature):
 
 
 class SyringePumpProtocols(PumpProtocols):
-
     def __init__(self, name: str):
         super().__init__(name)
         self.commands["withdraw"] = WithdrawParameter

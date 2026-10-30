@@ -422,6 +422,10 @@ class ProtocolService:
         the device's shared lock (see ``device_locks``), and a PUT shows on
         the live platform view like a run's commands.
 
+        A PUT returns as soon as the device accepts it: unlike a protocol run,
+        the panel doesn't wait for the device to finish, so a thermostat set
+        to 80 °C may still be heating when the response comes back.
+
         Note: ``timeout`` is accepted for API-contract compatibility but is
         not currently enforced against the underlying transport — none of
         the three client protocols has a timeout passthrough yet, so a call
@@ -436,6 +440,7 @@ class ProtocolService:
                 if self._device_state is not None
                 else None
             ),
+            wait_for_completion=False,
         )
         client: Any = None
         try:

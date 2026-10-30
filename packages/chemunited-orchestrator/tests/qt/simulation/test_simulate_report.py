@@ -537,6 +537,27 @@ class TestSimulateWindowReportPlayback:
         assert window.orchestrator.snapshot_draw_data() == design_snapshot_before
 
 
+class TestSimulateWindowReportLayout:
+    def test_profiles_panel_is_open_when_the_window_is_shown(
+        self, qtbot: QtBot
+    ) -> None:
+        # The report is built hidden with the setup window and shown later,
+        # on Simulate: its panes are laid out while it is still off screen.
+        window = SetupWindow()
+        qtbot.addWidget(window)
+        window.show()
+        qtbot.waitExposed(window)
+        qtbot.wait(10)
+
+        report = window.SimulateWindowReport
+        report.resize(1200, 800)
+        report.show()
+        qtbot.waitExposed(report)
+
+        splitter = report.central.graphWorkflowSplitter
+        qtbot.waitUntil(lambda: splitter.sizes()[1] > 0, timeout=1000)
+
+
 class TestProfilePlotCompoundColors:
     @pytest.fixture(autouse=True)
     def reset_compounds(self):

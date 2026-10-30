@@ -1,0 +1,20 @@
+/*
+ * The dashboard's colours: plain CSS, no build step. Name this file in
+ * ui_hook.py (theme_css="theme.css") to apply it. Set any of the --color-*
+ * tokens below; :root is the light theme, :root[data-theme='dark'] the dark one.
+ *
+ *   --color-background  --color-background-soft  --color-background-mute
+ *   --color-surface-raised  --color-sidebar  --color-sidebar-muted
+ *   --color-heading  --color-text  --color-text-muted
+ *   --color-border  --color-border-hover
+ *   --color-primary  --color-primary-hover  --color-primary-soft  --color-accent
+ *   --color-success  --color-success-soft  --color-warning  --color-warning-soft
+ *   --color-danger  --color-danger-soft
+ */
+:root {
+  /* --color-primary: #1264a3; */
+}
+
+:root[data-theme='dark'] {
+  /* --color-primary: #4da7e8; */
+}

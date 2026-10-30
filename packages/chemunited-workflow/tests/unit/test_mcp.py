@@ -181,7 +181,10 @@ def test_discover_custom_routes_tool_lists_registered_routes(tmp_path):
 
     assert result == {
         "name": "double",
-        "parameters": [{"name": "x", "required": True, "default": None}],
+        "description": None,
+        "parameters": [
+            {"name": "x", "required": True, "default": None, "json_schema": {}}
+        ],
     }
 
 
