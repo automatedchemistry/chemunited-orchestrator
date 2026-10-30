@@ -32,14 +32,17 @@ async def preview(
 
 
 @router.get("/download")
-async def download(
+def download(
     log: list[str] = Query(min_length=1),
     holder: ProjectHolder = Depends(get_project_holder),
 ):
     """Build a zip of the selected runs (log + run manifest + monitoring
     recording + source protocol, with an `export_manifest.json` index at the
-    root) and return it as a file download. Never deletes anything — see
-    POST /export/clean for that."""
+    root, and the monitoring recordings also as `monitoring.db` and one
+    `monitoring/{run_id}.csv` per run) and return it as a file download.
+    Never deletes anything — see POST /export/clean for that."""
+    # A plain def: FastAPI runs it in its threadpool, so building the zip
+    # never holds up the event loop serving live runs.
     project_dir = _project_dir(holder)
     try:
         content = export_service.build_zip(project_dir, log)

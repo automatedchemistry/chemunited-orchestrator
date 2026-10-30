@@ -83,6 +83,18 @@ def finish_run_manifest(manifest: dict[str, Any], record: RunRecord) -> dict[str
     }
 
 
+def read_run_manifest(path: Path) -> dict[str, Any] | None:
+    """The manifest at ``path``; None without one, or if it can't be read (logged)."""
+    if not path.is_file():
+        return None
+    try:
+        data = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, ValueError) as exc:
+        logger.warning("Could not read the run manifest {}: {}", path.name, exc)
+        return None
+    return data if isinstance(data, dict) else None
+
+
 def write_run_manifest(path: Path, manifest: dict[str, Any]) -> None:
     """Write ``manifest`` to ``path`` atomically.
 

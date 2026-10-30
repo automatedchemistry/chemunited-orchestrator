@@ -577,7 +577,7 @@ provides-extras = ["dev", "tray"]
 
 [[package]]
 name = "chemunited-workflow"
-version = "0.1.0"
+version = "0.1.1"
 source = { editable = "packages/chemunited-workflow" }
 dependencies = [
     { name = "chemunited-quantities" },

@@ -202,8 +202,9 @@ onMounted(() => {
         <p class="page-description">
           One row per executed run — its log, its manifest (the protocol that ran and the
           project's git commit), correlated monitoring recording (if any), and source
-          protocol. Select the runs you want, then download a zip or permanently clean
-          them out of the project.
+          protocol. The zip also has each recording as a table: a CSV per run, and one
+          SQLite database with all the selected runs. Select the runs you want, then
+          download a zip or permanently clean them out of the project.
         </p>
       </div>
     </header>
