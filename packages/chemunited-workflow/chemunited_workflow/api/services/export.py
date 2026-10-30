@@ -13,15 +13,18 @@ explicit stored link:
   outcome (``run_id = f"{protocol_stem}_{timestamp}"``, see
   ``api/run_manifest.py``).
 - ``log/monitoring/{protocol_stem}_{timestamp}/`` is the matching monitoring
-  recording directory (see ``api/services/monitoring.py``).
+  recording directory: one JSONL file per variable, and ``recording.json``
+  saying which variable each holds (see ``api/services/monitoring.py``).
 - ``protocols_historic/{protocol_stem}.json`` is the source protocol.
 
 A log filename is therefore enough, on its own, to derive the others. Rows
 are keyed by log filename (not by protocol name) because the same protocol
 can be run more than once, each execution producing its own log. The zip
-also carries ``export_manifest.json`` at its root: an index of the runs it
-holds and their files. It isn't named ``manifest.json``, the project's own
-manifest, because the zip mirrors the project's layout.
+mirrors the project's layout, plus files of its own at its root:
+``export_manifest.json``, an index of the runs it holds and their files (not
+``manifest.json``, the project's own manifest), and the monitoring
+recordings as tables, ``monitoring.db`` and ``monitoring/{run_id}.csv`` (see
+``api/services/monitoring_export.py``).
 
 Per-project customization mirrors the ``customizations/routers/router_hook.py``
 pattern: an optional ``customizations/export/export_hook.py`` exporting an
@@ -44,7 +47,9 @@ from typing import Any, Callable
 
 from loguru import logger
 
-from ..run_manifest import manifest_path
+from ..run_manifest import manifest_path, read_run_manifest
+from .monitoring import RECORDING_DESCRIPTION
+from .monitoring_export import add_monitoring_tables
 
 EXPORT_SCHEMA = "chemunited-export/1"
 EXPORT_INDEX_NAME = "export_manifest.json"
@@ -127,12 +132,8 @@ def _protocol_entry(project_dir: Path, stem: str) -> dict[str, Any] | None:
 
 def _manifest_git(path: Path) -> dict[str, Any] | None:
     """The git state a run manifest recorded; None without one or if unreadable."""
-    try:
-        data = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, ValueError) as exc:
-        logger.warning("Could not read the run manifest {}: {}", path.name, exc)
-        return None
-    project = data.get("project") if isinstance(data, dict) else None
+    data = read_run_manifest(path)
+    project = data.get("project") if data is not None else None
     git = project.get("git") if isinstance(project, dict) else None
     return git if isinstance(git, dict) else None
 
@@ -173,10 +174,12 @@ def preview(project_dir: Path) -> list[dict[str, Any]]:
 
 def default_build_zip(project_dir: Path, logs: list[str]) -> bytes:
     """Zip the selected runs' log + manifest + monitoring recording + source
-    protocol, with an ``export_manifest.json`` index of them at the root.
-    Pure read — never deletes anything. Unknown/missing filenames in *logs*
-    are skipped silently. A protocol shared by two selected runs is written
-    only once. Runs from before run manifests existed have none."""
+    protocol, with an ``export_manifest.json`` index of them at the root and
+    the recordings also as tables: ``monitoring.db`` and one
+    ``monitoring/{run_id}.csv`` per recorded run. Pure read — never deletes
+    anything. Unknown/missing filenames in *logs* are skipped silently. A
+    protocol shared by two selected runs is written only once. Runs from
+    before run manifests existed have none."""
     buffer = io.BytesIO()
     written: set[str] = set()
     runs: list[dict[str, Any]] = []
@@ -197,6 +200,8 @@ def default_build_zip(project_dir: Path, logs: list[str]) -> bytes:
                 "log": add(log_path, f"log/{log_path.name}"),
                 "manifest": None,
                 "monitoring": [],
+                "recording": None,
+                "monitoring_csv": None,
                 "protocol": None,
             }
             runs.append(run)
@@ -219,6 +224,11 @@ def default_build_zip(project_dir: Path, logs: list[str]) -> bytes:
                     add(jsonl, f"log/monitoring/{run_id}/{jsonl.name}")
                     for jsonl in sorted(run_dir.glob("*.jsonl"))
                 ]
+                description = run_dir / RECORDING_DESCRIPTION
+                if description.is_file():
+                    run["recording"] = add(
+                        description, f"log/monitoring/{run_id}/{description.name}"
+                    )
 
             protocol_path = _protocol_dir(project_dir) / f"{stem}.json"
             if protocol_path.is_file():
@@ -226,12 +236,19 @@ def default_build_zip(project_dir: Path, logs: list[str]) -> bytes:
                     protocol_path, f"protocols_historic/{protocol_path.name}"
                 )
 
+        tables = add_monitoring_tables(
+            zf, project_dir, [run["run_id"] for run in runs if run["monitoring"]]
+        )
+        for run in runs:
+            run["monitoring_csv"] = tables["csv"].get(run["run_id"])
+
         if runs:
             exported_at = datetime.now().astimezone()
             index = {
                 "schema": EXPORT_SCHEMA,
                 "exported_at": exported_at.isoformat(timespec="seconds"),
                 "project": project_dir.name,
+                "monitoring_database": tables["database"],
                 "runs": runs,
             }
             zf.writestr(
@@ -264,8 +281,8 @@ def default_clean(project_dir: Path, logs: list[str]) -> dict[str, Any]:
             deleted.append(f"log/manifests/{run_manifest.name}")
         run_dir = _monitoring_dir(project_dir) / run_id
         if run_dir.is_dir():
-            for jsonl in sorted(run_dir.glob("*.jsonl")):
-                deleted.append(f"log/monitoring/{run_id}/{jsonl.name}")
+            for path in sorted(run_dir.iterdir()):
+                deleted.append(f"log/monitoring/{run_id}/{path.name}")
             shutil.rmtree(run_dir)
 
     return {"deleted": deleted, "count": len(deleted)}

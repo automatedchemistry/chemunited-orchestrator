@@ -191,6 +191,8 @@ def test_default_build_zip_scoped_to_selection(tmp_path):
         names = set(zf.namelist())
     assert names == {
         EXPORT_INDEX_NAME,
+        "monitoring.db",
+        f"monitoring/{RUN1_ID}.csv",
         f"log/{RUN1_LOG}",
         f"log/monitoring/{RUN1_ID}/chiller__temperature.jsonl",
         "protocols_historic/test_2026-01-01T00-00-00.json",
@@ -209,12 +211,15 @@ def test_default_build_zip_includes_run_manifest_and_index(tmp_path):
     assert index["schema"] == "chemunited-export/1"
     assert index["project"] == tmp_path.name
     assert index["exported_at"]
+    assert index["monitoring_database"] == "monitoring.db"
     assert index["runs"] == [
         {
             "run_id": RUN1_ID,
             "log": f"log/{RUN1_LOG}",
             "manifest": f"log/manifests/{RUN1_ID}.json",
             "monitoring": [f"log/monitoring/{RUN1_ID}/chiller__temperature.jsonl"],
+            "recording": None,
+            "monitoring_csv": f"monitoring/{RUN1_ID}.csv",
             "protocol": "protocols_historic/test_2026-01-01T00-00-00.json",
         },
         {
@@ -222,6 +227,8 @@ def test_default_build_zip_includes_run_manifest_and_index(tmp_path):
             "log": f"log/{RUN3_LOG}",
             "manifest": None,
             "monitoring": [],
+            "recording": None,
+            "monitoring_csv": None,
             "protocol": None,
         },
         {
@@ -229,9 +236,38 @@ def test_default_build_zip_includes_run_manifest_and_index(tmp_path):
             "log": f"log/{WEIRD_LOG}",
             "manifest": None,
             "monitoring": [],
+            "recording": None,
+            "monitoring_csv": None,
             "protocol": None,
         },
     ]
+
+
+def test_default_build_zip_carries_the_recording_description(tmp_path):
+    _make_project(tmp_path)
+    run_dir = tmp_path / "log" / "monitoring" / RUN1_ID
+    (run_dir / "recording.json").write_text('{"variables": []}', encoding="utf-8")
+    content = default_build_zip(tmp_path, [RUN1_LOG])
+    with zipfile.ZipFile(io.BytesIO(content)) as zf:
+        assert f"log/monitoring/{RUN1_ID}/recording.json" in zf.namelist()
+
+    (run,) = _zip_index(content)["runs"]
+    assert run["recording"] == f"log/monitoring/{RUN1_ID}/recording.json"
+    # Only the readings' files, so each one reads line by line.
+    assert run["monitoring"] == [f"log/monitoring/{RUN1_ID}/chiller__temperature.jsonl"]
+
+
+def test_default_build_zip_without_a_recording_has_no_tables(tmp_path):
+    _make_project(tmp_path)
+    content = default_build_zip(tmp_path, [RUN2_LOG])
+    with zipfile.ZipFile(io.BytesIO(content)) as zf:
+        names = zf.namelist()
+    assert "monitoring.db" not in names
+    assert not any(name.startswith("monitoring/") for name in names)
+
+    index = _zip_index(content)
+    assert index["monitoring_database"] is None
+    assert index["runs"][0]["monitoring_csv"] is None
 
 
 def test_default_build_zip_index_names_a_shared_protocol_for_each_run(tmp_path):
@@ -327,6 +363,15 @@ def test_default_clean_scoped_to_selection(tmp_path):
     # unrelated runs untouched
     assert (tmp_path / "log" / RUN2_LOG).exists()
     assert (tmp_path / "log" / RUN3_LOG).exists()
+
+
+def test_default_clean_lists_every_file_of_the_recording(tmp_path):
+    _make_project(tmp_path)
+    run_dir = tmp_path / "log" / "monitoring" / RUN1_ID
+    (run_dir / "recording.json").write_text("{}", encoding="utf-8")
+    result = default_clean(tmp_path, [RUN1_LOG])
+    assert f"log/monitoring/{RUN1_ID}/recording.json" in result["deleted"]
+    assert not run_dir.exists()
 
 
 def test_default_clean_deletes_the_run_manifest(tmp_path):

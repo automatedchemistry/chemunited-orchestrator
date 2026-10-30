@@ -250,6 +250,8 @@ class MonitoringReading(BaseModel):
     time: str
     value: Any | None = None
     error: str | None = None
+    # Set when the value was a quantity: its number is the value.
+    unit: str | None = None
 
 
 class ExportEntry(BaseModel):

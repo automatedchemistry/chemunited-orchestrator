@@ -221,7 +221,11 @@ curl -X POST http://127.0.0.1:3116/run/ \
 curl http://127.0.0.1:3116/monitoring/recordings/suzuki_batch_2026-01-15T09-30-00_2026-08-19T10-00-00/reactor_01/temperature
 ```
 
-Each variable is polled concurrently using its own per-request timeout, so a hung device only delays its own reading. Recorded readings are stored as JSONL with one entry per tick: `{"tick": 0, "time": "...", "value": ..., "error": null}`, in `{component}__{command}.jsonl`, or `{component}__{command}__{params}.jsonl` for a variable with parameters (`adc__read__channel=2.jsonl`).
+Each variable is polled concurrently using its own per-request timeout, so a hung device only delays its own reading. Recorded readings are stored as JSONL with one entry per tick: `{"tick": 0, "time": "2026-10-30T10:30:45.123456+01:00", "value": ..., "error": null}`, in `{component}__{command}.jsonl`, or `{component}__{command}__{params}.jsonl` for a variable with parameters (`adc__read__channel=2.jsonl`). `time` carries its UTC offset.
+
+A value that isn't JSON is converted when it's read, for the live feed and the recording alike: a quantity (pint, `ChemUnitQuantity`) becomes its number, and the reading gets a `"unit"` (`"°C"`, `"ml/min"`); a `datetime` becomes ISO text, a `Decimal` or NumPy number a number, a NumPy array a list, `bytes` text; anything else its `str()`. A reading that can't be written to disk is logged once per file and never stops monitoring.
+
+The file names can't be read back (parameters are made file-safe, sometimes hashed), so each recorded run also gets `log/monitoring/{run_id}/recording.json`, written after its first recorded tick: `{"schema": "chemunited-monitoring-recording/1", "run_id", "sample_time", "request_timeout", "variables": [{"component", "command", "kwargs", "key", "file"}]}`.
 
 Every request to a device, from a run, a monitoring read or the device panel, takes that device's process-wide lock for the request only. A pump infusing for ten minutes still answers monitoring reads between its idle-wait polls. A command that can't get the lock within 10 s fails with "device busy"; a monitoring read that can't get it skips that tick and keeps the last reading.
 
@@ -262,7 +266,20 @@ Rows are correlated purely by filename convention (there is no stored link): a r
 | `GET` | `/export/download?log={filename}` | Zip the selected runs (repeat `log` for more than one) and return it as a file download (`Content-Disposition: attachment`). Never deletes anything. `422` if no `log` is given. |
 | `POST` | `/export/clean` | Body `{"logs": ["{filename}", ...]}`. Permanently delete the selected runs' log files, manifests and monitoring recordings. Returns `{"deleted": [...], "count": N}`. `protocols_historic/` is never touched — a run's protocol is always copied into its export, never removed by clean. `422` if `logs` is empty. |
 
-A zip's members are `log/{filename}`, `log/manifests/{run_id}.json`, `log/monitoring/{run_id}/{filename}`, `protocols_historic/{filename}`, and an `export_manifest.json` index at the root: `{"schema": "chemunited-export/1", "exported_at", "project", "runs": [{"run_id", "log", "manifest", "monitoring": [...], "protocol"}]}`, giving each run's paths inside the zip (`null` / `[]` for what it doesn't have). It isn't named `manifest.json` because the zip mirrors the project's layout, which has its own `manifest.json`. Selecting two runs of the same protocol writes that protocol file into the zip only once. An unknown or already-deleted filename passed to `download`/`clean` is skipped silently rather than erroring the whole request.
+A zip's members are `log/{filename}`, `log/manifests/{run_id}.json`, `log/monitoring/{run_id}/{filename}` (the JSONL files and `recording.json`), `protocols_historic/{filename}`, the monitoring recordings as tables (below), and an `export_manifest.json` index at the root: `{"schema": "chemunited-export/1", "exported_at", "project", "monitoring_database", "runs": [{"run_id", "log", "manifest", "monitoring": [...], "recording", "monitoring_csv", "protocol"}]}`, giving each run's paths inside the zip (`null` / `[]` for what it doesn't have). `monitoring` lists the JSONL files only, so each reads line by line. The index isn't named `manifest.json` because the zip mirrors the project's layout, which has its own `manifest.json`. Selecting two runs of the same protocol writes that protocol file into the zip only once. An unknown or already-deleted filename passed to `download`/`clean` is skipped silently rather than erroring the whole request.
+
+### Monitoring recordings as tables
+
+The zip also holds every selected run's recording as tables, built from the JSONL at download time (`chemunited_workflow.api.services.monitoring_export`):
+
+- `monitoring.db`, a SQLite database (`PRAGMA user_version` 1) with every selected run:
+  - `runs(run_id, protocol, state, reason, started_at, finished_at, git_commit, git_dirty, sample_time, request_timeout, manifest)`, from the run manifest (`manifest` is all of it, as JSON) and `recording.json`.
+  - `variables(id, run_id, key, component, command, params, file)`, from `recording.json`. A recording from before it existed is read back from its file names, with the same `key` a new recording would get, `params` `NULL`; a variable with parameters, which can't be read back, keeps its file name as `key`.
+  - `readings(variable_id, tick, time, value, value_type, unit, error)`. `value` has no declared type, so each row keeps its own: `value_type` is `number`, `boolean` (stored 0/1), `string`, `array` or `object` (stored as JSON text, for `json_extract`), or `null`.
+  - The view `readings_long`, with the CSV's columns.
+- `monitoring/{run_id}.csv`, one per recorded run: one row per reading, by tick, then variable, with the columns `run_id, variable, component, command, params, tick, time, value, value_type, unit, error`. Comma-separated, dot decimals, UTF-8 with a BOM; booleans are `true`/`false`, arrays and objects JSON.
+
+A line that isn't a reading, such as the last line of a recording still being written, is skipped and logged.
 
 ### Run manifests
 
@@ -309,7 +326,7 @@ EXPORT_HOOKS = {
 }
 ```
 
-A `build_zip` hook replaces the whole zip, so it only carries run manifests and the `export_manifest.json` index if it builds on `chemunited_workflow.api.services.export.default_build_zip(project_dir, logs)`.
+A `build_zip` hook replaces the whole zip, so it only carries run manifests, the monitoring tables and the `export_manifest.json` index if it builds on `chemunited_workflow.api.services.export.default_build_zip(project_dir, logs)`. To add the tables to a zip of its own, it can call `add_monitoring_tables(zf, project_dir, run_ids)` from `chemunited_workflow.api.services.monitoring_export`.
 
 The file is optional and reloaded fresh on every call. A missing file or one that fails to import (or doesn't export an `EXPORT_HOOKS` dict) falls back to the default behavior for both actions — a broken hook file never breaks `/export/preview`, `/export/download`, or `/export/clean`. Once a hook function is found and called, though, its own exception is *not* swallowed — it comes back as HTTP `500`, so a buggy custom `clean()` never silently reports success (or silently falls back to deleting a different set of files than the one it promised).
 

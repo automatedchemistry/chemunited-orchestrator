@@ -299,6 +299,22 @@ def test_lcds_on_one_variable_each_show_their_own_unit():
     assert failed["displays"]["Pressure"]["value"] is None
 
 
+def test_the_unit_a_quantity_came_with_wins_over_the_lcds():
+    store = DeviceStateStore(
+        displays={"Pressure": "custom::pressure", "Raw": "custom::pressure"},
+        display_units={"Pressure": "psi"},
+    )
+
+    store.record_reading(
+        "custom::pressure",
+        {"time": "t1", "value": 1.5, "error": None, "unit": "bar"},
+    )
+
+    displays = store.snapshot()["displays"]
+    assert displays["Pressure"]["value"] == "1.5 bar"
+    assert displays["Raw"]["value"] == "1.5 bar"
+
+
 def test_readings_of_variables_no_lcd_shows_change_nothing():
     store = _lcd_store()
 

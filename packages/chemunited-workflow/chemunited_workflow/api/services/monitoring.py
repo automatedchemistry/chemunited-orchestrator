@@ -17,11 +17,17 @@ live dashboard) and, only while a protocol run has opted in via
 ``on_run_started(run_id, record=True)``, is also appended to
 ``log/monitoring/{run_id}/{component}__{command}.jsonl`` for that run's
 duration (``{component}__{command}__{params}.jsonl`` for a variable with
-parameters).
+parameters). The file names can't be read back, so ``recording.json`` next
+to them says which variable each file holds, and how it was polled.
 
 Readings are keyed by ``monitoring_key``: device, command and parameters, so
 two variables on one command with different parameters (two ADC channels,
 say) keep their own readings.
+
+A reading's value is made safe to write as JSON when it is read (see
+``_reading_value``): a quantity becomes its number plus a ``unit``, and other
+Python objects become the nearest JSON value. Its ``time`` carries the UTC
+offset.
 """
 
 from __future__ import annotations
@@ -29,18 +35,24 @@ from __future__ import annotations
 import hashlib
 import importlib.util
 import json
+import os
 import re
 import threading
 import time
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime
+from dataclasses import asdict, is_dataclass
+from datetime import date, datetime
+from datetime import time as time_of_day
+from decimal import Decimal
+from enum import Enum
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
 
 import requests
 from loguru import logger
+from pydantic import BaseModel
 
 from ...clients.base import _pop_thread_resilient_errors
 from ...clients.http import ComponentClient, device_not_served
@@ -91,6 +103,76 @@ def monitoring_key(
 
 
 _UNSAFE_FILENAME_CHARS = re.compile(r"[^A-Za-z0-9._+=,-]")
+
+# Next to a run's recorded files: which variable each one holds.
+RECORDING_DESCRIPTION = "recording.json"
+RECORDING_SCHEMA = "chemunited-monitoring-recording/1"
+
+
+def _is_quantity(value: Any) -> bool:
+    """A pint quantity, ``ChemUnitQuantity`` included, going by its shape."""
+    return (
+        not isinstance(value, type)
+        and hasattr(value, "magnitude")
+        and hasattr(value, "units")
+    )
+
+
+def _unit_text(units: Any) -> str:
+    """A quantity's unit as the orchestrator writes it: ``°C``, ``ml/min``."""
+    try:
+        return f"{units:~}".replace(" ", "")
+    except (TypeError, ValueError):
+        return str(units)
+
+
+def _jsonable(value: Any) -> Any:
+    """*value* as the nearest value ``json.dumps`` can always write.
+
+    SiLA and OPC UA devices, and custom sources, return Python objects as
+    they are: a ``datetime``, a ``Decimal`` or a NumPy number would otherwise
+    stop the recording. Not ``clients.base._json_safe``: that one also shapes
+    what is sent to devices.
+    """
+    if value is None or isinstance(value, (str, bool, int, float)):
+        return value
+    if _is_quantity(value):
+        magnitude = _jsonable(value.magnitude)
+        unit = _unit_text(value.units)
+        return f"{magnitude} {unit}" if unit else magnitude
+    if isinstance(value, Mapping):
+        return {str(key): _jsonable(item) for key, item in value.items()}
+    as_dict = getattr(value, "_asdict", None)
+    if isinstance(value, tuple) and callable(as_dict):  # a named tuple
+        return _jsonable(as_dict())
+    if isinstance(value, (list, tuple, set, frozenset)):
+        return [_jsonable(item) for item in value]
+    if is_dataclass(value) and not isinstance(value, type):
+        return _jsonable(asdict(value))
+    if isinstance(value, BaseModel):
+        return value.model_dump(mode="json")
+    if isinstance(value, (date, time_of_day)):
+        return value.isoformat()
+    if isinstance(value, Enum):
+        return _jsonable(value.value)
+    if isinstance(value, Decimal):
+        return float(value)
+    if isinstance(value, (bytes, bytearray)):
+        try:
+            return bytes(value).decode("utf-8")
+        except UnicodeDecodeError:
+            return bytes(value).hex()
+    tolist = getattr(value, "tolist", None)
+    if callable(tolist):  # NumPy arrays and numbers
+        return _jsonable(tolist())
+    return str(value)
+
+
+def _reading_value(value: Any) -> tuple[Any, str | None]:
+    """A reading's value made safe to record, and its unit if it's a quantity."""
+    if _is_quantity(value):
+        return _jsonable(value.magnitude), _unit_text(value.units) or None
+    return _jsonable(value), None
 
 
 def _safe_close(client: Any, component_name: str) -> None:
@@ -336,6 +418,10 @@ class MonitoringService:
             groups.setdefault(self._group_key(var), []).append(var)
 
         tick = 0
+        # This ON-cycle's recordings described so far, and files a reading
+        # couldn't be written to (each warned about once).
+        described: set[Path] = set()
+        unwritable: set[Path] = set()
         try:
             with ThreadPoolExecutor(
                 max_workers=max(1, len(groups)), thread_name_prefix="monitoring"
@@ -367,7 +453,15 @@ class MonitoringService:
                             )
                             self._store.record_reading(key, reading)
                             if run_dir is not None:
-                                self._write_reading(run_dir, var, reading)
+                                self._record(run_dir, var, reading, unwritable)
+                    # Once the recording exists: nothing recorded, no folder.
+                    if (
+                        run_dir is not None
+                        and run_dir not in described
+                        and run_dir.is_dir()
+                    ):
+                        described.add(run_dir)
+                        self._describe_recording(run_dir, config)
                     tick += 1
                     remaining = sample_time - (time.monotonic() - tick_start)
                     if remaining > 0:
@@ -463,7 +557,7 @@ class MonitoringService:
         kwargs: dict[str, Any],
         custom_sources: dict[str, Any] | None = None,
     ) -> dict[str, Any]:
-        now = datetime.now().isoformat()
+        now = datetime.now().astimezone().isoformat()
         if component == "custom":
             func = (custom_sources or {}).get(command)
             if func is None:
@@ -473,9 +567,10 @@ class MonitoringService:
                     "error": f"Custom source '{command}' is not registered.",
                 }
             try:
-                return {"time": now, "value": func(**kwargs), "error": None}
+                value = func(**kwargs)
             except Exception as exc:
                 return {"time": now, "value": None, "error": str(exc)}
+            return self._reading(now, value)
         if component not in platform:
             return {
                 "time": now,
@@ -500,7 +595,19 @@ class MonitoringService:
         errors = _pop_thread_resilient_errors()
         if errors:
             return {"time": now, "value": None, "error": str(errors[-1])}
-        return {"time": now, "value": value, "error": None}
+        return self._reading(now, value)
+
+    @staticmethod
+    def _reading(now: str, value: Any) -> dict[str, Any]:
+        """A successful reading, its value made safe to record."""
+        try:
+            value, unit = _reading_value(value)
+        except Exception as exc:
+            return {"time": now, "value": None, "error": f"Unreadable value: {exc}"}
+        reading: dict[str, Any] = {"time": now, "value": value, "error": None}
+        if unit:
+            reading["unit"] = unit
+        return reading
 
     @staticmethod
     def _parse_value(response: requests.Response) -> Any:
@@ -541,6 +648,67 @@ class MonitoringService:
         )
         with path.open("a", encoding="utf-8") as fh:
             fh.write(json.dumps(reading) + "\n")
+
+    def _record(
+        self,
+        run_dir: Path,
+        var: dict[str, Any],
+        reading: dict[str, Any],
+        unwritable: set[Path],
+    ) -> None:
+        """Append *reading* to its file in *run_dir*. Never raises: a file
+        that can't be written is warned about once per ON-cycle, and polling
+        goes on."""
+        try:
+            self._write_reading(run_dir, var, reading)
+        except Exception as exc:
+            path = run_dir / self._variable_filename(
+                var["component"], var["command"], var.get("kwargs")
+            )
+            if path not in unwritable:
+                unwritable.add(path)
+                logger.warning(
+                    "Could not record monitoring readings to {}: {}", path, exc
+                )
+
+    def _describe_recording(self, run_dir: Path, config: dict[str, Any]) -> None:
+        """Write *run_dir*'s ``recording.json``: which variable each file
+        holds, and how they were polled. Never raises."""
+        path = run_dir / RECORDING_DESCRIPTION
+        temporary = path.with_name(f"{path.name}.tmp")
+        try:
+            variables = []
+            for var in config["variables"]:
+                component, command = var["component"], var["command"]
+                kwargs = var.get("kwargs") or {}
+                variables.append(
+                    {
+                        "component": component,
+                        "command": command,
+                        "kwargs": kwargs,
+                        "key": monitoring_key(component, command, kwargs),
+                        "file": self._variable_filename(component, command, kwargs),
+                    }
+                )
+            description = {
+                "schema": RECORDING_SCHEMA,
+                "run_id": run_dir.name,
+                "sample_time": config.get("sample_time"),
+                "request_timeout": config.get("request_timeout"),
+                "variables": variables,
+            }
+            run_dir.mkdir(parents=True, exist_ok=True)
+            temporary.write_text(
+                json.dumps(description, indent=2, ensure_ascii=False, default=str),
+                encoding="utf-8",
+            )
+            os.replace(temporary, path)
+        except Exception as exc:
+            logger.warning(
+                "Could not describe the monitoring recording of run '{}': {}",
+                run_dir.name,
+                exc,
+            )
 
     def _read_associations(self) -> dict[str, Any]:
         path = self._project_dir / "connectivity" / "associations.json"

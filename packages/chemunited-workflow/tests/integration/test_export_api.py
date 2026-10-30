@@ -2,9 +2,12 @@
 
 from __future__ import annotations
 
+import contextlib
+import csv
 import importlib.util
 import io
 import json
+import sqlite3
 import sys
 import zipfile
 from pathlib import Path
@@ -147,10 +150,29 @@ def test_download_returns_a_valid_zip_scoped_to_selection(client):
     with zipfile.ZipFile(io.BytesIO(r.content)) as zf:
         assert set(zf.namelist()) == {
             "export_manifest.json",
+            "monitoring.db",
+            f"monitoring/{RUN1_ID}.csv",
             f"log/{RUN1_LOG}",
             f"log/monitoring/{RUN1_ID}/chiller__temperature.jsonl",
             "protocols_historic/test_2026-01-01T00-00-00.json",
         }
+
+
+def test_download_carries_the_recording_as_csv_and_database(client, tmp_path):
+    r = client.get("/export/download", params={"log": RUN1_LOG})
+    database = tmp_path / "exported.db"
+    with zipfile.ZipFile(io.BytesIO(r.content)) as zf:
+        csv_text = zf.read(f"monitoring/{RUN1_ID}.csv").decode("utf-8-sig")
+        database.write_bytes(zf.read("monitoring.db"))
+
+    rows = list(csv.DictReader(io.StringIO(csv_text)))
+    assert [(row["variable"], row["value"], row["value_type"]) for row in rows] == [
+        ("chiller::temperature", "20", "number")
+    ]
+    with contextlib.closing(sqlite3.connect(database)) as conn:
+        assert conn.execute("SELECT run_id, value FROM readings_long").fetchall() == [
+            (RUN1_ID, 20)
+        ]
 
 
 def test_preview_and_download_carry_the_run_manifest(client, project):

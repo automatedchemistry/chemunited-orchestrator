@@ -12,8 +12,9 @@ the project loads; nothing is assumed from the design state.
 
 The LCD displays drawn in the desktop app show monitoring readings: the store
 gets each one through ``record_reading`` and keeps it, as text, for every LCD
-bound to that variable, followed by the LCD's unit when the reading is a
-number. LCDs never read a device themselves.
+bound to that variable, followed by a unit when the reading is a number: the
+one the reading came with (a quantity's), else the LCD's. LCDs never read a
+device themselves.
 
 Every change gets the next ``seq``. A bounded log of the changes lets a stream
 that reconnects replay what it missed (see ``routers/platform.py``).
@@ -196,10 +197,13 @@ class DeviceStateStore:
             return
         error = reading.get("error")
         text = None if error else _display_text(reading.get("value"))
+        # The unit a quantity came with wins over the LCD's own.
+        own_unit = reading.get("unit")
         with self._lock:
             for name in names:
+                unit = own_unit or self._display_units.get(name, "")
                 display = {
-                    "value": _with_unit(text, self._display_units.get(name, "")),
+                    "value": _with_unit(text, unit),
                     "at": reading.get("time"),
                     "error": None if error is None else str(error),
                     "monitored": True,
