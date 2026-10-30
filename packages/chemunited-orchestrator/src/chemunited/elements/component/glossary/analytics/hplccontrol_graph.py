@@ -15,7 +15,10 @@ class HPLCControl(GraphComponent[ComponentData]):
         super().build()
 
         self.spectrum = Spectrum(
-            width=80, height=20, color=Qt.blue, parent=self  # type: ignore
+            width=80,
+            height=20,
+            color=Qt.blue,  # type: ignore[attr-defined]
+            parent=self,  # type: ignore
         )
 
         self.spectrum.setPos(

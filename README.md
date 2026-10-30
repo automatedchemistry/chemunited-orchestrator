@@ -18,6 +18,9 @@ Download `windows_installer.bat` from the [latest release](https://github.com/au
 - Installs Python and ChemUnited into your own user folder — **no admin rights needed**
 - Adds a "ChemUnited" shortcut to your Desktop
 - Re-running it later upgrades to the latest release
+- **Appearance**: follows the Windows system theme by default; override with the
+  **Theme** item at the bottom of the app's navigation bar (Follow System /
+  Dark / Light) — the choice persists across launches
 
 ## Documentation
 

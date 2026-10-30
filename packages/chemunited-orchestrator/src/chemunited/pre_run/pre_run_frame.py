@@ -16,7 +16,6 @@ if TYPE_CHECKING:
 
 
 class PreRunFrame(QFrame):
-
     def __init__(self, parent: "SetupWindow"):
         super().__init__(parent)
         self.classification = SetupStepMode.PRE_RUN

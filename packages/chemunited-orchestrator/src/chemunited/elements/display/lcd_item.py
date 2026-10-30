@@ -84,11 +84,15 @@ class LcdDisplayItem(QGraphicsObject):
         painter.setFont(name_font)
         name_rect = rect.adjusted(8, 4, -8, 0)
         name = QFontMetricsF(name_font).elidedText(
-            self._display.name, Qt.ElideRight, name_rect.width()  # type: ignore[attr-defined]
+            self._display.name,
+            Qt.ElideRight,  # type: ignore[attr-defined]
+            name_rect.width(),
         )
         painter.drawText(name_rect, Qt.AlignLeft | Qt.AlignTop, name)  # type: ignore[attr-defined]
 
         painter.setFont(_font(22, monospace=True))
         painter.drawText(
-            rect.adjusted(8, 14, -8, -2), Qt.AlignCenter, _NO_VALUE  # type: ignore[attr-defined]
+            rect.adjusted(8, 14, -8, -2),
+            Qt.AlignCenter,  # type: ignore[attr-defined]
+            _NO_VALUE,
         )

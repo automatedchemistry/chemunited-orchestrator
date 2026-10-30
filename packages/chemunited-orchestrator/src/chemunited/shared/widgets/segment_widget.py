@@ -3,7 +3,7 @@ from typing import Any
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QStackedWidget, QVBoxLayout, QWidget
-from qfluentwidgets import SegmentedWidget
+from qfluentwidgets import FluentIconBase, SegmentedWidget
 
 
 class SegmentWindow(QWidget):
@@ -28,7 +28,7 @@ class SegmentWindow(QWidget):
         widget: QWidget,
         objectName: str,
         text: str,
-        icon: str | QIcon | None = None,
+        icon: str | QIcon | FluentIconBase | None = None,
         onClick: Any = None,
     ):
         widget.setObjectName(objectName)

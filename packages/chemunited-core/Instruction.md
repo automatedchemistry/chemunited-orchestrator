@@ -38,11 +38,14 @@ from . import my_valve
 from chemunited_core.components import ComponentData, ComponentMode
 from chemunited_core.components.command import PutResult
 from chemunited_core.figure_registry import ComponentDefinition, register_component
-from chemunited_core.protocols import ComponentProtocol, CommandSignature, register_protocol
+from chemunited_core.protocols import (
+    ComponentProtocol,
+    CommandSignature,
+    register_protocol,
+)
 
 
-class MyValveMode(ComponentMode):
-    ...
+class MyValveMode(ComponentMode): ...
 
 
 class MyValveData(ComponentData):
@@ -62,7 +65,10 @@ class MyValveData(ComponentData):
         return PutResult()
 
 
-register_component("MyValve", ComponentDefinition(MyValveData, MyValveMode, category="valve"))
+register_component(
+    "MyValve", ComponentDefinition(MyValveData, MyValveMode, category="valve")
+)
+
 
 # Optional — only for electronically commandable components. Purely declarative:
 # no networking code belongs here, just the command names/parameters.
@@ -540,9 +546,7 @@ self.internal_inventories = {
 Use this for valves, regulators, and flow controllers.
 
 ```python
-self.internal_edges = {
-    (1, 2): InternalEdge(origin_port=1, destination_port=2).close()
-}
+self.internal_edges = {(1, 2): InternalEdge(origin_port=1, destination_port=2).close()}
 
 # Later, in sync_internal_state() or apply():
 self.internal_edges[(1, 2)].open()

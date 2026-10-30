@@ -80,10 +80,7 @@ to hide them:
 ```python
 BASE_FIELDS = set(CommandSignature.model_fields)
 
-overrides = {
-    name: {"visible": False, "editable": False}
-    for name in BASE_FIELDS
-}
+overrides = {name: {"visible": False, "editable": False} for name in BASE_FIELDS}
 
 self._editor = BaseModeEditorWidget(
     model_class=self._command_class,
@@ -176,11 +173,12 @@ from chemunited.elements.component.widgets.command_editor import (
     ScriptEditorDialog,
 )
 
+
 def _on_block_double_clicked(self, block) -> None:
     if block.block_type != "command":
         return
 
-    protocol = block.protocol          # ComponentProtocol instance
+    protocol = block.protocol  # ComponentProtocol instance
     cmd_class = protocol.commands[block.command_key]
     instance = block.command_instance  # CommandSignature | None
 

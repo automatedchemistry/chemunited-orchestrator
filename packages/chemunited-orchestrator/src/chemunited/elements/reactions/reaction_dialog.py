@@ -8,13 +8,16 @@ from qfluentwidgets import (
     DoubleSpinBox,
     PrimaryPushButton,
     PushButton,
+    isDarkTheme,
 )
 from qframelesswindow import FramelessDialog
+
+from chemunited.shared.widgets.app_theme import ThemedChromeMixin
 
 from .model import ReactionDefinition
 
 
-class ReactionDialog(FramelessDialog):
+class ReactionDialog(ThemedChromeMixin, FramelessDialog):
     """Form for creating a first-order reaction from live project choices."""
 
     def __init__(
@@ -65,7 +68,9 @@ class ReactionDialog(FramelessDialog):
 
         self.error_label = BodyLabel("", self)
         self.error_label.setWordWrap(True)
-        self.error_label.setStyleSheet("color: #c42b1c;")
+        self.error_label.setStyleSheet(
+            "color: #f28b82;" if isDarkTheme() else "color: #c42b1c;"
+        )
         self.error_label.hide()
 
         cancel_button = PushButton("Cancel", self)

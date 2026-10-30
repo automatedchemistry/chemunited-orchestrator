@@ -68,8 +68,10 @@ The script patches this immediately after `compile_graph`:
 ```python
 _old = graph.nodes["divertvalve.0"]
 graph.nodes["divertvalve.0"] = HydraulicNode(
-    node_id=_old.node_id, boundary=_old.boundary,
-    is_hub=True, component=_old.component,
+    node_id=_old.node_id,
+    boundary=_old.boundary,
+    is_hub=True,
+    component=_old.component,
 )
 ```
 

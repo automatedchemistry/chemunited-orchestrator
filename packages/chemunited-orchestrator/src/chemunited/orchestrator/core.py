@@ -16,7 +16,6 @@ if TYPE_CHECKING:
 
 
 class OrchestratorCore(QObject):
-
     MAX_LOG_RECORDS_PER_TICK = 256
 
     def __init__(self, parent: "SetupWindow | MonitorWindow"):

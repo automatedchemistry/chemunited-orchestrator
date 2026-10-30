@@ -1,16 +1,17 @@
 Widget > QLabel {
     font: 24px 'Segoe UI', 'Microsoft YaHei';
+    color: rgba(255, 255, 255, 0.85);
 }
 
 
-Widget {
+QWidget {
     border-right: none;
     border-bottom: none;
     border-top: none;
     border-left: none;
     background-color: rgb(39, 39, 39);
+    color: rgba(255, 255, 255, 0.85);
 }
-
 
 QGraphicsView {
     border-right: none;
@@ -18,4 +19,22 @@ QGraphicsView {
     border-top: none;
     border-left: none;
     background-color: rgb(39, 39, 39);
+}
+
+QLabel {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+QTreeWidget {
+    background-color: rgb(39, 39, 39);
+    color: rgba(255, 255, 255, 0.85);
+}
+
+QTreeWidget::item {
+    color: rgba(255, 255, 255, 0.85);
+}
+
+QTreeWidget::item:selected {
+    background-color: rgba(0, 120, 215, 0.3);
+    color: white;
 }

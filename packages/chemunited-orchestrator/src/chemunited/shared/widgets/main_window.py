@@ -13,6 +13,7 @@ from qfluentwidgets import (
 from qframelesswindow import FramelessWindow, StandardTitleBar
 
 from chemunited.shared.enums import WindowCategory
+from chemunited.shared.widgets.app_theme import apply_titlebar_theme
 from chemunited.shared.widgets.busy_status import BusyStatusController
 from chemunited.shared.widgets.loggings_widget import FrameLoggings
 
@@ -111,6 +112,10 @@ class WindowBase(FramelessWindow):
             file.close()
         else:
             print(f"Failed to open QSS file: {path}")
+
+        # The frameless title bar does not follow the app-wide stylesheet;
+        # recolor its label and buttons to match the current background.
+        apply_titlebar_theme(self.titleBar)
 
     def switchTo(self, widget):
         """Switch to the given widget"""

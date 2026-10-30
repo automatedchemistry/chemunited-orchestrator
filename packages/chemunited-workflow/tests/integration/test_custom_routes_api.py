@@ -100,7 +100,7 @@ def test_discover_empty_when_no_hook_file(client):
 def test_discover_lists_registered_routes(client, project):
     _write_hook(
         project["tmp_path"],
-        "def double(x):\n" "    return x * 2\n" "CUSTOM_ROUTES = {'double': double}\n",
+        "def double(x):\n    return x * 2\nCUSTOM_ROUTES = {'double': double}\n",
     )
     r = client.get("/custom/discover")
     assert r.status_code == 200
@@ -123,7 +123,7 @@ def test_call_unknown_route_returns_404(client):
 def test_call_route_success(client, project):
     _write_hook(
         project["tmp_path"],
-        "def double(x):\n" "    return x * 2\n" "CUSTOM_ROUTES = {'double': double}\n",
+        "def double(x):\n    return x * 2\nCUSTOM_ROUTES = {'double': double}\n",
     )
     r = client.post("/custom/double", json={"x": 3})
     assert r.status_code == 200
@@ -140,9 +140,7 @@ def test_call_route_success(client, project):
 def test_call_route_exception_returns_200_with_ok_false(client, project):
     _write_hook(
         project["tmp_path"],
-        "def boom():\n"
-        "    raise ValueError('nope')\n"
-        "CUSTOM_ROUTES = {'boom': boom}\n",
+        "def boom():\n    raise ValueError('nope')\nCUSTOM_ROUTES = {'boom': boom}\n",
     )
     r = client.post("/custom/boom", json={})
     assert r.status_code == 200

@@ -23,7 +23,6 @@ class PowerOffParameter(CommandSignature):
 
 
 class SensorProtocolBase(ComponentProtocol):
-
     def __init__(self, name: str):
         super().__init__(name)
         self.commands["power-on"] = PowerOnParameter
@@ -64,7 +63,6 @@ class StopMFCParameter(CommandSignature):
 
 
 class MFCComponentProtocols(ComponentProtocol):
-
     def __init__(self, name: str):
         super().__init__(name)
         self.commands["get-flow-rate"] = GetFlowRateParameter
@@ -86,7 +84,6 @@ class CalibrateZeroParameter(CommandSignature):
 
 
 class PhotoSensorProtocols(SensorProtocolBase):
-
     def __init__(self, name: str):
         super().__init__(name)
         self.commands["acquire-signal"] = AcquireSignalParameter
@@ -102,7 +99,6 @@ class ReadPressureParameter(CommandSignature):
 
 
 class PressureSensorProtocols(SensorProtocolBase):
-
     def __init__(self, name: str):
         super().__init__(name)
         self.commands["read-pressure"] = ReadPressureParameter
@@ -139,7 +135,6 @@ class SetPressureParameter(CommandSignature):
 
 
 class PressureControlProtocols(SensorProtocolBase):
-
     def __init__(self, name: str):
         super().__init__(name)
         self.commands["pressure"] = GetPressureParameter

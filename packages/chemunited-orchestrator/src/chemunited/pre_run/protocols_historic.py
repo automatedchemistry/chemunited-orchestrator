@@ -13,6 +13,7 @@ from qfluentwidgets import (
     ScrollArea,
     TransparentPushButton,
     TransparentToolButton,
+    isDarkTheme,
 )
 
 from chemunited.monitor import MonitorWindow
@@ -87,7 +88,20 @@ class FileCard(GroupHeaderCardWidget):
             btn_summary.setVisible(False)
             btn_open.setVisible(False)
             warning_btn = TransparentPushButton("File is corrupted!")
-            warning_btn.setStyleSheet("""
+            if isDarkTheme():
+                warning_btn.setStyleSheet("""
+            TransparentPushButton {
+                color: #F28B82;
+            }
+            TransparentPushButton:hover {
+                color: #FFB4AB;
+            }
+            TransparentPushButton:pressed {
+                color: #FF9E96;
+            }
+            """)
+            else:
+                warning_btn.setStyleSheet("""
             TransparentPushButton {
                 color: #B71C1C;
             }
@@ -158,7 +172,9 @@ class ProtocolsManageList(ScrollArea):
         self.vBoxLayout.setSpacing(10)
         self.vBoxLayout.setContentsMargins(0, 0, 10, 30)
         self.vBoxLayout.addWidget(
-            self.FileCard, 0, Qt.AlignTop  # type: ignore[attr-defined]
+            self.FileCard,
+            0,
+            Qt.AlignTop,  # type: ignore[attr-defined]
         )
 
     def fill_cards(self):

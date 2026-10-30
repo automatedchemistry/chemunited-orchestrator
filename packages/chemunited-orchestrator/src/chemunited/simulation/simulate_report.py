@@ -37,6 +37,7 @@ from chemunited.orchestrator import Orchestrator
 from chemunited.orchestrator.execution import is_run_active_for
 from chemunited.shared.enums import WindowCategory
 from chemunited.shared.icon import OrchestratorIcon
+from chemunited.shared.widgets.app_theme import ThemedChromeMixin
 from chemunited.shared.widgets.frame_base import FrameBase
 from chemunited_core.common.enums import PhaseKind
 from chemunited_core.compounds import COMPOUNDS
@@ -858,8 +859,7 @@ class ProfilesWidget(QWidget):
 # ---------------------------------------------------------------------------
 
 
-class SimulateWindowReport(QMainWindow):
-
+class SimulateWindowReport(ThemedChromeMixin, QMainWindow):
     def __init__(self, graph: SimGraphicView, parent: "SetupWindow") -> None:
         super().__init__(parent)
         self._setup_window = parent

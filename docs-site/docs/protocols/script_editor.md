@@ -40,11 +40,13 @@ the command, the platform automatically waits until the pump reports idle before
 
 ```python
 ...
+
+
 def script_1(self, ctx: NodeExecutionContext) -> bool:
     self.platform["pump A"].put(  # Component name: pump A
-        "infuse",       # Command name
+        "infuse",  # Command name
         rate="20.0 milliliter / minute",  # Command parameter
-        volume="5 milliliter",            # Command parameter
+        volume="5 milliliter",  # Command parameter
     )
     return True
 ```
@@ -57,11 +59,13 @@ is used as the infusion volume instead of a literal value:
 
 ```python
 ...
+
+
 def script_1(self, ctx: NodeExecutionContext) -> bool:
     self.platform["pump A"].put(  # Component name: pump A
-        "infuse",       # Command name
+        "infuse",  # Command name
         rate="20.0 milliliter / minute",  # Command parameter
-        volume=self.config.pump_vol,      # Use predefined process parameter
+        volume=self.config.pump_vol,  # Use predefined process parameter
     )
     return True
 ```
@@ -92,12 +96,16 @@ Example: loop over an array of flow rates defined as a process parameter
 
 ```python
 ...
+
+
 def loop_1(self, ctx: NodeExecutionContext) -> bool:
     if ctx.iteration >= len(self.config.FlowrateArray):
         ctx.runtime.status_message = "All flow rates completed."
         return True  # Exit loop
 
-    ctx.runtime.status_message = f"Next flow rate: {self.config.FlowrateArray[ctx.iteration]}"
+    ctx.runtime.status_message = (
+        f"Next flow rate: {self.config.FlowrateArray[ctx.iteration]}"
+    )
     return False  # Continue looping
 ```
 <div class="info-block"> <strong>
@@ -119,6 +127,8 @@ Example: simple conditional
 
 ```python
 ...
+
+
 def conditional_1(self, ctx: NodeExecutionContext) -> bool:
     return True  # Follow the True branch
 ```

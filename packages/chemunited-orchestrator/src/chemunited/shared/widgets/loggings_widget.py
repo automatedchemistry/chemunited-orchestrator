@@ -11,6 +11,7 @@ from PyQt5.QtGui import QTextCursor
 from PyQt5.QtWidgets import QFrame, QHBoxLayout, QVBoxLayout
 from qfluentwidgets import FluentIcon, PushButton, TextBrowser, isDarkTheme
 
+from .app_theme import register_theme_observer
 from .segment_widget import SegmentWindow
 
 
@@ -68,11 +69,13 @@ def _severity_styles(sev_key: str) -> dict[str, str]:
         developer_bg = "rgba(255,255,255,0.04)"
         developer_border = "rgba(255,255,255,0.12)"
         meta_fg = "#D1D5DB"
+        body_fg = "#F3F4F6"
         reporting = {"bg": "#1F2937", "fg": "#F9FAFB", "badge": "#6B7280"}
     else:
         developer_bg = "#FFFFFF"
         developer_border = "rgba(0,0,0,0.12)"
         meta_fg = "#4B5563"
+        body_fg = "#111827"
         reporting = {"bg": "#F3F4F6", "fg": "#111827", "badge": "#6B7280"}
 
     styles = {
@@ -87,6 +90,10 @@ def _severity_styles(sev_key: str) -> dict[str, str]:
     resolved["developer_bg"] = developer_bg
     resolved["developer_border"] = developer_border
     resolved["meta_fg"] = meta_fg
+    # Inline color for the detailed-record wrapper: Qt's rich-text engine does
+    # not honor class selectors in the default document stylesheet, so children
+    # (message, labels, code blocks) otherwise keep the palette's black text.
+    resolved["body_fg"] = body_fg
     return resolved
 
 
@@ -172,6 +179,31 @@ class FrameLoggings(QFrame):
         base_css = _loggings_document_css()
         self.text.document().setDefaultStyleSheet(base_css)
         self.detail_loggins.document().setDefaultStyleSheet(base_css)
+
+        register_theme_observer(self.apply_theme)
+
+    def apply_theme(self) -> None:
+        """Re-apply QSS, base CSS and re-render history after a theme change."""
+        widget_qss = _loggings_widget_qss()
+        self.text.setStyleSheet(widget_qss)
+        self.detail_loggins.setStyleSheet(widget_qss)
+
+        base_css = _loggings_document_css()
+        self.text.document().setDefaultStyleSheet(base_css)
+        self.detail_loggins.document().setDefaultStyleSheet(base_css)
+
+        # Internal appenders replay history without re-registering it.
+        self.text.clear()
+        self.detail_loggins.clear()
+        for record in list(self._history):
+            self._append_developer_record(record)
+            if self._sev_key_from_record(record) in {
+                "fatal",
+                "error",
+                "warning",
+                "success",
+            }:
+                self._append_friendly_record(record)
 
     def append_record(self, r: dict):
         """
@@ -328,6 +360,7 @@ class FrameLoggings(QFrame):
             margin:6px 0; padding:10px; border-radius:12px;
             border:1px solid {s["developer_border"]};
             background:{s["developer_bg"]};
+            color:{s["body_fg"]};
         ">
           <div style="display:flex; align-items:center; gap:8px;">
             <span style="

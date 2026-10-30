@@ -1,5 +1,6 @@
 QTextBrowser {
     background-color: #ffffff;
+    color: #1A1A1A;
     border: 1px solid rgba(0, 0, 0, 0.10);
     border-radius: 10px;
     padding: 6px;

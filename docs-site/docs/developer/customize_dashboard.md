@@ -30,16 +30,34 @@ my_project/customizations/ui/
 Edit any file and reload the dashboard. `ui_hook.py` declares what changes:
 
 ```python
-from chemunited_workflow.ui import ActionField, Brand, Dashboard, PageAction, VuePage, Widget
+from chemunited_workflow.ui import (
+    ActionField,
+    Brand,
+    Dashboard,
+    PageAction,
+    VuePage,
+    Widget,
+)
 
 DASHBOARD = Dashboard(
     brand=Brand(title="Flow Synthesis Lab", monogram="FSL"),
     theme_css="theme.css",
-    pages=[VuePage(path="/reactor", label="Reactor", component="pages/ReactorPage.vue", after="/monitoring")],
+    pages=[
+        VuePage(
+            path="/reactor",
+            label="Reactor",
+            component="pages/ReactorPage.vue",
+            after="/monitoring",
+        )
+    ],
     actions=[
-        PageAction(page="export", route="summarize_runs", label="Summarize",
-                   context={"logs": "selection"},
-                   fields=[ActionField("note", remember=True)]),
+        PageAction(
+            page="export",
+            route="summarize_runs",
+            label="Summarize",
+            context={"logs": "selection"},
+            fields=[ActionField("note", remember=True)],
+        ),
     ],
     widgets=[Widget(slot="dashboard.cards", component="widgets/RunCard.vue")],
 )

@@ -27,6 +27,7 @@ from chemunited.protocols.workflows.naming import (
     process_class_name,
     process_config_class_name,
 )
+from chemunited.shared.editor import get_process_editor_window_class
 from chemunited.shared.editor.parameters.main import MainParametersEditor
 from chemunited.shared.editor.protocols.command import CommandEditorDialog
 from chemunited.shared.editor.protocols.command_list import CommandList
@@ -607,17 +608,41 @@ class WorkflowGraph(GraphCore):
             return
 
         class_name = process_class_name(data.process)
-        if (
-            self._script_editor is None
-            or self._script_editor.editor.path != script_path
-        ):
-            self._dispose_auxiliary_window("_script_editor")
-            self._script_editor = ProcessScriptEditorWindow(
+        # Reuse the Monaco editor window across process blocks (tabs);
+        # QScintilla windows stay one-file-per-window (dispose + recreate).
+        if self._script_editor is not None:
+            if self._script_editor.editor.path != script_path:
+                if hasattr(self._script_editor, "open_file"):
+                    self._script_editor.open_file(script_path, class_name=class_name)
+                else:
+                    self._dispose_auxiliary_window("_script_editor")
+                    editor_cls = get_process_editor_window_class()
+                    self._script_editor = editor_cls(
+                        path=script_path,
+                        class_name=class_name,
+                        main_parameters_path=script_path.parent / "main_parameters.py",
+                        parent=self,
+                    )
+                    self._script_editor.metadata_saved.connect(
+                        self._update_block_metadata
+                    )
+        else:
+            # Respects USE_MONACO_EDITOR: returns Monaco or QScintilla window
+            editor_cls = get_process_editor_window_class()
+            editor_kwargs: dict = dict(
                 path=script_path,
                 class_name=class_name,
                 main_parameters_path=script_path.parent / "main_parameters.py",
                 parent=self,
             )
+            # Monaco only: root the sidebar file tree at the project folder
+            if hasattr(editor_cls, "open_file"):
+                orchestrator = getattr(self.parent_ref, "orchestrator", None)
+                working_dir = getattr(orchestrator, "working_dir", None)
+                editor_kwargs["tree_root"] = (
+                    Path(working_dir) if working_dir else script_path.parent
+                )
+            self._script_editor = editor_cls(**editor_kwargs)
             self._script_editor.metadata_saved.connect(self._update_block_metadata)
 
         if data.method:
