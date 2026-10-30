@@ -227,3 +227,53 @@ def test_lcds_show_monitoring_readings_from_the_desktop_export(
     }
     assert displays["Unwatched"]["monitored"] is False
     assert displays["Unwatched"]["value"] is None
+
+
+def test_an_lcd_shows_a_custom_source_with_its_unit(tmp_path, modules, client, holder):
+    (tmp_path / "draw").mkdir()
+    (tmp_path / "draw" / "platform-live.json").write_text(
+        json.dumps(
+            {
+                "svg_sha256": "",
+                "parts": {},
+                "displays": {
+                    "Humidity": {
+                        "box": [0, 0, 10, 4],
+                        "component": "custom",
+                        "command": "room_humidity_pct",
+                        "kwargs": {},
+                        "unit": "%",
+                    },
+                },
+            }
+        ),
+        encoding="utf-8",
+    )
+    (tmp_path / "connectivity" / "monitoring.json").write_text(
+        json.dumps(
+            {
+                "sample_time": 1.0,
+                "variables": [
+                    {
+                        "component": "custom",
+                        "command": "room_humidity_pct",
+                        "kwargs": {},
+                    }
+                ],
+            }
+        ),
+        encoding="utf-8",
+    )
+    holder.load(modules)
+    holder.monitoring_store.try_manual_start()
+
+    holder.monitoring_store.record_reading(
+        "custom::room_humidity_pct", {"time": "t1", "value": 41.5, "error": None}
+    )
+
+    assert client.get("/platform/state").json()["displays"]["Humidity"] == {
+        "value": "41.5 %",
+        "at": "t1",
+        "error": None,
+        "monitored": True,
+    }

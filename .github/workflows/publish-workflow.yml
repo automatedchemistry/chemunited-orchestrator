@@ -29,7 +29,7 @@ jobs:
       - name: Install package and build tools
         run: |
           python -m pip install --upgrade pip
-          python -m pip install -e ".[test,sila2,opcua]"
+          python -m pip install -e ".[test,sila2,opcua,live]"
           python -m pip install build twine
 
       - name: Verify tag matches package version

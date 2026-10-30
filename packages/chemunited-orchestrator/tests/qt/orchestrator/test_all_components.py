@@ -56,7 +56,6 @@ def _remove_all(window: SetupWindow) -> None:
 
 
 class TestAllComponents:
-
     # ── add ────────────────────────────────────────────────────────────────
 
     def test_all_components_added_to_orchestrator(self, window: SetupWindow):

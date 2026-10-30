@@ -420,6 +420,27 @@ def test_put_waits_for_idle_node_before_returning(mocker):
     assert busy_node.read_calls == 3
 
 
+def test_put_without_wait_for_completion_does_not_poll_idle_node(mocker):
+    setpoint_node = FakeNode(node_class=ua.NodeClass.Variable, writable=True)
+    busy_node = FakeNode(value=True)
+    root = FakeNode(
+        node_class=ua.NodeClass.Object,
+        children={"2:SetPoint": setpoint_node, "6:Diagnostics/6:IsBusy": busy_node},
+    )
+    client = _client_with_root(
+        mocker,
+        root,
+        idle_node_path="6:Diagnostics/6:IsBusy",
+        idle_value=False,
+        wait_for_completion=False,
+    )
+
+    client.put("2:SetPoint", json=42)
+
+    assert setpoint_node.set_calls == [42]
+    assert busy_node.read_calls == 0
+
+
 def test_get_does_not_poll_idle_node(mocker):
     temp_node = FakeNode(value=21.5)
     busy_node = FakeNode(value=True)

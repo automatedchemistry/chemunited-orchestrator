@@ -64,7 +64,8 @@ class LcdDisplayItem(QGraphicsObject):
         display = self._display
         params = ", ".join(f"{key}={value}" for key, value in display.kwargs.items())
         variable = f"{display.command}({params})" if params else display.command
-        self.setToolTip(f"{display.name}\n{display.component} → {variable}")
+        unit = f" ({display.unit})" if display.unit else ""
+        self.setToolTip(f"{display.name}\n{display.component} → {variable}{unit}")
 
     def boundingRect(self) -> QRectF:
         return QRectF(-LCD_WIDTH / 2, -LCD_HEIGHT / 2, LCD_WIDTH, LCD_HEIGHT)
@@ -83,11 +84,15 @@ class LcdDisplayItem(QGraphicsObject):
         painter.setFont(name_font)
         name_rect = rect.adjusted(8, 4, -8, 0)
         name = QFontMetricsF(name_font).elidedText(
-            self._display.name, Qt.ElideRight, name_rect.width()  # type: ignore[attr-defined]
+            self._display.name,
+            Qt.ElideRight,  # type: ignore[attr-defined]
+            name_rect.width(),
         )
         painter.drawText(name_rect, Qt.AlignLeft | Qt.AlignTop, name)  # type: ignore[attr-defined]
 
         painter.setFont(_font(22, monospace=True))
         painter.drawText(
-            rect.adjusted(8, 14, -8, -2), Qt.AlignCenter, _NO_VALUE  # type: ignore[attr-defined]
+            rect.adjusted(8, 14, -8, -2),
+            Qt.AlignCenter,  # type: ignore[attr-defined]
+            _NO_VALUE,
         )

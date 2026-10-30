@@ -42,98 +42,98 @@ When a parameter is created, a corresponding Field(...) definition is generated 
 
 ```python
 repetitions: int = Field(
-        default=3,
-        title="Repetitions",
-        description="Number of experiment repeats.",
-        ge=1,
-        le=20,
-        json_schema_extra={"group": "Process", "editable": True, "visible": True},
-    )
+    default=3,
+    title="Repetitions",
+    description="Number of experiment repeats.",
+    ge=1,
+    le=20,
+    json_schema_extra={"group": "Process", "editable": True, "visible": True},
+)
 ```
 
 2. Float
 
 ```python
 precision: float = Field(
-        default=0.8,
-        title="Precision",
-        description="Experiment precision.",
-        ge=0,
-        le=1,
-        json_schema_extra={"group": "Process", "editable": True, "visible": True},
-    )
+    default=0.8,
+    title="Precision",
+    description="Experiment precision.",
+    ge=0,
+    le=1,
+    json_schema_extra={"group": "Process", "editable": True, "visible": True},
+)
 ```
 
 3. String
 
 ```python
 project_name: str = Field(
-        default="Simulation",
-        title="Project Name",
-        description="A short identifier for this setup.",
-        min_length=1,
-        max_length=50,
-        json_schema_extra={"group": "General", "editable": True, "visible": True},
-    )
+    default="Simulation",
+    title="Project Name",
+    description="A short identifier for this setup.",
+    min_length=1,
+    max_length=50,
+    json_schema_extra={"group": "General", "editable": True, "visible": True},
+)
 ```
 
 4. Array
 
 ```python
 secondary_solvents: list[str] = Field(
-        default=["Toluene", "DMF"],
-        title="Secondary solvents",
-        description="Optional co-solvents used during the reaction.",
-        min_items=0,
-        max_items=10,
-        json_schema_extra={"group": "Solvents", "editable": True, "visible": True},
-    )
+    default=["Toluene", "DMF"],
+    title="Secondary solvents",
+    description="Optional co-solvents used during the reaction.",
+    min_items=0,
+    max_items=10,
+    json_schema_extra={"group": "Solvents", "editable": True, "visible": True},
+)
 ```
 
 5. Choice
 
 ```python
 solvent: str = Field(
-        default="DCM",
-        title="Main solvent",
-        description="Select the solvent used in the process.",
-        json_schema_extra={
-            "group": "Solvents",
-            "editable": True,
-            "visible": True,
-            "Options": ["DCM", "Toluene", "Acetone", "DMF"],
-        },
-    )
+    default="DCM",
+    title="Main solvent",
+    description="Select the solvent used in the process.",
+    json_schema_extra={
+        "group": "Solvents",
+        "editable": True,
+        "visible": True,
+        "Options": ["DCM", "Toluene", "Acetone", "DMF"],
+    },
+)
 ```
 
 6. Physical
 
 ```python
 capacity: Annotated[
-        ChemUnitQuantity,
-        ChemQuantityValidator("ml"),
-    ] = Field(
-        default=ChemUnitQuantity("1 ml"),
-        title="Component Capacity",
-        description="Volumetric capacity of the component",
-        json_schema_extra={
-            "group": "Configuration",
-            "editable": True,
-            "visible": True,
-            "unit": "ml",
-        },
-    )
+    ChemUnitQuantity,
+    ChemQuantityValidator("ml"),
+] = Field(
+    default=ChemUnitQuantity("1 ml"),
+    title="Component Capacity",
+    description="Volumetric capacity of the component",
+    json_schema_extra={
+        "group": "Configuration",
+        "editable": True,
+        "visible": True,
+        "unit": "ml",
+    },
+)
 ```
 
 7. Boolean
 
 ```python
 active: bool = Field(
-        default=True,
-        title="Active experiment",
-        description="Whether this configuration is currently active.",
-        json_schema_extra={"group": "Configuration", "editable": True, "visible": True},
-    )
+    default=True,
+    title="Active experiment",
+    description="Whether this configuration is currently active.",
+    json_schema_extra={"group": "Configuration", "editable": True, "visible": True},
+)
 ```
 
 ## How parameters appear to the user

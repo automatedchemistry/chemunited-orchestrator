@@ -134,7 +134,6 @@ def units_for_dimension(dimensions, ureg: UnitRegistry) -> list[str]:
 
 
 class ChemUnitQuantity(ureg.Quantity):  # type: ignore[name-defined]
-
     # ----------- Construction Helpers -----------
 
     @classmethod
@@ -246,7 +245,6 @@ class ChemUnitQuantity(ureg.Quantity):  # type: ignore[name-defined]
 
 
 class ChemQuantityValidator(PydanticPintQuantity):
-
     def __init__(self, _arg: str, **kwargs) -> None:
         kwargs.update(strict=False, ser_mode="str", ureg=ureg)
         super().__init__(_arg, **kwargs)

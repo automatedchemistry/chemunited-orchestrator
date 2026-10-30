@@ -22,9 +22,7 @@ class CustomProcess:
 """
 
 SNIPPET = (
-    "self.platform['AS injection'].put("
-    "'position', connect='[[1, 4]]', disconnect=''"
-    ")"
+    "self.platform['AS injection'].put('position', connect='[[1, 4]]', disconnect='')"
 )
 
 

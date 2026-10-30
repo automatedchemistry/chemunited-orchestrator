@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { useNotification } from '../composables/useNotification'
+import PageActions from '../extensions/PageActions.vue'
 
 interface ProjectResponse {
   project_dir: string | null
@@ -19,10 +20,16 @@ interface ExportMonitoringGroup {
   total_size_bytes: number
 }
 
+interface ExportManifestEntry extends ExportEntry {
+  commit: string | null
+  dirty: boolean | null
+}
+
 interface ExportRow {
   log: ExportEntry
   monitoring: ExportMonitoringGroup | null
   protocol: ExportEntry | null
+  manifest: ExportManifestEntry | null
 }
 
 interface ExportCleanResult {
@@ -67,6 +74,18 @@ function formatBytes(bytes: number): string {
   )
   const value = bytes / 1024 ** exponent
   return `${exponent === 0 ? value : value.toFixed(1)} ${units[exponent]}`
+}
+
+// The commit the project was at when the work-server loaded it for the run.
+function manifestCommit(manifest: ExportManifestEntry): string {
+  return manifest.commit ? manifest.commit.slice(0, 7) : 'No commit'
+}
+
+function manifestNote(manifest: ExportManifestEntry): string {
+  if (manifest.commit === null) return 'Git unavailable or not a repository'
+  if (manifest.dirty === true) return 'Uncommitted changes'
+  if (manifest.dirty === false) return 'Committed'
+  return 'Changes unknown'
 }
 
 function isSelected(filename: string): boolean {
@@ -139,7 +158,7 @@ async function handleClean() {
   if (isCleaning.value || selected.value.size === 0) return
   const count = selected.value.size
   if (!window.confirm(
-    `Permanently delete the log and monitoring recording for ${count} selected `
+    `Permanently delete the log, manifest and monitoring recording for ${count} selected `
     + `run${count === 1 ? '' : 's'}? This cannot be undone. Protocol history is never deleted.`,
   )) return
 
@@ -181,9 +200,11 @@ onMounted(() => {
         <p class="page-eyebrow">Housekeeping</p>
         <h1 class="page-title">Export</h1>
         <p class="page-description">
-          One row per executed run — its log, correlated monitoring recording (if any),
-          and source protocol. Select the runs you want, then download a zip or
-          permanently clean them out of the project.
+          One row per executed run — its log, its manifest (the protocol that ran and the
+          project's git commit), correlated monitoring recording (if any), and source
+          protocol. The zip also has each recording as a table: a CSV per run, and one
+          SQLite database with all the selected runs. Select the runs you want, then
+          download a zip or permanently clean them out of the project.
         </p>
       </div>
     </header>
@@ -236,9 +257,11 @@ onMounted(() => {
         </button>
         <p class="actions-note">
           Download never deletes anything. Clean permanently removes the selected runs'
-          logs and monitoring recordings; protocol history is always kept.
+          logs, manifests and monitoring recordings; protocol history is always kept.
         </p>
       </div>
+
+      <PageActions page="export" :context="{ selection: [...selected] }" @refresh="loadPreview" />
 
       <section class="panel">
         <div v-if="rows.length === 0" class="muted">No executed runs yet.</div>
@@ -256,6 +279,7 @@ onMounted(() => {
                   >
                 </th>
                 <th>Log</th>
+                <th>Manifest</th>
                 <th>Monitoring</th>
                 <th>Protocol</th>
               </tr>
@@ -273,6 +297,17 @@ onMounted(() => {
                 <td>
                   <span class="cell-primary">{{ row.log.filename }}</span>
                   <small>{{ formatBytes(row.log.size_bytes) }} &middot; {{ row.log.modified }}</small>
+                </td>
+                <td>
+                  <template v-if="row.manifest">
+                    <span
+                      class="cell-primary"
+                      :class="{ commit: row.manifest.commit }"
+                      :title="row.manifest.commit ?? undefined"
+                    >{{ manifestCommit(row.manifest) }}</span>
+                    <small :class="{ 'dirty-note': row.manifest.dirty }">{{ manifestNote(row.manifest) }}</small>
+                  </template>
+                  <span v-else class="muted-inline">&mdash;</span>
                 </td>
                 <td>
                   <template v-if="row.monitoring">
@@ -435,6 +470,14 @@ onMounted(() => {
   margin-top: 0.15rem;
   color: var(--color-text-muted);
   font-size: 0.72rem;
+}
+
+.cell-primary.commit {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+}
+
+.runs-table td small.dirty-note {
+  color: var(--color-warning);
 }
 
 .muted-inline {

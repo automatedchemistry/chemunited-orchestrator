@@ -12,7 +12,6 @@ from chemunited_core.figure_registry import SolenoidValve2WayData, SolenoidValve
 
 
 class StatusOverlaySolenoid(StatusOverlay):
-
     COLOR_ACTIVE: QColor = QColor(0, 200, 83, 255)  # green
     COLOR_CLOSED: QColor = QColor(229, 57, 53, 255)  # red
     OPEN_ICON = "line"
@@ -58,7 +57,6 @@ class StatusOverlaySolenoid(StatusOverlay):
 
 
 class StatusOverlaySolenoid2Way(StatusOverlay):
-
     COLOR_ACTIVE: QColor = QColor(0, 200, 83, 255)  # green
     COLOR_CLOSED: QColor = QColor(255, 152, 0, 255)  # orange
 

@@ -2,8 +2,12 @@
 
 from __future__ import annotations
 
+import contextlib
+import csv
 import importlib.util
 import io
+import json
+import sqlite3
 import sys
 import zipfile
 from pathlib import Path
@@ -145,10 +149,50 @@ def test_download_returns_a_valid_zip_scoped_to_selection(client):
     assert "attachment" in r.headers["content-disposition"]
     with zipfile.ZipFile(io.BytesIO(r.content)) as zf:
         assert set(zf.namelist()) == {
+            "export_manifest.json",
+            "monitoring.db",
+            f"monitoring/{RUN1_ID}.csv",
             f"log/{RUN1_LOG}",
             f"log/monitoring/{RUN1_ID}/chiller__temperature.jsonl",
             "protocols_historic/test_2026-01-01T00-00-00.json",
         }
+
+
+def test_download_carries_the_recording_as_csv_and_database(client, tmp_path):
+    r = client.get("/export/download", params={"log": RUN1_LOG})
+    database = tmp_path / "exported.db"
+    with zipfile.ZipFile(io.BytesIO(r.content)) as zf:
+        csv_text = zf.read(f"monitoring/{RUN1_ID}.csv").decode("utf-8-sig")
+        database.write_bytes(zf.read("monitoring.db"))
+
+    rows = list(csv.DictReader(io.StringIO(csv_text)))
+    assert [(row["variable"], row["value"], row["value_type"]) for row in rows] == [
+        ("chiller::temperature", "20", "number")
+    ]
+    with contextlib.closing(sqlite3.connect(database)) as conn:
+        assert conn.execute("SELECT run_id, value FROM readings_long").fetchall() == [
+            (RUN1_ID, 20)
+        ]
+
+
+def test_preview_and_download_carry_the_run_manifest(client, project):
+    manifests = project["dirs"]["log_dir"] / "manifests"
+    manifests.mkdir()
+    (manifests / f"{RUN1_ID}.json").write_text(
+        json.dumps({"project": {"git": {"commit": "a1b2c3d4", "dirty": False}}}),
+        encoding="utf-8",
+    )
+
+    rows = {row["log"]["filename"]: row for row in client.get("/export/preview").json()}
+    assert rows[RUN1_LOG]["manifest"]["commit"] == "a1b2c3d4"
+    assert rows[RUN1_LOG]["manifest"]["dirty"] is False
+    assert rows[RUN2_LOG]["manifest"] is None
+
+    r = client.get("/export/download", params={"log": RUN1_LOG})
+    with zipfile.ZipFile(io.BytesIO(r.content)) as zf:
+        assert f"log/manifests/{RUN1_ID}.json" in zf.namelist()
+        index = json.loads(zf.read("export_manifest.json"))
+    assert index["runs"][0]["manifest"] == f"log/manifests/{RUN1_ID}.json"
 
 
 def test_download_dedupes_shared_protocol_across_selected_runs(client):

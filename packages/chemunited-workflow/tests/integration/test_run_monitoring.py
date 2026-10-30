@@ -110,6 +110,9 @@ def test_recorded_run_persists_readings_under_run_id(client, holder):
     recording = client.get(f"/monitoring/recordings/{run_id}/pump/value")
     assert recording.status_code == 200
     assert recording.json()[0]["value"] == 1.0
+    description = json.loads((run_dir / "recording.json").read_text(encoding="utf-8"))
+    assert description["run_id"] == run_id
+    assert [var["file"] for var in description["variables"]] == ["pump__value.jsonl"]
 
     state = client.get("/monitoring/state").json()
     assert state["run_active"] is False

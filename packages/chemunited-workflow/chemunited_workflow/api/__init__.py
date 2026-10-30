@@ -1,10 +1,17 @@
 """chemunited_workflow.api — FastAPI application factory."""
 
+import os
 from contextlib import asynccontextmanager
 from pathlib import Path
+from typing import Callable
 
 from fastapi import FastAPI
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+from starlette.datastructures import Headers
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from starlette.responses import Response
+from starlette.types import Scope
 
 from .dependencies import get_project_holder
 from .project_holder import ProjectHolder
@@ -19,10 +26,38 @@ from .routers.project import router as project_router
 from .routers.protocols import read_router as protocols_read_router
 from .routers.protocols import write_router as protocols_write_router
 from .routers.runner import router as runner_router
+from .routers.ui import resolve_dashboard_index
 from .routers.ui import router as ui_router
 from .security import AccessControlMiddleware
 
 _WEB_DIR = Path(__file__).parent.parent / "web"
+
+
+class _DashboardFiles(StaticFiles):
+    """The bundled dashboard's files, with a fallback to the dashboard's
+    ``index.html`` for a browser asking for an unknown one-segment page, so a
+    custom page's URL (``/sensors``) survives a hard refresh. The dashboard
+    then routes it, or shows its own "not found" page.
+    """
+
+    def __init__(self, *, directory: Path, index: Callable[[], Path]) -> None:
+        super().__init__(directory=directory)
+        self._index = index
+
+    async def get_response(self, path: str, scope: Scope) -> Response:
+        try:
+            return await super().get_response(path, scope)
+        except StarletteHTTPException as exc:
+            accept = Headers(scope=scope).get("accept", "")
+            is_page = (
+                os.sep not in path
+                and "/" not in path
+                and "." not in path
+                and "text/html" in accept
+            )
+            if exc.status_code != 404 or not is_page:
+                raise
+            return FileResponse(self._index(), headers={"Cache-Control": "no-store"})
 
 
 def create_api(
@@ -92,6 +127,12 @@ def create_api(
         app.mount("/mcp", mcp_sub_app)
 
     if _WEB_DIR.is_dir():
-        app.mount("/", StaticFiles(directory=_WEB_DIR), name="web")
+        app.mount(
+            "/",
+            _DashboardFiles(
+                directory=_WEB_DIR, index=lambda: resolve_dashboard_index(holder)
+            ),
+            name="web",
+        )
 
     return app

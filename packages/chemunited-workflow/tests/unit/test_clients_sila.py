@@ -290,6 +290,21 @@ def test_put_observable_command_times_out(mocker):
         client.put("FluidDosingService.AspirateVolume", VolumeMicroliters=500.0)
 
 
+def test_put_without_wait_for_completion_returns_execution_uuid(mocker):
+    command = FakeObservableCommand(
+        "AspirateVolume", instance_factory=lambda **kw: FakeNeverDoneCommandInstance()
+    )
+    feature = FakeFeature(
+        "FluidDosingService", observable_commands={"AspirateVolume": command}
+    )
+    client = _client_with_feature(mocker, feature, wait_for_completion=False)
+
+    result = client.put("FluidDosingService.AspirateVolume", VolumeMicroliters=500.0)
+
+    assert command.calls == [{"VolumeMicroliters": 500.0}]
+    assert result == {"execution_uuid": "never-done"}
+
+
 def test_close_disconnects_and_is_idempotent(mocker):
     feature = FakeFeature(
         "Thermostat", properties={"Temperature": FakeProperty("Temperature", value=1)}

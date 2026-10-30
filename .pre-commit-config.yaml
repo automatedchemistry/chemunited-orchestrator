@@ -31,11 +31,13 @@ repos:
       - id: check-added-large-files
         stages: [pre-commit]
         # docs-site/docs/_static/*.gif are intentional tutorial walkthroughs
-        # (2-37MB each), not accidental large-file commits.
-        # monaco/vs/* is the intentionally vendored Monaco editor dist from a
-        # release (editor.main.js 2.4MB, tsWorker.js 4.2MB, ...); it has to
-        # live in the repo so the editor works fully offline.
-        exclude: ^(docs-site/docs/_static/.*\.gif|packages/chemunited-orchestrator/src/chemunited/shared/resources/monaco/vs/)
+        # (2-37MB each), not accidental large-file commits. The dashboard
+        # bundle's lazy compiler chunk (~1 MB, built by .web-chemunited) is
+        # generated code shipped in the wheel. monaco/vs/* is the
+        # intentionally vendored Monaco editor dist from a release
+        # (editor.main.js 2.4MB, tsWorker.js 4.2MB, ...); it has to live in
+        # the repo so the editor works fully offline.
+        exclude: ^(docs-site/docs/_static/.*\.gif|packages/chemunited-workflow/chemunited_workflow/web/assets/.*\.js|packages/chemunited-orchestrator/src/chemunited/shared/resources/monaco/vs/)
 
   - repo: local
     hooks:

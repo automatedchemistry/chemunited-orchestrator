@@ -4,11 +4,13 @@ by filename convention, with zip/clean scoped to a selection of runs."""
 from __future__ import annotations
 
 import io
+import json
 import zipfile
 
 import pytest
 
 from chemunited_workflow.api.services.export import (
+    EXPORT_INDEX_NAME,
     _parse_log_filename,
     build_zip,
     clean,
@@ -57,6 +59,20 @@ def _make_project(tmp_path):
     (tmp_path / "log" / WEIRD_LOG).write_text("log4", encoding="utf-8")
 
     return tmp_path
+
+
+def _write_manifest(tmp_path, run_id: str, git: dict | None) -> None:
+    manifests = tmp_path / "log" / "manifests"
+    manifests.mkdir(parents=True, exist_ok=True)
+    (manifests / f"{run_id}.json").write_text(
+        json.dumps({"run_id": run_id, "project": {"name": "demo", "git": git}}),
+        encoding="utf-8",
+    )
+
+
+def _zip_index(content: bytes) -> dict:
+    with zipfile.ZipFile(io.BytesIO(content)) as zf:
+        return json.loads(zf.read(EXPORT_INDEX_NAME))
 
 
 # ── _parse_log_filename ──────────────────────────────────────────────────────
@@ -130,6 +146,39 @@ def test_preview_one_row_per_log_with_correlation(tmp_path):
     weird = rows[WEIRD_LOG]
     assert weird["monitoring"] is None
     assert weird["protocol"] is None
+    assert weird["manifest"] is None
+
+
+def test_preview_reports_the_commit_a_run_manifest_recorded(tmp_path):
+    _make_project(tmp_path)
+    _write_manifest(tmp_path, RUN1_ID, {"commit": "a1b2c3d4", "dirty": True})
+    rows = {r["log"]["filename"]: r for r in preview(tmp_path)}
+
+    manifest = rows[RUN1_LOG]["manifest"]
+    assert manifest["filename"] == f"{RUN1_ID}.json"
+    assert manifest["commit"] == "a1b2c3d4"
+    assert manifest["dirty"] is True
+    # a run from before run manifests existed has none
+    assert rows[RUN2_LOG]["manifest"] is None
+
+
+def test_preview_manifest_without_git_has_no_commit(tmp_path):
+    _make_project(tmp_path)
+    _write_manifest(tmp_path, RUN1_ID, None)
+    rows = {r["log"]["filename"]: r for r in preview(tmp_path)}
+    assert rows[RUN1_LOG]["manifest"]["commit"] is None
+    assert rows[RUN1_LOG]["manifest"]["dirty"] is None
+
+
+def test_preview_lists_an_unreadable_manifest_without_a_commit(tmp_path):
+    _make_project(tmp_path)
+    (tmp_path / "log" / "manifests").mkdir()
+    (tmp_path / "log" / "manifests" / f"{RUN1_ID}.json").write_text(
+        "not json", encoding="utf-8"
+    )
+    rows = {r["log"]["filename"]: r for r in preview(tmp_path)}
+    assert rows[RUN1_LOG]["manifest"]["filename"] == f"{RUN1_ID}.json"
+    assert rows[RUN1_LOG]["manifest"]["commit"] is None
 
 
 # ── default_build_zip / build_zip ────────────────────────────────────────────
@@ -141,10 +190,98 @@ def test_default_build_zip_scoped_to_selection(tmp_path):
     with zipfile.ZipFile(io.BytesIO(content)) as zf:
         names = set(zf.namelist())
     assert names == {
+        EXPORT_INDEX_NAME,
+        "monitoring.db",
+        f"monitoring/{RUN1_ID}.csv",
         f"log/{RUN1_LOG}",
         f"log/monitoring/{RUN1_ID}/chiller__temperature.jsonl",
         "protocols_historic/test_2026-01-01T00-00-00.json",
     }
+
+
+def test_default_build_zip_includes_run_manifest_and_index(tmp_path):
+    _make_project(tmp_path)
+    _write_manifest(tmp_path, RUN1_ID, {"commit": "a1b2c3d4", "dirty": False})
+    content = default_build_zip(tmp_path, [RUN1_LOG, RUN3_LOG, WEIRD_LOG])
+    with zipfile.ZipFile(io.BytesIO(content)) as zf:
+        manifest = json.loads(zf.read(f"log/manifests/{RUN1_ID}.json"))
+    assert manifest["project"]["git"]["commit"] == "a1b2c3d4"
+
+    index = _zip_index(content)
+    assert index["schema"] == "chemunited-export/1"
+    assert index["project"] == tmp_path.name
+    assert index["exported_at"]
+    assert index["monitoring_database"] == "monitoring.db"
+    assert index["runs"] == [
+        {
+            "run_id": RUN1_ID,
+            "log": f"log/{RUN1_LOG}",
+            "manifest": f"log/manifests/{RUN1_ID}.json",
+            "monitoring": [f"log/monitoring/{RUN1_ID}/chiller__temperature.jsonl"],
+            "recording": None,
+            "monitoring_csv": f"monitoring/{RUN1_ID}.csv",
+            "protocol": "protocols_historic/test_2026-01-01T00-00-00.json",
+        },
+        {
+            "run_id": "gone_2026-01-01T00-00-00_2026-01-04T12-00-00",
+            "log": f"log/{RUN3_LOG}",
+            "manifest": None,
+            "monitoring": [],
+            "recording": None,
+            "monitoring_csv": None,
+            "protocol": None,
+        },
+        {
+            "run_id": None,
+            "log": f"log/{WEIRD_LOG}",
+            "manifest": None,
+            "monitoring": [],
+            "recording": None,
+            "monitoring_csv": None,
+            "protocol": None,
+        },
+    ]
+
+
+def test_default_build_zip_carries_the_recording_description(tmp_path):
+    _make_project(tmp_path)
+    run_dir = tmp_path / "log" / "monitoring" / RUN1_ID
+    (run_dir / "recording.json").write_text('{"variables": []}', encoding="utf-8")
+    content = default_build_zip(tmp_path, [RUN1_LOG])
+    with zipfile.ZipFile(io.BytesIO(content)) as zf:
+        assert f"log/monitoring/{RUN1_ID}/recording.json" in zf.namelist()
+
+    (run,) = _zip_index(content)["runs"]
+    assert run["recording"] == f"log/monitoring/{RUN1_ID}/recording.json"
+    # Only the readings' files, so each one reads line by line.
+    assert run["monitoring"] == [f"log/monitoring/{RUN1_ID}/chiller__temperature.jsonl"]
+
+
+def test_default_build_zip_without_a_recording_has_no_tables(tmp_path):
+    _make_project(tmp_path)
+    content = default_build_zip(tmp_path, [RUN2_LOG])
+    with zipfile.ZipFile(io.BytesIO(content)) as zf:
+        names = zf.namelist()
+    assert "monitoring.db" not in names
+    assert not any(name.startswith("monitoring/") for name in names)
+
+    index = _zip_index(content)
+    assert index["monitoring_database"] is None
+    assert index["runs"][0]["monitoring_csv"] is None
+
+
+def test_default_build_zip_index_names_a_shared_protocol_for_each_run(tmp_path):
+    _make_project(tmp_path)
+    index = _zip_index(default_build_zip(tmp_path, [RUN1_LOG, RUN2_LOG]))
+    assert [run["protocol"] for run in index["runs"]] == [
+        "protocols_historic/test_2026-01-01T00-00-00.json"
+    ] * 2
+
+
+def test_default_build_zip_lists_a_run_selected_twice_once(tmp_path):
+    _make_project(tmp_path)
+    index = _zip_index(default_build_zip(tmp_path, [RUN1_LOG, RUN1_LOG]))
+    assert [run["log"] for run in index["runs"]] == [f"log/{RUN1_LOG}"]
 
 
 def test_default_build_zip_dedupes_shared_protocol(tmp_path):
@@ -226,6 +363,26 @@ def test_default_clean_scoped_to_selection(tmp_path):
     # unrelated runs untouched
     assert (tmp_path / "log" / RUN2_LOG).exists()
     assert (tmp_path / "log" / RUN3_LOG).exists()
+
+
+def test_default_clean_lists_every_file_of_the_recording(tmp_path):
+    _make_project(tmp_path)
+    run_dir = tmp_path / "log" / "monitoring" / RUN1_ID
+    (run_dir / "recording.json").write_text("{}", encoding="utf-8")
+    result = default_clean(tmp_path, [RUN1_LOG])
+    assert f"log/monitoring/{RUN1_ID}/recording.json" in result["deleted"]
+    assert not run_dir.exists()
+
+
+def test_default_clean_deletes_the_run_manifest(tmp_path):
+    _make_project(tmp_path)
+    _write_manifest(tmp_path, RUN1_ID, None)
+    _write_manifest(tmp_path, RUN2_ID, None)
+    result = default_clean(tmp_path, [RUN1_LOG])
+    assert f"log/manifests/{RUN1_ID}.json" in result["deleted"]
+    assert result["count"] == 3
+    assert not (tmp_path / "log" / "manifests" / f"{RUN1_ID}.json").exists()
+    assert (tmp_path / "log" / "manifests" / f"{RUN2_ID}.json").exists()
 
 
 def test_default_clean_never_touches_protocols_historic(tmp_path):

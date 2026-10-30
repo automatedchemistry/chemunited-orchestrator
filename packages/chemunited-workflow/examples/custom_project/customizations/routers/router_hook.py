@@ -47,8 +47,20 @@ def set_chiller_setpoint(celsius: float) -> dict:
     return {"setpoint_celsius": celsius}
 
 
+def summarize_runs(logs: list[str], note: str = "") -> str:
+    """One line describing the selected runs.
+
+    A pure function too. The Export page's "Summarize" button calls it with
+    the selected log filenames (see customizations/ui/ui_hook.py).
+    """
+    protocols = sorted({log.split("_executed_")[0] for log in logs})
+    summary = f"{len(logs)} run(s) of {', '.join(protocols) or 'no protocol'}"
+    return f"{summary}: {note}" if note else summary
+
+
 CUSTOM_ROUTES = {
     "residence_time_min": residence_time_min,
     "chiller_temperature_f": chiller_temperature_f,
     "set_chiller_setpoint": set_chiller_setpoint,
+    "summarize_runs": summarize_runs,
 }

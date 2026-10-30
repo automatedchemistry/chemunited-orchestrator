@@ -3,10 +3,15 @@
 What is tested:
 - The variable picker lists a device's GET commands only, from its protocol
   definition, and marks the ones in the project's monitoring list.
-- An LCD saves to draw/setup.py as ``platform.add_display(...)`` and loads back.
-- The export leaves LCDs out of platform.svg and writes their box and binding
-  to platform-live.json.
-- Save warns about an LCD whose device or variable no longer exists.
+- It also offers the project's custom monitoring sources, read from the
+  monitoring hook without running it, with the parameters they're monitored
+  with.
+- An LCD saves to draw/setup.py as ``platform.add_display(...)`` and loads back,
+  with its unit if it has one.
+- The export leaves LCDs out of platform.svg and writes their box, binding and
+  unit to platform-live.json.
+- Save warns about an LCD whose device, variable or custom source no longer
+  exists.
 - Adding from the Add panel, and deleting with the Delete key.
 """
 
@@ -21,6 +26,7 @@ from pytestqt.qtbot import QtBot
 from chemunited.elements.display import (
     LcdDisplayDialog,
     LcdDisplayItem,
+    custom_sources,
     device_variables,
 )
 from chemunited.elements.display.dialog import MONITORED_SUFFIX
@@ -43,7 +49,7 @@ def window(qtbot: QtBot):
 def project(window: SetupWindow, tmp_path):
     working_dir = tmp_path / "demo"
     session = ProjectSession()
-    session.new(name="demo", location=tmp_path, init_git=False)
+    session.new(name="demo", location=tmp_path)
     window.orchestrator.working_dir = working_dir
     window.orchestrator._session = session
     return working_dir
@@ -68,6 +74,12 @@ def _platform(window: SetupWindow) -> None:
         command="read",
         kwargs={"channel": "2"},
     )
+
+
+def _hook(project_dir, source: str) -> None:
+    path = project_dir / "customizations" / "monitoring" / "monitoring_hook.py"
+    path.parent.mkdir(parents=True, exist_ok=True)
+    path.write_text(source, encoding="utf-8")
 
 
 def test_the_variables_are_the_devices_get_commands():
@@ -97,6 +109,106 @@ def test_the_picker_marks_monitored_variables_and_offers_their_defaults(qtbot):
     assert dialog.monitoring_hint.text() == "In the monitoring list."
 
     dialog.params_edit.setText('{"channel": "2"}')
+    assert "not monitored" in dialog.monitoring_hint.text()
+
+
+def test_the_custom_sources_are_read_from_the_hook_without_running_it(tmp_path):
+    assert custom_sources(tmp_path) == ()
+
+    _hook(
+        tmp_path,
+        'raise SystemExit("never run")\n'
+        'CUSTOM_SOURCES = {"reactor_T": reactor, "pressure": pressure}\n',
+    )
+    assert custom_sources(tmp_path) == ("reactor_T", "pressure")
+
+    _hook(tmp_path, 'CUSTOM_SOURCES: dict[str, Any] = {"humidity": humidity}\n')
+    assert custom_sources(tmp_path) == ("humidity",)
+
+
+@pytest.mark.parametrize(
+    "source",
+    [
+        "CUSTOM_SOURCES = {name: f for name, f in SOURCES}\n",
+        'CUSTOM_SOURCES = {"a": f, **MORE}\n',
+        'CUSTOM_SOURCES = {"a": f}\nCUSTOM_SOURCES["b"] = g\n',
+        'CUSTOM_SOURCES = {"a": f}\nCUSTOM_SOURCES.update(MORE)\n',
+        "CUSTOM_SOURCES = {\n",
+        "SOURCES = {}\n",
+    ],
+)
+def test_custom_sources_that_need_the_hook_to_run_are_unknown(tmp_path, source):
+    _hook(tmp_path, source)
+
+    assert custom_sources(tmp_path) is None
+
+
+def _variables(dialog: LcdDisplayDialog) -> list[str]:
+    combo = dialog.variable_combo
+    return [combo.itemText(i) for i in range(combo.count())]
+
+
+def test_the_picker_offers_the_custom_sources_after_the_devices(qtbot):
+    dialog = LcdDisplayDialog(
+        devices={"ADC": "MultiChannelADC"},
+        custom_sources=["reactor_T", "pressure", "residence"],
+        monitored=[
+            {"component": "custom", "command": "pressure", "kwargs": {}},
+            {"component": "custom", "command": "pressure", "kwargs": {"report": 1}},
+            {"component": "custom", "command": "residence", "kwargs": {"volume": 2}},
+        ],
+        taken_names=set(),
+        name="LCD 1",
+        position=(0.0, 0.0),
+    )
+    qtbot.addWidget(dialog)
+    combo = dialog.device_combo
+    assert [combo.itemText(i) for i in range(combo.count())] == ["ADC", "custom"]
+
+    combo.setCurrentIndex(1)
+    assert _variables(dialog) == [
+        "pressure" + MONITORED_SUFFIX,
+        "reactor_T",
+        "residence" + MONITORED_SUFFIX,
+    ]
+    # The parameters the source is monitored with, so the LCD shows that reading.
+    assert dialog.params_edit.text() == ""
+    assert dialog.monitoring_hint.text() == "In the monitoring list."
+    dialog.variable_combo.setCurrentIndex(2)
+    assert json.loads(dialog.params_edit.text()) == {"volume": 2}
+    assert dialog.monitoring_hint.text() == "In the monitoring list."
+
+    dialog.unit_edit.setText(" mL ")
+    dialog._save()
+    result = dialog.get_result_instance()
+    assert result is not None
+    assert (result.component, result.command, result.kwargs, result.unit) == (
+        "custom",
+        "residence",
+        {"volume": 2},
+        "mL",
+    )
+
+
+def test_an_lcd_on_a_custom_source_opens_on_it(qtbot):
+    dialog = LcdDisplayDialog(
+        devices={},
+        custom_sources=["humidity", "reactor_T"],
+        monitored=[],
+        taken_names=set(),
+        name="Reactor",
+        position=(0.0, 0.0),
+        component="custom",
+        command="reactor_T",
+        kwargs={},
+        unit="°C",
+        creation=False,
+    )
+    qtbot.addWidget(dialog)
+
+    assert dialog.device_combo.currentText() == "custom"
+    assert dialog.variable_combo.currentData() == "reactor_T"
+    assert dialog.unit_edit.text() == "°C"
     assert "not monitored" in dialog.monitoring_hint.text()
 
 
@@ -210,6 +322,79 @@ def test_save_warns_about_an_lcd_whose_variable_is_gone(window, project):
     ]
 
 
+def test_a_custom_lcd_saves_with_its_unit(window, project, qtbot):
+    _hook(project, 'CUSTOM_SOURCES = {"reactor_T": reactor}\n')
+    window.orchestrator.add_display(
+        name="Reactor",
+        position=(10.0, 20.0),
+        component="custom",
+        command="reactor_T",
+        unit="°C",
+    )
+    window.orchestrator.add_display(
+        name="Bare", position=(10.0, 90.0), component="custom", command="reactor_T"
+    )
+
+    window.orchestrator.save()
+
+    setup = (project / "draw" / "setup.py").read_text(encoding="utf-8")
+    assert setup.count("unit=") == 1
+    reactor, bare = storage.load_draw(project)["displays"]
+    assert reactor == {
+        "name": "Reactor",
+        "position": (10.0, 20.0),
+        "component": "custom",
+        "command": "reactor_T",
+        "kwargs": {},
+        "unit": "°C",
+    }
+    assert "unit" not in bare
+    live = json.loads((project / "draw" / "platform-live.json").read_text("utf-8"))
+    assert live["displays"]["Reactor"]["component"] == "custom"
+    assert live["displays"]["Reactor"]["unit"] == "°C"
+    assert live["displays"]["Bare"]["unit"] == ""
+
+    other = SetupWindow()
+    qtbot.addWidget(other)
+    other.orchestrator.load_draw_data(storage.load_draw(project))
+    assert other.orchestrator.displays["Reactor"].display.unit == "°C"
+    assert other.orchestrator.displays["Bare"].display.unit == ""
+
+
+def test_save_warns_about_an_lcd_whose_custom_source_is_gone(window, project):
+    _hook(project, 'CUSTOM_SOURCES = {"reactor_T": reactor}\n')
+    window.orchestrator.add_display(
+        name="Reactor", position=(0, 0), component="custom", command="reactor_T"
+    )
+    window.orchestrator.add_display(
+        name="Old", position=(0, 100), component="custom", command="jacket_T"
+    )
+
+    assert window.orchestrator.stale_display_bindings() == [
+        "LCD 'Old' shows custom source 'jacket_T', which isn't in "
+        "customizations/monitoring/monitoring_hook.py."
+    ]
+
+    # One the monitoring list has is still known.
+    (project / "connectivity").mkdir(exist_ok=True)
+    (project / "connectivity" / "monitoring.json").write_text(
+        json.dumps(
+            {
+                "variables": [
+                    {"component": "custom", "command": "jacket_T", "kwargs": {}}
+                ]
+            }
+        ),
+        encoding="utf-8",
+    )
+    assert window.orchestrator.stale_display_bindings() == []
+
+    # Names it can't read without running the hook: no guess, no warning.
+    (project / "connectivity" / "monitoring.json").unlink()
+    _hook(project, "CUSTOM_SOURCES = build_sources()\n")
+    assert window.orchestrator.stale_display_bindings() == []
+
+
 def test_adding_from_the_add_panel_opens_the_dialog(window, monkeypatch):
     window.orchestrator.add_component(
         name="P1", figure="PressureSensor", position=(0, 0)
@@ -228,7 +413,28 @@ def test_adding_from_the_add_panel_opens_the_dialog(window, monkeypatch):
     assert (item.pos().x(), item.pos().y()) == (50.0, 60.0)
 
 
-def test_an_lcd_needs_a_device_to_show(window, monkeypatch):
+def test_an_lcd_can_show_a_custom_source_without_any_device(
+    window, project, monkeypatch
+):
+    _hook(project, 'CUSTOM_SOURCES = {"reactor_T": reactor}\n')
+
+    def accept(dialog):
+        dialog.unit_edit.setText("°C")
+        dialog._save()
+        return dialog.get_result_instance() is not None
+
+    monkeypatch.setattr(LcdDisplayDialog, "exec", accept)
+    window.orchestrator.request_add_display((50.0, 60.0))
+
+    display = window.orchestrator.displays["LCD 1"].display
+    assert (display.component, display.command, display.unit) == (
+        "custom",
+        "reactor_T",
+        "°C",
+    )
+
+
+def test_an_lcd_needs_a_device_or_a_custom_source_to_show(window, monkeypatch):
     opened = []
     monkeypatch.setattr(LcdDisplayDialog, "exec", lambda dialog: opened.append(1))
 

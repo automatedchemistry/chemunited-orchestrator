@@ -30,15 +30,21 @@ def configure_terminal_logging(
     )
 
 
-def create_run_log_path(project_dir: Path | str, snapshot_filename: str) -> Path:
+def create_run_log_path(
+    project_dir: Path | str,
+    snapshot_filename: str,
+    started_at: datetime | None = None,
+) -> Path:
     """Return the log file path for a given run.
 
     Example: snapshot ``test_2026-05-15T10-38-00.json`` in project dir
     ``examples/custom_project`` becomes
     ``examples/custom_project/log/test_2026-05-15T10-38-00_executed_2026-05-19T14-00-00.log``.
+    Pass the run's ``started_at`` so the log carries the run ID's timestamp,
+    which the export uses to find the run's other files; it defaults to now.
     """
     stem = Path(snapshot_filename).stem
-    now = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
+    now = (started_at or datetime.now()).strftime("%Y-%m-%dT%H-%M-%S")
     return Path(project_dir) / "log" / f"{stem}_executed_{now}.log"
 
 

@@ -19,7 +19,6 @@ from chemunited_quantities import (
 
 
 class SourceMode(ComponentMode):
-
     setpoint: Annotated[ChemUnitQuantity, ChemQuantityValidator("bar")] = Field(
         default=ChemUnitQuantity("1 bar"),
         title="Pressure",

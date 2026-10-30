@@ -90,6 +90,29 @@ def test_discover_custom_routes_skips_var_args_kwargs(tmp_path):
     assert info["parameters"] == []
 
 
+def test_discover_custom_routes_reports_type_hints_and_docstring(tmp_path):
+    _write_hook(
+        tmp_path,
+        "from __future__ import annotations\n"
+        "from typing import Literal\n"
+        "def purge(volume_ml: float, mode: Literal['fast', 'slow'] = 'fast',\n"
+        "          note: str | None = None, untyped=1):\n"
+        "    '''Purge the\n    line.\n\n    Longer explanation.\n    '''\n"
+        "    return volume_ml\n"
+        "CUSTOM_ROUTES = {'purge': purge}\n",
+    )
+    [info] = discover_custom_routes(tmp_path)
+    assert info["description"] == "Purge the line."
+    params = {p["name"]: p for p in info["parameters"]}
+    assert params["volume_ml"]["json_schema"] == {"type": "number"}
+    assert params["mode"]["json_schema"] == {"enum": ["fast", "slow"], "type": "string"}
+    assert params["note"]["json_schema"]["anyOf"] == [
+        {"type": "string"},
+        {"type": "null"},
+    ]
+    assert params["untyped"]["json_schema"] == {}
+
+
 # ── call_custom_route ────────────────────────────────────────────────────────
 
 
@@ -114,9 +137,7 @@ def test_call_custom_route_exception_is_captured_not_raised(tmp_path):
     _write_associations(tmp_path)
     _write_hook(
         tmp_path,
-        "def boom():\n"
-        "    raise ValueError('nope')\n"
-        "CUSTOM_ROUTES = {'boom': boom}\n",
+        "def boom():\n    raise ValueError('nope')\nCUSTOM_ROUTES = {'boom': boom}\n",
     )
     result = call_custom_route(tmp_path, "boom", {})
     assert result["ok"] is False

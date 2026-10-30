@@ -29,7 +29,12 @@ _ACTIVE_STATES = (RunState.RUNNING, RunState.PAUSED)
 class RunRecord:
     run_id: str
     protocol_filename: str = ""
+    # The run ID, the log filename and the manifest all carry this timestamp.
+    started_at: datetime = field(default_factory=datetime.now)
     state: RunState = RunState.RUNNING
+    # Why the run was cancelled, when whoever cancelled it said — a safety
+    # interlock (MonitoringContext.stop_run), say. None for a plain cancel.
+    cancel_reason: str | None = None
     cancel_event: threading.Event = field(default_factory=threading.Event)
     pause_event: threading.Event = field(default_factory=threading.Event)
     events: list[WorkflowExecutionEvent] = field(default_factory=list)
@@ -117,9 +122,13 @@ class RunStore:
             if self._record is not None and self._record.state in _ACTIVE_STATES:
                 return None
             stem = Path(protocol_filename).stem
-            now = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
-            run_id = f"{stem}_{now}"
-            self._record = RunRecord(run_id=run_id, protocol_filename=protocol_filename)
+            started_at = datetime.now()
+            run_id = f"{stem}_{started_at:%Y-%m-%dT%H-%M-%S}"
+            self._record = RunRecord(
+                run_id=run_id,
+                protocol_filename=protocol_filename,
+                started_at=started_at,
+            )
         self._write_lockfile(run_id, protocol_filename)
         return run_id
 
@@ -210,10 +219,17 @@ class RunStore:
                 return {}
             return dict(self._record.pending_input_messages)
 
-    def cancel(self) -> bool:
+    def cancel(self, reason: str | None = None) -> bool:
+        """Cancel the active run. ``reason``, if given, says why and is
+        reported with the cancelled run; the first cancel's reason sticks,
+        since a second one finds no active run."""
         with self._lock:
             if self._record is None or self._record.state not in _ACTIVE_STATES:
                 return False
+            # Set before the state: /run/stream and /run/status read the
+            # record without the lock, and must never see the cancelled
+            # state without its reason.
+            self._record.cancel_reason = reason
             self._record.state = RunState.CANCELLED
             self._record.cancel_event.set()
             # Wake anything blocked in a pause checkpoint so it observes cancellation.

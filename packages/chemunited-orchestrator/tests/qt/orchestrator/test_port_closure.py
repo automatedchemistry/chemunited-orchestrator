@@ -20,7 +20,6 @@ PORT_NUM = 2
 
 
 class TestPortClosure:
-
     @pytest.fixture
     def window(self, qtbot: QtBot):
         w = SetupWindow()

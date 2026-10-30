@@ -467,5 +467,62 @@ def serve(
                 zc.close()
 
 
+@main.group("ui")
+def ui_commands() -> None:
+    """Customize a project's dashboard (customizations/ui/); no build step.
+
+    \b
+      chemunited-workflow ui init my_project/
+      chemunited-workflow ui check my_project/
+    """
+
+
+_PROJECT_DIR = click.Path(
+    exists=True, file_okay=False, resolve_path=True, path_type=Path
+)
+
+
+@ui_commands.command("init")
+@click.argument("project_dir", type=_PROJECT_DIR)
+def ui_init(project_dir: Path) -> None:
+    """Create customizations/ui/ with a starter ui_hook.py, an example page, a
+    theme, editor types and a lint config.
+
+    Files that already exist are kept; the editor types (types/) are refreshed
+    from the installed package.
+    """
+    from chemunited_workflow.ui.tooling import scaffold
+
+    created, kept = scaffold(project_dir)
+    for path in created:
+        click.echo(f"created  {path.relative_to(project_dir)}")
+    for path in kept:
+        click.echo(f"kept     {path.relative_to(project_dir)}")
+    click.echo(
+        "\nServe the project (chemunited-workflow serve PROJECT_DIR) and open the "
+        "dashboard: the example page is under Hello."
+    )
+
+
+@ui_commands.command("check")
+@click.argument("project_dir", type=_PROJECT_DIR)
+def ui_check(project_dir: Path) -> None:
+    """Check customizations/ui/: ui_hook.py and the files it names and, with
+    the ui-lint extra installed, lint the .vue and .js files.
+
+    Exits with status 1 if anything is wrong.
+    """
+    from chemunited_workflow.ui.tooling import check
+
+    report = check(project_dir)
+    for note in report.notes:
+        click.echo(note)
+    for problem in report.problems:
+        click.echo(f"\nProblem: {problem}")
+    if report.problems:
+        raise SystemExit(1)
+    click.echo("\nNo problems found.")
+
+
 if __name__ == "__main__":
     main()

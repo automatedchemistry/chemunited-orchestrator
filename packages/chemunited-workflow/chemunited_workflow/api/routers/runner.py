@@ -95,7 +95,10 @@ async def get_run_status(
     safe for a client that just connected. The read is non-destructive, so
     any number of callers (multiple dashboard viewers, a script) can poll
     concurrently, each tracking its own cursor, without stealing events from
-    one another. For a push-based feed, use `/stream` instead.
+    one another. For a push-based feed, use `/stream` instead. `reason`
+    says why a `cancelled` run was stopped, when whoever stopped it gave one
+    (a safety interlock calling `MonitoringContext.stop_run(reason)`, say);
+    `null` otherwise.
     """
     rec = svc._run_store.get()
     if rec is None:
@@ -106,6 +109,7 @@ async def get_run_status(
         state=rec.state.value,
         events=[e.model_dump() for e in events],
         cursor=cursor,
+        reason=rec.cancel_reason,
     )
 
 
@@ -114,7 +118,8 @@ async def get_run_report(svc: RunnerService = Depends(get_runner_service)):
     """Return the full execution report for the current or last run.
 
     Returns one `WorkflowResult` per process step in execution order,
-    containing node states, results, runtimes, and any errors. Returns
+    containing node states, results, runtimes, and any errors, plus the
+    `reason` a `cancelled` run was stopped for (see `/status`). Returns
     HTTP 202 if the run has not finished yet. Returns null if no run
     has ever been recorded.
     """
@@ -126,6 +131,7 @@ async def get_run_report(svc: RunnerService = Depends(get_runner_service)):
     return {
         "run_id": rec.run_id,
         "state": rec.state.value,
+        "reason": rec.cancel_reason,
         "results": [r.model_dump() for r in rec.results],
     }
 
@@ -142,7 +148,8 @@ async def stream_run(svc: RunnerService = Depends(get_runner_service)):
     each gets the full event history. Also pushes a
     `{"state": "paused"|"running"}` frame whenever the run is paused or
     resumed. Closes with a final
-    `{"state": "finished"|"failed"|"cancelled"}` frame when the run ends.
+    `{"state": "finished"|"failed"|"cancelled"}` frame when the run ends —
+    with a `"reason"` too for a run stopped with one (see `/status`).
     For simple polling without a persistent connection, use `/status` instead.
     """
     rec = svc._run_store.get()
@@ -201,7 +208,10 @@ async def _generate_run_stream(
     for event in events:
         yield f"data: {event.model_dump_json()}\n\n"
 
-    yield f'data: {{"state": "{rec.state.value}"}}\n\n'
+    end: dict[str, str] = {"state": rec.state.value}
+    if rec.cancel_reason is not None:
+        end["reason"] = rec.cancel_reason
+    yield f"data: {json.dumps(end)}\n\n"
 
 
 @router.get("/pool")

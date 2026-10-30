@@ -63,6 +63,14 @@ def test_from_connectivity_passes_timeout_commands_to_clients():
     assert p["pump"]._feedback_timeout == 5.0
 
 
+def test_from_connectivity_passes_wait_for_completion_to_clients():
+    p = Platform.from_connectivity(
+        FIXTURES / "associations.json",
+        wait_for_completion=False,
+    )
+    assert p["pump"]._wait_for_completion is False
+
+
 def test_from_connectivity_without_server_url_does_not_raise(tmp_path):
     bad = tmp_path / "bad.json"
     bad.write_text(json.dumps({"associations": []}), encoding="utf-8")

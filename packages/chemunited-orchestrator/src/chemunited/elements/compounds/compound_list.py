@@ -190,9 +190,8 @@ class CompoundList(QWidget):
         values = [
             "Molecular weight: "
             f"{_format_quantity(entity.molecular_weight, 'g/mol')} g/mol",
-            "Cp liquid: "
-            f"{_format_quantity(entity.cp_liquid, 'J/(mol*K)')} J/(mol K)",
-            "Cp gas: " f"{_format_quantity(entity.cp_gas, 'J/(mol*K)')} J/(mol K)",
+            f"Cp liquid: {_format_quantity(entity.cp_liquid, 'J/(mol*K)')} J/(mol K)",
+            f"Cp gas: {_format_quantity(entity.cp_gas, 'J/(mol*K)')} J/(mol K)",
             "Liquid density: "
             f"{_format_quantity(entity.density_liquid, 'kg/m^3')} kg/m^3",
         ]

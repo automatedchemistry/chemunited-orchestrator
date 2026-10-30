@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import json
 from pathlib import Path
 
 import pytest
@@ -84,3 +85,41 @@ def test_run_stream_drains_events_appended_right_before_finish():
         "last node ran" in c for c in chunks
     ), f"Event appended just before the state flip was dropped: {chunks}"
     assert chunks[-1] == 'data: {"state": "finished"}\n\n'
+
+
+def _terminal_frame_after_cancel(reason: str | None) -> str:
+    async def collect_terminal() -> str:
+        store = RunStore()
+        run_id = store.try_start("p_2026-01-01T00-00-00.json")
+        assert run_id is not None
+        svc = RunnerService(Path(), {}, {}, store)
+        stream = _generate_run_stream(
+            svc,
+            poll_interval=0.0,
+            heartbeat_interval=0.0,
+        )
+
+        await anext(stream)  # heartbeat
+        store.cancel(reason)
+        terminal = await anext(stream)
+        with pytest.raises(StopAsyncIteration):
+            await anext(stream)
+        return terminal
+
+    return asyncio.run(collect_terminal())
+
+
+def test_run_stream_closes_with_the_reason_a_run_was_stopped_for():
+    reason = 'Overpressure: "P-Main" 3.2 bar > 3.0 bar'
+
+    terminal = _terminal_frame_after_cancel(reason)
+
+    assert terminal.startswith("data: ") and terminal.endswith("\n\n")
+    assert json.loads(terminal.removeprefix("data: ")) == {
+        "state": "cancelled",
+        "reason": reason,
+    }
+
+
+def test_run_stream_end_frame_is_unchanged_for_a_plain_cancel():
+    assert _terminal_frame_after_cancel(None) == 'data: {"state": "cancelled"}\n\n'

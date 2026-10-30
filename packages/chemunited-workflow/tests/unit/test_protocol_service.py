@@ -648,6 +648,29 @@ def test_send_component_command_put_success(svc):
 
 
 @resp_lib.activate
+def test_send_component_command_put_does_not_wait_for_device_to_finish(svc):
+    resp_lib.add(
+        resp_lib.PUT,
+        "http://device-server:8000/sim/pump/infuse",
+        json={"rate": "5 ml/min"},
+        status=200,
+    )
+    is_idle = resp_lib.add(
+        resp_lib.GET,
+        "http://device-server:8000/sim/pump/is-idle",
+        body=b"false",
+        status=200,
+    )
+    result = svc.send_component_command(
+        "pump", "infuse", "put", params={"rate": "5 ml/min"}
+    )
+
+    assert result["ok"] is True
+    assert result["error"] is None
+    assert is_idle.call_count == 0
+
+
+@resp_lib.activate
 def test_send_component_command_non_json_response_falls_back_to_text(svc):
     resp_lib.add(
         resp_lib.GET,

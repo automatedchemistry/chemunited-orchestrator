@@ -3,14 +3,18 @@
 Fed by the command events the device clients report (see ``command_events``):
 ``started`` marks the device running and records the command, ``finished``
 marks it done, and ``failed`` marks it failed with its picture unknown — a
-command that failed or timed out may or may not have run. With a picture
+command that failed or timed out may or may not have run. A command from the
+device panel is done as soon as the device accepts it: the panel doesn't wait
+for the device to finish. With a picture
 deriver installed (``command_tracker``, which needs chemunited-core), each
 command also redraws the device's picture. Every record starts unknown when
 the project loads; nothing is assumed from the design state.
 
 The LCD displays drawn in the desktop app show monitoring readings: the store
 gets each one through ``record_reading`` and keeps it, as text, for every LCD
-bound to that variable. LCDs never read a device themselves.
+bound to that variable, followed by a unit when the reading is a number: the
+one the reading came with (a quantity's), else the LCD's. LCDs never read a
+device themselves.
 
 Every change gets the next ``seq``. A bounded log of the changes lets a stream
 that reconnects replay what it missed (see ``routers/platform.py``).
@@ -101,12 +105,28 @@ def _display_text(value: Any) -> str | None:
         return str(value)
 
 
+def _with_unit(text: str | None, unit: str) -> str | None:
+    """*text* followed by *unit* when it's a number: ``"1.02"`` → ``"1.02 bar"``.
+
+    Anything else is left as it is, so a device that reports its own unit
+    ("24.3 degC") never shows two.
+    """
+    if text is None or not unit:
+        return text
+    try:
+        float(text)
+    except ValueError:
+        return text
+    return f"{text} {unit}"
+
+
 class DeviceStateStore:
     """The live state of every device and LCD in the loaded project. Thread-safe.
 
     ``displays`` maps each LCD's name to the monitoring key of the variable it
-    shows; ``monitored_keys`` returns the keys in the monitoring list, so an
-    LCD can say it isn't monitored.
+    shows, and ``display_units`` to its unit, if it has one; ``monitored_keys``
+    returns the keys in the monitoring list, so an LCD can say it isn't
+    monitored.
     """
 
     def __init__(
@@ -115,6 +135,7 @@ class DeviceStateStore:
         *,
         deriver: PictureDeriver | None = None,
         displays: Mapping[str, str] | None = None,
+        display_units: Mapping[str, str] | None = None,
         monitored_keys: Callable[[], Collection[str]] | None = None,
         log_size: int = CHANGE_LOG_SIZE,
     ) -> None:
@@ -128,6 +149,7 @@ class DeviceStateStore:
         for name in components:
             self._devices[name] = self._new_state(name)
         self._display_keys = dict(displays or {})
+        self._display_units = dict(display_units or {})
         self._monitored_keys = monitored_keys
         self._displays: dict[str, dict[str, Any]] = {
             name: {"value": None, "at": None, "error": None}
@@ -174,15 +196,19 @@ class DeviceStateStore:
         if not names:
             return
         error = reading.get("error")
-        display = {
-            "value": None if error else _display_text(reading.get("value")),
-            "at": reading.get("time"),
-            "error": None if error is None else str(error),
-            "monitored": True,
-        }
+        text = None if error else _display_text(reading.get("value"))
+        # The unit a quantity came with wins over the LCD's own.
+        own_unit = reading.get("unit")
         with self._lock:
             for name in names:
-                self._displays[name] = dict(display)
+                unit = own_unit or self._display_units.get(name, "")
+                display = {
+                    "value": _with_unit(text, unit),
+                    "at": reading.get("time"),
+                    "error": None if error is None else str(error),
+                    "monitored": True,
+                }
+                self._displays[name] = display
                 self._record_change({"displays": {name: dict(display)}})
 
     def snapshot(self) -> dict[str, Any]:

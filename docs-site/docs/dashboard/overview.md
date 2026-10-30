@@ -6,7 +6,7 @@ connectivity — from any browser, without the desktop orchestrator app open. St
 [Dashboard Launcher](launcher.md), or run `chemunited-workflow serve` directly; either way it opens at
 `http://127.0.0.1:<port>/` (default port `3116`).
 
-The dashboard has six pages, reachable from the sidebar on the left of every page:
+The dashboard has seven pages, reachable from the sidebar on the left of every page:
 
 * **Dashboard** (this page) — project status at a glance and quick navigation.
 * **[Run Control](run_control.md)** — start or cancel a run, and watch it execute live.
@@ -14,6 +14,7 @@ The dashboard has six pages, reachable from the sidebar on the left of every pag
 * **[Monitoring](monitoring.md)** — poll live device variables outside of a run.
 * **[Logs](logs.md)** — browse and tail execution log files.
 * **[Devices](devices.md)** — check connectivity for every component in the project.
+* **[Export](export.md)** — download past runs with their manifests, and clean them out of the project.
 
 At the bottom of the sidebar: **Refresh project** (reload project state from disk), **API Docs** (opens the
 work-server's OpenAPI docs — see [API & MCP Tools](api_and_mcp.md)), and a **Dark theme** toggle.
@@ -34,6 +35,8 @@ Four cards summarize the loaded project:
 **Refresh** re-reads all four cards from the server. Below them, the **Platform** card renders the project's
 platform diagram (the same layout you build in [Drawing](../drawing/drawing.md)), useful for a quick visual sanity
 check of the loaded setup. Click a component in the diagram to open its connectivity status and commands below it.
+A command you send from there returns as soon as the device accepts it: unlike a protocol run, the dashboard
+doesn't wait for the device to finish, so a thermostat may still be heating when the panel shows **OK**.
 At the bottom, four quick-navigation cards jump straight to Run Control, Protocols, Monitoring, and Logs.
 
 ### Navigating the platform diagram
@@ -67,7 +70,7 @@ On a live diagram:
 |---|---|
 | Valve rotor lines, open/closed badges, relay lights | The last command the device received. |
 | Turning ring, with the command above it | The device is running that command. |
-| Short flash | A command went to a device that doesn't report when it finishes. |
+| Short flash | A command went to a device that doesn't report when it finishes, or came from the device panel, which doesn't wait for the device. |
 | Grey **?** | Unknown: no command since the work-server started, or the last one failed or timed out. |
 | Black LCD with a value, e.g. `24.35 °C` | The latest monitoring reading of its variable. |
 | LCD showing `--` | Not live, no reading yet, or the last reading failed (hover for why). |

@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "chemunited-workflow"
-version = "0.0.10"
+version = "0.1.1"
 description = "Conditional NetworkX-based workflow execution with loopbacks and parallel branches."
 requires-python = ">=3.11"
 license = { file = "LICENSE" }
@@ -38,6 +38,8 @@ sila2 = ["sila2>=0.14,<1"]
 opcua = ["asyncua>=2.0,<3"]
 # Device pictures on the dashboard's live platform view (rotor channels, badges, ...).
 live = ["chemunited-core>=0.0.7"]
+# Lints a project's dashboard customizations (`chemunited-workflow ui check`), no Node needed.
+ui-lint = ["oxlint>=1.89"]
 
 [project.scripts]
 chemunited-workflow = "chemunited_workflow.cli:main"
@@ -52,6 +54,7 @@ norecursedirs = ["pytest-tmp-cli", ".pytest_cache", ".venv", "build", "dist"]
 
 [tool.setuptools.package-data]
 "chemunited_workflow" = ["web/index.html", "web/chemunited.ico", "web/assets/*", "py.typed"]
+"chemunited_workflow.ui" = ["templates/**/*", "types/**/*"]
 
 [tool.setuptools]
 package-dir = {"" = "."}
@@ -62,4 +65,5 @@ packages = [
     "chemunited_workflow.api.services",
     "chemunited_workflow.clients",
     "chemunited_workflow.mcp",
+    "chemunited_workflow.ui",
 ]

@@ -90,7 +90,7 @@ class MonacoBridge(QObject):
     # QWebChannel resolves the JS promise with ``null`` instead of the JSON
     # string (which made readFile consumers crash on `res.ok`).
 
-    @pyqtSlot(str, result="str")
+    @pyqtSlot(str, result=str)  # type: ignore[arg-type]
     def readFile(self, path: str) -> str:
         """Read a file for opening in a new tab. Returns JSON {ok, content/error}."""
         try:

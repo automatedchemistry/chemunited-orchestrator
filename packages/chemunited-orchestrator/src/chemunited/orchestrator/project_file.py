@@ -437,7 +437,7 @@ class OrchestratorProjectFile(OrchestratorExecution):
 
         self.open_project_async(path)
 
-    def save(self, comment: str = "") -> None:
+    def save(self) -> None:
         export_destination: Path | None = None
 
         if not self.working_dir:
@@ -470,9 +470,6 @@ class OrchestratorProjectFile(OrchestratorExecution):
         self._ensure_main_parameters_script()
         self._session.save_connectivity(self._build_connectivity_data())
         self._session.export_chemunited(export_destination)
-
-        if comment:
-            self._session.git_snapshot(comment)
 
         logger.bind(window=WindowCategory.SETUP).success(
             f"Project saved to {self._session.source_file}"

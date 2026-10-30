@@ -860,7 +860,6 @@ class ProfilesWidget(QWidget):
 
 
 class SimulateWindowReport(ThemedChromeMixin, QMainWindow):
-
     def __init__(self, graph: SimGraphicView, parent: "SetupWindow") -> None:
         super().__init__(parent)
         self._setup_window = parent
