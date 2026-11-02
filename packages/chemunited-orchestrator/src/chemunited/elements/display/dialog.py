@@ -15,6 +15,7 @@ from qfluentwidgets import (
     LineEdit,
     PrimaryPushButton,
     PushButton,
+    isDarkTheme,
 )
 from qframelesswindow import FramelessDialog
 
@@ -93,7 +94,9 @@ class LcdDisplayDialog(FramelessDialog):
 
         self.error_label = BodyLabel("", self)
         self.error_label.setWordWrap(True)
-        self.error_label.setStyleSheet("color: #c42b1c;")
+        self.error_label.setStyleSheet(
+            "color: #f28b82;" if isDarkTheme() else "color: #c42b1c;"
+        )
         self.error_label.hide()
 
         cancel_button = PushButton("Cancel", self)

@@ -5,10 +5,12 @@ from PyQt5.QtWidgets import QVBoxLayout
 from qfluentwidgets import BodyLabel
 from qframelesswindow import FramelessDialog
 
+from chemunited.shared.widgets.app_theme import ThemedChromeMixin
+
 from .editor_widget import BaseModeEditorWidget
 
 
-class BaseModeDialog(FramelessDialog):
+class BaseModeDialog(ThemedChromeMixin, FramelessDialog):
     def __init__(
         self,
         model_class: type[BaseModel],
