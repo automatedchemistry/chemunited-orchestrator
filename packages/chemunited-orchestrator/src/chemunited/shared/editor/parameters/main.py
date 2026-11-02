@@ -25,6 +25,7 @@ from qfluentwidgets import (
 
 from chemunited.shared.editor.parameters.list import ParameterListWidget
 from chemunited.shared.icon import OrchestratorIcon
+from chemunited.shared.widgets.app_theme import ThemedChromeMixin
 from chemunited.shared.widgets.base_mode_editor.cards.builder_models import (
     BasicVariableBuildMode,
     BoolVariableBuildMode,
@@ -249,7 +250,7 @@ def field_info_to_build_mode(
     return None
 
 
-class MainParametersEditor(QMainWindow):
+class MainParametersEditor(ThemedChromeMixin, QMainWindow):
     """Single-view parameter editor focused on the card list."""
 
     def __init__(

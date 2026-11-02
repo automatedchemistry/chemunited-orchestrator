@@ -9,7 +9,7 @@ from loguru import logger
 from PyQt5.QtCore import QMimeData, Qt
 from PyQt5.QtGui import QDrag, QIcon
 from PyQt5.QtWidgets import QAbstractItemView, QListWidgetItem, QVBoxLayout, QWidget
-from qfluentwidgets import FluentIcon, ListWidget
+from qfluentwidgets import FluentIcon, ListWidget, isDarkTheme
 
 from chemunited.shared.editor.parameters.main import field_info_to_build_mode
 from chemunited.shared.icon import OrchestratorIcon
@@ -111,6 +111,15 @@ class ParameterDragableList(QWidget):
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.addWidget(self._list)
+
+        # Apply theme-aware styling
+        if isDarkTheme():
+            self.setStyleSheet(
+                "ParameterDragableList { background-color: rgb(39, 39, 39); color: rgba(255, 255, 255, 0.85); }"
+                "ListWidget { background-color: rgb(39, 39, 39); color: rgba(255, 255, 255, 0.85); }"
+                "QListWidget::item { color: rgba(255, 255, 255, 0.85); }"
+                "QListWidget::item:selected { background-color: rgba(0, 120, 215, 0.3); color: white; }"
+            )
 
         self._populate()
 

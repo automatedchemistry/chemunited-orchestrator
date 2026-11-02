@@ -16,6 +16,7 @@ from qfluentwidgets import (
     RoundMenu,
     StrongBodyLabel,
     TransparentToolButton,
+    isDarkTheme,
 )
 
 from chemunited.shared.widgets.base_mode_editor.cards.base_card import BaseFieldCard
@@ -91,7 +92,8 @@ class ParamRefCard(QWidget):
         ref_layout.setSpacing(8)
 
         self._ref_label = CaptionLabel("", ref_page)
-        self._ref_label.setStyleSheet("color: #2d7dff; font-style: italic;")
+        ref_color = "#7FB2FF" if isDarkTheme() else "#2d7dff"
+        self._ref_label.setStyleSheet(f"color: {ref_color}; font-style: italic;")
         ref_layout.addWidget(self._ref_label, alignment=QT_ALIGN_VCENTER)
         ref_layout.addStretch()
 

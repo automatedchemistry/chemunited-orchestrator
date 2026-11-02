@@ -57,7 +57,6 @@ repos:
         language: system
         types: [python]
         stages: [pre-commit]
-        exclude: packages/chemunited-orchestrator/src/chemunited/shared/resources/resources_rc\.py
 
       - id: ruff
         name: ruff
@@ -65,11 +64,10 @@ repos:
         language: system
         types: [python]
         stages: [pre-commit]
-        exclude: packages/chemunited-orchestrator/src/chemunited/shared/resources/resources_rc\.py
 
       - id: mypy
         name: mypy
-        entry: uv run mypy --exclude 'resources_rc\.py'
+        entry: uv run mypy
         language: system
         pass_filenames: false
         types: [python]
