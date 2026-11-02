@@ -80,6 +80,7 @@ namespaces = true
     "icons/*.ico",
     "icons/*.svg",
     "lexer/*.json",
+    "monaco/**/*",
     "qss/dark/*.qss",
     "qss/light/*.qss",
     "scripts/*.txt",
