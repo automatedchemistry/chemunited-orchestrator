@@ -3,7 +3,12 @@ from __future__ import annotations
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QColor, QPainter
 from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
-from qfluentwidgets import CaptionLabel, CardWidget, StrongBodyLabel
+from qfluentwidgets import (
+    CaptionLabel,
+    CardWidget,
+    StrongBodyLabel,
+    isDarkTheme,
+)
 
 
 class BaseFieldCard(CardWidget):
@@ -85,7 +90,9 @@ class BaseFieldCard(CardWidget):
             self._valid = False
             self._error_label.setText(message)
             self._error_label.setVisible(True)
-            self._error_label.setStyleSheet("color: #c42b1c;")
+            self._error_label.setStyleSheet(
+                "color: #f28b82;" if isDarkTheme() else "color: #c42b1c;"
+            )
         else:
             self._error_label.setVisible(False)
             self._error_label.setText("")
@@ -108,5 +115,8 @@ class BaseFieldCard(CardWidget):
         if not self._touched:
             return
         painter = QPainter(self)
-        color = QColor("#0f7b0f") if self._valid else QColor("#c42b1c")
+        if self._valid:
+            color = QColor("#2E7D32" if isDarkTheme() else "#0f7b0f")
+        else:
+            color = QColor("#E57373" if isDarkTheme() else "#c42b1c")
         painter.fillRect(0, 0, 3, self.height(), color)
