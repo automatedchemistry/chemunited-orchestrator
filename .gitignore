@@ -247,3 +247,4 @@ docs-site/docs/tutorial_recorder/
 
 # design files
 *.design
+config/
