@@ -6,18 +6,22 @@ connectivity — from any browser, without the desktop orchestrator app open. St
 [Dashboard Launcher](launcher.md), or run `chemunited-workflow serve` directly; either way it opens at
 `http://127.0.0.1:<port>/` (default port `3116`).
 
-The dashboard has seven pages, reachable from the sidebar on the left of every page:
+The sidebar on the left of every page leads to the everyday pages:
 
 * **Dashboard** (this page) — project status at a glance and quick navigation.
 * **[Run Control](run_control.md)** — start or cancel a run, and watch it execute live.
 * **[Protocols](protocols.md)** — assemble processes into a saved, repeatable protocol.
 * **[Monitoring](monitoring.md)** — poll live device variables outside of a run.
 * **[Logs](logs.md)** — browse and tail execution log files.
-* **[Devices](devices.md)** — check connectivity for every component in the project.
 * **[Export](export.md)** — download past runs with their manifests, and clean them out of the project.
 
-At the bottom of the sidebar: **Refresh project** (reload project state from disk), **API Docs** (opens the
-work-server's OpenAPI docs — see [API & MCP Tools](api_and_mcp.md)), and a **Dark theme** toggle.
+At the bottom of the sidebar:
+
+* **Refresh project** — reload project state from disk.
+* **[Devices](devices.md)** — check connectivity for every component in the project.
+* **[Configurations](configurations.md)** — run options, what monitoring polls, the API docs and API token, and the
+  theme.
+* A **Dark theme** toggle.
 
 ## Landing page
 
@@ -74,7 +78,7 @@ On a live diagram:
 | Grey **?** | Unknown: no command since the work-server started, or the last one failed or timed out. |
 | Black LCD with a value, e.g. `24.35 °C` | The latest monitoring reading of its variable. |
 | LCD showing `--` | Not live, no reading yet, or the last reading failed (hover for why). |
-| LCD showing `not monitored` | Its variable isn't in the Monitoring page's list. |
+| LCD showing `not monitored` | Its variable isn't in the monitoring list ([Configurations](configurations.md#monitoring)). |
 
 The diagram shows commands, not readings from the hardware: a valve that didn't move still shows the commanded
 position. Commands sent outside the work-server (vendor software, for example) never appear. The **?** button in
@@ -88,9 +92,9 @@ commands only, with a note to save the project again.
 
 ## Starting the work-server manually
 
-You do not need to start the work-server yourself for a normal run — the orchestrator launches it automatically
-when you click **Run Monitoring**, and the [Dashboard Launcher](launcher.md) covers the common desktop-side
-options. This section is for running it standalone (e.g. headless, on a lab server, or exposed to other machines
+You do not need to start the work-server yourself for a normal run — the desktop app's
+[Dashboard Launcher](launcher.md) (the **Run** step) starts it with your project loaded and opens the dashboard.
+This section is for running it standalone (e.g. headless, on a lab server, or exposed to other machines
 on the network), via its own command-line tool:
 
 ```bash

@@ -55,7 +55,7 @@ This panel lists all components available for building your setup, organized int
 ## LCD readouts
 
 An LCD shows one variable on the Dashboard's [live platform view](../dashboard/overview.md#live-view): the latest
-reading the [Monitoring](../dashboard/monitoring.md) page takes of it. The variable is a device's, or one of the
+reading monitoring takes of it (see [Configurations → Monitoring](../dashboard/configurations.md#monitoring)). The variable is a device's, or one of the
 project's custom monitoring sources. LCDs are part of the drawing, not devices: they never read a device themselves,
 and don't appear in connectivity or the simulation.
 
@@ -76,7 +76,7 @@ monitoring list are offered.
 
 An LCD shows its variable's reading as it is: a custom source that returns a list shows the whole list. For an LCD,
 return one value from a source. An LCD bound to a variable that isn't in the monitoring list shows `not monitored`
-on the Dashboard until the variable is added on the Monitoring page. Double-click an LCD, or right-click it, to
+on the Dashboard until the variable is added under Configurations → Monitoring. Double-click an LCD, or right-click it, to
 change its **Properties**; select it and press **Delete**, or right-click **Delete**, to remove it. In the desktop
 app an LCD always reads `--`.
 

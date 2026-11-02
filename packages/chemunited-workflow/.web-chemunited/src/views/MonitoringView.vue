@@ -1,5 +1,18 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
+import { RouterLink } from 'vue-router'
+import {
+  DEFAULT_CONFIG,
+  DEFAULT_STATE,
+  type MonitoringConfig,
+  type MonitoringState,
+  type MonitoringVariable,
+  STATE_POLL_INTERVAL_MS,
+  isPlainRecord,
+  normalizeConfig,
+  variableKey,
+  variableParams,
+} from '../components/monitoring/monitoringConfig'
 
 interface ProjectResponse {
   project_dir: string | null
@@ -9,36 +22,6 @@ interface ErrorResponse {
   detail?: string | Array<{ msg?: string }>
 }
 
-interface ComponentAssociation {
-  component: string
-  component_url?: string
-}
-
-interface ConnectivityMap {
-  server_url?: string
-  associations?: ComponentAssociation[]
-}
-
-interface MonitoringVariable {
-  component: string
-  command: string
-  kwargs: Record<string, unknown>
-}
-
-interface MonitoringConfig {
-  sample_time: number
-  request_timeout: number
-  variables: MonitoringVariable[]
-}
-
-interface MonitoringState {
-  manual_on: boolean
-  run_active: boolean
-  recording: boolean
-  run_id: string | null
-  effective_on: boolean
-}
-
 interface MonitoringReading {
   tick: number
   time: string
@@ -46,62 +29,18 @@ interface MonitoringReading {
   error: string | null
 }
 
-interface DiscoveredCommand {
-  command: string
-  summary?: string
-  parameters?: unknown[]
-}
-
-interface OpenApiParameter {
-  name?: unknown
-  in?: unknown
-  required?: unknown
-  description?: unknown
-  schema?: {
-    type?: unknown
-  }
-}
-
-interface ParameterField {
-  name: string
-  required: boolean
-  description: string
-  type: string
-}
-
 type DisplayMode = 'unknown' | 'numeric' | 'table'
 type NoticeType = 'info' | 'error' | 'warning' | 'success'
-
-// Reserved pseudo-component: its "commands" are function names registered in
-// the project's customizations/monitoring/monitoring_hook.py rather than GET
-// endpoints on a real device (see docs/api-reference.md#custom-sources).
-const CUSTOM_COMPONENT = 'custom'
-
-const DEFAULT_CONFIG: MonitoringConfig = {
-  sample_time: 5,
-  request_timeout: 5,
-  variables: [],
-}
-
-const DEFAULT_STATE: MonitoringState = {
-  manual_on: false,
-  run_active: false,
-  recording: false,
-  run_id: null,
-  effective_on: false,
-}
 
 // Server-authoritative cap on the in-memory history buffer (see HISTORY_MAXLEN
 // in monitoring_store.py) — kept here only as a defensive client-side trim,
 // not load-bearing.
 const MAX_PROFILE_POINTS = 300
-const STATE_POLL_INTERVAL_MS = 2000
 const CHART_WIDTH = 520
 const CHART_HEIGHT = 160
 const CHART_PADDING = 18
 
 const projectLoaded = ref<boolean | null>(null)
-const connectivity = ref<ConnectivityMap | null>(null)
 const config = ref<MonitoringConfig>({ ...DEFAULT_CONFIG, variables: [] })
 const state = ref<MonitoringState>({ ...DEFAULT_STATE })
 
@@ -110,17 +49,6 @@ const pageError = ref('')
 const pageNotice = ref('')
 const pageNoticeType = ref<NoticeType>('info')
 const startError = ref('')
-const canRetryStart = ref(false)
-
-const selectedComponent = ref('')
-const selectedCommand = ref('')
-const discoveredCommands = ref<DiscoveredCommand[]>([])
-const isDiscovering = ref(false)
-const discoveryMessage = ref('')
-const discoveryMessageType = ref<NoticeType>('info')
-const paramValues = ref<Record<string, string>>({})
-const rawKwargsJson = ref('{}')
-const addVariableError = ref('')
 
 const isStarting = ref(false)
 const isStopping = ref(false)
@@ -134,25 +62,10 @@ const displayModes = ref<Record<string, DisplayMode>>({})
 let pollTimer: ReturnType<typeof window.setInterval> | undefined
 let statePollTimer: ReturnType<typeof window.setInterval> | undefined
 
-const associations = computed(() => connectivity.value?.associations ?? [])
-const configuredAssociations = computed(() =>
-  associations.value.filter(assoc => Boolean(assoc.component_url?.trim())),
-)
 const isRunning = computed(() => state.value.effective_on)
-const isLocked = computed(() => isRunning.value || isStarting.value || isStopping.value)
-const selectedDiscoveredCommand = computed(() =>
-  discoveredCommands.value.find(command => command.command === selectedCommand.value),
-)
-const parameterFields = computed(() =>
-  normalizeParameters(selectedDiscoveredCommand.value?.parameters ?? []),
-)
-const canAddVariable = computed(() =>
-  Boolean(selectedComponent.value && selectedCommand.value && !isLocked.value),
-)
 // Start and Stop also switch the dashboard's platform view live, so they
 // work during a run (only the manual flag changes) and with no variables.
-// Start saves the variable list first, so it waits until the page has loaded
-// that list: an earlier click would save an empty list over the project's.
+// The variables themselves are chosen under Configurations → Monitoring.
 const canStart = computed(() =>
   projectLoaded.value === true
   && !isLoadingPage.value
@@ -203,54 +116,6 @@ function clearNotice() {
   pageNotice.value = ''
 }
 
-function normalizeConfig(input: Partial<MonitoringConfig>): MonitoringConfig {
-  return {
-    sample_time: Number(input.sample_time) > 0 ? Number(input.sample_time) : DEFAULT_CONFIG.sample_time,
-    request_timeout: Number(input.request_timeout) > 0
-      ? Number(input.request_timeout)
-      : DEFAULT_CONFIG.request_timeout,
-    variables: Array.isArray(input.variables)
-      ? input.variables.map(variable => ({
-        component: String(variable.component ?? ''),
-        command: String(variable.command ?? ''),
-        kwargs: isPlainRecord(variable.kwargs) ? variable.kwargs : {},
-      })).filter(variable => variable.component && variable.command)
-      : [],
-  }
-}
-
-function normalizeParameters(parameters: unknown[]): ParameterField[] {
-  return parameters
-    .map(parameter => parameter as OpenApiParameter)
-    .filter(parameter => typeof parameter.name === 'string' && parameter.name.trim())
-    .filter(parameter => parameter.in === undefined || parameter.in === 'query')
-    .map(parameter => ({
-      name: String(parameter.name),
-      required: Boolean(parameter.required),
-      description: typeof parameter.description === 'string' ? parameter.description : '',
-      type: typeof parameter.schema?.type === 'string' ? parameter.schema.type : 'string',
-    }))
-}
-
-function canonical(value: unknown): unknown {
-  if (Array.isArray(value)) return value.map(canonical)
-  if (isPlainRecord(value)) {
-    return Object.fromEntries(Object.keys(value).sort().map(key => [key, canonical(value[key])]))
-  }
-  return value
-}
-
-// Matches the work-server's monitoring_key: the parameters as JSON with sorted
-// keys and no spaces, and nothing for a variable without parameters.
-function variableParams(variable: MonitoringVariable): string {
-  return Object.keys(variable.kwargs).length ? JSON.stringify(canonical(variable.kwargs)) : ''
-}
-
-function variableKey(variable: MonitoringVariable): string {
-  const params = variableParams(variable)
-  return `${variable.component}::${variable.command}${params ? `::${params}` : ''}`
-}
-
 function historyUrl(variable: MonitoringVariable): string {
   const component = encodeURIComponent(variable.component)
   const command = variable.command
@@ -262,10 +127,6 @@ function historyUrl(variable: MonitoringVariable): string {
   const params = variableParams(variable)
   const query = params ? `?kwargs=${encodeURIComponent(params)}` : ''
   return `/monitoring/history/${component}/${command}${query}`
-}
-
-function isPlainRecord(value: unknown): value is Record<string, unknown> {
-  return Boolean(value) && typeof value === 'object' && !Array.isArray(value)
 }
 
 function isFlatObject(value: unknown): value is Record<string, unknown> {
@@ -308,45 +169,6 @@ function objectEntries(value: unknown): Array<[string, string]> {
   return Object.entries(value).map(([key, item]) => [key, formatPrimitive(item)])
 }
 
-function convertParameterValue(value: string, field: ParameterField): unknown {
-  if (field.type === 'integer') {
-    const parsed = Number.parseInt(value, 10)
-    return Number.isNaN(parsed) ? value : parsed
-  }
-  if (field.type === 'number') {
-    const parsed = Number.parseFloat(value)
-    return Number.isNaN(parsed) ? value : parsed
-  }
-  if (field.type === 'boolean') {
-    if (value.toLowerCase() === 'true') return true
-    if (value.toLowerCase() === 'false') return false
-  }
-  return value
-}
-
-function buildKwargs(): Record<string, unknown> {
-  if (parameterFields.value.length === 0) {
-    const raw = rawKwargsJson.value.trim()
-    if (!raw) return {}
-    const parsed = JSON.parse(raw) as unknown
-    if (!isPlainRecord(parsed)) {
-      throw new Error('Kwargs JSON must be an object.')
-    }
-    return parsed
-  }
-
-  const kwargs: Record<string, unknown> = {}
-  for (const field of parameterFields.value) {
-    const raw = paramValues.value[field.name]?.trim() ?? ''
-    if (!raw) {
-      if (field.required) throw new Error(`${field.name} is required.`)
-      continue
-    }
-    kwargs[field.name] = convertParameterValue(raw, field)
-  }
-  return kwargs
-}
-
 async function loadMonitoringConfig() {
   const response = await fetch('/monitoring/config')
   if (!response.ok) {
@@ -370,15 +192,11 @@ async function initialize() {
     projectLoaded.value = Boolean(project.project_dir)
     if (!projectLoaded.value) return
 
-    const [componentsResponse, configResponse, stateResponse] = await Promise.all([
-      fetch('/components/'),
+    const [configResponse, stateResponse] = await Promise.all([
       fetch('/monitoring/config'),
       fetch('/monitoring/state'),
     ])
 
-    if (!componentsResponse.ok) {
-      throw new Error(await responseError(componentsResponse, 'Could not load device connectivity.'))
-    }
     if (!configResponse.ok) {
       throw new Error(await responseError(configResponse, 'Could not load monitoring config.'))
     }
@@ -386,13 +204,14 @@ async function initialize() {
       throw new Error(await responseError(stateResponse, 'Could not load monitoring state.'))
     }
 
-    connectivity.value = await componentsResponse.json() as ConnectivityMap
     config.value = normalizeConfig(await configResponse.json() as Partial<MonitoringConfig>)
     state.value = await stateResponse.json() as MonitoringState
 
     if (state.value.effective_on) {
       await afterTurnedOn(
         state.value.run_active ? 'Monitoring is running automatically for the active protocol run.' : '',
+        'info',
+        false,
       )
     }
     startStatePolling()
@@ -403,158 +222,8 @@ async function initialize() {
   }
 }
 
-async function discoverCommands() {
-  if (!selectedComponent.value || isLocked.value) return
-
-  isDiscovering.value = true
-  discoveryMessage.value = ''
-  discoveryMessageType.value = 'info'
-  discoveredCommands.value = []
-  selectedCommand.value = ''
-  paramValues.value = {}
-  rawKwargsJson.value = '{}'
-  addVariableError.value = ''
-
-  try {
-    const response = await fetch(`/monitoring/discover/${encodeURIComponent(selectedComponent.value)}`)
-    if (response.status === 404) {
-      discoveryMessage.value = 'Component not found.'
-      discoveryMessageType.value = 'warning'
-      return
-    }
-    if (response.status === 502) {
-      discoveryMessage.value = await responseError(response, 'Device server unreachable.')
-      discoveryMessageType.value = 'warning'
-      return
-    }
-    if (!response.ok) {
-      throw new Error(await responseError(response, 'Could not discover monitoring commands.'))
-    }
-    discoveredCommands.value = await response.json() as DiscoveredCommand[]
-    if (discoveredCommands.value.length === 0) {
-      discoveryMessage.value = selectedComponent.value === CUSTOM_COMPONENT
-        ? 'No custom sources registered. Add one to CUSTOM_SOURCES in customizations/monitoring/monitoring_hook.py.'
-        : 'No GET variables discovered for this component.'
-      discoveryMessageType.value = 'info'
-    }
-  } catch (error) {
-    discoveryMessage.value = apiError(error, 'Could not discover monitoring commands.')
-    discoveryMessageType.value = 'error'
-  } finally {
-    isDiscovering.value = false
-  }
-}
-
-function resetCommandInputs() {
-  paramValues.value = {}
-  rawKwargsJson.value = '{}'
-  addVariableError.value = ''
-}
-
-async function addVariable() {
-  if (!canAddVariable.value) return
-
-  addVariableError.value = ''
-  const nextVariable: MonitoringVariable = {
-    component: selectedComponent.value,
-    command: selectedCommand.value,
-    kwargs: {},
-  }
-
-  if (config.value.variables.some(variable => variableKey(variable) === variableKey(nextVariable))) {
-    addVariableError.value = 'This variable is already selected.'
-    return
-  }
-
-  try {
-    nextVariable.kwargs = buildKwargs()
-  } catch (error) {
-    addVariableError.value = apiError(error, 'Invalid kwargs.')
-    return
-  }
-
-  config.value = {
-    ...config.value,
-    variables: [...config.value.variables, nextVariable],
-  }
-  selectedCommand.value = ''
-  resetCommandInputs()
-
-  try {
-    await persistConfig()
-  } catch (error) {
-    addVariableError.value = apiError(
-      error,
-      'Variable added, but could not be saved to the project. It will be retried when you start monitoring.',
-    )
-  }
-}
-
-async function removeVariable(variable: MonitoringVariable) {
-  if (isLocked.value) return
-  const key = variableKey(variable)
-  config.value = {
-    ...config.value,
-    variables: config.value.variables.filter(item => variableKey(item) !== key),
-  }
-
-  try {
-    await persistConfig()
-  } catch (error) {
-    setNotice(apiError(error, 'Variable removed, but could not be saved to the project.'), 'error')
-  }
-}
-
-async function persistConfig(): Promise<void> {
-  const body: MonitoringConfig = {
-    sample_time: Number(config.value.sample_time),
-    request_timeout: Number(config.value.request_timeout),
-    variables: config.value.variables,
-  }
-  const response = await fetch('/monitoring/config', {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-  if (!response.ok) {
-    throw new Error(await responseError(response, 'Could not save monitoring config.'))
-  }
-  // Deliberately does NOT reassign config.value from the response, unlike
-  // putConfig() below. The local list is already the source of truth for
-  // what THIS request intended to persist — two auto-saves fired close
-  // together (e.g. removing two variables back to back) could otherwise
-  // let an older response's echoed variables list clobber a newer local
-  // edit if it happens to resolve later.
-}
-
-async function putConfig() {
-  const body: MonitoringConfig = {
-    sample_time: Number(config.value.sample_time),
-    request_timeout: Number(config.value.request_timeout),
-    variables: config.value.variables,
-  }
-  const response = await fetch('/monitoring/config', {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(body),
-  })
-  if (!response.ok) {
-    throw new Error(await responseError(response, 'Could not save monitoring config.'))
-  }
-  config.value = normalizeConfig(await response.json() as Partial<MonitoringConfig>)
-}
-
-async function postStartOnly() {
-  const response = await fetch('/monitoring/start', { method: 'POST' })
-  if (!response.ok) {
-    throw new Error(await responseError(response, 'Could not start monitoring.'))
-  }
-  state.value = await response.json() as MonitoringState
-  canRetryStart.value = false
-  startError.value = ''
-  await afterTurnedOn('Monitoring started.', 'success')
-}
-
+// The variable list and timings are saved under Configurations → Monitoring,
+// so Start only turns monitoring on.
 async function startMonitoring() {
   if (!canStart.value) return
 
@@ -564,30 +233,14 @@ async function startMonitoring() {
   clearNotice()
 
   try {
-    // While a run polls, the variable list is locked: nothing to save.
-    if (!isRunning.value) await putConfig()
-    try {
-      await postStartOnly()
-    } catch (error) {
-      canRetryStart.value = true
-      startError.value = apiError(error, 'Could not start monitoring.')
+    const response = await fetch('/monitoring/start', { method: 'POST' })
+    if (!response.ok) {
+      throw new Error(await responseError(response, 'Could not start monitoring.'))
     }
+    state.value = await response.json() as MonitoringState
+    await afterTurnedOn('Monitoring started.', 'success')
   } catch (error) {
     startError.value = apiError(error, 'Could not start monitoring.')
-  } finally {
-    isStarting.value = false
-  }
-}
-
-async function retryStart() {
-  if (isStarting.value) return
-  isStarting.value = true
-  startError.value = ''
-  try {
-    await postStartOnly()
-  } catch (error) {
-    startError.value = apiError(error, 'Could not start monitoring.')
-    canRetryStart.value = true
   } finally {
     isStarting.value = false
   }
@@ -622,10 +275,20 @@ async function stopMonitoring() {
   }
 }
 
-async function afterTurnedOn(notice = '', type: NoticeType = 'info') {
+// The list may have changed since the page loaded (under Configurations, or
+// in another browser), so the panels follow the saved one unless it was just
+// read.
+async function afterTurnedOn(notice = '', type: NoticeType = 'info', reloadConfig = true) {
   pollError.value = ''
   startError.value = ''
   if (notice) setNotice(notice, type)
+  if (reloadConfig) {
+    try {
+      await loadMonitoringConfig()
+    } catch (error) {
+      pollError.value = apiError(error, 'Could not load monitoring config.')
+    }
+  }
   await seedHistory(config.value.variables)
   startPolling()
   await pollLatest()
@@ -871,7 +534,7 @@ onBeforeUnmount(() => {
     <section v-if="isLoadingPage" class="state-card" aria-live="polite">
       <span class="spinner" aria-hidden="true"></span>
       <h2>Loading monitoring</h2>
-      <p>Checking project, devices, config, and state.</p>
+      <p>Checking project, config, and state.</p>
     </section>
 
     <section v-else-if="pageError" class="state-card error-state" role="alert">
@@ -886,180 +549,26 @@ onBeforeUnmount(() => {
     </section>
 
     <div v-else class="monitoring-layout">
-      <section class="config-panel">
-        <div class="panel-header">
-          <div>
-            <h2>Monitoring Config</h2>
-            <p v-if="state.run_active">
-              Running automatically for the active run<template v-if="state.run_id"> · <code>{{ state.run_id }}</code></template>
-            </p>
-            <p v-else>{{ config.variables.length }} selected variables</p>
-          </div>
-        </div>
-
-        <div v-if="pageNotice" class="notice" :class="pageNoticeType">
-          {{ pageNotice }}
-        </div>
-        <div v-if="pollError" class="notice error">
-          {{ pollError }}
-        </div>
-        <div v-if="startError" class="notice error">
-          <span>{{ startError }}</span>
-          <button
-            v-if="canRetryStart"
-            type="button"
-            class="button compact"
-            :disabled="isStarting"
-            @click="retryStart"
-          >
-            Retry
-          </button>
-        </div>
-
-        <div class="config-grid">
-          <label class="field">
-            <span>Sample time</span>
-            <input
-              v-model.number="config.sample_time"
-              type="number"
-              min="0.1"
-              step="0.1"
-              :disabled="isLocked"
-            >
-          </label>
-          <label class="field">
-            <span>Request timeout</span>
-            <input
-              v-model.number="config.request_timeout"
-              type="number"
-              min="0.1"
-              step="0.1"
-              :disabled="isLocked"
-            >
-          </label>
-        </div>
-
-        <div class="selector-grid">
-          <label class="field">
-            <span>Component</span>
-            <select v-model="selectedComponent" :disabled="isLocked" @change="discoverCommands">
-              <option value="">Select component</option>
-              <optgroup label="Devices">
-                <option
-                  v-for="assoc in configuredAssociations"
-                  :key="assoc.component"
-                  :value="assoc.component"
-                >
-                  {{ assoc.component }}
-                </option>
-              </optgroup>
-              <optgroup label="Custom sources">
-                <option :value="CUSTOM_COMPONENT">{{ CUSTOM_COMPONENT }}</option>
-              </optgroup>
-            </select>
-          </label>
-          <label class="field">
-            <span>{{ selectedComponent === CUSTOM_COMPONENT ? 'Custom source' : 'GET variable' }}</span>
-            <select
-              v-model="selectedCommand"
-              :disabled="isLocked || isDiscovering || discoveredCommands.length === 0"
-              @change="resetCommandInputs"
-            >
-              <option value="">{{ isDiscovering ? 'Discovering...' : 'Select variable' }}</option>
-              <option
-                v-for="command in discoveredCommands"
-                :key="command.command"
-                :value="command.command"
-              >
-                {{ command.command }}
-              </option>
-            </select>
-          </label>
-        </div>
-
-        <div v-if="discoveryMessage" class="inline-message" :class="discoveryMessageType">
-          {{ discoveryMessage }}
-        </div>
-
-        <div v-if="selectedCommand" class="kwargs-panel">
-          <template v-if="parameterFields.length">
-            <label
-              v-for="field in parameterFields"
-              :key="field.name"
-              class="field"
-            >
-              <span>{{ field.name }}{{ field.required ? ' *' : '' }}</span>
-              <input
-                v-model="paramValues[field.name]"
-                type="text"
-                :placeholder="field.description || field.type"
-                :disabled="isLocked"
-              >
-            </label>
-          </template>
-          <label v-else class="field">
-            <span>Kwargs JSON</span>
-            <textarea
-              v-model="rawKwargsJson"
-              rows="4"
-              spellcheck="false"
-              :disabled="isLocked"
-            ></textarea>
-          </label>
-        </div>
-
-        <div v-if="addVariableError" class="inline-message error">
-          {{ addVariableError }}
-        </div>
-
-        <button
-          type="button"
-          class="button"
-          :disabled="!canAddVariable"
-          @click="addVariable"
-        >
-          Add Variable
-        </button>
-
-        <div class="selected-table-wrap">
-          <table>
-            <thead>
-              <tr>
-                <th>Component</th>
-                <th>Command</th>
-                <th>Kwargs</th>
-                <th><span class="sr-only">Actions</span></th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="variable in config.variables" :key="variableKey(variable)">
-                <td>{{ variable.component }}</td>
-                <td><code>{{ variable.command }}</code></td>
-                <td><code>{{ formatJson(variable.kwargs) }}</code></td>
-                <td class="actions-cell">
-                  <button
-                    type="button"
-                    class="button compact"
-                    :disabled="isLocked"
-                    @click="removeVariable(variable)"
-                  >
-                    Remove
-                  </button>
-                </td>
-              </tr>
-              <tr v-if="config.variables.length === 0">
-                <td colspan="4" class="empty-row">No variables selected.</td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </section>
+      <div v-if="pageNotice" class="notice" :class="pageNoticeType">
+        {{ pageNotice }}
+      </div>
+      <div v-if="pollError" class="notice error">
+        {{ pollError }}
+      </div>
+      <div v-if="startError" class="notice error">
+        {{ startError }}
+      </div>
 
       <section class="profiles-area">
         <div class="profiles-header">
           <div>
             <h2>Profiles</h2>
-            <p>{{ config.variables.length }} {{ config.variables.length === 1 ? 'variable' : 'variables' }}</p>
+            <p>
+              {{ config.variables.length }} {{ config.variables.length === 1 ? 'variable' : 'variables' }}
+              · every {{ config.sample_time }} s
+              <template v-if="state.run_active">· polled for the active run</template>
+              · <RouterLink to="/configurations#monitoring" class="inline-link">Change</RouterLink>
+            </p>
           </div>
           <span v-if="isPollingLatest" class="refresh-label">
             <span class="mini-spinner" aria-hidden="true"></span>
@@ -1069,7 +578,10 @@ onBeforeUnmount(() => {
 
         <div v-if="config.variables.length === 0" class="empty-profiles">
           <h3>No variables selected</h3>
-          <p>Add variables to create monitoring panels.</p>
+          <p>
+            Choose what to monitor under
+            <RouterLink to="/configurations#monitoring" class="inline-link">Configurations → Monitoring</RouterLink>.
+          </p>
         </div>
 
         <div v-else class="profile-grid">
@@ -1211,14 +723,7 @@ onBeforeUnmount(() => {
   box-shadow: none;
 }
 
-.button.compact {
-  min-height: 32px;
-  padding: 0.4rem 0.65rem;
-  font-size: 0.74rem;
-}
-
 .state-card,
-.config-panel,
 .profiles-area,
 .profile-card {
   border: 1px solid var(--color-border);
@@ -1259,17 +764,13 @@ onBeforeUnmount(() => {
 
 .monitoring-layout {
   display: grid;
-  grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
   gap: 1rem;
-  align-items: start;
 }
 
-.config-panel,
 .profiles-area {
   overflow: hidden;
 }
 
-.panel-header,
 .profiles-header {
   display: flex;
   align-items: flex-start;
@@ -1279,7 +780,6 @@ onBeforeUnmount(() => {
   border-bottom: 1px solid var(--color-border);
 }
 
-.panel-header h2,
 .profiles-header h2 {
   margin: 0;
   color: var(--color-heading);
@@ -1287,74 +787,26 @@ onBeforeUnmount(() => {
   font-weight: 720;
 }
 
-.panel-header p,
 .profiles-header p {
   margin: 0.32rem 0 0;
   color: var(--color-text-muted);
   font-size: 0.82rem;
 }
 
-.config-grid,
-.selector-grid,
-.kwargs-panel {
-  display: grid;
-  gap: 0.8rem;
-  padding: 1rem 1.3rem 0;
+.inline-link {
+  color: var(--color-primary);
+  font-weight: 650;
 }
 
-.config-grid {
-  grid-template-columns: repeat(2, minmax(0, 1fr));
+.inline-link:hover {
+  text-decoration: underline;
 }
 
-.field {
-  display: grid;
-  gap: 0.35rem;
-}
-
-.field span {
-  color: var(--color-text-muted);
-  font-size: 0.72rem;
-  font-weight: 760;
-  text-transform: uppercase;
-}
-
-.field input,
-.field select,
-.field textarea {
-  width: 100%;
-  min-height: 38px;
-  padding: 0.55rem 0.65rem;
-  color: var(--color-text);
-  border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  background: var(--color-background);
-  font: inherit;
-  font-size: 0.84rem;
-}
-
-.field textarea {
-  resize: vertical;
-  font-family: 'SFMono-Regular', Consolas, 'Liberation Mono', monospace;
-}
-
-.field input:disabled,
-.field select:disabled,
-.field textarea:disabled {
-  cursor: not-allowed;
-  opacity: 0.65;
-}
-
-.config-panel > .button {
-  margin: 1rem 1.3rem;
-}
-
-.notice,
-.inline-message {
+.notice {
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 0.75rem;
-  margin: 1rem 1.3rem 0;
   padding: 0.72rem 0.85rem;
   border: 1px solid var(--color-border);
   border-radius: var(--radius-sm);
@@ -1363,15 +815,13 @@ onBeforeUnmount(() => {
   font-size: 0.82rem;
 }
 
-.notice.error,
-.inline-message.error {
+.notice.error {
   color: var(--color-danger);
   border-color: color-mix(in srgb, var(--color-danger) 22%, var(--color-border));
   background: var(--color-danger-soft);
 }
 
-.notice.warning,
-.inline-message.warning {
+.notice.warning {
   color: var(--color-warning);
   border-color: color-mix(in srgb, var(--color-warning) 24%, var(--color-border));
   background: var(--color-warning-soft);
@@ -1383,14 +833,9 @@ onBeforeUnmount(() => {
   background: var(--color-success-soft);
 }
 
-.selected-table-wrap,
 .history-table-wrap {
   width: 100%;
   overflow-x: auto;
-}
-
-.selected-table-wrap {
-  border-top: 1px solid var(--color-border);
 }
 
 table {
@@ -1439,12 +884,6 @@ pre {
   overflow-x: auto;
   font-size: 0.74rem;
   white-space: pre-wrap;
-}
-
-.actions-cell {
-  width: 1%;
-  text-align: right;
-  white-space: nowrap;
 }
 
 .empty-row {
@@ -1673,24 +1112,9 @@ pre {
   height: 14px;
 }
 
-.sr-only {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0, 0, 0, 0);
-  white-space: nowrap;
-}
-
 @keyframes spin {
   to {
     transform: rotate(360deg);
-  }
-}
-
-@media (max-width: 980px) {
-  .monitoring-layout {
-    grid-template-columns: 1fr;
   }
 }
 
@@ -1700,20 +1124,8 @@ pre {
     width: 100%;
   }
 
-  .config-grid {
-    grid-template-columns: 1fr;
-  }
-
-  .panel-header,
   .profiles-header {
     padding: 1rem;
-  }
-
-  .config-grid,
-  .selector-grid,
-  .kwargs-panel {
-    padding-right: 1rem;
-    padding-left: 1rem;
   }
 
   .profile-grid {

@@ -12,6 +12,7 @@ const BUILTIN_ROUTE_NAMES: Record<string, string> = {
   '/devices': 'devices',
   '/logs': 'logs',
   '/export': 'export',
+  '/configurations': 'configurations',
 }
 
 /**

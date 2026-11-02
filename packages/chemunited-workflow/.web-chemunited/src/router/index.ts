@@ -6,6 +6,7 @@ import MonitoringView from '../views/MonitoringView.vue'
 import LogsView from '../views/LogsView.vue'
 import DevicesView from '../views/DevicesView.vue'
 import ExportView from '../views/ExportView.vue'
+import ConfigurationsView from '../views/ConfigurationsView.vue'
 import NotFoundView from '../views/NotFoundView.vue'
 
 // The project's custom pages are added at start-up (extensions/bootstrap.ts).
@@ -19,6 +20,7 @@ const router = createRouter({
     { path: '/devices',    name: 'devices',     component: DevicesView },
     { path: '/logs',       name: 'logs',        component: LogsView },
     { path: '/export',     name: 'export',      component: ExportView },
+    { path: '/configurations', name: 'configurations', component: ConfigurationsView },
     {
       path: '/customizations',
       name: 'customizations',

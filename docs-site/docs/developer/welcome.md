@@ -19,7 +19,7 @@ see the first one, but it helps to know all three exist:
   [Drawing](../drawing/drawing.md), [Building Protocols](../protocols/build_protocols.md), and
   [Connect Devices](../connectivity/connectivity.md)).
 * **The work-server** (`chemunited-workflow`) — the engine that actually executes a protocol against real
-  hardware once you click **Run Monitoring**. It runs as its own process and exposes a browser dashboard and API —
+  hardware once you start a run from the dashboard's **Run Control**. It runs as its own process and exposes a browser dashboard and API —
   see [The Dashboard](../dashboard/overview.md).
 * **The simulation engine** (`chemunited-sim`) — the physics engine behind **Run Simulation** and digital twins —
   see [Setup Digital Twins](../simulation/digital_twins.md).

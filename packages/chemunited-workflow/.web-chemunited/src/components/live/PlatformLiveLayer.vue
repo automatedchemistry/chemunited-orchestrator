@@ -82,7 +82,7 @@ function lcdText(name: string): { value: string, title: string, dim: boolean } {
   if (stale.value) return { value: '--', title: 'Disconnected from the work-server.', dim: true }
   if (!display) return { value: '--', title: 'No reading yet.', dim: true }
   if (!display.monitored) {
-    return { value: 'not monitored', title: 'Add this variable on the Monitoring page.', dim: true }
+    return { value: 'not monitored', title: 'Add this variable under Configurations → Monitoring.', dim: true }
   }
   if (display.error) return { value: '--', title: `The last reading failed: ${display.error}`, dim: true }
   if (display.value === null) return { value: '--', title: 'No reading yet.', dim: true }

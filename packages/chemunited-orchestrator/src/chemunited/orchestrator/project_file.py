@@ -1,17 +1,15 @@
 from __future__ import annotations
 
-import json
-import re
 from collections import defaultdict
 from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Callable
+from typing import Callable
 from urllib.parse import urlsplit
 
 from loguru import logger
 from PyQt5.QtCore import QThread, QTimer, pyqtSignal, pyqtSlot
-from PyQt5.QtWidgets import QFileDialog, QInputDialog, QMessageBox
+from PyQt5.QtWidgets import QFileDialog, QMessageBox
 
 from chemunited.connectivity.openapi_commands import reset_protocol_to_default
 from chemunited.elements.component.component_factory import (
@@ -30,7 +28,6 @@ from chemunited.project.platform_svg import (
 )
 from chemunited.project.recent import RecentProjectsStore
 from chemunited.project.session import ProjectSession
-from chemunited.project.storage import ensure_protocols_historic_dir
 from chemunited.project.writer import render_python_script
 from chemunited.protocols.workflows import ProcessWorkflow
 from chemunited.shared.enums import WindowCategory
@@ -40,8 +37,8 @@ from chemunited_core.compounds import COMPOUNDS, ChemicalEntity
 from chemunited_core.figure_registry import COMPONENTS, is_project_component
 from chemunited_core.figure_registry.project_loader import load_project_components
 
+from .connectivity import OrchestratorConnectivity
 from .draw import call_component_model
-from .execution import OrchestratorExecution
 from .inventory_state import (
     apply_inventory_status_payload,
     build_inventory_status_payload,
@@ -218,7 +215,7 @@ def _load_project_payload(
     )
 
 
-class OrchestratorProjectFile(OrchestratorExecution):
+class OrchestratorProjectFile(OrchestratorConnectivity):
     def __init__(self, parent):
         super().__init__(parent)
         self.working_dir: Path | None = None
@@ -303,37 +300,6 @@ class OrchestratorProjectFile(OrchestratorExecution):
         logger.bind(window=WindowCategory.SETUP).success(f"Project loaded from {path}")
         self._record_recent_project(path)
 
-    def adopt_from(self, other: "OrchestratorProjectFile") -> None:
-        """Point this orchestrator's platform data at another's, instead of reloading
-        from disk.
-
-        Used when a MonitorWindow is opened for the project already live in the
-        calling SetupWindow - keeps parent_ref-scoped behavior (logging, frames,
-        api_process) tied to this orchestrator's own window, while both windows
-        render and mutate the exact same components/connections/scene.
-        """
-        self.working_dir = other.working_dir
-        self._session = other._session
-        self.components = other.components
-        self.connections = other.connections
-        self.displays = other.displays
-        self._passthrough_associations = other._passthrough_associations
-
-        # protocols is mutated in place, not reassigned: MonitorProcessesWidget
-        # captures a reference to it at construction time (before adopt_from() can
-        # run), and that widget's list only ever re-reads the same object it was
-        # given - reassigning the attribute would leave it pointed at a stale,
-        # permanently empty dict.
-        self.protocols.clear()
-        self.protocols.update(other.protocols)
-
-        # Mirrors _restore_protocols()'s widget-population side effects, targeting
-        # this orchestrator's own parent_ref widgets - building self.protocols alone
-        # doesn't populate the workflow-diagram widget or refresh the process list.
-        for name, workflow in self.protocols.items():
-            self.parent_ref.workflows_protocol.add_process(name, workflow)
-        self.parent_ref.protocols_widget.sync_list()
-
     def open_project_async(self, path: Path, overwrite: bool = False) -> bool:
         if self.is_project_operation_running:
             logger.bind(window=WindowCategory.SETUP).warning(
@@ -362,8 +328,6 @@ class OrchestratorProjectFile(OrchestratorExecution):
     def refresh_project_block_reason(self) -> str | None:
         if self.working_dir is None:
             return "Load or create a project before refreshing."
-        if self._has_online_project_monitor():
-            return "Disconnect the running project API before refreshing."
         return None
 
     def refresh_current_project(self) -> bool:
@@ -635,45 +599,6 @@ class OrchestratorProjectFile(OrchestratorExecution):
             QMessageBox.No,
         )
         return reply == QMessageBox.Yes
-
-    def _has_online_project_monitor(self) -> bool:
-        working_dir = self.working_dir
-        if working_dir is None:
-            return False
-
-        for monitor in self._project_monitor_windows():
-            monitor_orchestrator = getattr(monitor, "orchestrator", None)
-            monitor_working_dir = getattr(monitor_orchestrator, "working_dir", None)
-            if not self._same_path(working_dir, monitor_working_dir):
-                continue
-
-            status_widget = getattr(monitor, "status_widget", None)
-            status_text = getattr(status_widget, "text", None)
-            if callable(status_text):
-                if status_text() == "Online":
-                    return True
-                continue
-            if getattr(monitor, "api_process", None) is not None:
-                return True
-
-        return False
-
-    def _project_monitor_windows(self) -> list[Any]:
-        pre_run_frame = getattr(self.parent_ref, "preRunFrame", None)
-        protocols_list = getattr(pre_run_frame, "protocols_list_widget", None)
-        return list(getattr(protocols_list, "_monitor_windows", []))
-
-    @staticmethod
-    def _same_path(left: Path | None, right: object) -> bool:
-        if left is None or right is None:
-            return False
-        if not isinstance(right, (str, Path)):
-            return False
-        try:
-            right_path = Path(right)
-        except TypeError:
-            return False
-        return left.resolve() == right_path.resolve()
 
     def _sync_project_views_after_refresh(self) -> None:
         protocols_widget = getattr(self.parent_ref, "protocols_widget", None)
@@ -1304,86 +1229,3 @@ class OrchestratorProjectFile(OrchestratorExecution):
     @staticmethod
     def _component_payload(component) -> dict:
         return component.graph.base_mode_instance.model_dump(mode="json")
-
-    def save_protocols_historic(self) -> None:
-        if self.working_dir is None:
-            self._warn_user("Load or create a project before saving protocol scripts.")
-            return
-
-        folder = ensure_protocols_historic_dir(self.working_dir)
-        data: dict[str, dict[str, Any]] = {}
-        pre_run_list = self.parent_ref.preRunFrame.processes_list_widget
-
-        # Main parameters
-        if main_parameters := pre_run_list._main_parameters_instance:
-            data["main_parameter"] = main_parameters.model_dump(mode="json")
-
-        # Process parameters
-        for index, (active_name, process_name) in enumerate(
-            pre_run_list.active_processes_in_order()
-        ):
-            instance = pre_run_list._process_parameter_instances.get(active_name)
-            if instance is None:
-                path = self.working_dir / "protocols" / f"{process_name}.py"
-                model_class = pre_run_list._load_process_parameter_model(
-                    path,
-                    process_name,
-                )
-                if model_class is None:
-                    return
-                instance = pre_run_list._default_instance(model_class, path)
-                if instance is None:
-                    return
-            key = f"{process_name}_{index}"
-            data[key] = instance.model_dump(mode="json")
-
-        if not data:  # Should not happen if pre_run_list._active_data is not empty
-            return
-
-        # Save as <name>_<timestamp>.json, for example:
-        # name_2026-03-27T16-18-00.json
-        name, ok = QInputDialog.getText(
-            self.parent_ref,
-            "Save Protocol Script",
-            "Protocol script name:",
-        )
-        if not ok:
-            return
-
-        filename_base = self._protocols_historic_filename_base(name)
-        if not filename_base:
-            self._warn_user(
-                "Protocol script name must contain at least one letter, number, _ or -."
-            )
-            return
-
-        timestamp = datetime.now(timezone.utc).strftime("%Y-%m-%dT%H-%M-%S")
-        path = self._next_protocols_historic_path(folder, filename_base, timestamp)
-        path.write_text(json.dumps(data, indent=2), encoding="utf-8")
-
-        self.parent_ref.preRunFrame.protocols_list_widget.fill_cards()
-        logger.bind(window=WindowCategory.SETUP).success(
-            f"Protocol script saved to {path}"
-        )
-
-    @staticmethod
-    def _protocols_historic_filename_base(name: str) -> str:
-        base = re.sub(r"[^A-Za-z0-9_-]+", "_", name.strip())
-        return base.strip("_-")
-
-    @staticmethod
-    def _next_protocols_historic_path(
-        folder: Path,
-        filename_base: str,
-        timestamp: str,
-    ) -> Path:
-        path = folder / f"{filename_base}_{timestamp}.json"
-        if not path.exists():
-            return path
-
-        suffix = 1
-        while True:
-            candidate = folder / f"{filename_base}_{timestamp}_{suffix}.json"
-            if not candidate.exists():
-                return candidate
-            suffix += 1

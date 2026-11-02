@@ -69,7 +69,7 @@ my_project/
 │   ├── main_parameters.py         # parameters shared by every process
 │   └── <process_name>.py          # one file per process you create
 ├── protocols_historic/
-│   └── <process>_<timestamp>.json # saved protocol script snapshots (from Pre-Running)
+│   └── <process>_<timestamp>.json # saved protocols (from the dashboard's Protocols page)
 ├── connectivity/
 │   └── associations.json          # device connections — machine-specific
 ├── log/                           # execution logs and run manifests (local only, never shared)

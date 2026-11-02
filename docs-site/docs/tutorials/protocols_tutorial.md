@@ -85,7 +85,7 @@ Also, you can inspect the command list in the script window.
 
 ## Next steps
 
-Your protocol is now ready to run in **Simulation** or **Monitoring** mode.
+Your process is now ready to simulate, or to run from the dashboard.
 Continue with the next tutorials for detailed instructions:
 * [simulation](../simulation/digital_twins.md)
 * [Run a Protocol](monitoring_tutorial.md)

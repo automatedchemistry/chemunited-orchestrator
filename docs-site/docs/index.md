@@ -36,7 +36,7 @@ New to ChemUnited? Follow this path:
 3. **[Draw your setup](drawing/drawing.md)** — lay out your platform and its connections.
 4. **[Build protocols](protocols/build_protocols.md)** — define the processes and workflow logic.
 5. **[Connect your devices](connectivity/connectivity.md)** — link the drawing to physical hardware.
-6. **[Run and monitor](monitoring/run_monitoring.md)** — execute protocols and track experiments live.
+6. **[Run and monitor](dashboard/launcher.md)** — launch the dashboard to build, run and watch protocols.
 
 Prefer a hands-on walkthrough? Start with the **[Drawing Tutorial](tutorials/drawing_tutorial.md)**.
 
@@ -64,13 +64,6 @@ protocols/script_editor.md
 protocols/parameters.md
 simulation/digital_twins.md
 connectivity/connectivity.md
-protocols/pre_running.md
-```
-
-```{toctree}
-:maxdepth: 1
-:caption: Execute and Monitoring
-monitoring/run_monitoring.md
 ```
 
 ```{toctree}
@@ -84,6 +77,7 @@ dashboard/monitoring.md
 dashboard/logs.md
 dashboard/export.md
 dashboard/devices.md
+dashboard/configurations.md
 dashboard/api_and_mcp.md
 ```
 

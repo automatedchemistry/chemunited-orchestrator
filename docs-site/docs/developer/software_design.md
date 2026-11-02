@@ -47,7 +47,7 @@ my_project/
 │   ├── <process_name>.py          # one file per process: ProcessConfig + CustomProcess
 │   └── __init__.py                # auto-generated PROCESSES/CONFIGS registry — do not edit by hand
 ├── protocols_historic/
-│   └── <name>_<timestamp>.json    # saved protocol scripts (created via "Save Protocol Script")
+│   └── <name>_<timestamp>.json    # saved protocols (from the dashboard's Protocols page)
 └── pyproject.toml                 # makes the project directory pip-installable
 ```
 
@@ -55,11 +55,12 @@ my_project/
 
 1. **Draw** — you lay out the platform; this is saved as `draw/setup.py`.
 2. **Build Protocols** — you author one or more processes as workflow graphs; each becomes a `protocols/<name>.py` file.
-3. **Pre-Running** — you choose which processes are active and in what order, forming the protocol to run.
-4. **Run Monitoring** hands that protocol to the work-server (`chemunited-workflow`), which compiles it into a
-   graph (nodes are process steps, edges carry conditions/loopbacks) and executes it with a thread-pooled
-   scheduler, emitting live events to the [Monitor window](../monitoring/run_monitoring.md) and the
-   browser dashboard's [Run Control](../dashboard/run_control.md) page.
+3. **Run** — the desktop launches the work-server (`chemunited-workflow`) with the project loaded, and its
+   browser dashboard's [Protocols](../dashboard/protocols.md) page assembles processes into the protocol to
+   run: which ones, in what order, with which parameter values.
+4. **Start Protocol** in [Run Control](../dashboard/run_control.md) hands that protocol to the work-server,
+   which compiles it into a graph (nodes are process steps, edges carry conditions/loopbacks) and executes it
+   with a thread-pooled scheduler, streaming live events back to Run Control.
 5. **Run Simulation** instead hands the same protocol to `chemunited-sim`, which runs it against a physics model
    instead of real devices — see [Setup Digital Twins](../simulation/digital_twins.md).
 

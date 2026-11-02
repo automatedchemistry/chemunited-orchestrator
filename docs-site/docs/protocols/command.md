@@ -86,8 +86,8 @@ def script_1(self, ctx: NodeExecutionContext) -> bool:
 
 <div class="info-block"> <strong>
 💡 Information</strong><br> The maximum time to wait for a device to report idle is controlled by
-the run's <strong>Command timeout</strong> setting (see <a href="../dashboard/run_control.md">Run
-Control</a>), not by the individual command — leave it blank to wait indefinitely, or set it to
+the run's <strong>Command timeout</strong> setting (see <a href="../dashboard/configurations.md#run-control">Configurations
+→ Run control</a>), not by the individual command — leave it blank to wait indefinitely, or set it to
 fail the run if a device takes too long to respond.
 </div>
 

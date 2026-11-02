@@ -1,21 +1,15 @@
-"""Project-scoped tailer for `<project_dir>/log/pool/*.jsonl`.
+"""Tailer for `<project_dir>/log/pool/*.jsonl` during a desktop simulation.
 
-Lives for as long as a project is loaded, so it covers command activity that
-has no HTTP polling loop of its own (the standalone "Simulate" flow in
-chemunited.simulation.simulate_report). It must NOT run while a full
-execution is active: the workflow API server drains and deletes these same
-files server-side during a run (see OrchestratorExecution._on_pool_drained),
-and a second reader opening those files at the same time can make the
-server's own delete fail on Windows (a plain open() doesn't set
-share-delete). That flow is covered separately via the already-emitted
-RunPollingThread.pool_drained signal.
+The simulator appends each command it runs to these files; the Simulate
+window tails them onto its own copy of the components, so the run's command
+activity shows on the simulation canvas. Each file is renamed before it is
+read, so the tailer never holds a file a writer is about to append to.
 """
 
 from __future__ import annotations
 
 import json
 from pathlib import Path
-from typing import Callable
 
 from loguru import logger
 from PyQt5.QtCore import QObject, QTimer
@@ -32,13 +26,11 @@ class PoolLogTailer(QObject):
         self,
         project_dir: Path | str,
         components: Components,
-        is_run_active: Callable[[], bool],
         parent: QObject | None = None,
     ) -> None:
         super().__init__(parent)
         self._pool_dir = Path(project_dir) / "log" / "pool"
         self._components = components
-        self._is_run_active = is_run_active
         self._cleaned_initial = False
         self._timer = QTimer(self)
         self._timer.timeout.connect(self._tick)
@@ -52,17 +44,14 @@ class PoolLogTailer(QObject):
         self._cleaned_initial = False
 
     def _tick(self) -> None:
-        if self._is_run_active():
-            return
         if not self._pool_dir.is_dir():
             return
 
         files = sorted(self._pool_dir.glob("*.jsonl"))
 
         if not self._cleaned_initial:
-            # Pre-existing content is leftover from a previous session (or the
-            # execution flow, which already visualized it live) - clean it up
-            # without replaying it as if it just happened.
+            # Pre-existing content is leftover from a previous session - clean
+            # it up without replaying it as if it just happened.
             for path in files:
                 self._drain_file(path, apply=False)
             self._cleaned_initial = True

@@ -1,19 +1,37 @@
 # Dashboard Launcher
 
-The **Dashboard Launcher** is the second tab of the [Pre-Running](../protocols/pre_running.md) frame (next to
-**Pre-Execute internally**). It starts and manages the browser-based [Dashboard](overview.md)
-work-server directly from the desktop app, so you don't have to run its CLI command by hand.
+The **Dashboard Launcher** is the desktop app's **Run** step, after Draw, Protocol and Connectivity. It starts the
+browser-based [Dashboard](overview.md) work-server for the project you have open, so you don't have to run its CLI
+command by hand. Protocols are then built, run and watched in the dashboard: see [Protocols](protocols.md) and
+[Run Control](run_control.md).
 
 ![Alt text](../_static/dashboard_launcher.png)
 
+## Launching
+
+Click **Launch Dashboard**. The work-server starts with your project already loaded, and the status badge shows
+**Starting…** while it comes up. As soon as the dashboard answers, the badge turns **Running** and the dashboard
+opens in your default browser.
+
+<div class="info-block">
+<strong>💡 Information</strong><br>
+The dashboard loads the project as it is saved on disk, so save your changes before launching. With no project open,
+the dashboard starts without one and shows <strong>No project loaded</strong>.
+</div>
+
+If the dashboard doesn't answer within 30 seconds, or the work-server stops while starting (for example because a
+process's code fails to load), the badge goes back to **Not Running** and an error points to the work-server's log,
+`.chemunited-workflow/server.log` in your user folder, which holds the reason.
+
 ## Dashboard Status
 
-* **Status badge** — `Running` / `Not Running`, based on whether the configured port already responds.
+* **Status badge** — `Not Running`, `Starting…` or `Running`, based on whether the configured port answers.
 * **Local** — the local URL the dashboard is served at (`http://127.0.0.1:<port>/`).
 * **Open Dashboard** — opens the local URL in your default browser. Only enabled while the dashboard is running.
-* **Send Project to Dashboard** — pushes the currently open project's folder to the running server, so the
-  dashboard starts serving that project without needing a restart. Only shown while the dashboard is running, and
-  requires a project to already be open in the orchestrator.
+* **Send Project to Dashboard** — for a dashboard that was already running (started from a terminal, or earlier with
+  another project): pushes the open project's folder to it, so it serves this project without a restart. Only shown
+  while the dashboard is running, and requires a project to be open. **Launch Dashboard** already loads the project,
+  so it doesn't need this.
 
 ## Launch Options
 
@@ -30,8 +48,8 @@ work-server directly from the desktop app, so you don't have to run its CLI comm
 <div class="info-block">
 <strong>💡 Information</strong><br>
 The <strong>Generated command</strong> box below the options always shows the exact
-<code>chemunited-workflow serve ...</code> command your current selection maps to — useful if you'd rather copy it
-and run the dashboard from a terminal instead of launching it from the GUI.
+<code>chemunited-workflow serve ...</code> command your current selection maps to, including the project folder —
+useful if you'd rather copy it and run the dashboard from a terminal instead of launching it from the GUI.
 </div>
 
 With **System Tray** on, the dashboard keeps running in the background as an icon in the Windows system tray (the
@@ -40,12 +58,11 @@ App** (opens the dashboard in your browser), **Status**, and **Quit**:
 
 <img src="../_static/workflow_tray.png" width="220">
 
-## Launching and stopping
+## A dashboard that's already running
 
-Click **Launch Dashboard** to start the server with the options above. If a dashboard is already running on the
-configured port, the launcher warns instead of starting a second instance. Once running, the Launch Options card
-is disabled (options can't be changed on a running server) and the button row switches to **Open Dashboard** /
-**Send Project to Dashboard**.
+If a dashboard is already running on the configured port, **Launch Dashboard** is hidden: use **Open Dashboard**,
+or **Send Project to Dashboard** first if it serves another project. While the dashboard is starting or running, the
+Launch Options card is disabled (options can't be changed on a running server).
 
 If **LAN Advertisement** was on with a token set at launch, the **Dashboard Status** card shows an **API Token**
 row with its own **Copy** button. Unlike the Launch Options card, this row stays enabled while the server is

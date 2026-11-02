@@ -10,7 +10,6 @@ import sys
 import threading
 import zipfile
 from pathlib import Path
-from types import SimpleNamespace
 
 import pytest
 from PyQt5.QtGui import QKeySequence
@@ -779,26 +778,6 @@ class TestAddComponent:
 
         assert window.orchestrator.refresh_current_project() is False
         assert "PumpA" in window.orchestrator.components
-
-    def test_refresh_project_action_is_disabled_for_online_project_monitor(
-        self, window: SetupWindow, tmp_path
-    ):
-        working_dir = tmp_path / "demo"
-        window.orchestrator.working_dir = working_dir
-        monitor = SimpleNamespace(
-            orchestrator=SimpleNamespace(working_dir=working_dir),
-            status_widget=SimpleNamespace(text=lambda: "Online"),
-            api_process=object(),
-        )
-        window.preRunFrame.protocols_list_widget._monitor_windows.append(monitor)
-
-        window.update_project_actions()
-
-        assert not window.refresh_project_action.isEnabled()
-        assert (
-            window.refresh_project_action.toolTip()
-            == "Disconnect the running project API before refreshing."
-        )
 
     def test_mcp_refresh_reloads_without_confirmation(
         self, window: SetupWindow, tmp_path, monkeypatch

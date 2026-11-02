@@ -20,8 +20,8 @@ This is a working example of the `component: "custom"` pseudo-device described i
 chemunited-workflow serve examples/custom_project
 ```
 
-Register the custom variables (either via the dashboard's Monitoring page — "custom" is
-selectable in the Component picker — or via `PUT /monitoring/config`):
+Register the custom variables (either via the dashboard's Configurations → Monitoring tab —
+"custom" is selectable in the Component picker — or via `PUT /monitoring/config`):
 
 ```bash
 curl -X PUT http://127.0.0.1:3116/monitoring/config \

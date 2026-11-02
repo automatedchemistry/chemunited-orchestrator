@@ -26,6 +26,7 @@ PAGES = {
     "dashboard_monitoring.png": "/monitoring",
     "dashboard_logs.png": "/logs",
     "dashboard_devices.png": "/devices",
+    "dashboard_configurations.png": "/configurations",
 }
 
 

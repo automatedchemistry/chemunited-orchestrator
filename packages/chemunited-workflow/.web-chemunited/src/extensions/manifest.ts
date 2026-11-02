@@ -90,6 +90,14 @@ export interface ManifestError {
   message: string
 }
 
+/** The project's RunDefaults: the run options before a browser changes them. */
+export interface RunDefaultsSpec {
+  command_timeout: string
+  dry_run: boolean
+  error_resilient: boolean
+  record_monitoring: boolean
+}
+
 export interface UiManifest {
   ui_api: number
   requires_ui_api: number
@@ -102,6 +110,7 @@ export interface UiManifest {
   actions: ActionSpec[]
   widgets: WidgetSpec[]
   protocols: { process_categories: Record<string, string>, other_label: string }
+  run_defaults: RunDefaultsSpec
   slots: Record<string, string>
   errors: ManifestError[]
 }
@@ -119,6 +128,12 @@ export function emptyManifest(): UiManifest {
     actions: [],
     widgets: [],
     protocols: { process_categories: {}, other_label: 'Other' },
+    run_defaults: {
+      command_timeout: '',
+      dry_run: false,
+      error_resilient: false,
+      record_monitoring: false,
+    },
     slots: {},
     errors: [],
   }

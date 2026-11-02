@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { computed, onMounted, onUnmounted, ref } from 'vue'
+import { RouterLink } from 'vue-router'
 import { type NodeCard, type ProcessCard, type RunState, useRunStatusStore } from '../stores/runStatus'
+import { useRunOptions } from '../composables/useRunOptions'
 import ExtensionSlot from '../extensions/ExtensionSlot.vue'
 import PageActions from '../extensions/PageActions.vue'
 
@@ -16,6 +18,9 @@ interface ProcessInfo {
 }
 
 const store = useRunStatusStore()
+// Set under Configurations → Run control; shown here as a summary.
+const runOptions = useRunOptions()
+const timeoutText = computed(() => runOptions.timeout.trim())
 
 // Local only — not worth persisting
 const protocols = ref<ProtocolMeta[]>([])
@@ -321,10 +326,10 @@ async function startRun() {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         protocol: store.selectedProtocol,
-        dry_run: store.formDryRun,
-        timeout_commands: store.formTimeout.trim(),
-        error_resilient: store.formErrorResilient,
-        record_monitoring: store.formRecordMonitoring,
+        dry_run: runOptions.dryRun,
+        timeout_commands: timeoutText.value,
+        error_resilient: runOptions.errorResilient,
+        record_monitoring: runOptions.recordMonitoring,
       }),
     })
 
@@ -471,7 +476,7 @@ onUnmounted(() => {
         <p class="page-eyebrow">Protocol Execution</p>
         <h1 class="page-title">Run Control</h1>
         <p class="page-description">
-          Select a protocol, configure execution parameters, and monitor workflow progress.
+          Select a protocol, start it, and follow its progress live.
         </p>
       </div>
     </header>
@@ -484,7 +489,7 @@ onUnmounted(() => {
         <div class="panel-header">
           <div>
             <h2>Control Panel</h2>
-            <p>Adjust execution parameters before dispatching the protocol.</p>
+            <p>Pick a protocol and start it.</p>
           </div>
         </div>
 
@@ -524,63 +529,21 @@ onUnmounted(() => {
           </div>
 
           <div class="field">
-            <label for="timeout-input">Command timeout</label>
-            <input
-              id="timeout-input"
-              v-model="store.formTimeout"
-              type="text"
-              inputmode="text"
-              placeholder="10 s"
-              :disabled="isActive"
-            />
-            <span class="field-help">
-              Leave blank to wait indefinitely. Use values like <code>5 s</code>.
-            </span>
-          </div>
-
-          <div class="toggle-list" aria-label="Execution options">
-            <label class="toggle-row" for="dry-run-check">
-              <input
-                id="dry-run-check"
-                v-model="store.formDryRun"
-                type="checkbox"
-                :disabled="isActive"
-              />
-              <span>
-                <span class="toggle-title">Dry run</span>
-                <span class="field-help">
-                  Validate workflow logic without calling physical devices.
-                </span>
+            <span class="field-title">Run options</span>
+            <div class="option-summary">
+              <span
+                :class="['option-chip', { dry: runOptions.dryRun }]"
+                :title="runOptions.dryRun
+                  ? 'Validates the workflow without calling physical devices.'
+                  : 'Calls the physical devices.'"
+              >
+                {{ runOptions.dryRun ? 'Dry run' : 'Real run' }}
               </span>
-            </label>
-            <label class="toggle-row" for="error-resilient-check">
-              <input
-                id="error-resilient-check"
-                v-model="store.formErrorResilient"
-                type="checkbox"
-                :disabled="isActive"
-              />
-              <span>
-                <span class="toggle-title">Error-resilient mode</span>
-                <span class="field-help">
-                  Log device errors and allow independent workflow branches to continue.
-                </span>
-              </span>
-            </label>
-            <label class="toggle-row" for="record-monitoring-check">
-              <input
-                id="record-monitoring-check"
-                v-model="store.formRecordMonitoring"
-                type="checkbox"
-                :disabled="isActive"
-              />
-              <span>
-                <span class="toggle-title">Record monitoring data</span>
-                <span class="field-help">
-                  Save every monitored variable reading for this run to log/monitoring/&lt;run_id&gt;/.
-                </span>
-              </span>
-            </label>
+              <span v-if="runOptions.errorResilient" class="option-chip">Error-resilient</span>
+              <span v-if="runOptions.recordMonitoring" class="option-chip">Recording</span>
+              <span v-if="timeoutText" class="option-chip">Timeout {{ timeoutText }}</span>
+              <RouterLink to="/configurations#run-control" class="option-change">Change</RouterLink>
+            </div>
           </div>
 
           <div class="control-actions">
@@ -901,14 +864,14 @@ onUnmounted(() => {
   gap: 0.3rem;
 }
 
-.field label {
+.field label,
+.field-title {
   font-size: 0.82rem;
   font-weight: 650;
   color: var(--color-heading);
 }
 
-.field select,
-.field input[type='text'] {
+.field select {
   width: 100%;
   padding: 0.5rem 0.7rem;
   font-size: 0.875rem;
@@ -919,19 +882,16 @@ onUnmounted(() => {
   transition: border-color 150ms;
 }
 
-.field select:hover:not(:disabled),
-.field input[type='text']:hover:not(:disabled) {
+.field select:hover:not(:disabled) {
   border-color: var(--color-border-hover);
 }
 
-.field select:focus,
-.field input[type='text']:focus {
+.field select:focus {
   border-color: var(--color-primary);
   outline: none;
 }
 
-.field select:disabled,
-.field input[type='text']:disabled {
+.field select:disabled {
   opacity: 0.6;
   cursor: not-allowed;
 }
@@ -986,57 +946,41 @@ onUnmounted(() => {
   color: var(--color-text-muted);
 }
 
-.field-help code {
-  padding: 0.1em 0.3em;
-  border-radius: 4px;
+/* ── Run options summary ────────────────────────────── */
+.option-summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.option-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.22rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 650;
+  color: var(--color-text);
   background: var(--color-background-mute);
-  font-family: monospace;
-}
-
-/* ── Toggle list ────────────────────────────────────── */
-.toggle-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.55rem;
-}
-
-.toggle-row {
-  display: flex;
-  align-items: flex-start;
-  gap: 0.65rem;
-  padding: 0.75rem;
   border: 1px solid var(--color-border);
-  border-radius: var(--radius-sm);
-  cursor: pointer;
-  transition:
-    border-color 150ms,
-    background 150ms;
+  border-radius: 999px;
 }
 
-.toggle-row:hover {
-  border-color: var(--color-border-hover);
-  background: var(--color-background-mute);
+.option-chip.dry {
+  color: var(--color-warning);
+  background: var(--color-warning-soft);
+  border-color: color-mix(in srgb, var(--color-warning) 30%, var(--color-border));
 }
 
-.toggle-row input[type='checkbox'] {
-  flex-shrink: 0;
-  width: 15px;
-  height: 15px;
-  margin-top: 0.15rem;
-  cursor: pointer;
-  accent-color: var(--color-primary);
+.option-change {
+  margin-left: 0.2rem;
+  font-size: 0.78rem;
+  font-weight: 650;
+  color: var(--color-primary);
 }
 
-.toggle-row input[type='checkbox']:disabled {
-  cursor: not-allowed;
-}
-
-.toggle-title {
-  display: block;
-  margin-bottom: 0.15rem;
-  font-size: 0.84rem;
-  font-weight: 640;
-  color: var(--color-heading);
+.option-change:hover {
+  text-decoration: underline;
 }
 
 /* ── Control actions ────────────────────────────────── */

@@ -26,6 +26,7 @@ BUILTIN_PAGES: dict[str, str] = {
     "/devices": "Devices",
     "/logs": "Logs",
     "/export": "Export",
+    "/configurations": "Configurations",
 }
 
 # Where a Widget can go, and the context each slot hands its widgets.
@@ -63,7 +64,10 @@ class Brand(_Spec):
 class NavItem(_Spec):
     """Change a built-in nav entry: rename, hide, move (``order``) or re-icon it.
 
-    Built-in entries have orders 10, 20, ... 70 in their usual sequence.
+    Built-in entries have orders 10, 20, ... 80 in their usual sequence.
+    Devices and Configurations sit in the sidebar footer, where ``order``
+    sorts them. ``/customizations`` changes the diagnostics entry; hidden, it
+    still shows while this hook has problems.
     """
 
     path: str
@@ -155,6 +159,17 @@ class ProtocolsPage(_Spec):
     other_label: str = "Other"
 
 
+class RunDefaults(_Spec):
+    """The run options under Configurations → Run control before a browser
+    changes them; each browser then keeps its own changes."""
+
+    # As typed in the dashboard, e.g. "10 s"; blank waits indefinitely.
+    command_timeout: str = ""
+    dry_run: bool = False
+    error_resilient: bool = False
+    record_monitoring: bool = False
+
+
 class Dashboard(_Spec):
     """Everything a project changes about the dashboard."""
 
@@ -166,3 +181,4 @@ class Dashboard(_Spec):
     actions: list[PageAction] = Field(default_factory=list)
     widgets: list[Widget] = Field(default_factory=list)
     protocols: ProtocolsPage | None = None
+    run_defaults: RunDefaults | None = None

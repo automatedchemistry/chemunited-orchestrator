@@ -1,11 +1,9 @@
 # Monitoring
 
-<div class="warning-block">
-<strong>⚠️ Not the same as the Monitor window</strong><br>
-This page polls arbitrary device variables on demand, independent of any run. It is a different feature from the
-desktop orchestrator's <a href="../monitoring/run_monitoring.md">Monitor window</a>, which watches a protocol
-<em>while it executes</em>. Use this page to observe equipment state at any time; use
-<a href="run_control.md">Run Control</a> and the Monitor window to watch an actual run.
+<div class="info-block">
+<strong>💡 Information</strong><br>
+This page polls device variables on demand, independent of any run. To follow a protocol's steps and nodes
+while it executes, use <a href="run_control.md">Run Control</a>.
 </div>
 
 **Monitoring** lets you poll live values from any connected device — useful for watching equipment state before,
@@ -14,19 +12,11 @@ hand).
 
 ![Alt text](../_static/dashboard_monitoring.png)
 
-## Session Config
+## Choosing what to monitor
 
-| Field | Description |
-|---|---|
-| **Sample Time** | How often (in seconds) each variable is polled. |
-| **Request Timeout** | How long to wait for a device to respond before treating that poll as failed. |
-| **Component** | The device to read from. |
-| **Get Variable** | Which of that device's `GET` commands to poll. |
-
-Click **Add Variable** to add the selected component/command pair to the polling table below the form (shown with
-its **Component**, **Command**, and **Kwargs**). Click **Start** at the top to begin polling every variable in the
-table at the configured sample time. The same command can be added more than once with different parameters (two
-channels of one ADC, for example): each keeps its own readings and profile.
+The variables to poll, the sample time and the request timeout are set under
+[Configurations → Monitoring](configurations.md#monitoring); **Change** next to the variable count opens it. Click
+**Start** at the top to begin polling every variable in that list at the configured sample time.
 
 ## Start, Stop and the live platform view
 
@@ -36,10 +26,10 @@ while monitoring is on from this page (the header shows **Platform view live**).
 * They work during a protocol run too. A run keeps monitoring on for its own duration either way; **Start** then
   makes the diagram live and keeps monitoring on after the run, and **Stop** turns the live view off while the run
   goes on polling until it ends.
-* **Start** works with no variables in the table: the diagram goes live, with nothing to read.
-* The variable table stays locked while monitoring polls.
+* **Start** works with no variables in the list: the diagram goes live, with nothing to read.
+* The monitoring settings stay locked while monitoring polls.
 
 ## Profiles
 
-The right card shows a live panel per polled variable once a session is running, plotting readings as they come
-in. With no variables added yet, it shows **No variables selected**.
+The **Profiles** card shows a live panel per polled variable once monitoring is on, plotting readings as they come
+in. With no variables chosen yet, it shows **No variables selected**, with a link to Configurations.

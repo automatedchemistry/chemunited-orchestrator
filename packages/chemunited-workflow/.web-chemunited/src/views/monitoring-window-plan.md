@@ -1,5 +1,9 @@
 # Monitoring Window Plan
 
+> **Since 2026-11:** the config form (sample time, request timeout, variables) lives in
+> `components/monitoring/MonitoringConfigPanel.vue`, under Configurations → Monitoring. This page keeps
+> Start/Stop and the profiles, and Start no longer saves the config first.
+
 ## Summary
 
 `MonitoringView.vue` is a single, session-less monitoring dashboard backed by the `/monitoring/*` endpoints described in `docs/api-reference.md`. There is no session id: the backend holds one project-wide on/off state (`GET /monitoring/state`), forced on automatically while a protocol run is active and reverting to the user's manual setting once the run ends.

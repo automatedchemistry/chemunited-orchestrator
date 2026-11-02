@@ -6,8 +6,8 @@ as MCP tools for LLM-agent-driven automation. Both are served by the same [work-
 ## REST API
 
 The work-server exposes interactive API documentation (Swagger UI) at `/docs` on whatever host/port it is running
-on — this is the live source of truth for exact request/response schemas, so it is not duplicated here. The
-endpoint groups available are:
+on (**Open API docs** under [Configurations → API access](configurations.md#api-access)) — this is the live source
+of truth for exact request/response schemas, so it is not duplicated here. The endpoint groups available are:
 
 | Group | Covers |
 |---|---|

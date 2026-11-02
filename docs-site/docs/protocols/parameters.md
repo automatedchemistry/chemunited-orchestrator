@@ -146,9 +146,8 @@ process's parameters, so their default values can be reviewed and edited without
 
 <img src="../_static/parameters_window_view.png" width="400">
 
-Before actually running a process, [Pre-Running](pre_running.md#options-in-the-processes-lists) shows the same
-generated form again. This time for a specific queued instance (e.g. `clean_0`), with **Process Parameters** and
-**Experiment Parameters** (the project's main parameters) both listed side by side so their final run values can be
-set:
+Before a process runs, the dashboard's [Protocols](../dashboard/protocols.md) page shows the same generated form
+again. This time for one step of the protocol, with **Process parameters** and **Experiment parameters** (the
+project's main parameters) listed together so their final run values can be set:
 
-![Pre-Running parameters form in the dashboard](../_static/parameters_window_view_dashboard.png)
+![Step parameters form in the dashboard](../_static/parameters_window_view_dashboard.png)

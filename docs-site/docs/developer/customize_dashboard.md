@@ -1,7 +1,8 @@
 # Customize dashboard
 
-The browser [dashboard](../dashboard/overview.md) (Dashboard, Run Control, Protocols, Monitoring, Devices, Logs,
-Export) is a Vue single-page app served by the work-server (`chemunited-workflow`). A project can change it in two
+The browser [dashboard](../dashboard/overview.md) (Dashboard, Run Control, Protocols, Monitoring, Logs, Export, and
+Devices and Configurations at the bottom of the sidebar) is a Vue single-page app served by the work-server
+(`chemunited-workflow`). A project can change it in two
 ways:
 
 * **Runtime customizations** (below): files in `customizations/ui/`, applied by the dashboard as it loads. Nothing is
@@ -49,7 +50,7 @@ What a project can do this way:
 
 | Written in | What it can do |
 |------------|----------------|
-| Python (`ui_hook.py`) | Rebrand the sidebar, recolour the dashboard (`theme.css`), add, rename, hide or reorder nav entries, group the Protocols page's processes into tabs, and add buttons to built-in pages that call your Python functions in `customizations/routers/router_hook.py`, with forms built from their type hints |
+| Python (`ui_hook.py`) | Rebrand the sidebar, recolour the dashboard (`theme.css`), add, rename, hide or reorder nav entries, group the Protocols page's processes into tabs, set the default run options, and add buttons to built-in pages that call your Python functions in `customizations/routers/router_hook.py`, with forms built from their type hints |
 | Python (`HtmlPage`) | Pages whose HTML a Python function returns: tables, matplotlib or Plotly charts, reports |
 | `.vue` files | Any page or widget a Vue component can be, using the dashboard's API helpers, live run and device state, and single-file browser builds of libraries such as ECharts or Chart.js |
 
@@ -85,8 +86,8 @@ my_project/
                 └── index-XXXXXXXX.css
 ```
 
-`GET /`, `/run-control`, `/protocols`, `/monitoring`, `/devices`, `/logs`, `/export` (and any other one-segment page
-URL) serve `customizations/ui/dist/index.html` if it exists for the currently loaded project, otherwise the bundled
+`GET /`, `/run-control`, `/protocols`, `/monitoring`, `/devices`, `/logs`, `/export`, `/configurations` (and any
+other one-segment page URL) serve `customizations/ui/dist/index.html` if it exists for the currently loaded project, otherwise the bundled
 dashboard. `GET /assets/{filename}` resolves the same way, checking `customizations/ui/dist/assets/` first.
 
 <div class="info-block">

@@ -152,6 +152,7 @@ def test_a_bad_entry_is_skipped_and_the_rest_applies(tmp_path):
         ("/run", "reserved"),
         ("/customizations", "reserved"),
         ("/protocols", "set replaces=True"),
+        ("/configurations", "set replaces=True"),
     ],
 )
 def test_page_path_rules(tmp_path, path, message):
@@ -218,6 +219,49 @@ def test_nav_changes_only_built_in_entries(tmp_path):
         }
     ]
     assert "nav entries change built-in pages" in _messages(manifest)[0]
+
+
+def test_nav_changes_the_footer_entries(tmp_path):
+    _write_hook(
+        tmp_path,
+        """
+        DASHBOARD = Dashboard(nav=[
+            NavItem(path="/devices", label="Instruments"),
+            NavItem(path="/configurations", label="Settings"),
+        ])
+        """,
+    )
+    manifest = load_ui(tmp_path).manifest
+    assert manifest["errors"] == []
+    assert [item["label"] for item in manifest["nav"]] == ["Instruments", "Settings"]
+
+
+def test_nav_can_hide_the_diagnostics_entry(tmp_path):
+    _write_hook(
+        tmp_path,
+        'DASHBOARD = Dashboard(nav=[NavItem(path="/customizations", hidden=True)])\n',
+    )
+    manifest = load_ui(tmp_path).manifest
+    assert manifest["errors"] == []
+    assert manifest["nav"][0]["path"] == "/customizations"
+    assert manifest["nav"][0]["hidden"] is True
+
+
+def test_run_defaults(tmp_path):
+    assert load_ui(None).manifest["run_defaults"] == {
+        "command_timeout": "",
+        "dry_run": False,
+        "error_resilient": False,
+        "record_monitoring": False,
+    }
+    _write_hook(
+        tmp_path,
+        "DASHBOARD = Dashboard(run_defaults=RunDefaults(record_monitoring=True))\n",
+    )
+    manifest = load_ui(tmp_path).manifest
+    assert manifest["errors"] == []
+    assert manifest["run_defaults"]["record_monitoring"] is True
+    assert manifest["run_defaults"]["dry_run"] is False
 
 
 def test_widget_in_a_slot(tmp_path):

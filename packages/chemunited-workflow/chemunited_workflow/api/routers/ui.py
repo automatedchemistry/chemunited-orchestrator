@@ -64,6 +64,7 @@ async def dashboard(
 @router.get("/logs")
 @router.get("/devices")
 @router.get("/export")
+@router.get("/configurations")
 async def vue_page(
     holder: ProjectHolder = Depends(get_project_holder),
 ) -> FileResponse:

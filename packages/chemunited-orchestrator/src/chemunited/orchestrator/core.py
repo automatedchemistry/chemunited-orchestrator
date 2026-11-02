@@ -11,7 +11,6 @@ from chemunited.shared.enums import SetupStepMode, WindowCategory
 from chemunited.shared.logger_queue import LOG_QUEUE
 
 if TYPE_CHECKING:
-    from chemunited.monitor import MonitorWindow
     from chemunited.setup import SetupWindow
 
 
@@ -19,7 +18,7 @@ class OrchestratorCore(QObject):
 
     MAX_LOG_RECORDS_PER_TICK = 256
 
-    def __init__(self, parent: "SetupWindow | MonitorWindow"):
+    def __init__(self, parent: "SetupWindow"):
         super().__init__(parent)
         self.parent_ref = parent
 

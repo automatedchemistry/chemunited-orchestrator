@@ -32,6 +32,7 @@ from ...ui.models import (
     Dashboard,
     HtmlPage,
     PageAction,
+    RunDefaults,
     VuePage,
 )
 from .custom_routes import discover_custom_routes
@@ -77,6 +78,8 @@ _RESERVED_PATHS = frozenset(
     }
 )
 _FORM_TYPES = frozenset({"string", "integer", "number", "boolean", "array"})
+# The diagnostics page's nav entry, which a NavItem may change like a built-in's.
+_DIAGNOSTICS_PATH = "/customizations"
 
 
 def ui_dir(project_dir: Path) -> Path:
@@ -131,6 +134,7 @@ def _empty_manifest(project_dir: Path | None) -> dict[str, Any]:
         "actions": [],
         "widgets": [],
         "protocols": {"process_categories": {}, "other_label": "Other"},
+        "run_defaults": RunDefaults().model_dump(),
         "slots": dict(SLOTS),
         "errors": [],
     }
@@ -281,6 +285,8 @@ class _ManifestBuilder:
                 "process_categories": dict(dashboard.protocols.process_categories),
                 "other_label": dashboard.protocols.other_label,
             }
+        if dashboard.run_defaults is not None:
+            self._manifest["run_defaults"] = dashboard.run_defaults.model_dump()
         return LoadedUi(self._manifest, self._html_pages)
 
     def _error(self, source: str, message: str) -> None:
@@ -392,7 +398,7 @@ class _ManifestBuilder:
     def _nav(self) -> None:
         for item in self._dashboard.nav:
             source = f"nav {item.path}"
-            if item.path not in BUILTIN_PAGES:
+            if item.path not in BUILTIN_PAGES and item.path != _DIAGNOSTICS_PATH:
                 self._error(
                     source,
                     "nav entries change built-in pages; set label, icon or hidden on a "

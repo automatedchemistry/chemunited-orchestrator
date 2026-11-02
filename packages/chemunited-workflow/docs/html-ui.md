@@ -9,13 +9,14 @@ When the FastAPI server is running, open `http://127.0.0.1:3116/` to access the 
 | Dashboard | `/` | Active run status, protocol/process counts, platform device map, quick links |
 | Run Control | `/run-control` | Start/pause/resume/cancel runs, live event feed via SSE, per-node progress bars |
 | Protocols | `/protocols` | List and manage saved protocol files |
-| Monitoring | `/monitoring` | Live sensor monitoring sessions and time-series profiles |
-| Devices | `/devices` | Component connectivity map and ping check |
+| Monitoring | `/monitoring` | Start/stop monitoring and the live time-series profiles |
+| Devices | `/devices` | Component connectivity map and ping check (at the bottom of the sidebar) |
 | Logs | `/logs` | Browse and tail log files |
 | Export | `/export` | Download a zip of runs' logs, manifests (the protocol that ran and the project's git commit), monitoring recordings and protocols, and clean the source files out of the project |
-| Customizations | `/customizations` | Shown when the project customizes the dashboard: problems in `ui_hook.py`, a compile check of every custom page and widget, and what is applied where (see [Runtime customizations](#runtime-customizations)) |
+| Configurations | `/configurations` | Run options (command timeout, dry run, error-resilient, record monitoring data; kept in the browser), the monitoring variables and timings, the API docs link and API token, and the theme, as tabs (`#run-control`, `#monitoring`, `#api-access`, `#appearance`). At the bottom of the sidebar. |
+| Customizations | `/customizations` | Shown when the project customizes the dashboard: problems in `ui_hook.py`, a compile check of every custom page and widget, and what is applied where (see [Runtime customizations](#runtime-customizations)). `NavItem("/customizations", hidden=True)` takes it out of the nav while nothing is wrong. |
 
-Every route above is served by the same `index.html` (see `chemunited_workflow/api/routers/ui.py`); Vue Router handles client-side navigation between pages, and Pinia (`stores/runStatus.ts`) tracks shared run state across them.
+Every route above is served by the same `index.html` (`chemunited_workflow/api/routers/ui.py` lists the built-in pages; `/customizations` arrives through the one-segment fallback); Vue Router handles client-side navigation between pages, and Pinia (`stores/runStatus.ts`) tracks shared run state across them.
 
 ## Live node progress
 
@@ -63,7 +64,8 @@ Only `ui_hook.py` is required; the folder names are conventions. Start with `che
 
 ```python
 from chemunited_workflow.ui import (
-    ActionField, Brand, Dashboard, HtmlPage, NavItem, PageAction, ProtocolsPage, VuePage, Widget,
+    ActionField, Brand, Dashboard, HtmlPage, NavItem, PageAction, ProtocolsPage, RunDefaults, VuePage,
+    Widget,
 )
 
 DASHBOARD = Dashboard(
@@ -83,6 +85,7 @@ DASHBOARD = Dashboard(
     widgets=[Widget(slot="dashboard.cards", component="widgets/ReactorCard.vue")],
     protocols=ProtocolsPage(process_categories={"command_": "Commands", "module_": "Modules"},
                             other_label="Processes"),
+    run_defaults=RunDefaults(record_monitoring=True),
 )
 ```
 
@@ -94,11 +97,12 @@ File paths are relative to `customizations/ui/`.
 | `theme_css` | A plain CSS file loaded after the dashboard's own. Override any of the 21 `--color-*` tokens of `.web-chemunited/src/assets/base.css`, on `:root` for the light theme and on `:root[data-theme='dark']` for the dark one. |
 | `VuePage(path, label, component, icon, after, hidden, replaces)` | A page from a `.vue` file, with a nav entry placed after the entry named by `after` (at the end otherwise). `hidden=True` keeps it out of the nav; `replaces=True` takes over a built-in page's path and nav entry. |
 | `HtmlPage(path, label, render, refresh_seconds, ...)` | A page whose HTML a Python function returns (Jinja2, `DataFrame.to_html()`, matplotlib SVG, Plotly), shown in a sandboxed frame, reloaded every `refresh_seconds` if set. No JavaScript needed. |
-| `NavItem(path, label, hidden, order, icon)` | Rename, hide, move or re-icon a built-in nav entry. Built-in entries have orders 10, 20, ... 70. |
+| `NavItem(path, label, hidden, order, icon)` | Rename, hide, move or re-icon a built-in nav entry. Built-in entries have orders 10, 20, ... 80. Devices (50) and Configurations (80) sit at the bottom of the sidebar, where `order` sorts them; a page placed `after` one of them goes where that order falls in the main list. `NavItem("/customizations", ...)` changes the Customizations entry the same way; hidden, it still shows while `ui_hook.py` has problems. |
 | `PageAction(page, route, label, icon, context, fields, confirm, refresh)` | A button on a built-in page that calls a function from `customizations/routers/router_hook.py`. `context` maps the function's parameters to values the page provides; its other parameters become form fields typed from the function's type hints. `confirm` asks first; `refresh` reloads the page's data afterwards. |
 | `ActionField(name, label, placeholder, remember, hidden)` | How one parameter shows in an action's form. `remember` keeps the last value in the browser; `hidden` leaves it to its default. |
 | `Widget(slot, component, title, order)` | A `.vue` component placed in a slot of a built-in page (below). It gets the slot's `context` as a prop. |
 | `ProtocolsPage(process_categories, other_label)` | Tabs over the Protocols page's process library, grouping processes by name prefix; processes matching no prefix go under `other_label`. |
+| `RunDefaults(command_timeout, dry_run, error_resilient, record_monitoring)` | The run options under Configurations → Run control before a browser changes them (blank and off otherwise). Each browser keeps only the options it changed; the others follow these defaults. |
 
 A custom page's path is one lowercase segment (`/sensors`); paths the server uses (`/ui`, `/run`, `/custom`, ...) are refused, and built-in page paths need `replaces=True`. Page URLs survive a hard refresh.
 
@@ -161,7 +165,7 @@ The `chemunited` module:
 
 | Export | What it is |
 |--------|------------|
-| `api.get/post/put/delete(url, body?)` | JSON requests to the REST API; failures throw an `ApiError` with the server's message. Writes carry the API token set in the sidebar. |
+| `api.get/post/put/delete(url, body?)` | JSON requests to the REST API; failures throw an `ApiError` with the server's message. Writes carry the API token set under Configurations → API access. |
 | `callCustomRoute(name, kwargs)` | Calls a `router_hook.py` function and returns its result; throws `ApiError` if the function raises. |
 | `attempt(work, { success?, error? })` | Runs `work`, shows a notification on failure (and on success when `success` is given), never throws. |
 | `notify(message, type)` | The dashboard's notification bar. |
@@ -209,7 +213,7 @@ A project that has a build tool can instead replace the whole dashboard with its
 
 Resolution happens per request, driven by whatever project is currently loaded (via `chemunited-workflow serve <project_dir>` or `PUT /project/`):
 
-- `GET /`, `/run-control`, `/protocols`, `/monitoring`, `/devices`, `/logs`, `/export` serve `{project_dir}/customizations/ui/dist/index.html` if it exists, otherwise the bundled `chemunited_workflow/web/index.html`.
+- `GET /`, `/run-control`, `/protocols`, `/monitoring`, `/devices`, `/logs`, `/export`, `/configurations` serve `{project_dir}/customizations/ui/dist/index.html` if it exists, otherwise the bundled `chemunited_workflow/web/index.html`.
 - `GET /assets/{filename}` looks in `{project_dir}/customizations/ui/dist/assets/` first, then falls back to the package's own `assets/`.
 
 Your build must emit **root-absolute** asset URLs (`/assets/xyz.js`, not `./assets/xyz.js`) — this is Vite's default (no custom `base`), which is exactly what `.web-chemunited` itself uses, so pointing any Vite project's `outDir` at `{project_dir}/customizations/ui/dist` works with no extra config. Other bundlers work too as long as they emit the same root-absolute convention.
@@ -217,7 +221,7 @@ Your build must emit **root-absolute** asset URLs (`/assets/xyz.js`, not `./asse
 Two limitations to be aware of:
 
 - The dashboard favicon (`/chemunited.ico`) always comes from the package — it isn't overridable.
-- Only the seven page paths above are server-routed. A custom SPA should reuse those route names for anything that needs to survive a hard refresh or direct link; client-side navigation (`RouterLink`/`<a>` clicks handled by your app's router) works for any route without a server-side match.
+- Only the eight page paths above are server-routed for every client. A browser asking for any other one-segment path (`/sensors`) gets the same `index.html`, so a custom SPA's top-level routes survive a hard refresh or direct link too; deeper paths (`/a/b`) don't, so reach those by client-side navigation (`RouterLink`/`<a>` clicks handled by your app's router).
 
 ## Modifying the bundled UI
 
@@ -236,9 +240,10 @@ Source layout:
 ├── App.vue              # shell: sidebar nav, theme toggle, notifications
 ├── router/index.ts       # route table
 ├── views/                # one file per page (DashboardView.vue, RunControlView.vue, ...)
-├── components/           # shared components (DevicePropertiesPanel.vue, SchemaForm.vue)
+├── components/           # shared components (DevicePropertiesPanel.vue, SchemaForm.vue,
+│                         #   monitoring/MonitoringConfigPanel.vue for Configurations)
 ├── stores/runStatus.ts   # Pinia store for active-run state
-└── composables/          # e.g. useNotification.ts
+└── composables/          # e.g. useNotification.ts, useRunOptions.ts (run options kept in the browser)
 ```
 
 Built assets are written to `chemunited_workflow/web/` automatically (configured in `vite.config.ts`) and are what `GET /` and the other page routes serve as a fallback. The build also type-checks that `types/chemunited.d.ts` matches the `chemunited` module customizations import (`src/extensions/publicApi.ts`), and copies it with Vue's type declarations to `chemunited_workflow/ui/types/` for `chemunited-workflow ui init`.

@@ -33,7 +33,7 @@ Downloading never deletes anything.
 
 ## Monitoring Data as Tables
 
-A run started with **Record monitoring data** on (see [Run Control](run_control.md)) has its readings in the zip
+A run started with **Record monitoring data** on (see [Configurations](configurations.md#run-control)) has its readings in the zip
 twice more, ready to open: one CSV per run, and one SQLite database with all the selected runs. Both are made from the
 recorded files when you download, so older runs get them too.
 

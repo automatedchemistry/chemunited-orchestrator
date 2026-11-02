@@ -70,7 +70,7 @@ class LcdDisplayDialog(FramelessDialog):
         for device in sorted(self._devices):
             self.device_combo.addItem(device, userData=device)
         if self._custom_sources:
-            # Named as on the dashboard's Monitoring page.
+            # Named as in the dashboard's monitoring list (Configurations → Monitoring).
             self.device_combo.addItem(CUSTOM_COMPONENT, userData=CUSTOM_COMPONENT)
         self.variable_combo = ComboBox(self)
         self.params_edit = LineEdit(self)
@@ -220,7 +220,7 @@ class LcdDisplayDialog(FramelessDialog):
             "In the monitoring list."
             if monitored
             else 'Not in the monitoring list: the LCD will show "not monitored" '
-            "until it's added on the dashboard's Monitoring page."
+            "until it's added under the dashboard's Configurations → Monitoring."
         )
 
     # ── result ──────────────────────────────────────────────────────────────

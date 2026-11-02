@@ -4,17 +4,19 @@ import importlib.util
 import json
 import os
 import secrets
+import shlex
 import socket
 import subprocess
 import sys
+import time
 import webbrowser
 from pathlib import Path
-from typing import TYPE_CHECKING
+from typing import IO, TYPE_CHECKING
 from urllib import error as urllib_error
 from urllib import request as urllib_request
 
 from loguru import logger
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QFont
 from PyQt5.QtWidgets import (
     QApplication,
@@ -48,6 +50,15 @@ if TYPE_CHECKING:
 _IS_WINDOWS = sys.platform == "win32"
 DEFAULT_PORT = 3116
 DEFAULT_HOST = "127.0.0.1"
+READY_POLL_MS = 500
+READY_TIMEOUT_S = 30.0
+# Where the server's errors end up: `serve --silent` logs there by itself, and
+# the launcher sends a non-silent server's stderr there too.
+SERVER_LOG = Path.home() / ".chemunited-workflow" / "server.log"
+
+# Loopback requests skip any system proxy: some machines route even
+# http://127.0.0.1 through one, which then refuses it.
+_LOOPBACK = urllib_request.build_opener(urllib_request.ProxyHandler({}))
 
 
 def inpect_execution_address(
@@ -57,6 +68,31 @@ def inpect_execution_address(
     with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as sock:
         sock.settimeout(0.5)
         return sock.connect_ex((host, port)) == 0
+
+
+def _dashboard_answers(port: int) -> bool:
+    """Return True once the dashboard on *port* serves requests."""
+    try:
+        with _LOOPBACK.open(  # nosec B310 # fixed http://127.0.0.1 scheme/host, not user-controlled
+            f"http://{DEFAULT_HOST}:{port}/project/", timeout=2
+        ) as response:
+            return response.status == 200
+    except OSError:
+        return False
+
+
+def _open_server_log() -> IO[str] | None:
+    """SERVER_LOG opened for appending, or None if it can't be."""
+    try:
+        SERVER_LOG.parent.mkdir(parents=True, exist_ok=True)
+        return SERVER_LOG.open("a", encoding="utf-8")
+    except OSError:
+        return None
+
+
+def _command_line(args: list[str]) -> str:
+    """Quote *args* the way this platform's shell reads them back."""
+    return subprocess.list2cmdline(args) if _IS_WINDOWS else shlex.join(args)
 
 
 # ---------------------------------------------------------------------------
@@ -129,6 +165,10 @@ class _StatusBadge(QWidget):
             self._dot.setStyleSheet("border-radius: 5px; background: #888;")
             self._label.setText("Not Running")
 
+    def set_starting(self) -> None:
+        self._dot.setStyleSheet("border-radius: 5px; background: #9d5d00;")
+        self._label.setText("Starting…")
+
 
 # ---------------------------------------------------------------------------
 # Main frame
@@ -142,6 +182,13 @@ class DashBoardLauncherFrame(QFrame):
         self._pre_run_ref = parent
         self._is_running = False
         self._launched_token: str | None = None
+        # Set from Launch until the new server answers, fails or times out.
+        self._is_starting = False
+        self._launch_process: subprocess.Popen | None = None
+        self._ready_deadline = 0.0
+        self._ready_timer = QTimer(self)
+        self._ready_timer.setInterval(READY_POLL_MS)
+        self._ready_timer.timeout.connect(self._poll_ready)  # type: ignore[attr-defined]
         self._init_ui()
         self._connect_signals()
         self._update_address_display()
@@ -554,7 +601,7 @@ class DashBoardLauncherFrame(QFrame):
         exe_name = "chemunited-workflow.exe" if _IS_WINDOWS else "chemunited-workflow"
         cmd = exe_name + " serve"
         if options:
-            cmd += " " + " ".join(options)
+            cmd += " " + _command_line(options)
         self._command_preview.setText(cmd)
 
         advertise_on = self._advertise_switch.isChecked()
@@ -577,7 +624,14 @@ class DashBoardLauncherFrame(QFrame):
 
     # ------------------------------------------------------------------ status
 
+    def sync(self) -> None:
+        """Re-read the open project and whether the dashboard is running."""
+        self._update_address_display()
+        self.refresh_status()
+
     def refresh_status(self) -> None:
+        if self._is_starting:
+            return  # _poll_ready() settles it
         port = self._port_spin.value()
         self._is_running = inpect_execution_address(DEFAULT_HOST, port)
         if not self._is_running:
@@ -586,11 +640,17 @@ class DashBoardLauncherFrame(QFrame):
 
     def _apply_running_state(self) -> None:
         running = self._is_running
-        self._status_badge.set_running(running)
+        starting = self._is_starting
+        if starting:
+            self._status_badge.set_starting()
+        else:
+            self._status_badge.set_running(running)
         self._link_btn.setEnabled(running)
         self._set_project_btn.setVisible(running)
-        self._options_card.setEnabled(not running)
+        self._options_card.setEnabled(not running and not starting)
         self._launch_btn.setVisible(not running)
+        self._launch_btn.setEnabled(not starting)
+        self._refresh_btn.setEnabled(not starting)
 
         show_token = running and bool(self._launched_token)
         self._status_token_row.setVisible(show_token)
@@ -599,7 +659,7 @@ class DashBoardLauncherFrame(QFrame):
 
     def showEvent(self, event) -> None:
         super().showEvent(event)
-        self.refresh_status()
+        self.sync()
 
     # ------------------------------------------------------------------ actions
 
@@ -607,14 +667,15 @@ class DashBoardLauncherFrame(QFrame):
         port = self._port_spin.value()
         webbrowser.open(f"http://127.0.0.1:{port}/")
 
-    def _send_project_to_dashboard(self) -> None:
+    def _project_dir(self) -> Path | None:
+        """The folder of the project open in the setup window, if any."""
         try:
-            project_dir: Path | None = (
-                self._pre_run_ref.parent_ref.orchestrator.working_dir
-            )
+            return self._pre_run_ref.parent_ref.orchestrator.working_dir
         except AttributeError:
-            project_dir = None
+            return None
 
+    def _send_project_to_dashboard(self) -> None:
+        project_dir = self._project_dir()
         if project_dir is None:
             InfoBar.warning(
                 "No Project Loaded",
@@ -636,7 +697,7 @@ class DashBoardLauncherFrame(QFrame):
             method="PUT",
         )
         try:
-            with urllib_request.urlopen(
+            with _LOOPBACK.open(
                 req, timeout=5
             ):  # nosec B310 # fixed http://127.0.0.1 scheme/host, not user-controlled
                 InfoBar.success(
@@ -677,6 +738,10 @@ class DashBoardLauncherFrame(QFrame):
 
     def _build_args(self) -> list[str]:
         args = [sys.executable, "-m", "chemunited_workflow.cli", "serve"]
+        # serve's PROJECT_DIR: the dashboard opens with this project loaded.
+        project_dir = self._project_dir()
+        if project_dir is not None:
+            args.append(str(project_dir))
         if self._tray_switch.isChecked():
             args.append("--tray")
         if (
@@ -741,24 +806,24 @@ class DashBoardLauncherFrame(QFrame):
             env["CHEMUNITED_API_TOKEN"] = token
 
         try:
-            subprocess.Popen(  # nosec B603 # shell=False; args built from sys.executable + fixed subcommand list
-                args,
-                close_fds=True,
-                stdin=subprocess.DEVNULL,
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                env=env,
-            )
+            # A silent server detaches and logs to SERVER_LOG by itself; any
+            # other is told to put its errors there, so a project that fails
+            # to load leaves its reason behind.
+            log_file = None if "--silent" in args else _open_server_log()
+            try:
+                process = subprocess.Popen(  # nosec B603 # shell=False; args built from sys.executable + fixed subcommand list
+                    args,
+                    close_fds=True,
+                    stdin=subprocess.DEVNULL,
+                    stdout=subprocess.DEVNULL,
+                    stderr=log_file if log_file is not None else subprocess.DEVNULL,
+                    env=env,
+                )
+            finally:
+                if log_file is not None:
+                    log_file.close()
             self._launched_token = token
-            InfoBar.success(
-                "Dashboard Launched",
-                "Server is starting — click Refresh in a few seconds to verify.",
-                orient=Qt.Horizontal,  # type: ignore[attr-defined]
-                isClosable=True,
-                position=InfoBarPosition.TOP,
-                duration=5000,
-                parent=self,
-            )
+            self._wait_until_ready(process)
         except FileNotFoundError:
             logger.error(
                 "Launch Failed — Python executable not found. Check your virtual environment."
@@ -771,6 +836,59 @@ class DashBoardLauncherFrame(QFrame):
             logger.error(f"Launch Failed — {exc}")
         except Exception as exc:
             logger.error(f"Launch Failed — {exc}")
+
+    def _wait_until_ready(self, process: subprocess.Popen) -> None:
+        """Show the server as starting until it answers, then open it."""
+        self._launch_process = process
+        self._ready_deadline = time.monotonic() + READY_TIMEOUT_S
+        self._is_starting = True
+        self._apply_running_state()
+        self._ready_timer.start()
+
+    def _poll_ready(self) -> None:
+        port = self._port_spin.value()
+        if inpect_execution_address(DEFAULT_HOST, port) and _dashboard_answers(port):
+            self._finish_launch(ready=True)
+            return
+
+        # A silent launch exits 0 once it has started the detached server.
+        process = self._launch_process
+        exit_code = process.poll() if process is not None else None
+        if exit_code not in (None, 0):
+            self._finish_launch(
+                ready=False, reason=f"the server exited with code {exit_code}"
+            )
+        elif time.monotonic() >= self._ready_deadline:
+            self._finish_launch(
+                ready=False,
+                reason=f"it did not answer within {READY_TIMEOUT_S:.0f} s",
+            )
+
+    def _finish_launch(self, *, ready: bool, reason: str = "") -> None:
+        self._ready_timer.stop()
+        self._launch_process = None
+        self._is_starting = False
+        self._is_running = ready
+        if not ready:
+            self._launched_token = None
+        self._apply_running_state()
+
+        if not ready:
+            logger.error(
+                f"Dashboard did not start — {reason}. See {SERVER_LOG} for the reason."
+            )
+            return
+
+        self._open_browser()
+        InfoBar.success(
+            "Dashboard Ready",
+            "Opened in your browser.",
+            orient=Qt.Horizontal,  # type: ignore[attr-defined]
+            isClosable=True,
+            position=InfoBarPosition.TOP,
+            duration=4000,
+            parent=self,
+        )
 
     def _copy_to_clipboard(self, text: str, *, subject: str) -> None:
         if not text:

@@ -57,7 +57,7 @@ export function installApiTokenFetchInterceptor() {
     const response = await originalFetch(input, request)
     if (response.status === 401 && !SAFE_METHODS.has(method)) {
       notify(
-        'Remote action rejected — set a valid API token (sidebar, bottom-left) to control this instance from another machine.',
+        'Remote action rejected — set a valid API token in Configurations → API access to control this instance from another machine.',
         'error',
       )
     }

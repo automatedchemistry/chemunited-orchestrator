@@ -111,7 +111,7 @@ class SetupWindow(MainWindowBase):
         self.orchestrator = Orchestrator(self)
         self.mcp_service = ProjectMcpService(self)
 
-        self.preRunFrame = PreRunFrame(self)  # Pre-run frame
+        self.preRunFrame = PreRunFrame(self)  # Run step: dashboard launcher
 
         self.protocols_widget = ProtocolsWidget(self)
 
@@ -399,7 +399,7 @@ class SetupWindow(MainWindowBase):
         self.SegmentWindow.addSubInterface(
             widget=self.preRunFrame,
             objectName="preRunFrame",
-            text="Pre-run",
+            text="Run",
             icon=FluentIcon.ACCEPT_MEDIUM,
         )
 

@@ -1,28 +1,15 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from 'vue'
 import { RouterLink, RouterView } from 'vue-router'
-import { useApiToken } from './composables/useApiToken'
 import { useNotification } from './composables/useNotification'
+import { useTheme } from './composables/useTheme'
 import { customization } from './extensions/manifest'
 import { buildNav, type NavEntry } from './extensions/nav'
 import { useRunStatusStore } from './stores/runStatus'
 
 const { message, type, notify, dismiss } = useNotification()
 const runStatusStore = useRunStatusStore()
-const { token: apiToken, setToken: saveApiToken } = useApiToken()
-const showTokenField = ref(false)
-const tokenDraft = ref(apiToken.value)
-
-function toggleTokenField() {
-  showTokenField.value = !showTokenField.value
-  if (showTokenField.value) tokenDraft.value = apiToken.value
-}
-
-function saveToken() {
-  saveApiToken(tokenDraft.value)
-  showTokenField.value = false
-  notify(apiToken.value ? 'API token saved.' : 'API token cleared.', 'success')
-}
+const { theme, toggleTheme } = useTheme()
 
 onMounted(() => { runStatusStore.checkActiveRun() })
 
@@ -36,31 +23,12 @@ interface ErrorResponse {
   detail?: string | Array<{ msg?: string }>
 }
 
-type Theme = 'light' | 'dark'
-
-const storedTheme = localStorage.getItem('chemunited-theme') as Theme | null
-const theme = ref<Theme>(
-  storedTheme ??
-    (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'),
-)
 const isRefreshing = ref(false)
 
 const refreshSuccessMessage = sessionStorage.getItem(REFRESH_SUCCESS_KEY)
 if (refreshSuccessMessage) {
   sessionStorage.removeItem(REFRESH_SUCCESS_KEY)
   notify(refreshSuccessMessage, 'success')
-}
-
-function applyTheme(value: Theme) {
-  document.documentElement.dataset.theme = value
-  document.querySelector('meta[name="theme-color"]')
-    ?.setAttribute('content', value === 'dark' ? '#071525' : '#f3f7fb')
-}
-
-function toggleTheme() {
-  theme.value = theme.value === 'dark' ? 'light' : 'dark'
-  localStorage.setItem('chemunited-theme', theme.value)
-  applyTheme(theme.value)
 }
 
 async function responseError(res: Response): Promise<string> {
@@ -128,30 +96,19 @@ async function refreshProject() {
   }
 }
 
-applyTheme(theme.value)
-
-// Built-in pages plus the project's own (customizations/ui/ui_hook.py), and the
-// diagnostics page whenever the project customizes anything.
-const navItems = computed<NavEntry[]>(() => {
-  const manifest = customization.manifest
-  const items = buildNav(manifest)
-  if (manifest.active || customization.loadError) {
-    items.push({
-      to: '/customizations',
-      label: 'Customizations',
-      icon: 'customizations',
-      iconUrl: null,
-      custom: false,
-      order: Number.MAX_SAFE_INTEGER,
-      hidden: false,
-    })
-  }
-  return items
-})
-
 const customizationProblems = computed(
   () => customization.manifest.errors.length > 0 || Boolean(customization.loadError),
 )
+
+// Built-in pages plus the project's own (customizations/ui/ui_hook.py), and the
+// diagnostics page whenever the project customizes anything.
+const navItems = computed<NavEntry[]>(() => buildNav(customization.manifest, {
+  diagnostics: customization.manifest.active || Boolean(customization.loadError),
+  problems: customizationProblems.value,
+}))
+const mainNav = computed(() => navItems.value.filter(item => item.section === 'main'))
+// Devices and Configurations, under Refresh project.
+const footerNav = computed(() => navItems.value.filter(item => item.section === 'footer'))
 
 const brand = computed(() => {
   const custom = customization.manifest.brand
@@ -183,10 +140,10 @@ const brand = computed(() => {
       <nav
         class="primary-nav"
         aria-label="Primary navigation"
-        :style="{ '--nav-count': navItems.length }"
+        :style="{ '--nav-count': mainNav.length }"
       >
         <span
-          v-for="item in navItems"
+          v-for="item in mainNav"
           :key="item.to"
         >
         <RouterLink
@@ -214,10 +171,6 @@ const brand = computed(() => {
           </svg>
           <svg v-else-if="item.icon === 'monitoring'" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M3 12h4l2-5 4 10 2-5h6"/>
-          </svg>
-          <svg v-else-if="item.icon === 'devices'" viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M7 7h10v10H7z"/>
-            <path d="M4 10H2M4 14H2M22 10h-2M22 14h-2M10 4V2M14 4V2M10 22v-2M14 22v-2"/>
           </svg>
           <svg v-else-if="item.icon === 'export'" viewBox="0 0 24 24" fill="none" aria-hidden="true">
             <path d="M12 3v12m0 0-4-4m4 4 4-4"/>
@@ -267,36 +220,29 @@ const brand = computed(() => {
           </svg>
           <span>{{ isRefreshing ? 'Refreshing…' : 'Refresh project' }}</span>
         </button>
-        <a href="/docs" target="_blank" rel="noopener" class="utility-link" title="API Docs">
-          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M14 3h7v7M21 3l-9 9"/>
-            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-          </svg>
-          <span>API Docs</span>
-        </a>
-        <div v-if="showTokenField" class="token-field">
-          <input
-            v-model="tokenDraft"
-            type="password"
-            placeholder="API token"
-            aria-label="API access token"
-            @keyup.enter="saveToken"
-          />
-          <button type="button" @click="saveToken">Save</button>
-        </div>
-        <button
-          type="button"
-          class="utility-link"
-          :title="apiToken ? 'API token set — click to change' : 'Set API token for remote control'"
-          @click="toggleTokenField"
+        <RouterLink
+          v-for="item in footerNav"
+          :key="item.to"
+          :to="item.to"
+          :title="item.label"
+          class="footer-link"
         >
-          <svg viewBox="0 0 24 24" fill="none" aria-hidden="true">
-            <path d="M15 7a4 4 0 1 0-4 4"/>
-            <path d="M11 11 3 19v2h2l8-8"/>
-            <path d="M16 6h2m-2 0v2"/>
+          <i
+            v-if="item.iconUrl"
+            class="nav-icon-file"
+            :style="{ '--icon-url': `url(&quot;${item.iconUrl}&quot;)` }"
+            aria-hidden="true"
+          />
+          <svg v-else-if="item.icon === 'devices'" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <path d="M7 7h10v10H7z"/>
+            <path d="M4 10H2M4 14H2M22 10h-2M22 14h-2M10 4V2M14 4V2M10 22v-2M14 22v-2"/>
           </svg>
-          <span>{{ apiToken ? 'API token set' : 'Set API token' }}</span>
-        </button>
+          <svg v-else viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="12" cy="12" r="3"/>
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1Z"/>
+          </svg>
+          <span>{{ item.label }}</span>
+        </RouterLink>
         <button
           type="button"
           class="theme-toggle"
@@ -425,7 +371,7 @@ const brand = computed(() => {
 
 .primary-nav a,
 .nav-disabled,
-.utility-link,
+.footer-link,
 .refresh-button,
 .theme-toggle {
   width: 100%;
@@ -446,14 +392,15 @@ const brand = computed(() => {
 }
 
 .primary-nav a:hover,
-.utility-link:hover,
+.footer-link:hover,
 .refresh-button:hover:not(:disabled),
 .theme-toggle:hover {
   color: #ffffff;
   background: rgba(255, 255, 255, 0.06);
 }
 
-.primary-nav a {
+.primary-nav a,
+.footer-link {
   position: relative;
 }
 
@@ -466,13 +413,15 @@ const brand = computed(() => {
   opacity: 0.42;
 }
 
-.primary-nav a.router-link-active {
+.primary-nav a.router-link-active,
+.footer-link.router-link-active {
   color: #ffffff;
   border-color: rgba(92, 189, 225, 0.18);
   background: linear-gradient(90deg, rgba(37, 132, 190, 0.28), rgba(37, 132, 190, 0.1));
 }
 
-.primary-nav a.router-link-active::before {
+.primary-nav a.router-link-active::before,
+.footer-link.router-link-active::before {
   position: absolute;
   left: -0.9rem;
   width: 3px;
@@ -484,7 +433,7 @@ const brand = computed(() => {
 
 .primary-nav svg,
 .nav-disabled svg,
-.utility-link svg,
+.footer-link svg,
 .refresh-button svg,
 .theme-toggle svg {
   width: 19px;
@@ -498,7 +447,7 @@ const brand = computed(() => {
 
 .primary-nav a span,
 .nav-disabled span,
-.utility-link span,
+.footer-link span,
 .refresh-button span,
 .theme-toggle span {
   font-size: 0.84rem;
@@ -516,38 +465,6 @@ const brand = computed(() => {
 .refresh-button,
 .theme-toggle {
   text-align: left;
-}
-
-.token-field {
-  display: flex;
-  gap: 0.4rem;
-  padding: 0 0.75rem 0.3rem;
-}
-
-.token-field input {
-  min-width: 0;
-  flex: 1;
-  padding: 0.4rem 0.55rem;
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 7px;
-  background: rgba(255, 255, 255, 0.06);
-  font-size: 0.8rem;
-}
-
-.token-field button {
-  flex: 0 0 auto;
-  padding: 0.4rem 0.65rem;
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  border-radius: 7px;
-  background: rgba(255, 255, 255, 0.1);
-  cursor: pointer;
-  font-size: 0.8rem;
-}
-
-.token-field button:hover {
-  background: rgba(255, 255, 255, 0.18);
 }
 
 .refresh-button:disabled {
@@ -684,21 +601,22 @@ const brand = computed(() => {
   .brand-copy,
   .primary-nav a span,
   .nav-disabled span,
-  .utility-link span,
+  .footer-link span,
   .refresh-button span,
   .theme-toggle span {
     display: none;
   }
 
   .primary-nav a,
-  .utility-link,
+  .footer-link,
   .refresh-button,
   .theme-toggle {
     justify-content: center;
     padding-inline: 0;
   }
 
-  .primary-nav a.router-link-active::before {
+  .primary-nav a.router-link-active::before,
+  .footer-link.router-link-active::before {
     left: -0.65rem;
   }
 }
@@ -724,9 +642,10 @@ const brand = computed(() => {
     border-right: 0;
   }
 
+  /* Keeps the bar as wide as before Devices and Configurations joined the
+     footer; the theme is still under Configurations → Appearance. */
   .brand,
-  .utility-link,
-  .token-field {
+  .theme-toggle {
     display: none;
   }
 
@@ -746,7 +665,8 @@ const brand = computed(() => {
     padding: 0.25rem;
   }
 
-  .primary-nav a.router-link-active::before {
+  .primary-nav a.router-link-active::before,
+  .footer-link.router-link-active::before {
     top: -0.45rem;
     left: 50%;
     width: 24px;
@@ -776,7 +696,7 @@ const brand = computed(() => {
   }
 
   .refresh-button,
-  .theme-toggle {
+  .footer-link {
     width: 40px;
     height: 54px;
     min-height: 54px;

@@ -1,7 +1,6 @@
 # Protocols
 
-**Protocols** assembles the project's processes into a saved, repeatable sequence — the same protocol files listed
-as cards in the desktop orchestrator's [Pre-Running](../protocols/pre_running.md) frame, and the same ones selected
+**Protocols** assembles the project's processes into a saved, repeatable sequence — the protocol files you select
 in [Run Control](run_control.md).
 
 ![Alt text](../_static/dashboard_protocols.png)

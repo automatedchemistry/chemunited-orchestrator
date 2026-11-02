@@ -68,7 +68,7 @@ Project identity. Read on open, updated on every save.
 working directory and the `.chemunited` file.
 
 `processes_order` controls the order in which processes appear in the
-Protocols and Pre-Running panels.
+Protocols panel.
 
 ---
 
@@ -244,10 +244,9 @@ created. The user edits it freely afterwards.
 
 ### `protocols_historic/` — saved protocol JSON files
 
-Protocol script snapshots saved from the Pre-Running panel. Each snapshot is
-stored as a JSON file so it can be reopened for summary, monitoring, or
-simulation without changing the editable Python process modules in
-`protocols/`.
+Protocol snapshots saved from the dashboard's Protocols page. Each snapshot is
+stored as a JSON file so it can be run, and run again, without changing the
+editable Python process modules in `protocols/`.
 
 ```
 protocols_historic/
@@ -431,7 +430,7 @@ Continue as open existing project
 ### Export `.chemunited` file
 
 ```
-User clicks Save Protocol Script
+User clicks Save (Draw, Protocol or Connectivity step)
         ↓
 manifest.json updated (last_modified)
 Refresh draw/setup.py and draw/platform.svg

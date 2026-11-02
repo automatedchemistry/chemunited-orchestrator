@@ -63,10 +63,6 @@ export const useRunStatusStore = defineStore('runStatus', () => {
   // --- Run control view state (persisted across navigation) ---
   const selectedProtocol = ref('')
   const processCards = ref<ProcessCard[]>([])
-  const formTimeout = ref('')
-  const formDryRun = ref(false)
-  const formErrorResilient = ref(false)
-  const formRecordMonitoring = ref(false)
   const formMessage = ref('')
   const formMessageType = ref<'' | 'error' | 'success' | 'info'>('')
 
@@ -158,10 +154,6 @@ export const useRunStatusStore = defineStore('runStatus', () => {
     // view state
     selectedProtocol,
     processCards,
-    formTimeout,
-    formDryRun,
-    formErrorResilient,
-    formRecordMonitoring,
     formMessage,
     formMessageType,
     restoreFromReport,

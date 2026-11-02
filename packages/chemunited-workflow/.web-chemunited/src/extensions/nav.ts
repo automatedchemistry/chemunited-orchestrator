@@ -10,28 +10,56 @@ export interface NavEntry {
   custom: boolean
   order: number
   hidden: boolean
+  /** 'footer' entries sit under Refresh project instead of in the main list. */
+  section: 'main' | 'footer'
 }
 
-const BUILTIN_NAV: Pick<NavEntry, 'to' | 'label' | 'icon'>[] = [
-  { to: '/', label: 'Dashboard', icon: 'dashboard' },
-  { to: '/run-control', label: 'Run Control', icon: 'run' },
-  { to: '/protocols', label: 'Protocols', icon: 'protocols' },
-  { to: '/monitoring', label: 'Monitoring', icon: 'monitoring' },
-  { to: '/devices', label: 'Devices', icon: 'devices' },
-  { to: '/logs', label: 'Logs', icon: 'logs' },
-  { to: '/export', label: 'Export', icon: 'export' },
+const BUILTIN_NAV: Pick<NavEntry, 'to' | 'label' | 'icon' | 'section'>[] = [
+  { to: '/', label: 'Dashboard', icon: 'dashboard', section: 'main' },
+  { to: '/run-control', label: 'Run Control', icon: 'run', section: 'main' },
+  { to: '/protocols', label: 'Protocols', icon: 'protocols', section: 'main' },
+  { to: '/monitoring', label: 'Monitoring', icon: 'monitoring', section: 'main' },
+  { to: '/devices', label: 'Devices', icon: 'devices', section: 'footer' },
+  { to: '/logs', label: 'Logs', icon: 'logs', section: 'main' },
+  { to: '/export', label: 'Export', icon: 'export', section: 'main' },
+  { to: '/configurations', label: 'Configurations', icon: 'configurations', section: 'footer' },
 ]
 
+/** When the sidebar lists the Customizations (diagnostics) page. */
+export interface DiagnosticsNav {
+  /** The project customizes the dashboard, or its customization failed to load. */
+  diagnostics: boolean
+  /** Something is wrong there: the entry shows even when a nav item hides it. */
+  problems: boolean
+}
+
 /**
- * The sidebar's entries: the built-in pages (orders 10..70) as changed by the
+ * The sidebar's entries: the built-in pages (orders 10..80) as changed by the
  * manifest's nav items and replaced pages, plus its custom pages, each placed
- * after the entry named by `after` or at the end.
+ * after the entry named by `after` or at the end. Devices and Configurations
+ * keep their orders in the footer, so a custom page after one of them lands
+ * where that order falls in the main list. The diagnostics page comes last.
  */
-export function buildNav(manifest: UiManifest): NavEntry[] {
+export function buildNav(
+  manifest: UiManifest,
+  { diagnostics, problems }: DiagnosticsNav = { diagnostics: false, problems: false },
+): NavEntry[] {
   const entries = new Map<string, NavEntry>()
   BUILTIN_NAV.forEach((item, index) => {
     entries.set(item.to, { ...item, iconUrl: null, custom: false, order: (index + 1) * 10, hidden: false })
   })
+  if (diagnostics) {
+    entries.set('/customizations', {
+      to: '/customizations',
+      label: 'Customizations',
+      icon: 'customizations',
+      iconUrl: null,
+      custom: false,
+      order: Number.MAX_SAFE_INTEGER,
+      hidden: false,
+      section: 'main',
+    })
+  }
   for (const nav of manifest.nav) {
     const entry = entries.get(nav.path)
     if (!entry) continue
@@ -40,6 +68,9 @@ export function buildNav(manifest: UiManifest): NavEntry[] {
     if (nav.order !== null) entry.order = nav.order
     entry.hidden = nav.hidden
   }
+  // A hidden diagnostics entry still shows while there are problems to read.
+  const diagnosticsEntry = entries.get('/customizations')
+  if (diagnosticsEntry && problems) diagnosticsEntry.hidden = false
 
   const customPages = manifest.pages.filter(page => !page.replaces)
   for (const page of manifest.pages) {
@@ -59,6 +90,7 @@ export function buildNav(manifest: UiManifest): NavEntry[] {
       custom: true,
       order: Number.NaN,
       hidden: page.hidden,
+      section: 'main',
     })
   }
 

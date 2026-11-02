@@ -32,9 +32,7 @@ from qfluentwidgets import (
     isDarkTheme,
 )
 
-from chemunited.monitoring.pool_log_tailer import PoolLogTailer
 from chemunited.orchestrator import Orchestrator
-from chemunited.orchestrator.execution import is_run_active_for
 from chemunited.shared.enums import WindowCategory
 from chemunited.shared.icon import OrchestratorIcon
 from chemunited.shared.widgets.frame_base import FrameBase
@@ -44,6 +42,7 @@ from chemunited_core.compounds import COMPOUNDS
 from .final_state import load_edge_cells
 from .graph_simulation import SimGraphicView
 from .playback import SimulationPlayback
+from .pool_log_tailer import PoolLogTailer
 
 if TYPE_CHECKING:
     from chemunited.setup import SetupWindow
@@ -948,7 +947,6 @@ class SimulateWindowReport(QMainWindow):
         self._pool_tailer = PoolLogTailer(
             project_path,
             self.orchestrator.components,
-            lambda: is_run_active_for(project_path),
             parent=self,
         )
         self._pool_tailer.start()

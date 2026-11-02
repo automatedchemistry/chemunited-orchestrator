@@ -392,7 +392,7 @@ A project changes the dashboard through `{project_dir}/customizations/ui/ui_hook
 
 `ui_hook.py` is imported on every request, like the other hooks, so edits apply on the next page load. It never takes the server down: an import failure, or an entry that doesn't check out (a missing file, an unknown route or slot), lands in the manifest's `errors` (with the line, when known) while every other entry still applies.
 
-Besides the seven built-in page paths, the server answers a browser asking for any unknown one-segment path (`/sensors`) with the dashboard's `index.html`, so a custom page's URL survives a hard refresh; the dashboard shows its own "not found" page for paths it doesn't know. Requests that don't accept `text/html`, paths with more segments and file-like paths keep their `404`.
+Besides the eight built-in page paths, the server answers a browser asking for any unknown one-segment path (`/sensors`) with the dashboard's `index.html`, so a custom page's URL survives a hard refresh; the dashboard shows its own "not found" page for paths it doesn't know. Requests that don't accept `text/html`, paths with more segments and file-like paths keep their `404`.
 
 Visit `/docs` for the interactive Swagger UI, or `/` for the HTML dashboard.
 
