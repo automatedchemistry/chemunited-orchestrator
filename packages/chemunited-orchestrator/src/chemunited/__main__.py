@@ -6,11 +6,22 @@ from PyQt5.QtCore import Qt, QTimer
 from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication
 
+# Import WebEngine BEFORE any Qt widgets - required for Monaco Editor
+try:
+    import PyQt5.QtWebEngineWidgets  # noqa: F401
+except ImportError:
+    pass  # Will fail later with better error if Monaco is used
+
+# Import theme system and initialize before creating QApplication
 from chemunited.setup import SetupWindow
 
 # Import Qt resources - must be done before using :/ paths
 from chemunited.shared.resources import resources_rc  # noqa: F401
+from chemunited.shared.widgets.app_theme import init_theme
 from chemunited.shared.widgets.logo_window import show_waiting
+
+# Initialize theme system (dark/light mode)
+init_theme()
 
 _APP_ID = "org.chemunited.orchestrator"
 _ICON_PATH = ":/icons/icons/chemunited.ico"
