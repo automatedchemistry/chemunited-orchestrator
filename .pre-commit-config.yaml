@@ -67,9 +67,10 @@ repos:
 
       - id: mypy
         name: mypy
-        entry: cmd /c "uv run mypy --exclude 'resources_rc\.py' packages/chemunited-quantities/src packages/chemunited-core/src packages/chemunited-workflow/chemunited_workflow packages/chemunited-sim/src packages/chemunited-orchestrator/src"
+        entry: uv run mypy
         language: system
         pass_filenames: false
+        types: [python]
         stages: [pre-commit]
 
       # `stages: [manual]` -- the full suite (chemunited-workflow alone is
