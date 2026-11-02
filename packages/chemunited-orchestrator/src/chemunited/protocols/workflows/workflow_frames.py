@@ -38,11 +38,11 @@ from chemunited_core.protocols import CommandSignature
 from chemunited_workflow.enums import NodeState
 
 from .controller import WorkflowController
-from .editor import ProcessScriptEditorWindow
 from .elements.access_point import WorkflowAccessPoints
 from .elements.work_connection import WorkflowConnection
 from .elements.work_node import WorkflowNode
 from .exceptions import WorkflowRuleViolation
+from .monaco_editor import MonacoProcessScriptEditorWindow as ProcessScriptEditorWindow
 from .node_parameters_dialog import NodeParametersDialog
 from .process_workflow import BlockData, ConnectionData
 from .workflow_rules import resolve_render_start_role

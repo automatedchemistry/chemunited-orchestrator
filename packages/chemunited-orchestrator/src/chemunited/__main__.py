@@ -7,6 +7,9 @@ from PyQt5.QtGui import QIcon
 from PyQt5.QtWidgets import QApplication
 
 from chemunited.setup import SetupWindow
+
+# Import Qt resources - must be done before using :/ paths
+from chemunited.shared.resources import resources_rc  # noqa: F401
 from chemunited.shared.widgets.logo_window import show_waiting
 
 _APP_ID = "org.chemunited.orchestrator"
