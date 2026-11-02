@@ -16,7 +16,81 @@ from PyQt5.QtWidgets import (
     QVBoxLayout,
     QWidget,
 )
-from qfluentwidgets import BodyLabel, CaptionLabel, StrongBodyLabel, TitleLabel
+from qfluentwidgets import (
+    BodyLabel,
+    CaptionLabel,
+    StrongBodyLabel,
+    TitleLabel,
+    isDarkTheme,
+)
+
+from chemunited.shared.widgets.app_theme import ThemedChromeMixin
+
+
+def _section_qss() -> str:
+    if isDarkTheme():
+        return """
+            QFrame#summarySection {
+                background: rgba(255, 255, 255, 0.05);
+                border: 1px solid rgba(255, 255, 255, 0.11);
+                border-radius: 8px;
+            }
+            """
+    return """
+        QFrame#summarySection {
+            background: palette(base);
+            border: 1px solid rgba(0, 0, 0, 28);
+            border-radius: 8px;
+        }
+        """
+
+
+def _parameter_row_qss() -> str:
+    if isDarkTheme():
+        return """
+            QFrame#parameterRow {
+                background: rgba(255, 255, 255, 0.04);
+                border: 1px solid rgba(255, 255, 255, 0.08);
+                border-radius: 7px;
+            }
+            QFrame#parameterRow:hover {
+                background: rgba(0, 120, 212, 45);
+                border-color: rgba(0, 120, 212, 110);
+            }
+            """
+    return """
+        QFrame#parameterRow {
+            background: rgba(0, 0, 0, 5);
+            border: 1px solid rgba(0, 0, 0, 20);
+            border-radius: 7px;
+        }
+        QFrame#parameterRow:hover {
+            background: rgba(0, 120, 212, 12);
+            border-color: rgba(0, 120, 212, 70);
+        }
+        """
+
+
+def _type_badge_qss() -> str:
+    if isDarkTheme():
+        return """
+            QLabel#typeBadge {
+                background: rgba(0, 120, 212, 0.22);
+                color: #79B7F7;
+                border-radius: 4px;
+                font-weight: 700;
+                padding: 3px 6px;
+            }
+            """
+    return """
+        QLabel#typeBadge {
+            background: #E7F1FF;
+            color: #005FB8;
+            border-radius: 4px;
+            font-weight: 700;
+            padding: 3px 6px;
+        }
+        """
 
 
 class SummaryParametersFrame(QFrame):
@@ -78,13 +152,7 @@ class SummaryParametersFrame(QFrame):
     ) -> QWidget:
         section = QFrame(parent)
         section.setObjectName("summarySection")
-        section.setStyleSheet("""
-            QFrame#summarySection {
-                background: palette(base);
-                border: 1px solid rgba(0, 0, 0, 28);
-                border-radius: 8px;
-            }
-            """)
+        section.setStyleSheet(_section_qss())
 
         layout = QVBoxLayout(section)
         layout.setContentsMargins(14, 12, 14, 12)
@@ -107,17 +175,7 @@ class SummaryParametersFrame(QFrame):
         row = QFrame(parent)
         row.setObjectName("parameterRow")
         row.setMinimumHeight(44)
-        row.setStyleSheet("""
-            QFrame#parameterRow {
-                background: rgba(0, 0, 0, 5);
-                border: 1px solid rgba(0, 0, 0, 20);
-                border-radius: 7px;
-            }
-            QFrame#parameterRow:hover {
-                background: rgba(0, 120, 212, 12);
-                border-color: rgba(0, 120, 212, 70);
-            }
-            """)
+        row.setStyleSheet(_parameter_row_qss())
 
         layout = QHBoxLayout(row)
         layout.setContentsMargins(12, 7, 12, 7)
@@ -131,15 +189,7 @@ class SummaryParametersFrame(QFrame):
         badge.setObjectName("typeBadge")
         badge.setAlignment(Qt.AlignCenter)  # type: ignore[attr-defined]
         badge.setFixedWidth(48)
-        badge.setStyleSheet("""
-            QLabel#typeBadge {
-                background: #E7F1FF;
-                color: #005FB8;
-                border-radius: 4px;
-                font-weight: 700;
-                padding: 3px 6px;
-            }
-            """)
+        badge.setStyleSheet(_type_badge_qss())
 
         name_label = BodyLabel(name, row)
         name_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
@@ -207,7 +257,7 @@ class SummaryParametersFrame(QFrame):
         return json.dumps(value, ensure_ascii=False)
 
 
-class SummaryParametersWindow(QMainWindow):
+class SummaryParametersWindow(ThemedChromeMixin, QMainWindow):
     def __init__(self, file_path: Path, data: dict[str, Any], parent=None):
         super().__init__(parent=parent)
         self.main_frame = SummaryParametersFrame(file_path, data, parent)

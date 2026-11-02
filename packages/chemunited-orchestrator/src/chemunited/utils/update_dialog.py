@@ -9,6 +9,8 @@ from PyQt5.QtWidgets import QPlainTextEdit, QVBoxLayout
 from qfluentwidgets import FluentIcon, PushButton, StrongBodyLabel
 from qframelesswindow import FramelessDialog
 
+from chemunited.shared.widgets.app_theme import ThemedChromeMixin
+
 if TYPE_CHECKING:
     from chemunited.utils.version_check import UpdateAvailable
 
@@ -35,7 +37,7 @@ class PipUpgradeThread(QThread):
         self.finished_with_code.emit(proc.returncode)
 
 
-class UpdateDialog(FramelessDialog):
+class UpdateDialog(ThemedChromeMixin, FramelessDialog):
     def __init__(self, updates: list[UpdateAvailable], parent=None) -> None:
         super().__init__(parent=parent)
         self.setWindowTitle("Update Packages")
