@@ -141,6 +141,16 @@
             flex: 1;
             min-height: 0;
         }
+
+        /* ---------- method lock ---------- */
+        .cu-locked-line {
+            background: rgba(128, 128, 128, 0.12);
+        }
+        .cu-editable-gutter {
+            background: #3A7AFE;
+            width: 3px !important;
+            margin-left: 3px;
+        }
     </style>
 </head>
 <body class="theme-dark">
@@ -527,10 +537,12 @@
             });
 
             // Track changes (fires only for the ACTIVE model)
-            editor.onDidChangeModelContent(function () {
+            editor.onDidChangeModelContent(function (e) {
                 if (!activePath) return;
                 const f = files.get(activePath);
                 if (!f) return;
+                if (rejectLockedEdit(f, e)) return;
+                refreshLock(f);
                 f.dirty = true;
                 renderTabs();
                 if (autosaveEnabled) {
@@ -579,6 +591,142 @@
                 return files.get(activePath) || null;
             }
 
+            // ---- method lock: only one line range of a file is editable --------
+            // f.lock = { zoneId, decoIds, range: {start, end} } with 1-based,
+            // inclusive lines. The zone is a tracked decoration, so Monaco grows
+            // and shrinks it as lines are typed or deleted inside it; `range`
+            // holds the zone as it was before the change being checked.
+            let lockGuardPaused = false;
+
+            function currentZone(f) {
+                const r = f.model.getDecorationRange(f.lock.zoneId);
+                return r ? { start: r.startLineNumber, end: r.endLineNumber } : f.lock.range;
+            }
+
+            function insideZone(range, zone) {
+                return range.startLineNumber >= zone.start && range.endLineNumber <= zone.end;
+            }
+
+            function paintLock(f) {
+                const model = f.model;
+                const zone = currentZone(f);
+                const last = model.getLineCount();
+                const locked = { isWholeLine: true, className: 'cu-locked-line' };
+                const decorations = [{
+                    range: new monaco.Range(zone.start, 1, zone.end, 1),
+                    options: { isWholeLine: true, linesDecorationsClassName: 'cu-editable-gutter' },
+                }];
+                if (zone.start > 1) {
+                    decorations.push({ range: new monaco.Range(1, 1, zone.start - 1, 1), options: locked });
+                }
+                if (zone.end < last) {
+                    decorations.push({ range: new monaco.Range(zone.end + 1, 1, last, 1), options: locked });
+                }
+                f.lock.decoIds = model.deltaDecorations(f.lock.decoIds, decorations);
+            }
+
+            function setZone(f, start, end) {
+                const model = f.model;
+                const last = model.getLineCount();
+                start = Math.max(1, Math.min(start, last));
+                end = Math.max(start, Math.min(end, last));
+                const old = f.lock ? [f.lock.zoneId].concat(f.lock.decoIds) : [];
+                const zoneId = model.deltaDecorations(old, [{
+                    range: new monaco.Range(start, 1, end, model.getLineMaxColumn(end)),
+                    options: {
+                        stickiness: monaco.editor.TrackedRangeStickiness.AlwaysGrowsWhenTypingAtEdges,
+                    },
+                }])[0];
+                f.lock = { zoneId: zoneId, decoIds: [], range: { start: start, end: end } };
+                paintLock(f);
+            }
+
+            function dropLock(f) {
+                if (!f.lock) return;
+                f.model.deltaDecorations([f.lock.zoneId].concat(f.lock.decoIds), []);
+                f.lock = null;
+            }
+
+            function refreshLock(f) {
+                if (!f.lock) return;
+                f.lock.range = currentZone(f);
+                paintLock(f);
+            }
+
+            // Safety net for every edit path the key guard below does not see
+            // (context-menu cut/paste, IME, drag-moves, replace all, undo/redo):
+            // reverse the offending operation and restore the zone.
+            function rejectLockedEdit(f, e) {
+                if (!f.lock || e.isFlush || lockGuardPaused) return false;
+                const zone = f.lock.range;
+                if (e.changes.every(function (c) { return insideZone(c.range, zone); })) return false;
+
+                const model = f.model;
+                setTimeout(function () {
+                    lockGuardPaused = true;
+                    Promise.resolve(e.isUndoing ? model.redo() : model.undo()).finally(function () {
+                        lockGuardPaused = false;
+                        if (f.lock && files.get(activePath) === f) setZone(f, zone.start, zone.end);
+                    });
+                }, 0);
+                return true;
+            }
+
+            function notifyPythonText() {
+                if (activePath && window.pybridge && window.pybridge.onTextChanged) {
+                    window.pybridge.onTextChanged(activePath, editor.getValue());
+                }
+            }
+
+            // Key guard: block typing outside the zone before it happens, as the
+            // old QScintilla editor did (no flicker for the common case).
+            const K = monaco.KeyCode;
+            const keyCode = function (oldName, newName) {
+                return K[oldName] !== undefined ? K[oldName] : K[newName];
+            };
+            const SAFE_KEYS = new Set([
+                K.LeftArrow, K.RightArrow, K.UpArrow, K.DownArrow, K.Home, K.End,
+                K.PageUp, K.PageDown, K.Escape, K.Ctrl, K.Shift, K.Alt, K.Meta,
+                K.CapsLock, K.NumLock, K.ContextMenu, K.Insert,
+                K.F1, K.F2, K.F3, K.F4, K.F5, K.F6, K.F7, K.F8, K.F9, K.F10, K.F11, K.F12,
+            ]);
+            const SAFE_CTRL_KEYS = new Set([
+                keyCode('KEY_C', 'KeyC'), keyCode('KEY_A', 'KeyA'), keyCode('KEY_F', 'KeyF'),
+                keyCode('KEY_Z', 'KeyZ'), keyCode('KEY_Y', 'KeyY'), keyCode('KEY_S', 'KeyS'),
+            ]);
+
+            function rangeTouchedByKey(e, selection, model) {
+                if (!selection.isEmpty()) return selection;
+                const line = selection.positionLineNumber;
+                const col = selection.positionColumn;
+                if (e.keyCode === K.Backspace) {
+                    return col > 1
+                        ? new monaco.Range(line, col - 1, line, col)
+                        : new monaco.Range(Math.max(line - 1, 1), 1, line, col);
+                }
+                if (e.keyCode === K.Delete) {
+                    return col < model.getLineMaxColumn(line)
+                        ? new monaco.Range(line, col, line, col + 1)
+                        : new monaco.Range(line, col, Math.min(line + 1, model.getLineCount()), 1);
+                }
+                return selection;
+            }
+
+            editor.onKeyDown(function (e) {
+                const f = activeFileEntry();
+                if (!f || !f.lock) return;
+                if (SAFE_KEYS.has(e.keyCode)) return;
+                if ((e.ctrlKey || e.metaKey) && SAFE_CTRL_KEYS.has(e.keyCode)) return;
+                const zone = currentZone(f);
+                const allowed = editor.getSelections().every(function (selection) {
+                    return insideZone(rangeTouchedByKey(e, selection, f.model), zone);
+                });
+                if (!allowed) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                }
+            });
+
             // ---- expose functions to Python -----------------------------------
             window.monacoEditor = {
                 // --- tabs / files ---
@@ -595,9 +743,11 @@
                 getText: function () { return editor.getValue(); },
                 setText: function (text) {
                     const pos = editor.getPosition();
+                    const f = activeFileEntry();
+                    // A full replace invalidates the zone; Python re-applies it.
+                    if (f) dropLock(f);
                     editor.setValue(text);
                     if (pos) editor.setPosition(pos);
-                    const f = activeFileEntry();
                     if (f) { f.dirty = false; renderTabs(); }
                 },
                 getCursorPosition: function () {
@@ -622,7 +772,23 @@
                     };
                 },
                 insertAt: function (text, line, column) {
-                    const range = new monaco.Range(line + 1, column + 1, line + 1, column + 1);
+                    let lineNumber = line + 1;
+                    let col = column + 1;
+                    const f = activeFileEntry();
+                    if (f && f.lock) {
+                        const zone = currentZone(f);
+                        if (lineNumber === zone.end + 1 && col === 1) {
+                            // "After the last statement": append at the zone's end
+                            // edge instead, so the zone grows over the new lines.
+                            text = f.model.getEOL() + text.replace(/\r?\n$/, '');
+                            lineNumber = zone.end;
+                            col = f.model.getLineMaxColumn(zone.end);
+                        } else if (lineNumber < zone.start || lineNumber > zone.end) {
+                            notifyPythonText(); // undo Python's optimistic cache update
+                            return;
+                        }
+                    }
+                    const range = new monaco.Range(lineNumber, col, lineNumber, col);
                     editor.executeEdits('python-bridge', [{ range: range, text: text }]);
                 },
                 replaceSelection: function (text) {
@@ -671,6 +837,33 @@
                     }
                 },
 
+                // --- method lock (lines are 1-based, inclusive) ---
+                setEditableRange: function (start, end) {
+                    const f = activeFileEntry();
+                    if (f && f.model) setZone(f, start, end);
+                },
+                clearEditableRange: function () {
+                    const f = activeFileEntry();
+                    if (f) dropLock(f);
+                },
+                getEditableRange: function () {
+                    const f = activeFileEntry();
+                    return f && f.lock ? currentZone(f) : null;
+                },
+                // Drop target for Python's drag handling: 0-based line under a
+                // view-relative point (-1 if none) and whether it is editable.
+                lineAtPoint: function (x, y) {
+                    const target = editor.getTargetAtClientPoint(x, y);
+                    if (!target || !target.position) return { line: -1, editable: true };
+                    const lineNumber = target.position.lineNumber;
+                    const f = activeFileEntry();
+                    const zone = f && f.lock ? currentZone(f) : null;
+                    return {
+                        line: lineNumber - 1,
+                        editable: !zone || (lineNumber >= zone.start && lineNumber <= zone.end),
+                    };
+                },
+
                 // --- folding ---
                 setFolding: function (enabled) {
                     editor.updateOptions({ folding: enabled });
@@ -698,38 +891,16 @@
         });
 
         // ---- drag and drop -----------------------------------------------------
+        // Commands and parameters are dropped through Python (the view keeps
+        // their MIME types, which never reach the page). Swallow any other drop
+        // so external text cannot be inserted around the method lock.
         document.addEventListener('dragover', function (e) {
             e.preventDefault();
-            e.dataTransfer.dropEffect = 'copy';
+            e.dataTransfer.dropEffect = 'none';
         });
 
         document.addEventListener('drop', function (e) {
             e.preventDefault();
-            if (!window.pybridge || !window.pybridge.handleDrop) return;
-            if (!editor) return;
-            const dropData = {
-                types: Array.from(e.dataTransfer.types),
-                data: {}
-            };
-            dropData.types.forEach(function (type) {
-                const data = e.dataTransfer.getData(type);
-                if (data) {
-                    dropData.data[type] = data;
-                }
-            });
-            // Get drop position (guard: method exists in Monaco 0.22+, but be safe)
-            try {
-                if (typeof editor.getScrolledVisiblePositionAtCoordinate === 'function') {
-                    const pos = editor.getScrolledVisiblePositionAtCoordinate(e.clientX, e.clientY);
-                    if (pos) {
-                        dropData.line = pos.lineNumber - 1;
-                        dropData.column = pos.column - 1;
-                    }
-                }
-            } catch (err) {
-                console.warn('drop position unavailable:', err);
-            }
-            window.pybridge.handleDrop(dropData);
         });
     </script>
 </body>

@@ -46,6 +46,8 @@ class MonacoProcessScriptEditorWindow(ScriptEditorWindow):
         # reliable once the initial content has been pushed. Queue method
         # focusing that arrives too early and replay it when ready.
         self.editor.editor_ready.connect(self._on_editor_ready)
+        # setText() (Black, workflow syncs) drops the method lock; restore it.
+        self.editor.text_replaced.connect(self._relock)
 
     def _on_editor_ready(self) -> None:
         """Apply a queued focus_method() once the Monaco page is ready."""
@@ -81,7 +83,7 @@ class MonacoProcessScriptEditorWindow(ScriptEditorWindow):
         return MonacoScriptEditor(path=path, parent=self)
 
     def focus_method(self, name: str) -> None:
-        """Move the cursor to a specific method (no code is highlighted or locked)."""
+        """Move the cursor to a method and lock editing to its body."""
         self._current_focused_method = name
 
         if not getattr(self.editor, "_editor_ready", False):
@@ -91,16 +93,51 @@ class MonacoProcessScriptEditorWindow(ScriptEditorWindow):
             self._pending_focus_method = name
             return
 
+        body = self._method_body_range(name)
+        if body is None:
+            return
+        body_start, body_end, line, index = body
+        self.editor.set_protected_zone(body_start, body_end)
+
+        def _apply() -> None:
+            if self._current_focused_method != name:
+                return
+
+            self.editor.setCursorPosition(line, index)
+            self.editor.focus()
+
+        # Defer to ensure editor is ready
+        QTimer.singleShot(100, _apply)
+
+    def _relock(self) -> None:
+        """Re-apply the method lock after the whole text was replaced."""
+        name = self._current_focused_method
+        if name is None:
+            return
+        body = self._method_body_range(name, log_errors=False)
+        if body is not None:
+            self.editor.set_protected_zone(body[0], body[1])
+
+    def _method_body_range(
+        self, name: str, log_errors: bool = True
+    ) -> tuple[int, int, int, int] | None:
+        """Editable body of method ``name`` as 0-based, inclusive lines.
+
+        Returns ``(body_start, body_end, cursor_line, cursor_col)``. The
+        decorators and the ``def`` line stay locked; the body starts at its
+        first statement, as in the old QScintilla editor.
+        """
         code = self.editor.text()
         try:
             tree = ast.parse(code)
         except SyntaxError as exc:
-            logger.opt(exception=exc).error(
-                "Unable to focus method '{}' because the editor content is not "
-                "valid Python.",
-                name,
-            )
-            return
+            if log_errors:
+                logger.opt(exception=exc).error(
+                    "Unable to focus method '{}' because the editor content is "
+                    "not valid Python.",
+                    name,
+                )
+            return None
 
         class_node = next(
             (
@@ -134,27 +171,20 @@ class MonacoProcessScriptEditorWindow(ScriptEditorWindow):
             )
 
         if method_node is None:
-            logger.error(
-                "Method '{}.{}' was not found in '{}'.",
-                self._class_name,
-                name,
-                self.editor.path,
-            )
-            return
+            if log_errors:
+                logger.error(
+                    "Method '{}.{}' was not found in '{}'.",
+                    self._class_name,
+                    name,
+                    self.editor.path,
+                )
+            return None
 
         target_node = method_node.body[0] if method_node.body else method_node
         line = max(target_node.lineno - 1, 0)
         index = max(target_node.col_offset, 0)
-
-        def _apply() -> None:
-            if self._current_focused_method != name:
-                return
-
-            self.editor.setCursorPosition(line, index)
-            self.editor.focus()
-
-        # Defer to ensure editor is ready
-        QTimer.singleShot(100, _apply)
+        body_end = max((method_node.end_lineno or method_node.lineno) - 1, line)
+        return line, body_end, line, index
 
     def add_content(self, method: str, content: str) -> None:
         """Add content to a specific method of a class object."""

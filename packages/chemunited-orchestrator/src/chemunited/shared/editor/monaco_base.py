@@ -4,7 +4,7 @@ import json
 from pathlib import Path
 from typing import Any, Callable
 
-from PyQt5.QtCore import QObject, QTimer, QUrl, pyqtSignal, pyqtSlot
+from PyQt5.QtCore import QMimeData, QObject, QPoint, QTimer, QUrl, pyqtSignal, pyqtSlot
 from PyQt5.QtWidgets import QVBoxLayout, QWidget
 
 try:
@@ -33,7 +33,6 @@ class MonacoBridge(QObject):
     cursorPositionChanged = pyqtSignal(int, int)  # line, column (0-based)
     editorFocused = pyqtSignal()
     saveFileRequested = pyqtSignal(str, str)  # content, path
-    dropReceived = pyqtSignal(str)  # JSON-encoded drop data
 
     def __init__(self, editor: "MonacoEditorBase"):
         super().__init__()
@@ -117,13 +116,37 @@ class MonacoBridge(QObject):
         except Exception as e:
             logger.error(f"Failed to save file: {e}")
 
-    @pyqtSlot(object)
-    def handleDrop(self, dropData: Any) -> None:
-        """Handle drop event from JavaScript (dict or JSON string)."""
-        if isinstance(dropData, str):
-            self.dropReceived.emit(dropData)
-        else:
-            self.dropReceived.emit(json.dumps(dropData))
+
+class _DropAwareWebView(QWebEngineView):  # type: ignore[misc, valid-type]
+    """Web view that handles the editor's own drag payloads in Python.
+
+    Qt WebEngine only forwards text, HTML and URLs into the page, so custom
+    MIME types (command vs parameter, the parameter's source file) would be
+    lost there. Drags the editor accepts never reach Chromium.
+    """
+
+    def __init__(self, editor: "MonacoEditorBase"):
+        super().__init__(editor)
+        self._editor = editor
+
+    def dragEnterEvent(self, event):
+        if event is not None and self._editor._accepts_drop(event.mimeData()):
+            event.acceptProposedAction()
+            return
+        super().dragEnterEvent(event)
+
+    def dragMoveEvent(self, event):
+        if event is not None and self._editor._accepts_drop(event.mimeData()):
+            event.acceptProposedAction()
+            return
+        super().dragMoveEvent(event)
+
+    def dropEvent(self, event):
+        if event is not None and self._editor._accepts_drop(event.mimeData()):
+            event.acceptProposedAction()
+            self._editor._handle_qt_drop(event.mimeData(), event.pos())
+            return
+        super().dropEvent(event)
 
 
 class MonacoEditorBase(QWidget):
@@ -144,11 +167,13 @@ class MonacoEditorBase(QWidget):
 
     textChanged = pyqtSignal()
     editorFocused = pyqtSignal()
-    dropAccepted = pyqtSignal()
     active_file_changed = pyqtSignal(str)  # new active file path (tabs)
     editor_ready = pyqtSignal()  # emitted once the Monaco page is usable
+    text_replaced = pyqtSignal()  # setText() replaced the whole content
 
     AUTOSAVE_INTERVAL_MS = 2000
+    # Drag payloads handled in Python (_handle_qt_drop) instead of the page.
+    DROP_MIME_TYPES: tuple[str, ...] = ()
 
     def __init__(
         self,
@@ -177,6 +202,7 @@ class MonacoEditorBase(QWidget):
         self._cached_col: int = 0
         self._cached_selection: tuple[int, int, int, int] = (0, 0, 0, 0)
         self._editor_ready: bool = False
+        self._protected = False
 
         # Setup layout
         layout = QVBoxLayout(self)
@@ -184,7 +210,7 @@ class MonacoEditorBase(QWidget):
         layout.setSpacing(0)
 
         # Create web view
-        self.web_view = QWebEngineView(self)
+        self.web_view = _DropAwareWebView(self)
         layout.addWidget(self.web_view)
 
         # Setup web channel for JS-Python communication
@@ -341,11 +367,31 @@ class MonacoEditorBase(QWidget):
         return self._cached_text
 
     def setText(self, text: str) -> None:
-        """Set editor text."""
+        """Set editor text (drops the protected zone; see text_replaced)."""
         self._cached_text = text
         escaped = json.dumps(text)
         self._call_js(f"monacoEditor.setText({escaped})")
         self._current_file_changed = False
+        self._protected = False
+        self.text_replaced.emit()
+
+    def set_protected_zone(self, start: int, end: int) -> None:
+        """Make only lines start..end (0-based, inclusive) editable."""
+        self._protected = True
+        self._call_js(f"monacoEditor.setEditableRange({start + 1}, {end + 1})")
+
+    def clear_protected_zone(self) -> None:
+        """Make the whole active file editable again."""
+        self._protected = False
+        self._call_js("monacoEditor.clearEditableRange()")
+
+    def _accepts_drop(self, mime_data: QMimeData | None) -> bool:
+        return mime_data is not None and any(
+            mime_data.hasFormat(mime_type) for mime_type in self.DROP_MIME_TYPES
+        )
+
+    def _handle_qt_drop(self, mime_data: QMimeData, pos: QPoint) -> None:
+        """Handle an accepted drop (see DROP_MIME_TYPES); subclasses override."""
 
     def getCursorPosition(self) -> tuple[int, int]:
         """Get current cursor position (line, column), 0-based."""

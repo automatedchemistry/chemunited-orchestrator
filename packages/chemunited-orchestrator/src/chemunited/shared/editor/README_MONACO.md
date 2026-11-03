@@ -16,9 +16,11 @@ This directory contains the Monaco Editor integration for the ChemUnited Orchest
 - Dark/Light theme support (follows the application theme: the Setup window's
   Theme menu with Follow System / Dark / Light; the editor re-themes live when
   the app theme changes)
-- Method focusing: the cursor jumps to the block's method when a node is opened
+- Method focusing: the cursor jumps to the block's method when a node is
+  opened, and only that method's body stays editable (method lock)
 - Auto-save with debouncing
-- Drag-and-drop support for commands and parameters
+- Drag-and-drop of commands and parameters from the side panels (handled in
+  Python, inserted at the end of the method under the drop)
 - Black code formatting
 - Same API as QScintilla-based editor
 
@@ -121,8 +123,34 @@ The Monaco editor provides the same API as the QScintilla editor:
 | Autosave | `editor.set_autosave(bool)` | `editor.set_autosave(bool)` |
 | Save now | `editor.save_now()` | `editor.save_now()` |
 
-`focus_method(name)` moves the cursor to the method's body on both window
-types; the code itself is never restyled or locked.
+| Lock lines | `editor.set_protected_zone(start, end)` | `editor.set_protected_zone(start, end)` |
+| Unlock | `editor.clear_protected_zone()` | `editor.clear_protected_zone()` |
+
+### Method lock
+
+`MonacoProcessScriptEditorWindow.focus_method(name)` moves the cursor to the
+method's body and calls `set_protected_zone` with the body lines (from its
+first statement to its last line; decorators and the `def` line stay locked).
+
+- The zone is a tracked Monaco decoration, so it grows and shrinks as lines
+  are typed or deleted inside it. Lines outside it are dimmed, and a blue
+  gutter bar marks it.
+- A key guard (`editor.onKeyDown`) blocks typing outside the zone, including
+  Backspace/Delete across its edges. Every other edit path (context menu,
+  IME, drag-move, Replace All, undo/redo) is checked in the content-change
+  handler and reversed if it touches a locked line.
+- `setText()` drops the zone and emits `text_replaced`; the window then
+  re-locks the method on the new text (Black formatting, workflow syncs).
+
+### Drag-and-drop
+
+Qt WebEngine only forwards plain text into the page, so the view
+(`_DropAwareWebView`) handles drags whose MIME type is in
+`DROP_MIME_TYPES` in Python. `MonacoScriptEditor` asks the page for the
+line under the drop (`monacoEditor.lineAtPoint`) and inserts the snippet at
+the end of that method, with the same rules as the QScintilla editor:
+parameters only from the current file or `main_parameters.py`, no drops on
+locked lines, and Black runs after command drops.
 
 ## Keyboard Shortcuts
 
