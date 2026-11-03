@@ -232,6 +232,9 @@ example/RTD/
 example/Dani/
 example/test_sim/
 
+# Scratch dirs the chemunited-sim tests create (and wipe) on every run
+examples/simulation/test_*_tmp/
+
 # Test Temporal files
 .flowchem-sim/
 .pre-commit-cache*
