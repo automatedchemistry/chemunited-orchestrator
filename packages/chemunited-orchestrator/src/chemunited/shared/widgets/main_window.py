@@ -13,7 +13,10 @@ from qfluentwidgets import (
 from qframelesswindow import FramelessWindow, StandardTitleBar
 
 from chemunited.shared.enums import WindowCategory
-from chemunited.shared.widgets.app_theme import apply_titlebar_theme
+from chemunited.shared.widgets.app_theme import (
+    apply_app_palette,
+    apply_titlebar_theme,
+)
 from chemunited.shared.widgets.busy_status import BusyStatusController
 from chemunited.shared.widgets.loggings_widget import FrameLoggings
 
@@ -101,6 +104,10 @@ class WindowBase(FramelessWindow):
 
     def setQss(self):
         """Set the QSS"""
+        # Also covers startup with a saved dark theme: buildUi runs once the
+        # QApplication exists, which init_theme() cannot rely on.
+        apply_app_palette()
+
         color = "dark" if isDarkTheme() else "light"
         path = f":/styles/qss/{color}/{self.QSS_FILE}"
 

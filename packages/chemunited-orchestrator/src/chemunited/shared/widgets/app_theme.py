@@ -16,6 +16,8 @@ Responsibilities:
   the saved mode (first run: ``AUTO``), and hook the global broadcast so
   that every later change re-applies across open windows.
 - ``set_theme_mode()``: apply and persist a manual override.
+- ``apply_app_palette()``: swap the application palette, which paints the
+  window background and plain Qt widgets (lists, line edits, separators).
 - ``apply_theme_change()``: the broadcast — re-applies window-level QSS
   (``setQss`` on our window bases), schedules repaints for widgets that
   derive their colors from ``isDarkTheme()`` at paint time, and calls
@@ -35,9 +37,9 @@ from pathlib import Path
 from typing import Callable
 from weakref import WeakMethod
 
-from PyQt5.QtGui import QColor
+from PyQt5.QtGui import QColor, QPalette
 from PyQt5.QtWidgets import QApplication, QWidget
-from qfluentwidgets import Theme, isDarkTheme, qconfig
+from qfluentwidgets import Theme, isDarkTheme, qconfig, themeColor
 from qfluentwidgets.common.style_sheet import setTheme
 
 logger = logging.getLogger(__name__)
@@ -51,9 +53,14 @@ _strong_observers: list[Callable[[], None]] = []
 
 _broadcast_connected = False
 
-# Window chrome colors, mirroring shared/resources/qss/main_window.qss.
-_LIGHT_WINDOW_BG = "rgb(249, 249, 249)"
-_DARK_WINDOW_BG = "rgb(39, 39, 39)"
+# Canvas (QGraphicsView) colors, mirroring shared/resources/qss/main_window.qss.
+# The window background comes from the application palette (apply_app_palette)
+# so it stays a shade apart from the canvases.
+_LIGHT_SURFACE_BG = "rgb(249, 249, 249)"
+_DARK_SURFACE_BG = "rgb(39, 39, 39)"
+
+# Platform (light) palette, saved before the first dark swap.
+_light_palette: QPalette | None = None
 
 
 def _config_path() -> Path:
@@ -110,12 +117,80 @@ def unregister_theme_observer(callback: Callable[[], None]) -> None:
             _observers.remove(entry)
 
 
+def _dark_palette(base: QPalette) -> QPalette:
+    """``base`` with the Fluent dark colors for windows and plain Qt widgets."""
+    palette = QPalette(base)
+    text = QColor(255, 255, 255, 217)
+    disabled_text = QColor(255, 255, 255, 92)
+    accent = themeColor()
+
+    for role, color in (
+        (QPalette.Window, QColor(32, 32, 32)),
+        (QPalette.Base, QColor(39, 39, 39)),
+        (QPalette.AlternateBase, QColor(45, 45, 45)),
+        (QPalette.Button, QColor(45, 45, 45)),
+        (QPalette.WindowText, text),
+        (QPalette.Text, text),
+        (QPalette.ButtonText, text),
+        (QPalette.BrightText, QColor(255, 255, 255)),
+        # Shading for frames and sunken separator lines.
+        (QPalette.Light, QColor(80, 80, 80)),
+        (QPalette.Midlight, QColor(60, 60, 60)),
+        (QPalette.Mid, QColor(50, 50, 50)),
+        (QPalette.Dark, QColor(20, 20, 20)),
+        (QPalette.Shadow, QColor(0, 0, 0)),
+        (QPalette.Highlight, accent),
+        (QPalette.HighlightedText, QColor(255, 255, 255)),
+        (QPalette.Link, accent),
+        (QPalette.ToolTipBase, QColor(43, 43, 43)),
+        (QPalette.ToolTipText, text),
+        (QPalette.PlaceholderText, QColor(255, 255, 255, 115)),
+    ):
+        palette.setColor(role, color)
+
+    for role in (QPalette.WindowText, QPalette.Text, QPalette.ButtonText):
+        palette.setColor(QPalette.Disabled, role, disabled_text)
+    return palette
+
+
+def apply_app_palette() -> None:
+    """Swap the application palette to match the current theme.
+
+    The palette paints the window background and plain Qt widgets. It has to
+    be application-wide: under a window stylesheet, child widgets resolve their
+    palette from the application, not from the window. A blanket ``QWidget``
+    background rule would instead paint a strip behind every label.
+    """
+    global _light_palette
+
+    if QApplication.instance() is None:
+        return
+    if _light_palette is None:
+        # Copy every role explicitly: setPalette() keeps the current value of
+        # any role the new palette leaves unset, so a plain copy would not
+        # undo the dark swap (e.g. Link).
+        current = QApplication.palette()
+        _light_palette = QPalette()
+        for group in (QPalette.Active, QPalette.Inactive, QPalette.Disabled):
+            for role in range(QPalette.NColorRoles):
+                color_role = QPalette.ColorRole(role)
+                _light_palette.setBrush(
+                    group, color_role, current.brush(group, color_role)
+                )
+
+    QApplication.setPalette(
+        _dark_palette(_light_palette) if isDarkTheme() else _light_palette
+    )
+
+
 def apply_theme_change() -> None:
     """Re-apply the current theme across the application.
 
     Emitted after ``themeChangedFinished``, i.e. after qfluentwidgets has
     already swapped its own stylesheets.
     """
+    apply_app_palette()
+
     # Window-level QSS on our window bases (loads :/styles/qss/{color}/...).
     for window in QApplication.topLevelWidgets():
         apply_native_titlebar_theme(window)
@@ -194,25 +269,17 @@ def window_chrome_qss() -> str:
     """Chrome QSS mirroring ``:/styles/qss/{color}/main_window.qss``.
 
     Used by windows that do not run through ``WindowBase`` (plain QMainWindow
-    windows and frameless dialogs) so that every window paints the same
-    background in both themes.
+    windows and frameless dialogs) so that their canvases match in both
+    themes. The window background itself comes from ``apply_app_palette()``.
     """
-    bg = _DARK_WINDOW_BG if isDarkTheme() else _LIGHT_WINDOW_BG
+    surface = _DARK_SURFACE_BG if isDarkTheme() else _LIGHT_SURFACE_BG
     return f"""
-        QWidget {{
-            border-right: none;
-            border-bottom: none;
-            border-top: none;
-            border-left: none;
-            background-color: {bg};
-        }}
-
         QGraphicsView {{
             border-right: none;
             border-bottom: none;
             border-top: none;
             border-left: none;
-            background-color: {bg};
+            background-color: {surface};
         }}
         """
 
@@ -299,6 +366,7 @@ class ThemedChromeMixin:
         from PyQt5.QtWidgets import QWidget
 
         widget = cast(QWidget, self)
+        apply_app_palette()
         widget.setStyleSheet(window_chrome_qss())
         apply_native_titlebar_theme(widget)
 
