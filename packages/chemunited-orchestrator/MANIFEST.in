@@ -1,0 +1,9 @@
+# Include all resource files
+recursive-include src/chemunited/shared/resources *.qss *.qrc *.svg *.ico *.json *.html *.py *.js *.css *.ttf *.md *.txt
+recursive-include src/chemunited/shared/resources/components *
+recursive-include src/chemunited/shared/resources/icons *
+recursive-include src/chemunited/shared/resources/lexer *
+recursive-include src/chemunited/shared/resources/monaco *
+recursive-include src/chemunited/shared/resources/qss *
+recursive-include src/chemunited/shared/resources/scripts *
+recursive-include src/chemunited/mcp *.md

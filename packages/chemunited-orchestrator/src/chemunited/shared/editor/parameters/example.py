@@ -16,7 +16,6 @@ def some_method(): ...
 
 
 class MainParameter(BaseModel):
-
     sample_loop_volume: Annotated[ChemUnitQuantity, ChemQuantityValidator("ml")] = (
         Field(
             title="Sample Loop Volume",

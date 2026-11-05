@@ -1,0 +1,3 @@
+# Qt-compiled resource files are binary (UTF-16)
+packages/chemunited-orchestrator/src/chemunited/shared/resources/resources_rc.py -diff -text
+packages/chemunited-orchestrator/src/chemunited/shared/resources/resources_rc.qrc -text
