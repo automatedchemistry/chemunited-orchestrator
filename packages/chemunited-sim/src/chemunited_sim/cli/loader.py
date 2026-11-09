@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import importlib.util
 import json
+import re
 import sys
 import tempfile
 import zipfile
@@ -12,6 +13,7 @@ from pathlib import Path
 from types import ModuleType
 
 from loguru import logger
+from pydantic import BaseModel
 
 from chemunited_core.components import ComponentData
 from chemunited_core.compounds import COMPOUNDS
@@ -23,11 +25,24 @@ from ..adapter.models import HydraulicGraph
 from .builder import PlatformBuilder
 
 
+@dataclass(frozen=True)
+class SequenceStep:
+    """One entry of a protocol: the process, its index and its parameters."""
+
+    process: str
+    index: int
+    params: dict
+
+    @property
+    def key(self) -> str:
+        return f"{self.process}_{self.index}"
+
+
 @dataclass
 class ProjectState:
     project_path: Path
     processes: dict[str, type[Process]]
-    configs: dict[str, type]  # process name → ProcessConfig class
+    configs: dict[str, type[BaseModel]]  # process name → ProcessConfig class
     components: dict[str, ComponentData]
     graph: HydraulicGraph
     reactions_map: dict | None = None
@@ -125,7 +140,7 @@ def load_project(path: Path) -> ProjectState:
         )
 
     processes: dict[str, type[Process]] = protocols_module.PROCESSES
-    configs: dict[str, type] = getattr(protocols_module, "CONFIGS", {})
+    configs: dict[str, type[BaseModel]] = getattr(protocols_module, "CONFIGS", {})
     logger.info("Processes available: {}", list(processes))
 
     COMPOUNDS.clear()
@@ -192,29 +207,28 @@ def resolve_historical_file(project_dir: Path, filename: str | None) -> Path:
     return resolved
 
 
-def parse_historical_file(path: Path) -> tuple[dict, list[tuple[str, dict]]]:
-    """Parse a historical JSON file into (main_parameter, process_sequence).
+def parse_historical_file(path: Path) -> tuple[dict, list[SequenceStep]]:
+    """Parse a historical JSON file into (main_parameter, sequence).
 
-    process_sequence is sorted by the integer suffix of each <Name>_<index> key.
+    The sequence is in key order, as ``RunnerService._parse_sequence`` reads it for
+    a real run. The index in a <Name>_<index> key says nothing about the order.
     """
     logger.debug("Parsing historical file: {}", path.name)
     data: dict = json.loads(path.read_text(encoding="utf-8"))
     main_parameter = data.get("main_parameter", {})
 
-    entries: list[tuple[int, str, dict]] = []
+    sequence: list[SequenceStep] = []
     for key, value in data.items():
         if key == "main_parameter":
             continue
-        parts = key.rsplit("_", 1)
-        if len(parts) == 2 and parts[1].isdigit():
-            entries.append((int(parts[1]), parts[0], value))
+        match = re.fullmatch(r"(.+)_(\d+)", key)
+        if match:
+            sequence.append(SequenceStep(match.group(1), int(match.group(2)), value))
 
-    entries.sort(key=lambda e: e[0])
-    process_sequence = [(name, kwargs) for _, name, kwargs in entries]
     logger.info(
         "Historical file '{}' parsed | {} process step(s): {}",
         path.name,
-        len(process_sequence),
-        [n for n, _ in process_sequence],
+        len(sequence),
+        [step.key for step in sequence],
     )
-    return main_parameter, process_sequence
+    return main_parameter, sequence

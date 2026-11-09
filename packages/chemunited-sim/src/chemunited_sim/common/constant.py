@@ -48,6 +48,18 @@ MIN_POCKET_VOLUME: float = 1e-18
 DEFICIT_FILL_ABS_TOL: float = 1e-12
 DEFICIT_FILL_REL_TOL: float = 1e-6
 
+# Neighbouring pockets merge when they hold the same fluid, so that a tube's
+# queue stays short: without this, every step adds a pocket that nothing removes.
+# Same fluid means the same phase, each species' concentration within this
+# fraction, and temperatures within this many kelvin.
+POCKET_MERGE_CONCENTRATION_TOL: float = 1e-3
+POCKET_MERGE_TEMPERATURE_TOL: float = 0.1
+
+# A pocket smaller than this merges into a same-phase neighbour whatever it holds.
+# It's what bounds the queue in an idle line, where a closed valve's tiny leak
+# brings a slightly different mixture every step. Unit: m³ (0.05 µL).
+POCKET_MERGE_TINY_VOLUME: float = 5e-11
+
 # Safety limit on the number of JUNCTION hops a pocket may traverse in a
 # single step.  Guards against degenerate graph topologies with cycles.
 MAX_JUNCTION_HOPS: int = 32
@@ -76,3 +88,14 @@ RECORDER_INTERVAL_DEFAULT: float = 2.0
 # Shorter values give finer spatial resolution at the cost of more rows.
 # Unit: m.
 RECORDER_CELL_LENGTH_M: float = 0.01
+
+# What counts as a change, for a recorder that skips unchanged frames. Differences
+# smaller than these aren't worth a frame. Units: Pa, m³/s, m³, K.
+RECORDER_SAME_PRESSURE: float = 1.0
+RECORDER_SAME_FLOW: float = 1e-10
+RECORDER_SAME_VOLUME: float = 1e-10
+RECORDER_SAME_TEMPERATURE: float = 0.01
+# Significant figures compared for an inventory's moles. Gas is coarser, because
+# its composition drifts on for a long time without mattering, as under bubbling.
+RECORDER_SAME_LIQUID_MOLES_FIGURES: int = 4
+RECORDER_SAME_GAS_MOLES_FIGURES: int = 2

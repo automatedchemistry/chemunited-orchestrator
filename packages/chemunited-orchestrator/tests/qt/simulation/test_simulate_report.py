@@ -11,11 +11,13 @@ from chemunited.elements.component.glossary.valve.solenoid_valve_graph import (
     StatusOverlaySolenoid,
 )
 from chemunited.setup import SetupWindow
+from chemunited.simulation import simulate_report
 from chemunited.simulation.simulate_report import (
     _LENGTH_PROFILE_KEY,
     ProfilePlot,
     ProfilesWidget,
     SimDbReader,
+    SimRunWorker,
 )
 from chemunited_core.compounds import COMPOUNDS, ChemicalEntity
 from chemunited_sim.recorder.schema import create_all_tables
@@ -84,6 +86,99 @@ class TestProfilesWidgetScrubBar:
         qtbot.wait(_THROTTLE_WAIT_MS)
 
         assert received == [24.0]
+
+
+class _Response:
+    def __init__(self, payload: dict) -> None:
+        self._payload = payload
+        self.status_code = 200
+        self.content = b"{}"
+
+    def json(self) -> dict:
+        return self._payload
+
+    def raise_for_status(self) -> None:
+        pass
+
+
+class TestSimRunWorkerOutcome:
+    def _run(
+        self, qtbot: QtBot, tmp_path: Path, monkeypatch, status: dict
+    ) -> tuple[list[str], list[str], list[str]]:
+        monkeypatch.setattr(simulate_report, "_is_port_in_use", lambda _port: True)
+        monkeypatch.setattr(
+            simulate_report, "_wait_for_api", lambda *_args, **_kwargs: True
+        )
+        worker = SimRunWorker("Process", tmp_path)
+        answers = {"/status": status, "/simulation/db": {"db_path": "run.db"}}
+        monkeypatch.setattr(worker, "_post", lambda *_args, **_kwargs: _Response({}))
+        monkeypatch.setattr(
+            worker, "_get", lambda endpoint, **_kwargs: _Response(answers[endpoint])
+        )
+        monkeypatch.setattr(worker, "msleep", lambda _ms: None)
+        done: list[str] = []
+        failed: list[str] = []
+        run_failed: list[str] = []
+        worker.simulation_done.connect(done.append)
+        worker.simulation_failed.connect(failed.append)
+        worker.run_failed.connect(run_failed.append)
+
+        worker._run_pipeline()
+
+        return done, failed, run_failed
+
+    def test_finished_run_only_reports_done(
+        self, qtbot: QtBot, tmp_path: Path, monkeypatch
+    ) -> None:
+        status = {
+            "sim_status": "idle",
+            "current_t": 5.0,
+            "last_run": {"outcome": "finished", "error": None},
+        }
+
+        done, failed, run_failed = self._run(qtbot, tmp_path, monkeypatch, status)
+
+        assert done == ["run.db"]
+        assert failed == []
+        assert run_failed == []
+
+    def test_failed_run_still_opens_its_results_and_says_why(
+        self, qtbot: QtBot, tmp_path: Path, monkeypatch
+    ) -> None:
+        status = {
+            "sim_status": "idle",
+            "current_t": 5.0,
+            "last_run": {
+                "outcome": "failed",
+                "error": "work (iteration 0): the line is blocked",
+                "process": "Boom_1",
+            },
+        }
+
+        done, failed, run_failed = self._run(qtbot, tmp_path, monkeypatch, status)
+
+        assert done == ["run.db"]
+        assert failed == []
+        assert run_failed == ["Boom_1: work (iteration 0): the line is blocked"]
+
+    def test_server_without_last_run_is_treated_as_done(
+        self, qtbot: QtBot, tmp_path: Path, monkeypatch
+    ) -> None:
+        status = {"sim_status": "idle", "current_t": 5.0}
+
+        done, _failed, run_failed = self._run(qtbot, tmp_path, monkeypatch, status)
+
+        assert done == ["run.db"]
+        assert run_failed == []
+
+    def test_profiles_widget_shows_why_the_run_stopped(self, qtbot: QtBot) -> None:
+        widget = ProfilesWidget()
+        qtbot.addWidget(widget)
+        widget.on_sim_done()
+
+        widget.show_run_failed("Boom_1: the line is blocked")
+
+        assert "Boom_1: the line is blocked" in widget._label.text()
 
 
 class TestSimDbReaderLengthProfile:

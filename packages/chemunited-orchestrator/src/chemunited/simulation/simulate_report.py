@@ -287,6 +287,8 @@ class SimRunWorker(QThread):
     time_updated = pyqtSignal(float)
     simulation_done = pyqtSignal(str)
     simulation_failed = pyqtSignal(str)
+    # The run ended early, but what it recorded is still there to look at.
+    run_failed = pyqtSignal(str)
 
     def __init__(self, process: str, project_path: Path, parent=None) -> None:
         super().__init__(parent)
@@ -412,6 +414,7 @@ class SimRunWorker(QThread):
             self.time_updated.emit(current_t)
 
             if sim_status == "idle":
+                last_run = data.get("last_run") or {}
                 break
             if sim_status == "no_project":
                 self.simulation_failed.emit(
@@ -432,6 +435,10 @@ class SimRunWorker(QThread):
             return
 
         self.simulation_done.emit(db_path)
+        if last_run.get("outcome") == "failed":
+            where = last_run.get("process")
+            error = last_run.get("error") or "unknown error"
+            self.run_failed.emit(f"{where}: {error}" if where else error)
 
 
 # ---------------------------------------------------------------------------
@@ -754,6 +761,10 @@ class ProfilesWidget(QWidget):
         self._header_stack.setCurrentIndex(0)
         self._label.setText("Click a component to see its profiles")
 
+    def show_run_failed(self, message: str) -> None:
+        """The run stopped early. What it recorded up to then stays on screen."""
+        self._label.setText(f"The run stopped early. {message}")
+
     # --- Normal profile loading ---
 
     def set_db(self, db_path: Path | None) -> None:
@@ -925,6 +936,7 @@ class SimulateWindowReport(QMainWindow):
         self._worker.time_updated.connect(self.widget_profiles.update_sim_time)
         self._worker.simulation_done.connect(self._on_sim_done)
         self._worker.simulation_failed.connect(self._on_sim_failed)
+        self._worker.run_failed.connect(self._on_run_failed)
         self._worker.start()
 
     def _load_design_snapshot(self) -> None:
@@ -969,6 +981,10 @@ class SimulateWindowReport(QMainWindow):
         self.widget_profiles.set_scrub_times(times)
         if times:
             self._apply_scrub(times[-1])
+
+    def _on_run_failed(self, message: str) -> None:
+        logger.error(f"Simulated run failed: {message}")
+        self.widget_profiles.show_run_failed(message)
 
     def _on_sim_failed(self, message: str) -> None:
         self._stop_pool_tailer()

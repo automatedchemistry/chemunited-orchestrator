@@ -1,10 +1,11 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Annotated
 
 from pint.errors import DimensionalityError
 from pydantic import Field
 from typing_extensions import override
 
+from chemunited_core.common.constant import AMBIENT_TEMPERATURE_K
 from chemunited_core.common.enums import ConnectionType, GroupParameterCategory
 from chemunited_core.components import ComponentMode, NeutralComponentData
 from chemunited_core.components.command import PutResult
@@ -13,6 +14,8 @@ from chemunited_quantities import (
     ChemQuantityValidator,
     ChemUnitQuantity,
 )
+
+_KELVIN_AT_0_DEGC = 273.15
 
 
 def _temperature_quantity(value: object) -> ChemUnitQuantity:
@@ -52,19 +55,22 @@ class TemperatureControlData(NeutralComponentData):
 
     @override
     def apply(self, command: str, **kwargs) -> PutResult:
-        if command not in {"temperature", "set_temperature"}:
+        if command not in {"temperature", "set_temperature", "set-temperature"}:
             return PutResult()
 
-        if "temp" not in kwargs:
+        # flowchem's temperature controls take `temp`, its Peltier `temperature`.
+        setpoint = kwargs.get("temp", kwargs.get("temperature"))
+        if setpoint is None:
             return PutResult()
 
-        self.temperature = _temperature_quantity(kwargs["temp"])
+        self.temperature = _temperature_quantity(setpoint)
         return PutResult()
 
     @override
     def get(self, command: str, **kwargs) -> float | None:
+        """The setpoint in degC, which is what the real devices report."""
         if command in {"temperature", "temperature-setpoint"}:
-            return self.temperature_value
+            return self.temperature_value - _KELVIN_AT_0_DEGC
         return None
 
     @override
@@ -107,3 +113,34 @@ class HeiConnectTemperatureControlMode(TemperatureControlMode): ...
 
 @dataclass
 class HeiConnectTemperatureControlData(TemperatureControlData): ...
+
+
+class TemperatureSensorMode(ComponentMode):
+    measures: str = Field(
+        default="",
+        title="Measured Vessel",
+        description=(
+            "Name of the vessel this sensor reads in a simulation. Leave empty "
+            "to read the only vessel with a heat link."
+        ),
+        json_schema_extra={
+            "group": GroupParameterCategory.PROPERTY.value,
+        },
+    )
+
+
+@dataclass
+class TemperatureSensorData(NeutralComponentData):
+    """A thermocouple or PT100. A simulation keeps ``reading_k`` current."""
+
+    measures: str = ""
+    reading_k: float = field(
+        default=AMBIENT_TEMPERATURE_K, init=False, repr=False, compare=False
+    )
+
+    @override
+    def get(self, command: str, **kwargs) -> float | None:
+        """The reading in degC, which is what the real devices report."""
+        if command == "temperature":
+            return self.reading_k - _KELVIN_AT_0_DEGC
+        return None

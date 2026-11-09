@@ -3,6 +3,10 @@
 from __future__ import annotations
 
 import threading
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from .lockstep import Lockstep
 
 
 class SimClock:
@@ -11,6 +15,8 @@ class SimClock:
     def __init__(self) -> None:
         self._t: float = 0.0
         self._lock = threading.Lock()
+        # Set for a run whose physics waits for the workflow.
+        self.lockstep: Lockstep | None = None
 
     def now(self) -> float:
         with self._lock:

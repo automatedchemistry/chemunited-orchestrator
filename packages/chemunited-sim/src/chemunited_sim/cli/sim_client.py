@@ -34,6 +34,9 @@ def _wait_until_sim_time(
     stop_event: threading.Event,
 ) -> None:
     """Wait until the simulated deadline, aborting on simulation stop."""
+    if clock.lockstep is not None:
+        clock.lockstep.wait_until(deadline)
+        return
     while clock.now() < deadline:
         if stop_event.is_set():
             raise RunCancelledError("Run was cancelled.")

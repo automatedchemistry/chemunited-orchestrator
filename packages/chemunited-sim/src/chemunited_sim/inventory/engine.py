@@ -25,6 +25,7 @@ from ..common.constant import (
     ATMOSPHERE_PRESSURE_PA,
     MIN_POCKET_VOLUME,
 )
+from ..common.heat_capacity import molar_cp
 from ..hydraulics.models import HydraulicState
 from ..transport.models import Pocket
 from .models import InventoryState
@@ -45,9 +46,8 @@ def _merge_species(target: dict[str, float], incoming: dict[str, float]) -> None
 
 def _thermal_mass(species_moles: dict[str, float], phase_kind: PhaseKind) -> float:
     """Sum of n_i * Cp_i (J/K) for all tracked species."""
-    phase_str = "liquid" if phase_kind == PhaseKind.LIQUID else "gas"
     return sum(
-        moles * COMPOUNDS[s].cp(phase_str).to_base_units().magnitude
+        moles * molar_cp(s, phase_kind)
         for s, moles in species_moles.items()
         if s in COMPOUNDS
     )
@@ -205,11 +205,13 @@ def assimilate(
                     inv_node_id,
                 )
             else:
-                logger.warning(
-                    "No tracked species in vessel {} or arriving pockets - "
-                    "falling back to volume-weighted temperature blend.",
-                    inv_node_id,
-                )
+                if not arrival_state.warned_no_thermal_mass:
+                    arrival_state.warned_no_thermal_mass = True
+                    logger.warning(
+                        "No tracked species in vessel {} or arriving pockets - "
+                        "falling back to volume-weighted temperature blend.",
+                        inv_node_id,
+                    )
                 total = v_before + v_arriving
                 t_arriving = sum(p.temperature * p.volume for p in pockets) / v_arriving
                 arrival_state.temperature = (
@@ -222,16 +224,20 @@ def emit(
     departures: dict[str, float],
     port_map: PortAccessMap,
     variable_volume_inventory_ids: set[str] | None = None,
-) -> dict[str, Pocket]:
+) -> dict[str, list[Pocket]]:
     """Draw replacement pockets from vessel inventories for each departing edge.
 
     For each entry in *departures*, looks up the inventory node and port
-    access via *port_map*, then:
+    access via *port_map*, then draws the volume:
 
-    - ``TOP`` port → prefers a gas-phase pocket, then falls back to liquid.
-    - ``BOTTOM`` port → prefers a liquid-phase pocket, then falls back to gas.
+    - ``TOP`` port → gas first, then liquid for whatever gas couldn't cover.
+    - ``BOTTOM`` port → liquid first, then gas for whatever liquid couldn't cover.
 
-    The emitted pocket carries the vessel's current temperature and pressure
+    So a vessel's last liquid leaves through its bottom port, followed in the same
+    step by the gas behind it, rather than stranding because less is left than the
+    step moves.
+
+    The emitted pockets carry the vessel's current temperature and pressure
     (post-assimilation, post-reaction if the worker calls reactions between
     assimilate and emit).
 
@@ -239,10 +245,8 @@ def emit(
     inventory in-place.
 
     **Phase availability**: the vessel-is-always-full principle means total
-    phase runout should not occur in a correctly configured network.  If the
-    preferred phase is unavailable, the opposite phase is used first.  Carrier
-    fallback is used only when neither physical phase can provide the full
-    requested volume.
+    phase runout should not occur in a correctly configured network.  Carrier
+    air makes up the volume only when both phases together can't provide it.
 
     Parameters
     ----------
@@ -260,12 +264,12 @@ def emit(
 
     Returns
     -------
-    dict[str, Pocket]
-        ``{edge_id: Pocket}`` — one pocket per departing edge that has a
-        valid port-map entry.  Passed to
+    dict[str, list[Pocket]]
+        ``{edge_id: [Pocket, ...]}`` for each departing edge that has a valid
+        port-map entry, first to leave first.  Passed to
         :func:`~chemunited_sim.transport.engine.inject`.
     """
-    emitted: dict[str, Pocket] = {}
+    emitted: dict[str, list[Pocket]] = {}
     variable_ids = variable_volume_inventory_ids or set()
 
     for edge_id, dV in departures.items():
@@ -289,55 +293,46 @@ def emit(
         fallback_phase = (
             PhaseKind.LIQUID if preferred_phase == PhaseKind.GAS else PhaseKind.GAS
         )
-        phase = _select_emit_phase(state, preferred_phase, fallback_phase, dV)
-        available = _phase_volume(state, phase)
-        preferred_available = _phase_volume(state, preferred_phase)
-        fallback_available = _phase_volume(state, fallback_phase)
-        species = _phase_species(state, phase)
-        inventory_vol = min(max(0.0, available), dV)
 
-        emit_species: dict[str, float] = {}
-        if inventory_vol > 0.0 and available > 0.0:
-            fraction = inventory_vol / available
-            emit_species = {k: v * fraction for k, v in species.items()}
+        pockets: list[Pocket] = []
+        remaining = dV
+        for phase in (preferred_phase, fallback_phase):
+            pocket = _take_from_phase(state, phase, remaining, state.pressure)
+            if pocket is None:
+                continue
+            pockets.append(pocket)
+            remaining -= pocket.volume
+            if not is_variable_volume:
+                _add_gas_carrier(state, pocket.volume)
+            if remaining < MIN_POCKET_VOLUME:
+                break
 
-            # Remove emitted fraction from inventory in-place.
-            for k in list(species):
-                species[k] *= 1.0 - fraction
-        if phase == PhaseKind.GAS:
-            state.gas_volume = max(0.0, state.gas_volume - inventory_vol)
-        else:
-            state.liq_volume = max(0.0, state.liq_volume - inventory_vol)
-        if not is_variable_volume:
-            _add_gas_carrier(state, inventory_vol)
-
-        deficit = dV - inventory_vol
-        if deficit > 0.0:
+        if remaining >= MIN_POCKET_VOLUME:
             logger.warning(
-                "emit: inventory node '{}' selected phase {} needs carrier "
-                "deficit={:.3e} m^3; preferred={} available={:.3e} m^3, "
-                "fallback={} available={:.3e} m^3, requested dV={:.3e} m^3. "
-                "Check vessel initial conditions and port access.",
+                "emit: inventory node '{}' needs carrier deficit={:.3e} m^3; "
+                "liquid available={:.3e} m^3, gas available={:.3e} m^3, "
+                "requested dV={:.3e} m^3. Check vessel initial conditions and "
+                "port access.",
                 entry.inv_node_id,
-                _phase_name(phase),
-                deficit,
-                _phase_name(preferred_phase),
-                preferred_available,
-                _phase_name(fallback_phase),
-                fallback_available,
+                remaining,
+                state.liq_volume,
+                state.gas_volume,
                 dV,
             )
-        if phase == PhaseKind.GAS and deficit > 0.0:
-            n_air = state.pressure * deficit / (IDEAL_GAS_CONSTANT * state.temperature)
-            emit_species["air"] = emit_species.get("air", 0.0) + n_air
+            n_air = (
+                state.pressure * remaining / (IDEAL_GAS_CONSTANT * state.temperature)
+            )
+            pockets.append(
+                Pocket(
+                    phase_kind=PhaseKind.GAS,
+                    volume=remaining,
+                    species_moles={"air": n_air},
+                    temperature=state.temperature,
+                    pressure=state.pressure,
+                )
+            )
 
-        emitted[edge_id] = Pocket(
-            phase_kind=phase,
-            volume=dV,
-            species_moles=emit_species,
-            temperature=state.temperature,
-            pressure=state.pressure,
-        )
+        emitted[edge_id] = pockets
 
     return emitted
 
@@ -391,25 +386,32 @@ def _vent_to_capacity(state: InventoryState) -> None:
         _remove_phase_volume(state, PhaseKind.LIQUID, excess)
 
 
-def _select_emit_phase(
+def _take_from_phase(
     state: InventoryState,
-    preferred_phase: PhaseKind,
-    fallback_phase: PhaseKind,
-    dV: float,
-) -> PhaseKind:
-    preferred_available = _phase_volume(state, preferred_phase)
-    if preferred_available >= dV:
-        return preferred_phase
+    phase: PhaseKind,
+    volume: float,
+    pressure: float,
+) -> Pocket | None:
+    """Move up to *volume* of *phase* out of *state*, or None if it holds too little."""
+    available = _phase_volume(state, phase)
+    taken = min(max(0.0, available), volume)
+    if taken < MIN_POCKET_VOLUME:
+        return None
 
-    fallback_available = _phase_volume(state, fallback_phase)
-    if fallback_available >= dV:
-        return fallback_phase
+    species = _phase_species(state, phase)
+    fraction = taken / available
+    moles = {k: v * fraction for k, v in species.items()}
+    for k in list(species):
+        species[k] *= 1.0 - fraction
+    _set_phase_volume(state, phase, available - taken)
 
-    if preferred_available > 0.0:
-        return preferred_phase
-    if fallback_available > 0.0:
-        return fallback_phase
-    return preferred_phase
+    return Pocket(
+        phase_kind=phase,
+        volume=taken,
+        species_moles=moles,
+        temperature=state.temperature,
+        pressure=pressure,
+    )
 
 
 def _phase_volume(state: InventoryState, phase: PhaseKind) -> float:
@@ -429,17 +431,13 @@ def _phase_species(state: InventoryState, phase: PhaseKind) -> dict[str, float]:
     )
 
 
-def _phase_name(phase: PhaseKind) -> str:
-    return "GAS" if phase == PhaseKind.GAS else "LIQUID"
-
-
 def emit_from_sources(
     source_map: SourceMap,
     graph: HydraulicGraph,
     hyd_state: HydraulicState,
     states: dict[str, InventoryState],
     dt: float,
-) -> dict[str, Pocket]:
+) -> dict[str, list[Pocket]]:
     """Emit species-carrying pockets from FlowSource boundary components.
 
     Unlike vessel emission, FlowSource nodes are infinite reservoirs — their
@@ -466,14 +464,15 @@ def emit_from_sources(
 
     Returns
     -------
-    dict[str, Pocket]
-        ``{edge_id: Pocket}`` — one pocket per source edge with nonzero flow.
+    dict[str, list[Pocket]]
+        ``{edge_id: [Pocket, ...]}`` for each source edge with nonzero flow,
+        first to leave first.
     """
     from chemunited_core.figure_registry.pumps import (
         SyringePumpData,  # local to avoid circular
     )
 
-    emitted: dict[str, Pocket] = {}
+    emitted: dict[str, list[Pocket]] = {}
 
     for edge_id, entry in source_map.items():
         q = hyd_state.flows.get(edge_id, 0.0)
@@ -501,49 +500,42 @@ def emit_from_sources(
                 if preferred_phase == PhaseKind.LIQUID
                 else PhaseKind.LIQUID
             )
-            phase = _select_emit_phase(state, preferred_phase, fallback_phase, dV)
-            available = _phase_volume(state, phase)
-            preferred_available = _phase_volume(state, preferred_phase)
-            fallback_available = _phase_volume(state, fallback_phase)
-            species = _phase_species(state, phase)
-            emit_vol = min(max(0.0, available), dV)
-            species_moles: dict[str, float] = {}
+            already_empty = state.liq_volume + state.gas_volume < MIN_POCKET_VOLUME
 
-            if emit_vol > 0.0 and available > 0.0:
-                fraction = emit_vol / available
-                species_moles = {k: v * fraction for k, v in species.items()}
-                for k in list(species):
-                    species[k] *= 1.0 - fraction
-                _set_phase_volume(state, phase, available - emit_vol)
+            pockets: list[Pocket] = []
+            remaining = dV
+            for phase in (preferred_phase, fallback_phase):
+                pocket = _take_from_phase(state, phase, remaining, P)
+                if pocket is None:
+                    continue
+                pockets.append(pocket)
+                remaining -= pocket.volume
+                if remaining < MIN_POCKET_VOLUME:
+                    break
 
-            deficit = dV - emit_vol
-            if deficit > 0.0:
-                logger.warning(
-                    "emit_from_sources: SyringePump '{}' ran dry; selected "
-                    "phase {} available={:.3e} m^3, preferred={} "
-                    "available={:.3e} m^3, fallback={} available={:.3e} m^3, "
-                    "requested dV={:.3e} m^3, carrier deficit={:.3e} m^3.",
-                    entry.comp.name,
-                    _phase_name(phase),
-                    available,
-                    _phase_name(preferred_phase),
-                    preferred_available,
-                    _phase_name(fallback_phase),
-                    fallback_available,
-                    dV,
-                    deficit,
-                )
-            if phase == PhaseKind.GAS and deficit > 0.0:
+            if remaining >= MIN_POCKET_VOLUME:
+                # A barrel emptying part-way through a step is the normal end of a
+                # stroke. Only pumping on from an empty barrel is worth a warning.
+                if already_empty:
+                    logger.warning(
+                        "emit_from_sources: SyringePump '{}' ran dry; "
+                        "requested dV={:.3e} m^3, carrier deficit={:.3e} m^3.",
+                        entry.comp.name,
+                        dV,
+                        remaining,
+                    )
                 n_air = P / (IDEAL_GAS_CONSTANT * AMBIENT_TEMPERATURE_K)
-                species_moles["air"] = species_moles.get("air", 0.0) + n_air * deficit
+                pockets.append(
+                    Pocket(
+                        phase_kind=PhaseKind.GAS,
+                        volume=remaining,
+                        species_moles={"air": n_air * remaining},
+                        temperature=state.temperature,
+                        pressure=P,
+                    )
+                )
 
-            emitted[edge_id] = Pocket(
-                phase_kind=phase,
-                volume=dV,
-                species_moles=species_moles,
-                temperature=state.temperature,
-                pressure=P,
-            )
+            emitted[edge_id] = pockets
         else:
             # FlowSourceData base class — infinite reservoir, constant concentration
             if primary_liquid:
@@ -552,23 +544,27 @@ def emit_from_sources(
                     species_moles = {
                         k: (n / liq.volume) * dV for k, n in liq.initial_species.items()
                     }
-                    emitted[edge_id] = Pocket(
-                        phase_kind=PhaseKind.LIQUID,
-                        volume=dV,
-                        species_moles=species_moles,
-                        temperature=AMBIENT_TEMPERATURE_K,
-                        pressure=P,
-                    )
+                    emitted[edge_id] = [
+                        Pocket(
+                            phase_kind=PhaseKind.LIQUID,
+                            volume=dV,
+                            species_moles=species_moles,
+                            temperature=AMBIENT_TEMPERATURE_K,
+                            pressure=P,
+                        )
+                    ]
                 else:
                     # No liquid declared → fall back to air
                     n_air = P / (IDEAL_GAS_CONSTANT * AMBIENT_TEMPERATURE_K)
-                    emitted[edge_id] = Pocket(
-                        phase_kind=PhaseKind.GAS,
-                        volume=dV,
-                        species_moles={"air": n_air * dV},
-                        temperature=AMBIENT_TEMPERATURE_K,
-                        pressure=P,
-                    )
+                    emitted[edge_id] = [
+                        Pocket(
+                            phase_kind=PhaseKind.GAS,
+                            volume=dV,
+                            species_moles={"air": n_air * dV},
+                            temperature=AMBIENT_TEMPERATURE_K,
+                            pressure=P,
+                        )
+                    ]
             else:
                 # direction_upward=False → gas source
                 gas = inv_node.gas_content if inv_node is not None else None
@@ -579,12 +575,14 @@ def emit_from_sources(
                 else:
                     n_air = P / (IDEAL_GAS_CONSTANT * AMBIENT_TEMPERATURE_K)
                     species_moles = {"air": n_air * dV}
-                emitted[edge_id] = Pocket(
-                    phase_kind=PhaseKind.GAS,
-                    volume=dV,
-                    species_moles=species_moles,
-                    temperature=AMBIENT_TEMPERATURE_K,
-                    pressure=P,
-                )
+                emitted[edge_id] = [
+                    Pocket(
+                        phase_kind=PhaseKind.GAS,
+                        volume=dV,
+                        species_moles=species_moles,
+                        temperature=AMBIENT_TEMPERATURE_K,
+                        pressure=P,
+                    )
+                ]
 
     return emitted

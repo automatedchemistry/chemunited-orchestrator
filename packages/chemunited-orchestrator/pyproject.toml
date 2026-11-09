@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "chemunited"
-version = "0.0.6"
+version = "0.0.7"
 description = "Desktop app for designing, simulating, and executing chemical process workflows on real automated hardware via device APIs."
 readme = "README.md"
 requires-python = ">=3.13"
@@ -24,7 +24,7 @@ dependencies = [
     "chemunited-quantities>=0.0.3",
     "chemunited-core>=0.0.6",
     "chemunited-workflow>=0.0.8",
-    "chemunited-sim[tray]>=0.0.3",
+    "chemunited-sim[tray]>=0.0.5",
     "PyQt-Fluent-Widgets>=1.7.0,<2.0",  # Qt UI
     "QScintilla>=2.14.0",
     "PyQtWebEngine>=5.15,<6",  # QWebEngineView, required by the Monaco editor
