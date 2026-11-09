@@ -12,8 +12,37 @@ from collections import defaultdict
 
 from chemunited_core.common.enums import PhaseKind
 
-from ..common.constant import MIN_POCKET_VOLUME
+from ..common.constant import (
+    MIN_POCKET_VOLUME,
+    POCKET_MERGE_CONCENTRATION_TOL,
+    POCKET_MERGE_TEMPERATURE_TOL,
+    POCKET_MERGE_TINY_VOLUME,
+)
 from .models import Pocket
+
+
+def can_merge_neighbours(first: Pocket, second: Pocket) -> bool:
+    """Whether two neighbouring pockets in a tube may become one.
+
+    Different phases never merge. A tiny pocket merges whatever it holds.
+    Otherwise both must be the same fluid: temperature and every species'
+    concentration agree within the tolerances in ``common.constant``.
+    """
+    if first.phase_kind != second.phase_kind:
+        return False
+    if (
+        first.volume < POCKET_MERGE_TINY_VOLUME
+        or second.volume < POCKET_MERGE_TINY_VOLUME
+    ):
+        return True
+    if abs(first.temperature - second.temperature) > POCKET_MERGE_TEMPERATURE_TOL:
+        return False
+    for species in first.species_moles.keys() | second.species_moles.keys():
+        one = first.species_moles.get(species, 0.0) / first.volume
+        other = second.species_moles.get(species, 0.0) / second.volume
+        if abs(one - other) > POCKET_MERGE_CONCENTRATION_TOL * max(one, other):
+            return False
+    return True
 
 
 def merge_arriving_pockets(pockets: list[Pocket]) -> list[Pocket]:

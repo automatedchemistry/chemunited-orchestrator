@@ -29,7 +29,7 @@ from chemunited_core.components import (
     VesselComponentData,
 )
 from chemunited_core.components.enums import InternalEdgeRole, PortClosure
-from chemunited_core.figure_registry import Gantry3DData, VialData
+from chemunited_core.figure_registry import Gantry1DData, VialData
 
 from .models import HydraulicEdge, HydraulicNode
 
@@ -50,7 +50,7 @@ def _is_hydraulic_active(port, comp=None) -> bool:  # type: ignore[no-untyped-de
     if port.category == ConnectionType.HYDRAULIC:
         return True
     return port.category == ConnectionType.MOVEMENT and isinstance(
-        comp, (Gantry3DData, VialData)
+        comp, (Gantry1DData, VialData)
     )
 
 

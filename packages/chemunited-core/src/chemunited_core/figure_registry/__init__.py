@@ -86,6 +86,8 @@ from chemunited_core.figure_registry.thermal import (
     PeltierCoolerTemperatureControlMode,
     TemperatureControlData,
     TemperatureControlMode,
+    TemperatureSensorData,
+    TemperatureSensorMode,
 )
 from chemunited_core.figure_registry.vessels import (
     FlowReactorData,
@@ -411,8 +413,8 @@ COMPONENTS: dict[str, ComponentDefinition] = {
         category="sensors",
     ),
     "TemperatureSensor": ComponentDefinition(
-        NeutralComponentData,
-        ComponentMode,
+        TemperatureSensorData,
+        TemperatureSensorMode,
         figure_base="PT100",
         category="sensors",
     ),

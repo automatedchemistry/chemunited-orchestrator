@@ -20,7 +20,7 @@ from chemunited_core.components.internals import InventoryNode
 from chemunited_core.components.plugflow import PlugFlowComponentData
 from chemunited_core.connections.edge import EdgeData
 from chemunited_core.figure_registry import (
-    Gantry3DData,
+    Gantry1DData,
     MultiChannelData,
     MultiChannelRelayData,
     VialData,
@@ -125,8 +125,8 @@ def _is_autosampler_contact_edge(
 
     origin = components_by_name.get(edge_data.origin)
     destination = components_by_name.get(edge_data.destination)
-    return (isinstance(origin, Gantry3DData) and isinstance(destination, VialData)) or (
-        isinstance(origin, VialData) and isinstance(destination, Gantry3DData)
+    return (isinstance(origin, Gantry1DData) and isinstance(destination, VialData)) or (
+        isinstance(origin, VialData) and isinstance(destination, Gantry1DData)
     )
 
 

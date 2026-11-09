@@ -46,6 +46,21 @@ def test_gantry1d_position_opens_selected_port() -> None:
     assert _open_edges(gantry) == {(1, 4)}
 
 
+def test_gantry1d_home_leaves_every_tube() -> None:
+    gantry = Gantry1DData.from_mode(Gantry1DMode(name="linear", position_x="3"))
+    assert gantry.selected_port == 4
+
+    gantry.apply("home", wait=True)
+
+    assert gantry.selected_port is None
+    assert all(
+        edge.resistance_override is not None for edge in gantry.internal_edges.values()
+    )
+    boundary = gantry.ports_by_number[1].boundary
+    assert boundary is not None
+    assert boundary.kind == BoundaryConditionKind.PRESSURE
+
+
 def test_gantry_defaults_to_atmospheric_head_with_closed_tray_edges() -> None:
     gantry = Gantry3DData.from_mode(Gantry3DMode(name="as"))
 

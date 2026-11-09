@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Annotated
 
 from pydantic import Field, model_validator
@@ -16,6 +16,9 @@ from chemunited_quantities import (
     ChemQuantityValidator,
     ChemUnitQuantity,
 )
+
+# What a full-stroke move runs at if no rate has been commanded yet.
+_FULL_STROKE_DEFAULT_RATE = "10 ml/min"
 
 
 def _finite_pump_duration(rate: object, volume: object) -> float:
@@ -104,8 +107,35 @@ class SyringePumpData(FlowSourceData):
     syringe_volume: ChemUnitQuantity = ChemUnitQuantity("10 ml")
     syringe_actual_volume: ChemUnitQuantity = ChemUnitQuantity("0 ml")
     direction_upward: bool = True
+    # What's in the barrel now. A simulation keeps this current, because the fill
+    # level lives in its inventory. Until then syringe_actual_volume applies.
+    fill_m3: float | None = field(default=None, init=False, repr=False, compare=False)
+    last_rate: str = field(
+        default=_FULL_STROKE_DEFAULT_RATE, init=False, repr=False, compare=False
+    )
+
+    def _current_fill_m3(self) -> float:
+        if self.fill_m3 is not None:
+            return self.fill_m3
+        return float(self.syringe_actual_volume.to_base_units().magnitude)
+
+    def _full_stroke(self, command: str, volume_m3: float) -> PutResult:
+        """Move `volume_m3` at the last commanded rate, then stop."""
+        if volume_m3 <= 0.0:
+            return PutResult()
+        self.flow_rate = (
+            ChemUnitQuantity(f"-{self.last_rate}")
+            if command == "withdraw"
+            else ChemUnitQuantity(self.last_rate)
+        )
+        self.sync_internal_state()
+        dt = _finite_pump_duration(self.last_rate, ChemUnitQuantity(volume_m3, "m^3"))
+        return PutResult(scheduled=[ScheduledCommand(dt=dt, command="stop")])
 
     def put(self, command: str, **kwargs) -> PutResult:
+        if command in ["infuse-all", "withdraw-all"]:
+            return PutResult()
+
         if command in ["infuse", "withdraw"]:
             scheduled = []
             if "volume" in kwargs:
@@ -120,7 +150,8 @@ class SyringePumpData(FlowSourceData):
 
     def apply(self, command: str, **kwargs) -> PutResult:
         if command in ["infuse", "withdraw"]:
-            rate_str = kwargs["rate"]
+            rate_str = str(kwargs["rate"])
+            self.last_rate = rate_str
             self.flow_rate = (
                 ChemUnitQuantity(f"-{rate_str}")
                 if command == "withdraw"
@@ -133,6 +164,13 @@ class SyringePumpData(FlowSourceData):
                 dt = _finite_pump_duration(rate_str, kwargs["volume"])
                 scheduled.append(ScheduledCommand(dt=dt, command="stop"))
             return PutResult(scheduled=scheduled)
+
+        if command == "infuse-all":
+            return self._full_stroke("infuse", self._current_fill_m3())
+
+        if command == "withdraw-all":
+            capacity = float(self.syringe_volume.to_base_units().magnitude)
+            return self._full_stroke("withdraw", capacity - self._current_fill_m3())
 
         if command == "stop":
             self.flow_rate = ChemUnitQuantity("0 ml/min")

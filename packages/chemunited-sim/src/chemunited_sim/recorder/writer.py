@@ -14,6 +14,7 @@ import math
 import os
 import sqlite3
 from collections import defaultdict
+from collections.abc import Iterable
 from datetime import datetime, timezone
 
 from loguru import logger
@@ -24,7 +25,16 @@ from chemunited_core.figure_registry import SolenoidValve2WayData, SolenoidValve
 from chemunited_core.figure_registry.rotary_valve import RotaryValveData
 
 from ..adapter.models import HydraulicGraph
-from ..common.constant import RECORDER_CELL_LENGTH_M, RECORDER_INTERVAL_DEFAULT
+from ..common.constant import (
+    RECORDER_CELL_LENGTH_M,
+    RECORDER_INTERVAL_DEFAULT,
+    RECORDER_SAME_FLOW,
+    RECORDER_SAME_GAS_MOLES_FIGURES,
+    RECORDER_SAME_LIQUID_MOLES_FIGURES,
+    RECORDER_SAME_PRESSURE,
+    RECORDER_SAME_TEMPERATURE,
+    RECORDER_SAME_VOLUME,
+)
 from ..hydraulics.models import HydraulicState
 from ..inventory.models import InventoryState
 from ..transport.models import Pocket, TransportState
@@ -47,6 +57,17 @@ from .schema import (
 # Sentinel species_id written when a phase has no tracked species, so the
 # GUI always finds a row for every (node_id, phase) pair.
 _CARRIER_SPECIES_ID = "__carrier__"
+
+# The dynamic tables in the order Recorder builds a frame's rows.
+_FRAME_STATEMENTS = (
+    SQL_INSERT_NODE_PRESSURE,
+    SQL_INSERT_INVENTORY_STATE,
+    SQL_INSERT_INVENTORY_CONTENT,
+    SQL_INSERT_EDGE_FLOW,
+    SQL_INSERT_CELL_STATE,
+    SQL_INSERT_CELL_CONTENT,
+    SQL_INSERT_COMPONENT_STATE,
+)
 
 
 class RecorderWriteError(RuntimeError):
@@ -94,6 +115,17 @@ class Recorder:
         valve open/closed) into the ``component_state`` table each record
         step.  Optional — omit for graphs with no such components, or when
         discrete-state recording isn't needed.
+    record_cells:
+        Whether to write what's in each tube.  Tube cells are most of a frame's
+        rows, so leaving them out makes a long run's database far smaller, at the
+        cost of the tube views and length profiles.
+    skip_unchanged:
+        Skip a frame when nothing has changed since the last one written, beyond
+        the ``RECORDER_SAME_*`` tolerances.  A skipped stretch keeps its last
+        frame, written just before the next change or at :meth:`close`, so every
+        recorded time still holds a complete frame and charts stay flat across
+        the gap.  Readers need no changes, though recorded times are no longer
+        evenly spaced.
     """
 
     def __init__(
@@ -105,15 +137,21 @@ class Recorder:
         platform_name: str = "",
         cell_length_m: float = RECORDER_CELL_LENGTH_M,
         components: dict[str, ComponentData] | None = None,
+        record_cells: bool = True,
+        skip_unchanged: bool = False,
     ) -> None:
         self._graph = graph
         self._dt = dt
         self._record_interval = record_interval
         self._components: dict[str, ComponentData] = components or {}
+        self._skip_unchanged = skip_unchanged
+        self._last_signature: tuple | None = None
+        self._last_frame: list[list[tuple]] | None = None
+        self._held_t: float | None = None
 
         # Integer-tick interval — pre-computed to avoid per-step float division
         raw_ticks = record_interval / dt
-        self._interval_ticks: int = round(raw_ticks)
+        self._interval_ticks: int = max(1, round(raw_ticks))
         if abs(raw_ticks - self._interval_ticks) > 0.01:
             logger.warning(
                 "Recorder: record_interval={} is not an exact multiple of dt={}. "
@@ -124,8 +162,8 @@ class Recorder:
             )
 
         # Build cell definitions (once)
-        self._cell_defs: list[CellDefinition] = build_cell_definitions(
-            graph, cell_length_m
+        self._cell_defs: list[CellDefinition] = (
+            build_cell_definitions(graph, cell_length_m) if record_cells else []
         )
         # Pre-build per-edge cell list for fast lookup
         self._cells_by_edge: dict[str, list[CellDefinition]] = defaultdict(list)
@@ -154,6 +192,8 @@ class Recorder:
             ("record_interval", str(record_interval)),
             ("platform_name", platform_name),
             ("timestamp", timestamp),
+            ("record_cells", str(record_cells)),
+            ("skip_unchanged", str(skip_unchanged)),
         ]
         cell_rows = [
             (cd.edge_id, cd.cell_index, cd.position_m, cd.length_m)
@@ -189,6 +229,9 @@ class Recorder:
 
         If ``should_record(t)`` is ``False`` the call is a no-op.
 
+        With ``skip_unchanged``, a frame that matches the last one written is
+        only remembered, not written.
+
         All tables are written in one atomic transaction.  On failure a
         :class:`RecorderWriteError` is raised; no partial snapshot is
         committed.
@@ -209,6 +252,27 @@ class Recorder:
         if self._conn is None:
             raise RecorderWriteError("Recorder.record called after close().")
 
+        if self._skip_unchanged:
+            signature = self._signature(hyd_state, transport_state, inv_states)
+            if signature == self._last_signature:
+                self._held_t = t
+                return
+            self._last_signature = signature
+            self._write_held_frame()
+
+        frame = self._build_frame(t, hyd_state, transport_state, inv_states)
+        self._write_frame(t, frame)
+        if self._skip_unchanged:
+            self._last_frame = frame
+
+    def _build_frame(
+        self,
+        t: float,
+        hyd_state: HydraulicState,
+        transport_state: TransportState,
+        inv_states: dict[str, InventoryState],
+    ) -> list[list[tuple]]:
+        """The rows of one frame, per table, in ``_FRAME_STATEMENTS`` order."""
         node_pressure_rows: list[tuple] = []
         inv_state_rows: list[tuple] = []
         inv_content_rows: list[tuple] = []
@@ -327,29 +391,65 @@ class Recorder:
         # component_state — discrete state not otherwise recoverable from the
         # continuous tables above (rotor position, solenoid open/closed)
         for name, component in self._components.items():
-            if isinstance(component, RotaryValveData):
-                component_state: dict[str, object] = {
-                    "rotor_ports": component.rotor_ports
-                }
-            elif isinstance(component, (SolenoidValveData, SolenoidValve2WayData)):
-                component_state = {"opened": component.opened}
-            else:
-                continue
-            component_state_rows.append((t, name, json.dumps(component_state)))
+            component_state = _component_state(component)
+            if component_state is not None:
+                component_state_rows.append((t, name, json.dumps(component_state)))
 
+        return [
+            node_pressure_rows,
+            inv_state_rows,
+            inv_content_rows,
+            edge_flow_rows,
+            cell_state_rows,
+            cell_content_rows,
+            component_state_rows,
+        ]
+
+    def _write_frame(self, t: float, frame: list[list[tuple]]) -> None:
+        """Write one frame's rows in one atomic transaction."""
+        assert self._conn is not None
         try:
             with self._conn:
-                self._conn.executemany(SQL_INSERT_NODE_PRESSURE, node_pressure_rows)
-                self._conn.executemany(SQL_INSERT_INVENTORY_STATE, inv_state_rows)
-                self._conn.executemany(SQL_INSERT_INVENTORY_CONTENT, inv_content_rows)
-                self._conn.executemany(SQL_INSERT_EDGE_FLOW, edge_flow_rows)
-                self._conn.executemany(SQL_INSERT_CELL_STATE, cell_state_rows)
-                self._conn.executemany(SQL_INSERT_CELL_CONTENT, cell_content_rows)
-                self._conn.executemany(SQL_INSERT_COMPONENT_STATE, component_state_rows)
+                for statement, rows in zip(_FRAME_STATEMENTS, frame, strict=True):
+                    self._conn.executemany(statement, rows)
         except sqlite3.Error as exc:
             raise RecorderWriteError(
                 f"Recorder failed to write at t={t:.6f} s: {exc}"
             ) from exc
+
+    def _write_held_frame(self) -> None:
+        """Write the last skipped time, as a copy of the last frame written."""
+        if self._held_t is None or self._last_frame is None:
+            return
+        t = self._held_t
+        self._held_t = None
+        self._write_frame(
+            t,
+            [[(t, *row[1:]) for row in rows] for rows in self._last_frame],
+        )
+
+    def _signature(
+        self,
+        hyd_state: HydraulicState,
+        transport_state: TransportState,
+        inv_states: dict[str, InventoryState],
+    ) -> tuple:
+        """Everything a frame shows, rounded to what counts as a change."""
+        return (
+            tuple(
+                round(pressure / RECORDER_SAME_PRESSURE)
+                for pressure in hyd_state.pressures.values()
+            ),
+            tuple(
+                round(flow / RECORDER_SAME_FLOW) for flow in hyd_state.flows.values()
+            ),
+            tuple(_inventory_signature(state) for state in inv_states.values()),
+            tuple(_tube_signature(q) for q in transport_state.edge_queues.values()),
+            tuple(
+                (name, repr(_component_state(component)))
+                for name, component in self._components.items()
+            ),
+        )
 
     def close(self) -> None:
         """Flush pending writes and close the database connection.
@@ -357,6 +457,7 @@ class Recorder:
         Safe to call multiple times; subsequent calls are no-ops.
         """
         if self._conn is not None:
+            self._write_held_frame()
             self._conn.close()
             self._conn = None
 
@@ -364,6 +465,48 @@ class Recorder:
 # ---------------------------------------------------------------------------
 # Private helpers
 # ---------------------------------------------------------------------------
+
+
+def _component_state(component: ComponentData) -> dict[str, object] | None:
+    """The discrete state of a valve, or None for anything without one."""
+    if isinstance(component, RotaryValveData):
+        return {"rotor_ports": component.rotor_ports}
+    if isinstance(component, (SolenoidValveData, SolenoidValve2WayData)):
+        return {"opened": component.opened}
+    return None
+
+
+def _moles_signature(species_moles: dict[str, float], figures: int) -> tuple:
+    return tuple(
+        (species, f"{moles:.{figures}g}") for species, moles in species_moles.items()
+    )
+
+
+def _inventory_signature(state: InventoryState) -> tuple:
+    return (
+        round(state.liq_volume / RECORDER_SAME_VOLUME),
+        round(state.gas_volume / RECORDER_SAME_VOLUME),
+        round(state.temperature / RECORDER_SAME_TEMPERATURE),
+        _moles_signature(state.liq_species_moles, RECORDER_SAME_LIQUID_MOLES_FIGURES),
+        _moles_signature(state.gas_species_moles, RECORDER_SAME_GAS_MOLES_FIGURES),
+    )
+
+
+def _tube_signature(queue: Iterable[Pocket]) -> tuple[int, int]:
+    """How much liquid a tube holds, and how warm its contents are on average."""
+    liquid = 0.0
+    total = 0.0
+    warmth = 0.0
+    for pocket in queue:
+        total += pocket.volume
+        warmth += pocket.temperature * pocket.volume
+        if pocket.phase_kind == PhaseKind.LIQUID:
+            liquid += pocket.volume
+    temperature = warmth / total if total > 0.0 else 0.0
+    return (
+        round(liquid / RECORDER_SAME_VOLUME),
+        round(temperature / RECORDER_SAME_TEMPERATURE),
+    )
 
 
 def _inventory_content_rows(

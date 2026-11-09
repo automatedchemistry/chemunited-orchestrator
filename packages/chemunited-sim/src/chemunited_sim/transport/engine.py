@@ -30,15 +30,14 @@ from ..common.constant import (
     MIN_POCKET_VOLUME,
 )
 from ..common.edges import is_hydraulically_closed
+from ..common.heat_capacity import molar_cp
 from ..hydraulics.models import HydraulicState
-from .junction import merge_arriving_pockets
+from .junction import can_merge_neighbours, merge_arriving_pockets
 from .models import Pocket, TransportResult, TransportState
 
 # ---------------------------------------------------------------------------
 # Private helpers
 # ---------------------------------------------------------------------------
-
-_CP_CACHE: dict[tuple[str, PhaseKind], float] = {}
 
 
 def _scale_pocket(pocket: Pocket, fraction: float) -> Pocket:
@@ -50,6 +49,23 @@ def _scale_pocket(pocket: Pocket, fraction: float) -> Pocket:
         temperature=pocket.temperature,
         pressure=pocket.pressure,
     )
+
+
+def _push_inflow(queue: deque[Pocket], pocket: Pocket, Q: float) -> None:
+    """Add *pocket* at the inflow end of *queue*, the end *Q* flows in from.
+
+    It merges into the pocket already at that end when they can become one, which
+    is what keeps a queue short: each step would otherwise leave one more pocket.
+    """
+    if Q >= 0:
+        if queue and can_merge_neighbours(queue[-1], pocket):
+            queue.extend(merge_arriving_pockets([queue.pop(), pocket]))
+        else:
+            queue.append(pocket)
+    elif queue and can_merge_neighbours(queue[0], pocket):
+        queue.extendleft(merge_arriving_pockets([queue.popleft(), pocket]))
+    else:
+        queue.appendleft(pocket)
 
 
 def _pop_volume(
@@ -184,13 +200,10 @@ def _inject_staged_transport(
             continue
         Q = hyd_state.flows.get(edge_id, 0.0)
         for pocket in pockets:
-            if Q >= 0:
-                queue.append(pocket)
-            else:
-                queue.appendleft(pocket)
+            _push_inflow(queue, pocket, Q)
 
 
-def _edge_capacity(edge: HydraulicEdge) -> float:
+def edge_capacity(edge: HydraulicEdge) -> float:
     """Return geometric capacity for a transport edge."""
     if edge.length <= 0.0 or edge.diameter <= 0.0:
         return 0.0
@@ -207,7 +220,7 @@ def _fill_carrier_deficits(
         edge = graph.edges.get(edge_id)
         if edge is None or edge.role != InternalEdgeRole.TRANSPORT:
             continue
-        capacity = _edge_capacity(edge)
+        capacity = edge_capacity(edge)
         if capacity <= 0.0:
             continue
 
@@ -228,10 +241,7 @@ def _fill_carrier_deficits(
             temperature=AMBIENT_TEMPERATURE_K,
             pressure=pressure,
         )
-        if Q >= 0.0:
-            queue.append(carrier)
-        else:
-            queue.appendleft(carrier)
+        _push_inflow(queue, carrier, Q)
 
 
 def _route_pocket(
@@ -253,6 +263,7 @@ def _route_pocket(
 
     - An inventory node → appended to ``arrivals``.
     - A hub node → staged in ``hub_staging`` for merging.
+    - A vented vessel's port → appended to that vessel's ``arrivals``.
     - A dead-end port (boundary component: FlowSource, PressureControl)
       → silently discarded (absorbed by the BC).
 
@@ -299,6 +310,13 @@ def _route_pocket(
         if outgoing_dv:
             _stage_transport_injections(pocket, outgoing_dv, transport_staging)
             return
+
+        # A vented vessel's port holds the pressure, so the edge into its
+        # inventory shows no flow. What arrives there still goes in.
+        for neighbor_id, edge in junction_neighbors.get(current, []):
+            if neighbor_id in inventory_nodes and not is_hydraulically_closed(edge):
+                arrivals[neighbor_id].append(pocket)
+                return
 
         # Dead end: pocket absorbed by boundary component.
         return
@@ -416,13 +434,9 @@ def _process_hub(
             if vol < MIN_POCKET_VOLUME:
                 continue
             fragment = _scale_pocket(merged_pocket, frac)
-            Q_trans = hyd_state.flows.get(trans_id, 0.0)
-            if Q_trans >= 0:
-                # Inflow at origin end → append to right
-                new_queues[trans_id].append(fragment)
-            else:
-                # Inflow at destination end → appendleft to left
-                new_queues[trans_id].appendleft(fragment)
+            _push_inflow(
+                new_queues[trans_id], fragment, hyd_state.flows.get(trans_id, 0.0)
+            )
 
 
 # ---------------------------------------------------------------------------
@@ -442,19 +456,11 @@ class TransportHeatExchangeEntry:
 
 def _pocket_thermal_mass(pocket: Pocket) -> float:
     """Return the tracked species thermal mass for a pocket in J/K."""
-    total = 0.0
-    phase = pocket.phase_kind
-    phase_name = "liquid" if phase == PhaseKind.LIQUID else "gas"
-    for species_id, moles in pocket.species_moles.items():
-        if species_id not in COMPOUNDS:
-            continue
-        key = (species_id, phase)
-        cp = _CP_CACHE.get(key)
-        if cp is None:
-            cp = COMPOUNDS[species_id].cp(phase_name).to_base_units().magnitude
-            _CP_CACHE[key] = cp
-        total += moles * cp
-    return total
+    return sum(
+        moles * molar_cp(species_id, pocket.phase_kind)
+        for species_id, moles in pocket.species_moles.items()
+        if species_id in COMPOUNDS
+    )
 
 
 def _heat_pocket(pocket: Pocket, T_wall: float, rate_factor: float) -> Pocket:
@@ -645,7 +651,7 @@ def advance(
 
 def inject(
     state: TransportState,
-    emitted: dict[str, Pocket],
+    emitted: dict[str, list[Pocket]],
     hyd_state: HydraulicState,
     graph: HydraulicGraph | None = None,
 ) -> TransportState:
@@ -663,9 +669,9 @@ def inject(
     state:
         The transport state to augment (a shallow copy is made internally).
     emitted:
-        ``{edge_id: Pocket}`` — one pocket per edge to inject.  Provided by
-        the inventory module, which resolves the edge from the port's access
-        type (TOP → gas, BOTTOM → liquid).
+        ``{edge_id: [Pocket, ...]}`` — the pockets to inject per edge, first to
+        enter first.  Provided by the inventory module, which resolves the edge
+        from the port's access type (TOP → gas first, BOTTOM → liquid first).
     hyd_state:
         Flows from the most recent hydraulic solve, used to determine which
         end of the edge is the inflow end.
@@ -681,17 +687,14 @@ def inject(
     """
     new_queues = {eid: deque(q) for eid, q in state.edge_queues.items()}
 
-    for edge_id, pocket in emitted.items():
-        if pocket.volume < MIN_POCKET_VOLUME:
-            continue
+    for edge_id, pockets in emitted.items():
         queue = new_queues.get(edge_id)
         if queue is None:
             continue
         Q = hyd_state.flows.get(edge_id, 0.0)
-        if Q >= 0:
-            queue.append(pocket)
-        else:
-            queue.appendleft(pocket)
+        for pocket in pockets:
+            if pocket.volume >= MIN_POCKET_VOLUME:
+                _push_inflow(queue, pocket, Q)
 
     if graph is not None:
         _fill_carrier_deficits(graph, new_queues, hyd_state)

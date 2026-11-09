@@ -48,7 +48,7 @@ def test_emit_top_falls_back_to_liquid_when_gas_is_unavailable():
         {"edge": EdgePortAccess("vessel.Inventory", PortAccess.TOP)},
     )
 
-    pocket = emitted["edge"]
+    [pocket] = emitted["edge"]
     assert pocket.phase_kind == PhaseKind.LIQUID
     assert pocket.volume == pytest.approx(3.0e-9)
     assert pocket.species_moles == {"solvent": pytest.approx(0.024)}
@@ -69,7 +69,7 @@ def test_emit_bottom_falls_back_to_gas_when_liquid_is_unavailable():
         {"edge": EdgePortAccess("vessel.Inventory", PortAccess.BOTTOM)},
     )
 
-    pocket = emitted["edge"]
+    [pocket] = emitted["edge"]
     assert pocket.phase_kind == PhaseKind.GAS
     assert pocket.volume == pytest.approx(4.0e-9)
     assert pocket.species_moles == {"nitrogen": pytest.approx(0.024)}
@@ -93,7 +93,7 @@ def test_emit_sufficient_inventory_preserves_existing_fractional_behavior():
         {"edge": EdgePortAccess("vessel.Inventory", PortAccess.TOP)},
     )
 
-    pocket = emitted["edge"]
+    [pocket] = emitted["edge"]
     assert pocket.phase_kind == PhaseKind.GAS
     assert pocket.volume == pytest.approx(1.0e-9)
     assert pocket.species_moles == {"nitrogen": pytest.approx(3.0)}
@@ -105,7 +105,8 @@ def test_emit_sufficient_inventory_preserves_existing_fractional_behavior():
     assert state.liq_volume + state.gas_volume == pytest.approx(state.capacity)
 
 
-def test_emit_uses_carrier_only_when_both_phases_are_insufficient():
+def test_emit_takes_both_phases_when_neither_alone_covers_the_step():
+    """This used to strand the 2e-9 m^3 of liquid and invent air to fill the step."""
     state = _state()
     state.gas_volume = 1.0e-9
     state.liq_volume = 2.0e-9
@@ -116,15 +117,58 @@ def test_emit_uses_carrier_only_when_both_phases_are_insufficient():
         variable_volume_inventory_ids={"vessel.Inventory"},
     )
 
-    pocket = emitted["edge"]
-    expected_air = state.pressure * 2.0e-9 / (IDEAL_GAS_CONSTANT * state.temperature)
-    assert pocket.phase_kind == PhaseKind.GAS
-    assert pocket.volume == pytest.approx(3.0e-9)
-    assert pocket.species_moles["nitrogen"] == pytest.approx(6.0)
-    assert pocket.species_moles["air"] == pytest.approx(expected_air)
+    gas, liquid = emitted["edge"]
+    assert gas.phase_kind == PhaseKind.GAS
+    assert gas.volume == pytest.approx(1.0e-9)
+    assert gas.species_moles == {"nitrogen": pytest.approx(6.0)}
+    assert liquid.phase_kind == PhaseKind.LIQUID
+    assert liquid.volume == pytest.approx(2.0e-9)
+    assert liquid.species_moles == {"solvent": pytest.approx(8.0)}
     assert state.gas_volume == pytest.approx(0.0)
-    assert state.liq_volume == pytest.approx(2.0e-9)
-    assert state.gas_species_moles["nitrogen"] == pytest.approx(0.0)
+    assert state.liq_volume == pytest.approx(0.0)
+
+
+def test_emit_uses_carrier_only_when_both_phases_together_are_insufficient():
+    state = _state()
+    state.gas_volume = 1.0e-9
+    state.liq_volume = 0.5e-9
+    emitted = emit(
+        {"vessel.Inventory": state},
+        {"edge": 3.0e-9},
+        {"edge": EdgePortAccess("vessel.Inventory", PortAccess.TOP)},
+        variable_volume_inventory_ids={"vessel.Inventory"},
+    )
+
+    gas, liquid, carrier = emitted["edge"]
+    expected_air = state.pressure * 1.5e-9 / (IDEAL_GAS_CONSTANT * state.temperature)
+    assert gas.species_moles == {"nitrogen": pytest.approx(6.0)}
+    assert liquid.species_moles == {"solvent": pytest.approx(8.0)}
+    assert carrier.phase_kind == PhaseKind.GAS
+    assert carrier.volume == pytest.approx(1.5e-9)
+    assert carrier.species_moles == {"air": pytest.approx(expected_air)}
+    assert gas.volume + liquid.volume + carrier.volume == pytest.approx(3.0e-9)
+
+
+def test_emit_bottom_sends_the_last_liquid_ahead_of_the_gas_behind_it():
+    state = _state()
+    state.liq_volume = 2.0e-9
+    state.liq_species_moles = {"solvent": 8.0}
+    state.gas_volume = state.capacity - state.liq_volume
+    emitted = emit(
+        {"vessel.Inventory": state},
+        {"edge": 5.0e-9},
+        {"edge": EdgePortAccess("vessel.Inventory", PortAccess.BOTTOM)},
+    )
+
+    liquid, gas = emitted["edge"]
+    assert liquid.phase_kind == PhaseKind.LIQUID
+    assert liquid.volume == pytest.approx(2.0e-9)
+    assert liquid.species_moles == {"solvent": pytest.approx(8.0)}
+    assert gas.phase_kind == PhaseKind.GAS
+    assert gas.volume == pytest.approx(3.0e-9)
+    assert state.liq_volume == pytest.approx(0.0)
+    assert state.liq_species_moles["solvent"] == pytest.approx(0.0)
+    assert state.liq_volume + state.gas_volume == pytest.approx(state.capacity)
 
 
 def test_normal_vessel_liquid_assimilation_displaces_headspace():
@@ -234,7 +278,7 @@ def test_autosampler_transport_edge_emits_liquid_from_selected_vial():
         port_map,
     )
 
-    pocket = emitted["as_1_sink_1"]
+    [pocket] = emitted["as_1_sink_1"]
     assert pocket.phase_kind == PhaseKind.LIQUID
     assert pocket.species_moles == {"HeavyWater": pytest.approx(1.0e-3)}
     assert state.liq_volume == pytest.approx(9.99e-7)

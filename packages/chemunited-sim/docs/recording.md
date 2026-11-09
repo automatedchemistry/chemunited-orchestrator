@@ -40,13 +40,36 @@ tick interval.
 
 The worker records before transport advances, so `t=0` is included.
 
+## Keeping Recordings Small
+
+A frame holds every node, edge, vessel and tube cell, and tube cells are most of
+it. A long run adds up: at the 2 s default, a 7.5-hour run on a platform the size
+of AGA would need about 1.9 GB. Two options help, and the server uses the first
+for every run:
+
+```python
+Recorder(..., skip_unchanged=True, record_cells=False)
+```
+
+- `skip_unchanged` skips a frame when nothing has changed since the last one
+  written, beyond the `RECORDER_SAME_*` tolerances in `common/constant.py`. A
+  skipped stretch keeps its last frame, written just before the next change or at
+  `close()`. Every recorded time still holds a complete frame, so readers need no
+  changes and charts stay flat across a gap. Recorded times are no longer evenly
+  spaced.
+- `record_cells=False` leaves out `edge_cells`, `cell_state` and `cell_content`,
+  at the cost of tube views and length profiles.
+
+`POST /simulation/start` takes `record_interval` and `record_cells`. Both options
+are noted in the `meta` table.
+
 ## Static Tables
 
 Static tables are written once at construction.
 
 | Table | Content |
 |---|---|
-| `meta` | `dt`, `record_interval`, `platform_name`, and UTC timestamp |
+| `meta` | `dt`, `record_interval`, `platform_name`, UTC timestamp, `record_cells` and `skip_unchanged` |
 | `edge_cells` | Fixed cell layout for every eligible transport edge |
 
 ## Dynamic Tables

@@ -15,6 +15,7 @@ from fastapi import HTTPException
 from mcp.server.fastmcp import FastMCP
 
 from ..cli import server as _server
+from ..common.constant import RECORDER_INTERVAL_DEFAULT
 from ..visualization import (
     NoSnapshotsError,
     SnapshotReadError,
@@ -58,6 +59,9 @@ def register_tools(mcp: FastMCP) -> None:
         """Return the server's current state: sim_status, current_t, and config.
 
         ``sim_status`` is one of ``no_project``, ``idle``, or ``running``.
+        ``last_run`` says how the last run ended: ``outcome`` is ``finished``,
+        ``failed`` or ``stopped``, with ``error``, ``process`` and ``node`` saying
+        where a failure happened.
         Poll this after ``start_simulation`` until it reports ``idle`` before
         requesting results.
         """
@@ -72,6 +76,9 @@ def register_tools(mcp: FastMCP) -> None:
         t_end: float | None = None,
         real_time: bool = False,
         historical_file: str | None = None,
+        error_resilient: bool = False,
+        record_interval: float = RECORDER_INTERVAL_DEFAULT,
+        record_cells: bool = True,
     ) -> dict:
         """Start a simulation run.
 
@@ -89,6 +96,12 @@ def register_tools(mcp: FastMCP) -> None:
           a live run at wall-clock pace, driven by ``send_component_command``.
         - ``historical_file``: mode 1 only — a filename inside
           ``protocols_historic/``, or null to use the most recently modified one.
+        - ``error_resilient``: mode 1 only — carry on past a failed node instead
+          of stopping the run at the first error.
+        - ``record_interval``: simulated seconds between recorded frames. Frames
+          where nothing changed are skipped whatever this is.
+        - ``record_cells``: false leaves out what's in each tube, which is most of
+          a recording, at the cost of tube views and length profiles.
         """
         try:
             return _server.post_simulation_start(
@@ -98,6 +111,9 @@ def register_tools(mcp: FastMCP) -> None:
                     t_end=t_end,
                     real_time=real_time,
                     historical_file=historical_file,
+                    error_resilient=error_resilient,
+                    record_interval=record_interval,
+                    record_cells=record_cells,
                 )
             )
         except HTTPException as exc:

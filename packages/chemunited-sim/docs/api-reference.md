@@ -63,7 +63,7 @@ from chemunited_sim.transport import (
 | `TransportResult` | Output of `advance`: next state, inventory arrivals, inventory departures |
 | `build_initial_state(graph)` | Fill transport edges with initial air pockets |
 | `advance(graph, hyd_state, transport_state, dt)` | Move pockets by `abs(flow) * dt` |
-| `inject(state, emitted, hyd_state)` | Insert inventory-emitted pockets at edge inflow ends |
+| `inject(state, emitted, hyd_state)` | Insert inventory-emitted pockets (a list per edge) at edge inflow ends |
 
 ## `chemunited_sim.inventory`
 
@@ -85,7 +85,7 @@ from chemunited_sim.inventory import (
 | `build_inventory_states(graph)` | Seed inventory states from graph inventory snapshots |
 | `build_port_map(graph, components)` | Map inventory-connected edges to top/bottom port access |
 | `assimilate(states, arrivals, hyd_state)` | Absorb arriving pockets into inventories |
-| `emit(states, departures, port_map)` | Draw replacement gas/liquid pockets from inventories |
+| `emit(states, departures, port_map)` | Draw replacement gas/liquid pockets from inventories, as a list per edge |
 | `EdgePortAccess` | Per-edge record of inventory node and port access |
 | `PortAccessMap` | Alias for the edge-to-access mapping |
 
@@ -151,10 +151,10 @@ from chemunited_sim.recorder import (
 
 | Name | Purpose |
 |---|---|
-| `Recorder(db_path, graph, dt, ...)` | SQLite writer for simulation snapshots |
+| `Recorder(db_path, graph, dt, ..., record_cells=True, skip_unchanged=False)` | SQLite writer for simulation snapshots. See [Recording](recording.md) |
 | `Recorder.should_record(t)` | Return whether `t` falls on a record interval |
-| `Recorder.record(t, hyd_state, transport_state, inv_states)` | Write one snapshot if due |
-| `Recorder.close()` | Close the database connection; safe to call repeatedly |
+| `Recorder.record(t, hyd_state, transport_state, inv_states)` | Write one snapshot if due, and if it differs from the last with `skip_unchanged` |
+| `Recorder.close()` | Write any held frame and close the database connection; safe to call repeatedly |
 | `RecorderWriteError` | Raised if a write fails |
 | `build_cell_definitions(graph, cell_length_m=...)` | Slice transport edges into recorder cells |
 | `CellDefinition` | Static cell metadata for spatial recording |
@@ -167,7 +167,7 @@ from chemunited_sim.worker import SimConfig, Worker
 
 | Name | Purpose |
 |---|---|
-| `SimConfig(dt, t_end, viscosity=..., bpr_max_iters=20)` | Time-step and solver configuration |
+| `SimConfig(dt, t_end, viscosity=..., max_transport_substeps=64)` | Time-step and solver configuration |
 | `Worker(graph, components, config, reactions_map=None, recorder=None)` | Main simulation orchestrator |
 | `Worker.step()` | Execute one time step |
 | `Worker.run()` | Step from current time through `t_end` and close the recorder |

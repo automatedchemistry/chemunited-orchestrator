@@ -2,9 +2,7 @@
 
 from __future__ import annotations
 
-import heapq
 import queue
-import time
 from dataclasses import dataclass, field
 from enum import Enum
 from pathlib import Path
@@ -19,8 +17,8 @@ from pydantic import BaseModel, Field
 from chemunited_workflow.platform import Platform
 from chemunited_workflow.process import Process
 
-from ..adapter.graph import propagate_power_links, resync_component
-from ..recorder.writer import Recorder
+from ..common.constant import RECORDER_INTERVAL_DEFAULT
+from ..recorder.writer import Recorder, RecorderWriteError
 from ..visualization import (
     NoSnapshotsError,
     SnapshotReadError,
@@ -33,17 +31,22 @@ from ..worker.runner import Worker
 from .clock import SimClock
 from .loader import (
     ProjectState,
+    SequenceStep,
     load_project,
     parse_historical_file,
     resolve_historical_file,
 )
+from .lockstep import Lockstep
+from .run import FAILED, STOPPED, RunOutcome, run_physics, run_sequence
 from .sim_client import (
     SimClient,
     SimCommand,
     SimPlatform,
-    iter_apply_kwargs,
     write_pool_log,
 )
+
+# How long the physics thread waits for the workflow to notice a stop.
+WORKFLOW_STOP_SECONDS = 5.0
 
 # ---------------------------------------------------------------------------
 # State types
@@ -67,11 +70,11 @@ class SimulationState:
     cmd_queue: queue.Queue
     db_dir: Path
     log_path: Path | None = None
+    last_run: RunOutcome | None = None
     _worker_thread: Thread | None = field(default=None, repr=False)
     _workflow_thread: Thread | None = field(default=None, repr=False)
     _log_sink_id: int | None = field(default=None, repr=False)
     _stop_event: Event = field(default_factory=Event, repr=False)
-    _workflow_done: Event = field(default_factory=Event, repr=False)
 
 
 # Module-level state (initialised by main.py before uvicorn starts)
@@ -122,138 +125,77 @@ def _worker_thread_fn(
     cmd_queue: queue.Queue,
     config: SimConfig,
     stop_event: Event,
-    workflow_done: Event,
+    lockstep: Lockstep | None,
+    workflow_thread: Thread | None,
     state: SimulationState,
+    record_interval: float = RECORDER_INTERVAL_DEFAULT,
+    record_cells: bool = True,
 ) -> None:
-    # Recorder and Worker are created here so the SQLite connection belongs
-    # to this thread.
-    recorder = Recorder(
-        db_path=db_path,
-        graph=project.graph,
-        dt=config.dt,
-        record_interval=2.0,
-        platform_name=project.project_path.stem,
-        components=project.components,
-    )
-    worker = Worker(
-        graph=project.graph,
-        components=list(project.components.values()),
-        config=config,
-        reactions_map=project.reactions_map,
-        recorder=recorder,
-    )
-    components = project.components
-    graph = project.graph
+    recorder: Recorder | None = None
+    worker: Worker | None = None
+    failure: str | None = None
 
-    scheduled: list[tuple[float, SimCommand]] = []
-    power_state_cache: dict[tuple[str, int], bool] = {}
-    for link in graph.power_links:
-        provider = components.get(link.provider_component)
-        if provider is not None:
-            propagate_power_links(provider, graph, components, power_state_cache)
-    wall_t0 = time.monotonic()
-    sim_t0 = clock.now()
-
-    logger.info(
-        "Worker thread started | db={} dt={} t_end={}",
-        db_path.name,
-        config.dt,
-        config.t_end,
-    )
+    def after_step(stepped: Worker) -> None:
+        state.current_t = stepped.t
 
     try:
-        while not stop_event.is_set():
-            # 1. Drain immediate command queue
-            while True:
-                try:
-                    cmd: SimCommand = cmd_queue.get_nowait()
-                except queue.Empty:
-                    break
-                logger.debug(
-                    "Applying command | component={} command={} kwargs={} t={:.3f}",
-                    cmd.component,
-                    cmd.command,
-                    cmd.kwargs,
-                    clock.now(),
-                )
-                if cmd.pre_applied:
-                    resync_component(graph, components[cmd.component])
-                else:
-                    for call_kwargs in iter_apply_kwargs(cmd.command, cmd.kwargs):
-                        result = components[cmd.component].apply(
-                            cmd.command, **call_kwargs
-                        )
-                        for s in result.scheduled:
-                            heapq.heappush(
-                                scheduled,
-                                (
-                                    clock.now() + s.dt,
-                                    SimCommand(cmd.component, s.command, s.kwargs),
-                                ),
-                            )
-                    resync_component(graph, components[cmd.component])
-                propagate_power_links(
-                    components[cmd.component], graph, components, power_state_cache
-                )
-
-            # 2. Fire scheduled events that are now due
-            while scheduled and scheduled[0][0] <= clock.now():
-                _, sched_cmd = heapq.heappop(scheduled)
-                logger.debug(
-                    "Firing scheduled command | component={} command={} t={:.3f}",
-                    sched_cmd.component,
-                    sched_cmd.command,
-                    clock.now(),
-                )
-                components[sched_cmd.component].apply(
-                    sched_cmd.command, **sched_cmd.kwargs
-                )
-                resync_component(graph, components[sched_cmd.component])
-                propagate_power_links(
-                    components[sched_cmd.component],
-                    graph,
-                    components,
-                    power_state_cache,
-                )
-
-            # 3. Check t_end
-            if config.t_end is not None and worker.t >= config.t_end:
-                logger.info(
-                    "Simulation reached t_end={:.3f} — stopping worker", config.t_end
-                )
-                state.sim_status = SimStatus.IDLE
-                return
-
-            # 4. Auto-complete in mode 1: workflow finished + nothing pending
-            if (
-                not config.real_time
-                and workflow_done.is_set()
-                and cmd_queue.empty()
-                and not scheduled
-            ):
-                logger.info(
-                    "Workflow finished and queues empty — auto-completing at t={:.3f}",
-                    worker.t,
-                )
-                state.sim_status = SimStatus.IDLE
-                return
-
-            # 5. Advance simulation
-            worker.step()
-            state.current_t = worker.t
-            clock.advance(config.dt)
-
-            # 6. Real-time throttle (mode 2)
-            if config.real_time:
-                elapsed_sim = clock.now() - sim_t0
-                elapsed_wall = time.monotonic() - wall_t0
-                drift = elapsed_sim - elapsed_wall
-                if drift > 0.0:
-                    time.sleep(drift)
-
+        # Recorder and Worker are created here so the SQLite connection belongs
+        # to this thread.
+        recorder = Recorder(
+            db_path=db_path,
+            graph=project.graph,
+            dt=config.dt,
+            record_interval=record_interval,
+            platform_name=project.project_path.stem,
+            components=project.components,
+            record_cells=record_cells,
+            skip_unchanged=True,
+        )
+        worker = Worker(
+            graph=project.graph,
+            components=list(project.components.values()),
+            config=config,
+            reactions_map=project.reactions_map,
+            recorder=recorder,
+        )
+        logger.info(
+            "Worker thread started | db={} dt={} t_end={}",
+            db_path.name,
+            config.dt,
+            config.t_end,
+        )
+        run_physics(
+            worker,
+            project.graph,
+            project.components,
+            clock,
+            cmd_queue,
+            config,
+            stop_event,
+            lockstep=lockstep,
+            after_step=after_step,
+        )
+    except Exception as exc:
+        logger.exception("Physics thread failed")
+        at = "" if worker is None else f" at t={worker.t:.1f} s"
+        failure = f"The physics step failed{at}: {exc}"
     finally:
-        recorder.close()
-        logger.info("Recorder closed | final t={:.3f}", worker.t)
+        # Wakes a workflow still waiting, after t_end or a failure in physics.
+        stop_event.set()
+        if workflow_thread is not None:
+            workflow_thread.join(timeout=WORKFLOW_STOP_SECONDS)
+        if failure is not None:
+            state.last_run = RunOutcome(FAILED, error=failure)
+        elif workflow_thread is None:
+            state.last_run = RunOutcome(STOPPED)
+        if recorder is not None:
+            try:
+                recorder.close()
+            except RecorderWriteError:
+                logger.exception("Could not finish writing the recording")
+        logger.info(
+            "Recorder closed | final t={:.3f}", 0.0 if worker is None else worker.t
+        )
         if state.sim_status == SimStatus.RUNNING:
             logger.info("Worker thread exiting — marking simulation idle")
             state.sim_status = SimStatus.IDLE
@@ -266,45 +208,35 @@ def _worker_thread_fn(
 
 
 def _workflow_thread_fn(
-    process_sequence: list[tuple[str, dict]],
+    sequence: list[SequenceStep],
     processes: dict[str, type[Process]],
-    configs: dict[str, type],
+    configs: dict[str, type[BaseModel]],
     platform: Platform,
     stop_event: Event,
-    workflow_done: Event,
+    lockstep: Lockstep,
+    historical_file: str,
+    error_resilient: bool,
+    state: SimulationState,
 ) -> None:
-    total = len(process_sequence)
-    logger.info("Workflow thread started | {} process(es) in sequence", total)
+    outcome = RunOutcome(FAILED, error="The workflow thread stopped unexpectedly.")
     try:
-        for idx, (process_name, config_kwargs) in enumerate(process_sequence):
-            if stop_event.is_set():
-                logger.warning(
-                    "Workflow interrupted by stop event at process {}/{} ({})",
-                    idx + 1,
-                    total,
-                    process_name,
-                )
-                break
-            process_cls = processes.get(process_name)
-            config_cls = configs.get(process_name)
-            if process_cls is None or config_cls is None:
-                logger.warning(
-                    "Skipping unknown process '{}' (step {}/{})",
-                    process_name,
-                    idx + 1,
-                    total,
-                )
-                continue
-            logger.info("Running process {}/{}: {}", idx + 1, total, process_name)
-            config = config_cls(**config_kwargs)
-            process = process_cls(config=config, platform=platform, process_index=idx)
-            process.run_workflow(start_node="start")
-            logger.info("Process {}/{} completed: {}", idx + 1, total, process_name)
-    except Exception:
+        outcome = run_sequence(
+            sequence,
+            processes,
+            configs,
+            platform,
+            stop_event,
+            lockstep=lockstep,
+            historical_file=historical_file,
+            error_resilient=error_resilient,
+        )
+    except Exception as exc:
         logger.exception("Unhandled exception in workflow thread")
+        outcome = RunOutcome(FAILED, error=str(exc))
     finally:
+        state.last_run = outcome
         logger.info("Workflow thread done — signalling worker")
-        workflow_done.set()
+        lockstep.finish()
 
 
 # ---------------------------------------------------------------------------
@@ -376,6 +308,30 @@ class StartSimRequest(BaseModel):
             "an absolute path to the JSON that defines the process sequence. "
             "If null, the most recently modified JSON in "
             "`protocols_historic/` is used."
+        ),
+    )
+    record_interval: float = Field(
+        default=RECORDER_INTERVAL_DEFAULT,
+        gt=0.0,
+        description=(
+            "Simulated seconds between recorded frames. Frames where nothing "
+            "changed are skipped whatever this is."
+        ),
+    )
+    record_cells: bool = Field(
+        default=True,
+        description=(
+            "Record what's in each tube. Tube cells are most of a recording, so "
+            "turning this off makes a long run's database far smaller, without "
+            "the tube views and length profiles."
+        ),
+    )
+    error_resilient: bool = Field(
+        default=False,
+        description=(
+            "Mode 1 only. Carry on past a failed node, as the real runner's "
+            "option of the same name does. By default the first error stops "
+            "the run."
         ),
     )
 
@@ -454,6 +410,9 @@ def get_status() -> dict:
     - `current_t`: simulation time in seconds, updated each worker step.
     - `project_loaded`: `true` once `POST /project/load` has succeeded.
     - `config`: the `SimConfig` that will be (or is being) used for the current run.
+    - `last_run`: how the last run ended, `null` until one has. `outcome` is
+      `finished`, `failed` or `stopped`, with `error`, `process` and `node` saying
+      where a failure happened. Partial results are still in the database.
     """
     state = get_state()
     return {
@@ -466,6 +425,7 @@ def get_status() -> dict:
             "real_time": state.config.real_time,
             "viscosity": state.config.viscosity,
         },
+        "last_run": None if state.last_run is None else state.last_run.to_dict(),
     }
 
 
@@ -512,39 +472,29 @@ def post_simulation_start(req: StartSimRequest) -> dict:
         except queue.Empty:
             break
     state.clock.reset()
+    state.clock.lockstep = None
     state._stop_event.clear()
-    state._workflow_done.clear()
     state.current_t = 0.0
+    state.last_run = None
 
     pool_dir = project.project_path / "log" / "pool"
     if pool_dir.exists():
         for f in pool_dir.glob("*.jsonl"):
             f.unlink(missing_ok=True)
 
-    state._worker_thread = Thread(
-        target=_worker_thread_fn,
-        args=(
-            db_path,
-            project,
-            state.clock,
-            state.cmd_queue,
-            config,
-            state._stop_event,
-            state._workflow_done,
-            state,
-        ),
-        daemon=True,
-    )
-
+    lockstep: Lockstep | None = None
     if not req.real_time:
         # Mode 1: resolve historical file and build platform
         try:
             hist_path = resolve_historical_file(
                 project.project_path, req.historical_file
             )
-            main_parameter, process_sequence = parse_historical_file(hist_path)
+            _, sequence = parse_historical_file(hist_path)
         except FileNotFoundError as exc:
             raise HTTPException(422, str(exc))
+
+        lockstep = Lockstep(state.clock, state._stop_event)
+        state.clock.lockstep = lockstep
 
         sim_platform = SimPlatform(
             {
@@ -565,19 +515,39 @@ def post_simulation_start(req: StartSimRequest) -> dict:
         state._workflow_thread = Thread(
             target=_workflow_thread_fn,
             args=(
-                process_sequence,
+                sequence,
                 project.processes,
                 project.configs,
                 sim_platform,
                 state._stop_event,
-                state._workflow_done,
+                lockstep,
+                str(hist_path),
+                req.error_resilient,
+                state,
             ),
             daemon=True,
         )
     else:
-        # Mode 2: no workflow thread; mark workflow_done so worker won't wait
-        state._workflow_done.set()
+        # Mode 2: no workflow, physics just keeps pace with the wall clock.
         state._workflow_thread = None
+
+    state._worker_thread = Thread(
+        target=_worker_thread_fn,
+        args=(
+            db_path,
+            project,
+            state.clock,
+            state.cmd_queue,
+            config,
+            state._stop_event,
+            lockstep,
+            state._workflow_thread,
+            state,
+            req.record_interval,
+            req.record_cells,
+        ),
+        daemon=True,
+    )
 
     _attach_run_log(state, db_path)
     mode = "mode 2 (real-time)" if req.real_time else "mode 1 (workflow)"
@@ -590,9 +560,9 @@ def post_simulation_start(req: StartSimRequest) -> dict:
         db_path.name,
     )
     state.sim_status = SimStatus.RUNNING
-    state._worker_thread.start()
     if state._workflow_thread is not None:
         state._workflow_thread.start()
+    state._worker_thread.start()
 
     return {"status": "running", "db_path": str(db_path.resolve())}
 

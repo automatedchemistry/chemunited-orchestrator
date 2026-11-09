@@ -57,3 +57,4 @@ class InventoryState:
     gas_volume: float
     liq_species_moles: dict[str, float] = field(default_factory=dict)
     gas_species_moles: dict[str, float] = field(default_factory=dict)
+    warned_no_thermal_mass: bool = field(default=False, repr=False, compare=False)

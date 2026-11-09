@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "chemunited-sim"
-version = "0.0.4"
+version = "0.0.5"
 description = "Dynamic simulation engine for fluidic automation platforms built on chemunited-core."
 license = { file = "LICENSE" }
 authors = [
@@ -12,8 +12,8 @@ authors = [
 ]
 requires-python = ">=3.11"
 dependencies = [
-    "chemunited-core>=0.0.7",
-    "chemunited-workflow>=0.0.8",
+    "chemunited-core>=0.0.9",
+    "chemunited-workflow>=0.1.1",
     "scipy>=1.12",
     "fastapi>=0.115",
     "uvicorn[standard]>=0.29",

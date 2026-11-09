@@ -162,6 +162,8 @@ class Gantry1DData(ComponentData):
     def apply(self, command: str, **kwargs) -> PutResult:
         if command in {"position", "set_x_position"}:
             self.position_x = str(kwargs["position"])
+        elif command == "home":
+            self.position_x = "0"
         else:
             return PutResult()
 

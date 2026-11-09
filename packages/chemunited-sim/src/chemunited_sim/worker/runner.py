@@ -13,10 +13,14 @@ Operator-splitting order (CLAUDE.md):
   6. emit
   7. inject
   8. advance time → record if due
+
+Steps 3 to 7 run once per step, or several times at a fraction of ``dt`` when a
+flow would otherwise move more than a tube holds in one go.
 """
 
 from __future__ import annotations
 
+import math
 from collections.abc import Callable
 from dataclasses import dataclass
 
@@ -33,7 +37,9 @@ from chemunited_core.components import (
     PumpData,
     VesselComponentData,
 )
+from chemunited_core.components.enums import InternalEdgeRole
 from chemunited_core.figure_registry.pumps import SyringePumpData
+from chemunited_core.figure_registry.thermal import TemperatureSensorData
 
 from ..adapter.models import HydraulicEdge, HydraulicGraph
 from ..hydraulics.models import HydraulicState
@@ -56,6 +62,7 @@ from ..transport.engine import (
     TransportHeatExchangeEntry,
     advance,
     apply_transport_heat_exchange,
+    edge_capacity,
     inject,
 )
 from ..transport.initialiser import build_initial_state
@@ -124,6 +131,14 @@ class _TransportHeatEntry:
 
     comp: ComponentData
     edge: HydraulicEdge
+
+
+@dataclass
+class _SensorEntry:
+    """A temperature sensor and the inventory it reads."""
+
+    comp: TemperatureSensorData
+    inv_node_id: str
 
 
 def _build_bpr_entries(
@@ -278,6 +293,43 @@ def _build_heat_provider_map(
             continue
         providers[target.name] = provider
     return providers
+
+
+def _first_inventory_id(comp: ComponentData) -> str | None:
+    """The inventory node of a vessel. A tray of wells reads its first well."""
+    key = next(iter(comp.internal_inventories), None)
+    return None if key is None else f"{comp.name}.{key}"
+
+
+def _build_sensor_entries(
+    graph: HydraulicGraph,
+    components_by_name: dict[str, ComponentData],
+) -> list[_SensorEntry]:
+    """Resolve which inventory each temperature sensor reads.
+
+    A sensor reads the vessel its ``measures`` property names, or else the only
+    vessel with a heat link. With none or several to choose from, it keeps
+    reporting ambient, and says so once here.
+    """
+    heated = sorted({link.target_component for link in graph.heat_links})
+    entries: list[_SensorEntry] = []
+    for comp in components_by_name.values():
+        if not isinstance(comp, TemperatureSensorData):
+            continue
+        measured = comp.measures or (heated[0] if len(heated) == 1 else "")
+        vessel = components_by_name.get(measured)
+        inv_node_id = None if vessel is None else _first_inventory_id(vessel)
+        if inv_node_id is None or inv_node_id not in graph.inventory_nodes:
+            logger.warning(
+                "worker: temperature sensor '{}' has no vessel to read "
+                "(measures='{}', heat-linked vessels: {}), so it reports ambient.",
+                comp.name,
+                comp.measures,
+                heated,
+            )
+            continue
+        entries.append(_SensorEntry(comp=comp, inv_node_id=inv_node_id))
+    return entries
 
 
 def _temperature_value(comp: ComponentData) -> float:
@@ -568,6 +620,21 @@ class Worker:
             self._heat_provider_by_target,
         )
 
+        self._edge_capacities = {
+            edge_id: capacity
+            for edge_id, edge in graph.edges.items()
+            if edge.role == InternalEdgeRole.TRANSPORT
+            and (capacity := edge_capacity(edge)) > 0.0
+        }
+        self._warned_substep_limit = False
+        self._sensor_entries = _build_sensor_entries(graph, self._components_by_name)
+        self._syringes = {
+            entry.inv_node_id: entry.comp
+            for entry in self._source_map.values()
+            if isinstance(entry.comp, SyringePumpData)
+        }
+        self._sync_device_readings()
+
         self._t: float = 0.0
         self._hyd_state: HydraulicState | None = None
 
@@ -598,6 +665,52 @@ class Worker:
     # ------------------------------------------------------------------
     # Step interface
     # ------------------------------------------------------------------
+
+    def _transport_substeps(self, hyd_state: HydraulicState) -> int:
+        """How many pieces this step's transport must be cut into.
+
+        A tube can only pass on what it holds. If one step moves more, the tube
+        overfills and the one after it is padded with air, so liquid ends up
+        behind a gas plug that isn't really there. Cutting the step so that no
+        flow moves more than a tube holds avoids both. The solved flows stay
+        constant across the pieces.
+        """
+        flows = hyd_state.flows
+        worst = max(
+            (
+                abs(flows.get(edge_id, 0.0)) / capacity
+                for edge_id, capacity in self._edge_capacities.items()
+            ),
+            default=0.0,
+        )
+        # The margin keeps rounding from adding a piece at exactly one tube per step.
+        needed = max(1, math.ceil(worst * self._config.dt - 1e-9))
+        limit = self._config.max_transport_substeps
+        if needed <= limit:
+            return needed
+        if not self._warned_substep_limit:
+            self._warned_substep_limit = True
+            logger.warning(
+                "worker: a flow moves {} tube volumes in one step, more than "
+                "max_transport_substeps={} can resolve. Use a smaller dt.",
+                needed,
+                limit,
+            )
+        return limit
+
+    def _sync_device_readings(self) -> None:
+        """Copy to the devices what they report but can't see for themselves.
+
+        A sensor's reading and a syringe's fill level live in the inventories.
+        """
+        for sensor in self._sensor_entries:
+            state = self._inv_states.get(sensor.inv_node_id)
+            if state is not None:
+                sensor.comp.reading_k = state.temperature
+        for inv_node_id, syringe in self._syringes.items():
+            state = self._inv_states.get(inv_node_id)
+            if state is not None:
+                syringe.fill_m3 = state.liq_volume + state.gas_volume
 
     def _reseat_backward_bpr_edges(self, hyd_state: HydraulicState) -> HydraulicState:
         """Force-close any open BPR edge whose solved flow is backward.
@@ -789,6 +902,21 @@ class Worker:
                 self._t, hyd_state, self._transport_state, self._inv_states
             )
 
+        self._port_map = build_port_map(
+            self._graph, list(self._components_by_name.values())
+        )
+        substeps = self._transport_substeps(hyd_state)
+        for _ in range(substeps):
+            self._advance_transport(hyd_state, self._config.dt / substeps)
+
+        self._sync_device_readings()
+
+        # 10. Advance time
+        self._t += self._config.dt
+        self._hyd_state = hyd_state
+
+    def _advance_transport(self, hyd_state: HydraulicState, dt: float) -> None:
+        """Move fluid for *dt* at the flows in *hyd_state*: steps 4 to 9."""
         # 4. Apply plug-flow wall heat exchange before moving pockets.
         transport_heat_entries = self._static_transport_heat_entries
         if self._dynamic_transport_heat_entries:
@@ -803,18 +931,14 @@ class Worker:
             apply_transport_heat_exchange(
                 self._transport_state,
                 transport_heat_entries,
-                self._config.dt,
+                dt,
             )
 
         # Apply plug-flow reactions while pockets are resident in the reactor.
-        apply_transport(
-            self._transport_state,
-            self._reactions_map,
-            self._config.dt,
-        )
+        apply_transport(self._transport_state, self._reactions_map, dt)
 
         # 5. Advance transport
-        result = advance(self._graph, hyd_state, self._transport_state, self._config.dt)
+        result = advance(self._graph, hyd_state, self._transport_state, dt)
 
         # 6. Assimilate arriving pockets into inventories
         assimilate(
@@ -826,7 +950,7 @@ class Worker:
         _clamp_syringe_inventory_capacity(self._source_map, self._inv_states)
 
         # 7. Apply reactions
-        apply(self._inv_states, self._reactions_map, self._config.dt)
+        apply(self._inv_states, self._reactions_map, dt)
 
         # 7.5. Apply vessel wall heat exchange
         vessel_heat_entries = self._static_vessel_heat_entries
@@ -836,16 +960,9 @@ class Worker:
                 self._heat_provider_by_target,
             )
         if vessel_heat_entries:
-            apply_heat_exchange(
-                self._inv_states,
-                vessel_heat_entries,
-                self._config.dt,
-            )
+            apply_heat_exchange(self._inv_states, vessel_heat_entries, dt)
 
         # 8. Emit replacement pockets from inventories
-        self._port_map = build_port_map(
-            self._graph, list(self._components_by_name.values())
-        )
         emitted = emit(
             self._inv_states,
             result.departures,
@@ -859,17 +976,13 @@ class Worker:
             self._graph,
             hyd_state,
             self._inv_states,
-            self._config.dt,
+            dt,
         )
 
         # 9. Inject emitted pockets into transport queues
         self._transport_state = inject(
             result.next_state, {**emitted, **source_emitted}, hyd_state, self._graph
         )
-
-        # 10. Advance time
-        self._t += self._config.dt
-        self._hyd_state = hyd_state
 
     # ------------------------------------------------------------------
     # Run interface

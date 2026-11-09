@@ -41,7 +41,9 @@ sources) can be re-evaluated each tick.
    - BPRs: see [Back-Pressure Regulators](#back-pressure-regulators).
 3. Record the current state if a `Recorder` is attached and the record
    interval is due.
-4. Advance transport pockets through edges.
+4. Advance transport pockets through edges. Steps 4 to 10 run several times at
+   a fraction of `dt` when a flow would otherwise move more than a tube holds:
+   see [Sub-steps](#sub-steps).
 5. Assimilate arrived pockets into vessel inventories.
 6. Apply reactions to inventory states.
 7. Apply wall heat exchange (Newton cooling) to vessels that enable it.
@@ -154,6 +156,26 @@ emission. `inject()` appends emitted pockets at the inflow end of each edge
 and pads any underfilled edge with an air carrier pocket so transport edges
 are always full.
 
+### Merging
+
+Everything entering a tube goes through one helper, which merges the new pocket
+into the one already at the inflow end when they hold the same fluid: same
+phase, every species' concentration within 0.1% and temperatures within 0.1 K.
+A pocket under 0.05 µL merges into a same-phase neighbour whatever it holds.
+Without this, every step would add a pocket that nothing removes, and an idle
+line would grow without limit. Volume and moles are conserved; the cost is that
+composition isn't resolved along a tube more finely than those tolerances.
+
+### Sub-steps
+
+A tube can only pass on what it holds. If `|Q|·dt` exceeded a tube's volume, the
+tube would overfill and the one after it would be padded with air, leaving
+liquid behind a gas plug that isn't really there. So `Worker.step()` cuts
+transport, inventories, reactions and heat exchange into
+`n = ceil(max(|Q|·dt / V))` pieces of `dt/n`, across all transport edges. The
+hydraulics are solved once per step, so flows stay constant across the pieces.
+`SimConfig.max_transport_substeps` caps `n`, with one warning if it's hit.
+
 ## Inventory
 
 Vessel inventory state is seeded from the inventory snapshots stored in the
@@ -165,10 +187,14 @@ compiled graph. During each step:
 - Temperature is blended by thermal mass (`Σ n_i·Cp_i` over both phases,
   instantaneous equilibrium between phases). When no tracked species carry
   thermal mass, blending falls back to volume weighting with a warning.
-- Departing volumes emit gas from `TOP` ports or liquid from `BOTTOM` ports,
-  removing a proportional fraction of the phase's species. If the requested
-  phase runs out, the deficit is filled with carrier (air for gas, computed
-  from the ideal gas law) and a warning is logged.
+- Departing volumes emit gas first from `TOP` ports and liquid first from
+  `BOTTOM` ports, removing a proportional fraction of the phase's species. If
+  that phase can't cover the step, the rest comes from the other phase in the
+  same step, so a vessel's last liquid leaves ahead of the gas behind it. Only
+  if both together fall short is the deficit filled with carrier air (computed
+  from the ideal gas law), with a warning.
+- A vented vessel's ports hold atmospheric pressure, so the edges into its
+  inventory show no flow, but whatever flows to those ports still arrives.
 
 ### Flow sources and syringe pumps
 
@@ -178,10 +204,12 @@ directly into their outgoing transport edge each tick:
 - Plain flow sources are infinite reservoirs: their declared concentration
   (`initial_species / content volume`) is constant and never depleted.
   `direction_upward` selects liquid (default) or gas emission.
-- Syringe pumps are finite: the worker tracks the remaining liquid volume,
-  decrements it on dispense, refills it on withdrawal (negative flow), and
-  falls back to emitting air once the syringe runs dry (with warnings for
-  run-dry and over-fill).
+- Syringe pumps are finite: the worker tracks the remaining volume, decrements
+  it on dispense (liquid first, then any gas in the barrel, or the reverse with
+  `direction_upward=False`), refills it on withdrawal (negative flow), and falls
+  back to emitting air once the syringe runs dry (with warnings for pumping on
+  from an empty barrel and for over-fill). It also keeps the pump's `fill_m3`
+  current, so `infuse-all` and `withdraw-all` can stop in time.
 
 ### Heat exchange
 
@@ -242,7 +270,8 @@ construction and writes all dynamic tables atomically per record interval
 (`record_interval` must be a multiple of `dt`). Transport edges are sliced
 into fixed-length cells (`RECORDER_CELL_LENGTH_M`) for spatial snapshots of
 pocket contents. The worker closes the recorder at the end of `run()`. GUI
-readers must use their own read-only connections.
+readers must use their own read-only connections. The server skips frames where
+nothing changed: see [Recording](recording.md).
 
 ## Server / CLI
 
@@ -252,3 +281,38 @@ ZIP, runs the worker in a background thread, and exposes endpoints to load
 projects, start/stop simulations, send runtime component commands, and query
 status. Each run writes its own SQLite database (and log file) under the
 `--db` directory.
+
+### Running a protocol
+
+`cli/run.py` holds the two halves of a run, which the server puts on two threads
+and anything else driving a simulation can call the same way:
+
+- `run_sequence()` follows `RunnerService._execute` in chemunited-workflow, so a
+  protocol runs here as on the instrument. Steps run in the historical file's key
+  order, with the index from each key, and parameters load the same way. The first
+  error stops the run, and so does an unknown process, unless `error_resilient`
+  is set. Background nodes live for the whole run.
+- `run_physics()` applies queued commands and steps the worker until the run ends.
+  Whatever a step raises reaches its caller, which ends the run and wakes the
+  workflow.
+
+`GET /status` reports how the last run ended in `last_run`. A failed run keeps its
+partial results.
+
+### Lockstep
+
+In mode 1, `cli/lockstep.py` stops the two halves from racing. Physics steps only
+while every running node is parked on a simulated wait and none of those waits is
+due, and a node only runs while physics is parked. Simulated time stands still
+while a node runs, so pulse lengths don't depend on thread scheduling and repeat
+runs come out identical.
+
+- A pulse still lasts a whole number of steps: a wait ends at the first step on or
+  after its deadline.
+- A node that runs 60 s without a simulated wait, say with a `time.sleep()` in a
+  protocol, makes physics fall back to running freely, with one warning, so it
+  can't hang the run.
+- While a background node is parked, physics can take a step in the moment between
+  two processes, so such a run can shift by a step between repeats.
+
+Mode 2 has no workflow to wait for, and paces physics against the wall clock.

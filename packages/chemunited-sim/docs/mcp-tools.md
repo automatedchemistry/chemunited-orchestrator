@@ -16,13 +16,13 @@ When running with `--with-mcp` (MCP streamable-HTTP endpoint embedded in the Fas
 |------|-------------|
 | `load_project` | Load or replace the active project from a directory or `.chemunited` ZIP. Rejected while a simulation is running. |
 | `get_project` | Return the currently loaded project's path, components, and processes. |
-| `get_status` | Return `sim_status` (`no_project`/`idle`/`running`), `current_t`, and the active `SimConfig`. |
+| `get_status` | Return `sim_status` (`no_project`/`idle`/`running`), `current_t`, the active `SimConfig`, and `last_run`: how the last run ended (`finished`, `failed` or `stopped`), with the error and where it happened. |
 
 ## Run control
 
 | Tool | Description |
 |------|-------------|
-| `start_simulation` | Start a run (`execution_id`, `dt`, `t_end`, `real_time`, `historical_file`). Returns immediately. |
+| `start_simulation` | Start a run (`execution_id`, `dt`, `t_end`, `real_time`, `historical_file`, `error_resilient`, `record_interval`, `record_cells`). Returns immediately. |
 | `stop_simulation` | Abort the running simulation and return to idle. The database is kept as-is. |
 | `send_component_command` | Enqueue a component command during a real-time (mode 2) run, mirroring a command executed on real hardware. |
 

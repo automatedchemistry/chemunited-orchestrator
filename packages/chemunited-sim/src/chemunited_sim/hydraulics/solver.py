@@ -211,7 +211,7 @@ def solve(
         if comp_idx not in dirichlet_components:
             component_nodes = np.where(labels == comp_idx)[0]
             anchor = int(component_nodes[0])
-            logger.debug(
+            logger.trace(
                 "solve: connected component with {} node(s) has no Dirichlet "
                 "(PRESSURE) boundary condition; anchoring node '{}' to "
                 "atmospheric pressure ({:.0f} Pa) to keep the system solvable. "
