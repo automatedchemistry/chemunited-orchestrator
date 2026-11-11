@@ -379,6 +379,12 @@ COMPONENTS: dict[str, ComponentDefinition] = {
         category="pumps",
     ),
     # sensors
+    "BubbleSensor": ComponentDefinition(
+        ComponentData,
+        ComponentMode,
+        port_positions={1: (-48, 7), 2: (48, 7)},
+        category="sensors",
+    ),
     "FlowMeter": ComponentDefinition(ComponentData, ComponentMode, category="sensors"),
     "PhidgetBubbleSensorComponent": ComponentDefinition(
         ComponentData,

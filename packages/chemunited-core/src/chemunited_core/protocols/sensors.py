@@ -30,9 +30,6 @@ class SensorProtocolBase(ComponentProtocol):
         self.commands["power-off"] = PowerOffParameter
 
 
-class PhidgetBubbleSensorComponentProtocols(SensorProtocolBase): ...
-
-
 # --- MFC ---
 
 
@@ -91,6 +88,24 @@ class PhotoSensorProtocols(SensorProtocolBase):
         super().__init__(name)
         self.commands["acquire-signal"] = AcquireSignalParameter
         self.commands["calibration"] = CalibrateZeroParameter
+
+
+# --- Bubble sensor (any flowchem BubbleSensor component) ---
+
+
+class BubbleDetectedParameter(CommandSignature):
+    command: str = "bubble-detected"
+    method: Literal["GET", "PUT"] = "GET"
+
+
+class BubbleSensorProtocols(PhotoSensorProtocols):
+
+    def __init__(self, name: str):
+        super().__init__(name)
+        self.commands["bubble-detected"] = BubbleDetectedParameter
+
+
+class PhidgetBubbleSensorComponentProtocols(BubbleSensorProtocols): ...
 
 
 # --- Pressure sensor (read-only) ---

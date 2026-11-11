@@ -51,6 +51,7 @@ for example, all rotary valve variants are drawn with the same base graphic, and
 
 | Icon | Component | Description |
 |---|---|---|
+| <img src="../_static/components/BubbleSensor.svg" width="40" height="40"> | **Bubble Sensor** | Optical sensor that tells liquid from gas in a tube; links to either flowchem bubble sensor (Phidget or FlowControl board). |
 | <img src="../_static/components/FlowMeter.svg" width="40" height="40"> | **Flowmeter** | Measures the flow rate of liquid or gas passing through a line. |
 | <img src="../_static/components/BubbleSensor.svg" width="40" height="40"> | **Phidget Bubble Sensor** | Optical sensor that detects gas bubbles/phase boundaries in a tube (Phidget hardware). |
 | <img src="../_static/components/Power.svg" width="40" height="40"> | **Phidget Bubble Sensor (Powered)** | Powered variant of the Phidget bubble sensor, with an associated power/control channel. |

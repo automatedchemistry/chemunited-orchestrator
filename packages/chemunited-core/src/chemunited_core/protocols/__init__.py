@@ -13,6 +13,7 @@ from .assembly import (
 from .models import CommandSignature, ComponentProtocol
 from .pumps import HPLCPumpProtocols, SyringePumpProtocols
 from .sensors import (
+    BubbleSensorProtocols,
     MFCComponentProtocols,
     PhidgetBubbleSensorComponentProtocols,
     PhotoSensorProtocols,
@@ -122,6 +123,7 @@ __all__ = [
     "FourPortFivePositionValveProtocols",
     "SixPortTwoPositionValveProtocols",
     "SolenoidValve2WayProtocols",
+    "BubbleSensorProtocols",
     "PhidgetBubbleSensorComponentProtocols",
     "MFCComponentProtocols",
     "PhotoSensorProtocols",

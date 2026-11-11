@@ -5,6 +5,7 @@ from __future__ import annotations
 import pytest
 
 from chemunited_core.protocols import (
+    BubbleSensorProtocols,
     CommandSignature,
     Gantry1DProtocols,
     Gantry3DProtocols,
@@ -13,10 +14,12 @@ from chemunited_core.protocols import (
     MFCComponentProtocols,
     MultiChannelADCProtocols,
     NMRControlProtocols,
+    PhidgetBubbleSensorComponentProtocols,
     PressureControlProtocols,
     SixPortTwoPositionValveProtocols,
     SyringePumpProtocols,
     TemperatureControlProtocols,
+    get_protocol_class,
 )
 from chemunited_quantities import ChemUnitQuantity
 
@@ -112,6 +115,19 @@ class TestSensorProtocols:
         proto = PressureControlProtocols("pr1")
         assert "pressure" in proto.commands
         assert "target-reached" in proto.commands
+
+    def test_bubble_sensor_commands(self) -> None:
+        proto = BubbleSensorProtocols("bubble1")
+        assert set(proto.commands) >= {
+            "power-on",
+            "power-off",
+            "acquire-signal",
+            "calibration",
+            "bubble-detected",
+        }
+        assert get_protocol_class("BubbleSensor") is BubbleSensorProtocols
+        # The older Phidget-specific figure gets the same default commands
+        assert issubclass(PhidgetBubbleSensorComponentProtocols, BubbleSensorProtocols)
 
 
 class TestTechnicalProtocols:
