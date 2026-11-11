@@ -28,6 +28,9 @@ source_suffix = {
     ".rst": "restructuredtext",
     ".md": "markdown",
 }
+# Recorder tooling and local captures are not documentation pages. Published
+# tutorial GIFs live in _static/tutorials instead.
+exclude_patterns = ["_build", "tutorial_recorder/**"]
 autodoc_member_order = "bysource"
 
 # Theme

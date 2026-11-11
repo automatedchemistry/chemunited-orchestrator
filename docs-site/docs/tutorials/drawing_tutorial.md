@@ -1,53 +1,55 @@
-# Tutorial Example
+# 1. Draw the setup
 
-This tutorial guides you through building a very simple setup, step by step, so you can learn how ChemUnited
-works in practice. The goal is to build the simple setup shown below:
+Build a small liquid-transfer setup, then follow it through simulation and dashboard execution. This walkthrough has six steps. Drawing has separate GIFs for placing components and building connections; each remaining step has its own GIF.
 
-<p align="center">
-<img src="../_static/transfer_fluid.svg" alt="Image 1" width="85%">
-</p>
+1. [Draw the setup](drawing_tutorial.md).
+2. [Add a substance and fill the vessel](inventory_tutorial.md).
+3. [Build the protocol](protocols_tutorial.md).
+4. [Simulate the process](simulation_tutorial.md).
+5. [Connect the devices](connectivity_tutorial.md).
+6. [Run the dashboard](monitoring_tutorial.md).
 
-This setup is responsible for transferring a defined volume of fluid from one vessel to another. Follow the
-step-by-step demonstration shown below.
+Start with a [new project](../wellcome/new_project.md) and open **Draw** in the desktop app.
 
-## 1 — Insert all components
+## Add the components
 
-To add a component to the drawing:
+```{image} ../_static/tutorials/01-components.gif
+:alt: Dragging five components onto the canvas and editing their names, capacities and dimensions.
+:width: 100%
+```
 
-a - Select it from the desired category,
+Drag each component from the library onto the canvas. In its properties dialog, enter the name and values below, then click **Save**. Keep these names throughout the tutorial; the commands refer to them.
 
-b - Click Add,
+| Component | Name | Properties used in the recording |
+| --- | --- | --- |
+| Glass bottle | `A` | Capacity: `20 mL` |
+| Glass bottle | `B` | Capacity: `20 mL` |
+| Sixteen-port distribution valve | `valve` | Default properties |
+| Loop | `Loop` | Length: `1000 mm`; internal diameter: `2 mm` (about `3.14 mL`) |
+| Syringe pump | `P01` | Syringe volume: `1 mL` |
 
-c - Then click on the canvas where you want to place it.
+Place B above the left side of the valve and A above the right side, with the loop to the left and the pump below it. This keeps the tubing close to ports 16 and 4 without crossing the valve face.
 
-Begin by inserting all the components exactly as shown in the illustration:
+The loop holds about **3.14 mL**, exceeding the required 3 mL minimum. The short tubing connections below use their own dimensions.
 
-<img src="../_static/add_valve_tutorial.gif" width="700px">
+## Connect and route the tubing
 
-The components required for this setup are:
+```{image} ../_static/tutorials/01-connections.gif
+:alt: Connecting flow ports, opening the tubing right-click menu, and dragging inflection points to shape the routes.
+:width: 100%
+```
 
-* **1 x Syringe Pump** - from `pump` group
+Drag from one flow port to the other to create each connection:
 
-* **1 x Sixteen Port Distribution Valve** - from `valve` group
+| From | Port | To | Port |
+| --- | --- | --- | --- |
+| `A` | 1 | `valve` | 4 |
+| `B` | 1 | `valve` | 16 |
+| `valve` | 0 | `Loop` | 2 |
+| `Loop` | 1 | `P01` | 1 |
 
-* **1 x Loop** - from `glasses` group
+For each connection, right-click the tubing and choose **Add Inflection Point**. Drag the new handle to route the tubing around the components. Then right-click the tubing again, open **Properties**, set its length to `10 mm` and diameter to `0.5 mm`, and click **Save**.
 
-* **5 x Glass Bottle** - from `glasses` group
+Save the drawing. You should now have five components and four connections. See [Drawing](../drawing/drawing.md) for the other canvas and connection tools.
 
-<p align="center">
-  <img src="../_static/components_tutorial.png" alt="Image 1" width="85%">
-</p>
-
-<div class="info-block">
-<strong>💡 Information</strong><br>
-To set an inclination for the pump, simply double-click the component to open the properties window.
-Then, adjust the angle to <strong>45°</strong>.
-</div>
-
-## 2 - Build connections
-
-A connection is created by linking two compatible connection points.
-When building a connection, the user may add several inflection points to better route the connection through the setup layout.
-Connections can also be reshaped—made more curved or more linear—to improve the clarity and aesthetics of the design.
-
-<img src="../_static/build_connection.gif" width="500px">
+Next: [2. Add a substance and fill the vessel](inventory_tutorial.md).

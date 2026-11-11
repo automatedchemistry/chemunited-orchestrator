@@ -38,7 +38,7 @@ New to ChemUnited? Follow this path:
 5. **[Connect your devices](connectivity/connectivity.md)** — link the drawing to physical hardware.
 6. **[Run and monitor](dashboard/launcher.md)** — launch the dashboard to build, run and watch protocols.
 
-Prefer a hands-on walkthrough? Start with the **[Drawing Tutorial](tutorials/drawing_tutorial.md)**.
+Prefer a hands-on walkthrough? Follow the **[six-step tutorial](tutorials/drawing_tutorial.md)**, from drawing and filling a vessel to simulation, device connections, and dashboard execution. Drawing has separate component and connection GIFs; each remaining step has its own GIF.
 
 ---
 
@@ -92,9 +92,11 @@ reference/components.md
 :maxdepth: 1
 :caption: Tutorial
 tutorials/drawing_tutorial.md
+tutorials/inventory_tutorial.md
 tutorials/protocols_tutorial.md
-tutorials/monitoring_tutorial.md
+tutorials/simulation_tutorial.md
 tutorials/connectivity_tutorial.md
+tutorials/monitoring_tutorial.md
 ```
 
 ```{toctree}
