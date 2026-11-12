@@ -218,7 +218,10 @@ class RunnerService:
                 )
                 write_run_manifest(manifest_file, manifest)
                 if plan is None:
-                    assert isinstance(sequence, list)
+                    if not isinstance(sequence, list):
+                        raise TypeError(
+                            "Expected a ProtocolPlan or a list of process steps."
+                        )
                     # Retain the private legacy execution entry point used by
                     # integrations, but route it through the same validated model.
                     selected = {"main_parameter": data.get("main_parameter", {})}
