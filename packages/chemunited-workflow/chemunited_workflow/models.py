@@ -156,10 +156,12 @@ class WorkflowResult:
     node_runtime: dict[tuple[str, int], NodeRuntime]
     errors: dict[tuple[str, int], Exception]
     process: str | None = None
+    occurrence: dict[str, Any] | None = None
 
     def model_dump(self) -> dict:
         return {
             "process": self.process,
+            "occurrence": self.occurrence,
             "node_state": {
                 f"{k[0]}:{k[1]}": str(v) for k, v in self.node_state.items()
             },
@@ -199,12 +201,14 @@ class WorkflowExecutionEvent:
     wait_seconds: float | None = None
     input_value: str | None = None
     timestamp: float = field(default_factory=time)
+    occurrence: dict[str, Any] | None = None
 
     def model_dump(self) -> dict:
         return {
             "event_type": str(self.event_type),
             "message": self.message,
             "process": self.process,
+            "occurrence": self.occurrence,
             "node_key": list(self.node_key) if self.node_key else None,
             "state": str(self.state) if self.state else None,
             "result": self.result,

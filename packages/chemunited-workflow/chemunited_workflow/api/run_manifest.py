@@ -45,6 +45,7 @@ def build_run_manifest(
     project_name: str,
     git: GitState | None,
     head_at_start: str | None = None,
+    protocol_plan: dict[str, Any] | None = None,
 ) -> dict[str, Any]:
     """The manifest of a run that just started.
 
@@ -57,7 +58,7 @@ def build_run_manifest(
     }
     if head_at_start is not None:
         project["head_at_start"] = head_at_start
-    return {
+    manifest: dict[str, Any] = {
         "schema": MANIFEST_SCHEMA,
         "run_id": run_id,
         "state": RunState.RUNNING.value,
@@ -70,6 +71,9 @@ def build_run_manifest(
         "software": dict(software_versions()),
         "results": [],
     }
+    if protocol_plan is not None:
+        manifest["protocol_plan"] = protocol_plan
+    return manifest
 
 
 def finish_run_manifest(manifest: dict[str, Any], record: RunRecord) -> dict[str, Any]:

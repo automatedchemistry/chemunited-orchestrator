@@ -30,12 +30,50 @@ serializer before being returned.
 | Method | Path | Description |
 |--------|------|-------------|
 | `GET` | `/protocols/` | List saved protocol files |
-| `GET` | `/protocols/{filename}` | Read a protocol file by filename |
-| `POST` | `/protocols/` | Save a new versioned protocol file |
+| `GET` | `/protocols/{filename}` | Read a validated, normalized v2 document without rewriting the saved source |
+| `GET` | `/protocols/{filename}/plan` | Compact entered/source/resolved documents, planner version and exact total executions |
+| `GET` | `/protocols/{filename}/preview` | Bounded execution page; query `offset=0&limit=20` |
+| `POST` | `/protocols/preview` | Validate and preview an unsaved draft; body `{"data": {...}, "offset": "0", "limit": 20}`; writes no file |
+| `POST` | `/protocols/` | Validate and save a compact v2 document; body `{"name": "...", "data": {...}}` |
 | `DELETE` | `/protocols/{filename}` | Permanently delete a protocol file |
 
 Protocol names may not contain the characters `/ \ : ? # * < > |`. Names are
 stored as `{name}_{YYYY-MM-DDTHH-MM-SS}.json` in `protocols_historic/`.
+
+V2 documents contain `schema_version: 2`, `main_parameter`, and an ordered
+`sequence`. Each process item has `type: "process"`, a globally unique stable
+`id`, a registered `process` name, and a `parameters` object. A repeat item has
+`type: "repeat"`, its own unique `id`, `label`, a canonical decimal-string
+`count` greater than 1, and nonempty `steps` containing process items. For example:
+
+```json
+{
+  "schema_version": 2,
+  "main_parameter": {},
+  "sequence": [{
+    "type": "repeat", "id": "wash-cycles", "label": "Wash cycles", "count": "3",
+    "steps": [{"type": "process", "id": "wash", "process": "Wash", "parameters": {}}]
+  }]
+}
+```
+
+Several sequential groups are supported; nested groups are rejected. Every
+cycle uses the group's shared parameter values. Counts have no application
+maximum. Preview responses contain `document`, `total_executions`, `offset`,
+`limit`, `next_offset` and `occurrences`; limits range from 1 to 200. Counts,
+totals, offsets, occurrence indices and cycles are decimal strings, preserving
+values above JavaScript's safe integer range. A late page seeks by arithmetic
+without enumerating preceding cycles. Occurrences include their unique
+`execution_key`, `source_id`, `group_id`, `group_label`, `cycle`, and resolved
+parameters. The plan summary also retains `source_document`,
+`source_schema_version`, and `resolved_document` with validated defaults.
+
+Legacy flat `{process}_{index}` documents remain readable and runnable in their
+original insertion order, retaining their execution keys and process indices.
+GET normalizes their editable representation; `/plan` retains the original
+source. Opening or running does not change the file, while saving emits v2.
+Unsupported versions, unknown processes, duplicate IDs and invalid settings
+fail explicitly with an error naming the source item and field.
 
 ## Run control
 

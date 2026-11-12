@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from ..dependencies import get_project_holder, get_protocol_service
 from ..project_holder import ProjectHolder
-from ..schemas import ProtocolIn
+from ..schemas import ProtocolIn, ProtocolPreviewIn
 from ..services.protocol import ProtocolService
 
 read_router = APIRouter(prefix="/protocols", tags=["protocols"])
@@ -29,9 +29,8 @@ async def get_protocol(
 ):
     """Read a single protocol by filename.
 
-    Returns the full JSON content of the protocol — `main_parameter` plus one
-    key per process step in `{process_name}_{index}` format. The insertion
-    order of the process keys defines the execution sequence.
+    Returns a validated v2 document with ordered process steps and repeat
+    groups. Reading a legacy flat file normalizes it without changing the file.
     """
     try:
         return svc.read_protocol(filename)
@@ -39,6 +38,48 @@ async def get_protocol(
         raise HTTPException(status_code=400, detail=str(exc))
     except FileNotFoundError as exc:
         raise HTTPException(status_code=404, detail=str(exc))
+
+
+@read_router.get("/{filename}/plan")
+async def get_protocol_plan(
+    filename: str,
+    svc: ProtocolService = Depends(get_protocol_service),
+):
+    """Get the compact source/resolved snapshot and exact execution total."""
+    try:
+        return svc.read_plan(filename).summary()
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
+@read_router.get("/{filename}/preview")
+async def get_protocol_preview(
+    filename: str,
+    offset: str = "0",
+    limit: int = 20,
+    svc: ProtocolService = Depends(get_protocol_service),
+):
+    """Seek directly to a bounded execution page without expanding earlier cycles."""
+    try:
+        return svc.read_plan(filename).preview(offset, limit)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+    except FileNotFoundError as exc:
+        raise HTTPException(status_code=404, detail=str(exc))
+
+
+@write_router.post("/preview")
+async def preview_protocol(
+    body: ProtocolPreviewIn,
+    svc: ProtocolService = Depends(get_protocol_service),
+):
+    """Validate and preview an unsaved draft; this does not write a file."""
+    try:
+        return svc.preview_protocol(body.data, body.offset, body.limit)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
 
 
 @write_router.post("/", status_code=201)
@@ -49,7 +90,7 @@ async def create_protocol(
     """Save a new protocol file.
 
     Validates all process configs and the `main_parameter` block, then writes
-    a timestamped JSON file to `protocols_historic/`. Every call creates a
+    a compact v2 document to `protocols_historic/`. Every call creates a
     **new** file — protocols are immutable once written. Returns the generated
     filename, e.g. `suzuki_batch_14_2026-05-15T10-38-00.json`.
     """

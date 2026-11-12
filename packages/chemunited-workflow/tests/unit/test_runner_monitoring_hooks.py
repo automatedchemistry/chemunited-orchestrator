@@ -69,18 +69,24 @@ def test_execute_calls_on_run_started_and_finished_with_run_id_and_record_flag(
     monitoring.on_run_finished.assert_called_once_with()
 
 
-def test_execute_calls_on_run_finished_even_when_run_fails(tmp_path):
+def test_execute_calls_on_run_finished_even_when_run_fails(tmp_path, monkeypatch):
     monitoring = MagicMock()
     runner, store = _make_runner(tmp_path, monitoring_service=monitoring)
     run_id = store.try_start("proto.json")
     assert run_id is not None
 
-    # An unknown process name makes _execute raise before completing the sequence.
+    # Use a runtime failure: unknown processes now fail preflight, before
+    # monitoring starts or the platform is constructed.
+    monkeypatch.setattr(
+        runner._processes["my_process"],
+        "build_workflow",
+        MagicMock(side_effect=RuntimeError("workflow build failed")),
+    )
     runner._execute(
         run_id,
         "proto.json",
-        [("no_such_process", 0)],
-        {},
+        [("my_process", 0)],
+        {"my_process_0": {}},
         dry_run=True,
         timeout_commands="1 s",
         error_resilient=False,

@@ -40,12 +40,16 @@ async def get_active_run(
     """
     run_id = holder.active_run_id()
     rec = holder.run_store.get() if run_id is not None else None
-    return {
+    response = {
         "active_run_id": run_id,
         "state": rec.state.value if rec is not None else None,
         "pending_inputs": holder.run_store.pending_input_prompts(),
         "protocol": rec.protocol_filename if rec is not None else None,
     }
+    if rec is not None and rec.protocol_plan is not None:
+        response["protocol_plan"] = rec.protocol_plan
+        response["current_occurrence"] = rec.current_occurrence
+    return response
 
 
 @router.post("/", status_code=202)
@@ -73,6 +77,8 @@ async def start_run(
         )
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
+    except FileNotFoundError:
+        raise HTTPException(status_code=404, detail="Protocol file not found.")
     if run_id is None:
         raise HTTPException(
             status_code=409,
@@ -103,13 +109,17 @@ async def get_run_status(
     rec = svc._run_store.get()
     if rec is None:
         raise HTTPException(status_code=404, detail="No run is active or recorded.")
-    events, cursor = svc._run_store.events_since(after)
+    events, cursor = svc._run_store.events_since(after, record=rec)
     return RunStatus(
         run_id=rec.run_id,
         state=rec.state.value,
         events=[e.model_dump() for e in events],
         cursor=cursor,
         reason=rec.cancel_reason,
+        protocol=rec.protocol_filename,
+        protocol_plan=rec.protocol_plan,
+        current_occurrence=rec.current_occurrence,
+        pending_inputs=svc._run_store.pending_input_prompts(record=rec),
     )
 
 
@@ -133,6 +143,9 @@ async def get_run_report(svc: RunnerService = Depends(get_runner_service)):
         "state": rec.state.value,
         "reason": rec.cancel_reason,
         "results": [r.model_dump() for r in rec.results],
+        "protocol": rec.protocol_filename,
+        "protocol_plan": rec.protocol_plan,
+        "current_occurrence": rec.current_occurrence,
     }
 
 
@@ -179,7 +192,7 @@ async def _generate_run_stream(
     active_states = (RunState.RUNNING, RunState.PAUSED)
     while rec.state in active_states:
         sent_event = False
-        events, cursor = svc._run_store.events_since(cursor)
+        events, cursor = svc._run_store.events_since(cursor, record=rec)
         for event in events:
             yield f"data: {event.model_dump_json()}\n\n"
             sent_event = True
@@ -204,7 +217,7 @@ async def _generate_run_stream(
     # The run can transition out of RUNNING/PAUSED between one poll's sleep
     # and the next loop-condition check; any events appended in that gap
     # would otherwise be dropped, so read once more before closing.
-    events, cursor = svc._run_store.events_since(cursor)
+    events, cursor = svc._run_store.events_since(cursor, record=rec)
     for event in events:
         yield f"data: {event.model_dump_json()}\n\n"
 
@@ -317,7 +330,10 @@ async def submit_run_input(
     either it never asked, already got an answer, timed out, or the run
     ended.
     """
-    if not svc._run_store.submit_input(body.node_id, body.value):
+    input_key = (
+        f"{body.process_key}::{body.node_id}" if body.process_key else body.node_id
+    )
+    if not svc._run_store.submit_input(input_key, body.value):
         raise HTTPException(
             status_code=404,
             detail=f"Node {body.node_id!r} is not currently waiting for operator input.",

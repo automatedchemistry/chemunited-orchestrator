@@ -4,10 +4,12 @@ from __future__ import annotations
 
 import json
 import threading
+from copy import deepcopy
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
+from typing import Any
 
 from chemunited_workflow.models import WorkflowExecutionEvent, WorkflowResult
 
@@ -42,6 +44,9 @@ class RunRecord:
     pending_inputs: dict[str, threading.Event] = field(default_factory=dict)
     pending_input_messages: dict[str, str] = field(default_factory=dict)
     input_values: dict[str, str] = field(default_factory=dict)
+    protocol_plan: dict[str, Any] | None = None
+    current_occurrence: dict[str, Any] | None = None
+    execution_active: bool = False
 
 
 class RunStore:
@@ -116,10 +121,25 @@ class RunStore:
             self._project_dir = project_dir
         self._restore_from_lockfile()
 
-    def try_start(self, protocol_filename: str) -> str | None:
+    def try_start(
+        self, protocol_filename: str, *, protocol_plan: dict[str, Any] | None = None
+    ) -> str | None:
         """Atomically start a new run. Returns the derived run_id, or None if busy."""
+        record = self.try_start_record(protocol_filename, protocol_plan=protocol_plan)
+        return record.run_id if record is not None else None
+
+    def try_start_record(
+        self,
+        protocol_filename: str,
+        *,
+        protocol_plan: dict[str, Any] | None = None,
+        execution_active: bool = False,
+    ) -> RunRecord | None:
+        """Claim a run and retain its identity, including while a cancelled worker drains."""
         with self._lock:
-            if self._record is not None and self._record.state in _ACTIVE_STATES:
+            if self._record is not None and (
+                self._record.state in _ACTIVE_STATES or self._record.execution_active
+            ):
                 return None
             stem = Path(protocol_filename).stem
             started_at = datetime.now()
@@ -128,16 +148,52 @@ class RunStore:
                 run_id=run_id,
                 protocol_filename=protocol_filename,
                 started_at=started_at,
+                protocol_plan=deepcopy(protocol_plan),
+                execution_active=execution_active,
             )
-        self._write_lockfile(run_id, protocol_filename)
-        return run_id
+            self._write_lockfile(run_id, protocol_filename)
+            return self._record
 
-    def append_event(self, event: WorkflowExecutionEvent) -> None:
+    def release_execution(self, record: RunRecord) -> None:
         with self._lock:
-            if self._record is not None:
-                self._record.events.append(event)
+            record.execution_active = False
+            if self._record is record and record.state not in _ACTIVE_STATES:
+                self._delete_lockfile()
 
-    def events_since(self, cursor: int) -> tuple[list[WorkflowExecutionEvent], int]:
+    def mark_execution(self, record: RunRecord) -> bool:
+        with self._lock:
+            if self._record is not record:
+                return False
+            record.execution_active = True
+            return True
+
+    def set_protocol_plan(
+        self, plan: dict[str, Any], *, record: RunRecord | None = None
+    ) -> None:
+        with self._lock:
+            target = record if record is not None else self._record
+            if target is not None:
+                target.protocol_plan = deepcopy(plan)
+
+    def set_current_occurrence(
+        self, occurrence: dict[str, Any], *, record: RunRecord | None = None
+    ) -> None:
+        with self._lock:
+            target = record if record is not None else self._record
+            if target is not None:
+                target.current_occurrence = dict(occurrence)
+
+    def append_event(
+        self, event: WorkflowExecutionEvent, *, record: RunRecord | None = None
+    ) -> None:
+        with self._lock:
+            target = record if record is not None else self._record
+            if target is not None:
+                target.events.append(event)
+
+    def events_since(
+        self, cursor: int, *, record: RunRecord | None = None
+    ) -> tuple[list[WorkflowExecutionEvent], int]:
         """Non-destructive read of every event recorded from index ``cursor`` onward.
 
         Returns ``(events, new_cursor)`` — pass ``new_cursor`` back in as
@@ -150,24 +206,28 @@ class RunStore:
         already happened.
         """
         with self._lock:
-            if self._record is None:
+            target = record if record is not None else self._record
+            if target is None:
                 return [], cursor
-            return list(self._record.events[cursor:]), len(self._record.events)
+            return list(target.events[cursor:]), len(target.events)
 
-    def append_result(self, result: WorkflowResult) -> None:
+    def append_result(
+        self, result: WorkflowResult, *, record: RunRecord | None = None
+    ) -> None:
         with self._lock:
-            if self._record is not None:
-                self._record.results.append(result)
+            target = record if record is not None else self._record
+            if target is not None:
+                target.results.append(result)
 
-    def set_state(self, success: bool) -> None:
+    def set_state(self, success: bool, *, record: RunRecord | None = None) -> None:
         with self._lock:
-            if self._record is None:
+            target = record if record is not None else self._record
+            if target is None:
                 return
-            if self._record.state == RunState.CANCELLED:
+            if target.state != RunState.CANCELLED:
+                target.state = RunState.FINISHED if success else RunState.FAILED
+            if self._record is target and not target.execution_active:
                 self._delete_lockfile()
-                return
-            self._record.state = RunState.FINISHED if success else RunState.FAILED
-        self._delete_lockfile()
 
     def get(self) -> RunRecord | None:
         with self._lock:
@@ -185,39 +245,63 @@ class RunStore:
                 return None
             return self._record.pause_event
 
-    def request_input(self, node_id: str, message: str) -> threading.Event:
+    def request_input(
+        self, node_id: str, message: str, *, record: RunRecord | None = None
+    ) -> threading.Event:
         """Register a pending operator-input request for ``node_id`` and return its Event."""
         with self._lock:
             event = threading.Event()
-            if self._record is not None:
-                self._record.pending_inputs[node_id] = event
-                self._record.pending_input_messages[node_id] = message
+            target = record if record is not None else self._record
+            if target is not None:
+                target.pending_inputs[node_id] = event
+                target.pending_input_messages[node_id] = message
             return event
 
     def submit_input(self, node_id: str, value: str) -> bool:
         """Deliver an operator's reply for ``node_id``. Returns False if nothing is pending for it."""
         with self._lock:
-            if self._record is None or node_id not in self._record.pending_inputs:
+            if self._record is None:
                 return False
+            if node_id not in self._record.pending_inputs:
+                # Older clients identify a prompt only by node ID. Accept that
+                # only when it identifies exactly one execution occurrence.
+                matches = (
+                    [
+                        key
+                        for key in self._record.pending_inputs
+                        if key.endswith(f"::{node_id}")
+                    ]
+                    if "::" not in node_id
+                    else []
+                )
+                if len(matches) != 1:
+                    return False
+                node_id = matches[0]
             self._record.input_values[node_id] = value
             self._record.pending_inputs[node_id].set()
             return True
 
-    def pop_input_value(self, node_id: str) -> str | None:
+    def pop_input_value(
+        self, node_id: str, *, record: RunRecord | None = None
+    ) -> str | None:
         """Clear and return the delivered reply for ``node_id``, if any."""
         with self._lock:
-            if self._record is None:
+            target = record if record is not None else self._record
+            if target is None:
                 return None
-            self._record.pending_inputs.pop(node_id, None)
-            self._record.pending_input_messages.pop(node_id, None)
-            return self._record.input_values.pop(node_id, None)
+            target.pending_inputs.pop(node_id, None)
+            target.pending_input_messages.pop(node_id, None)
+            return target.input_values.pop(node_id, None)
 
-    def pending_input_prompts(self) -> dict[str, str]:
+    def pending_input_prompts(
+        self, *, record: RunRecord | None = None
+    ) -> dict[str, str]:
         """Return ``{node_id: message}`` for every request awaiting an operator reply."""
         with self._lock:
-            if self._record is None:
+            target = record if record is not None else self._record
+            if target is None:
                 return {}
-            return dict(self._record.pending_input_messages)
+            return dict(target.pending_input_messages)
 
     def cancel(self, reason: str | None = None) -> bool:
         """Cancel the active run. ``reason``, if given, says why and is
@@ -237,7 +321,8 @@ class RunStore:
             # Wake anything blocked waiting on an operator reply, same reason.
             for event in self._record.pending_inputs.values():
                 event.set()
-        self._delete_lockfile()
+            if not self._record.execution_active:
+                self._delete_lockfile()
         return True
 
     def pause(self) -> bool:
@@ -259,6 +344,8 @@ class RunStore:
     @property
     def active_run_id(self) -> str | None:
         with self._lock:
-            if self._record is not None and self._record.state in _ACTIVE_STATES:
+            if self._record is not None and (
+                self._record.state in _ACTIVE_STATES or self._record.execution_active
+            ):
                 return self._record.run_id
             return None

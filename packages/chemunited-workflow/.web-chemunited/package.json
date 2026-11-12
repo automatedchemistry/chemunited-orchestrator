@@ -9,6 +9,8 @@
     "preview": "vite preview",
     "build-only": "vite build",
     "type-check": "vue-tsc --build",
+    "test:protocols": "node scripts/test-protocol-editor.mjs && node scripts/test-protocol-editor-ui.mjs",
+    "test:run-control": "node scripts/test-run-presentation.mjs",
     "lint": "run-s \"lint:*\"",
     "lint:oxlint": "oxlint . --fix",
     "lint:eslint": "eslint . --fix --cache"

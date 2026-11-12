@@ -11,6 +11,7 @@ class ProcessInfo(BaseModel):
     name: str
     description: str
     config_schema: dict[str, Any]
+    library_visible: bool = True
 
 
 class ProtocolMeta(BaseModel):
@@ -24,6 +25,14 @@ class ProtocolIn(BaseModel):
 
     name: str
     data: dict[str, Any]
+
+
+class ProtocolPreviewIn(BaseModel):
+    """Bounded execution preview of an unsaved document, with an exact offset."""
+
+    data: dict[str, Any]
+    offset: str = Field(default="0", strict=True)
+    limit: int = Field(default=20, ge=1, le=200, strict=True)
 
 
 class RunRequest(BaseModel):
@@ -93,6 +102,10 @@ class RunStatus(BaseModel):
     # Why a cancelled run was stopped, when whoever stopped it said (a safety
     # interlock, say); null otherwise.
     reason: str | None = None
+    protocol: str = ""
+    protocol_plan: dict[str, Any] | None = None
+    current_occurrence: dict[str, Any] | None = None
+    pending_inputs: dict[str, str] = Field(default_factory=dict)
 
 
 class RunInputIn(BaseModel):
@@ -100,6 +113,7 @@ class RunInputIn(BaseModel):
 
     node_id: str
     value: str
+    process_key: str | None = None
 
 
 class LogMeta(BaseModel):

@@ -21,6 +21,7 @@ from chemunited_workflow import Process
 from chemunited_workflow.clients.base import _pop_thread_resilient_errors
 from chemunited_workflow.clients.http import ComponentClient
 from chemunited_workflow.platform import Platform
+from chemunited_workflow.protocol_plan import ProtocolPlan, build_protocol_plan
 
 from ..device_state import DeviceStateStore
 
@@ -95,6 +96,7 @@ class ProtocolService:
                 "name": name,
                 "description": (cls.__doc__ or "").strip(),
                 "config_schema": self._model_json_schema(self._configs[name]),
+                "library_visible": getattr(cls, "library_visible", True),
             }
             for name, cls in self._processes.items()
         ]
@@ -145,11 +147,26 @@ class ProtocolService:
             )
         return target
 
-    def read_protocol(self, filename: str) -> dict[str, Any]:
+    def _read_protocol_data(self, filename: str) -> dict[str, Any]:
         path = self._protocol_path(filename)
         if not path.exists():
             raise FileNotFoundError(f"Protocol '{filename}' not found.")
         return json.loads(path.read_text(encoding="utf-8"))
+
+    def build_plan(self, data: dict[str, Any]) -> ProtocolPlan:
+        return build_protocol_plan(data, self._configs, self._main_parameter_class)
+
+    def read_plan(self, filename: str) -> ProtocolPlan:
+        return self.build_plan(self._read_protocol_data(filename))
+
+    def read_protocol(self, filename: str) -> dict[str, Any]:
+        """Return the normalized editable document without rewriting its source."""
+        return self.read_plan(filename).document
+
+    def preview_protocol(
+        self, data: dict[str, Any], offset: str = "0", limit: int = 20
+    ) -> dict[str, Any]:
+        return self.build_plan(data).preview(offset, limit)
 
     _INVALID_NAME_CHARS = re.compile(r"[/\\:?#*<>|]")
 
@@ -163,36 +180,17 @@ class ProtocolService:
                 f"Protocol name '{name}' contains invalid characters. "
                 "Avoid: / \\ : ? # * < > |"
             )
-        if "main_parameter" not in data:
-            data = {
-                "main_parameter": self._main_parameter_class().model_dump(mode="json"),
-                **data,
-            }
-        self._validate_protocol(data)
+        document = self.build_plan(data).document
         timestamp = datetime.now().strftime("%Y-%m-%dT%H-%M-%S")
         filename = f"{name}_{timestamp}.json"
         path = self._protocol_dir / filename
         path.write_text(
-            json.dumps(data, indent=2, ensure_ascii=False), encoding="utf-8"
+            json.dumps(document, indent=2, ensure_ascii=False), encoding="utf-8"
         )
         return filename
 
     def _validate_protocol(self, data: dict[str, Any]) -> None:
-        for key, params in data.items():
-            if key == "main_parameter":
-                self._main_parameter_class.model_validate(params)
-                continue
-            m = re.fullmatch(r"(.+)_(\d+)", key)
-            if not m:
-                raise ValueError(
-                    f"Invalid protocol key '{key}'. Expected '{{process}}_{{index}}'."
-                )
-            process_name = m.group(1)
-            if process_name not in self._configs:
-                raise ValueError(
-                    f"Unknown process '{process_name}' in protocol key '{key}'."
-                )
-            self._configs[process_name].model_validate(params)
+        self.build_plan(data)
 
     # ── Process source ───────────────────────────────────────────────────────
 

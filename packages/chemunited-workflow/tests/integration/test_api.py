@@ -200,7 +200,9 @@ def test_list_protocols(client):
 def test_get_existing_protocol(client):
     r = client.get("/protocols/run_001.json")
     assert r.status_code == 200
-    assert "my_process_0" in r.json()
+    assert r.json()["schema_version"] == 2
+    assert r.json()["sequence"][0]["id"] == "my_process_0"
+    assert r.json()["sequence"][0]["process"] == "my_process"
 
 
 def test_get_missing_protocol(client):

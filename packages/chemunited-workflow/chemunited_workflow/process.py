@@ -137,6 +137,12 @@ class Process(ABC, Generic[ConfigT]):
         try:
             data = json.loads(historic_file_path.read_text(encoding="utf-8"))
 
+            if "schema_version" in data or "sequence" in data:
+                raise ValueError(
+                    "Versioned protocols must run through the protocol planner. "
+                    "Process.load_parameters() only supports flat historic files."
+                )
+
             if "main_parameter" in data:
                 if self.main_parameters is None:
                     logger.error(

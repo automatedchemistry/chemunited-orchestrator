@@ -16,6 +16,8 @@ eggs/
 .eggs/
 lib/
 lib64/
+!/.web-chemunited/src/lib/
+!/.web-chemunited/src/lib/*.ts
 parts/
 sdist/
 var/

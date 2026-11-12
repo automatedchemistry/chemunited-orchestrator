@@ -5,7 +5,8 @@ from __future__ import annotations
 import json
 import re
 import threading
-from datetime import datetime
+from dataclasses import replace
+from functools import partial
 from pathlib import Path
 from typing import Any
 
@@ -16,7 +17,9 @@ from chemunited_workflow import Process, WorkflowExecutor, compile_workflow
 from chemunited_workflow.background import STOP_TIMEOUT_SECONDS, BackgroundTasks
 from chemunited_workflow.cancellation import wait_for_operator_input, wait_while_paused
 from chemunited_workflow.durations import parse_timeout_commands
+from chemunited_workflow.models import WorkflowExecutionEvent
 from chemunited_workflow.platform import Platform
+from chemunited_workflow.protocol_plan import ProtocolPlan, build_protocol_plan
 from chemunited_workflow.provenance import GitState, read_head
 from chemunited_workflow.terminal import WorkflowLogger, create_run_log_path
 
@@ -27,7 +30,7 @@ from ..run_manifest import (
     manifest_path,
     write_run_manifest,
 )
-from ..run_store import RunState, RunStore
+from ..run_store import RunRecord, RunStore
 from .monitoring import MonitoringService
 
 
@@ -41,6 +44,7 @@ class RunnerService:
         monitoring_service: MonitoringService | None = None,
         device_state: DeviceStateStore | None = None,
         git_state: GitState | None = None,
+        main_parameter_class: type[BaseModel] | None = None,
     ) -> None:
         self._project_dir = project_dir
         self._processes = processes
@@ -50,6 +54,18 @@ class RunnerService:
         self._device_state = device_state
         # The project's git state when it was loaded, and so its process code.
         self._git_state = git_state
+        self._main_parameter_class = main_parameter_class
+
+    def _plan(self, data: dict) -> ProtocolPlan:
+        return build_protocol_plan(
+            data,
+            {
+                name: config
+                for name, config in self._configs.items()
+                if name in self._processes
+            },
+            self._main_parameter_class,
+        )
 
     def start(
         self,
@@ -81,28 +97,43 @@ class RunnerService:
         parse_timeout_commands(timeout_commands)
         if record_monitoring:
             self._validate_record_monitoring()
+        if (
+            Path(protocol_filename).name != protocol_filename
+            or "\\" in protocol_filename
+        ):
+            raise ValueError("Protocol must be a filename in protocols_historic.")
         protocol_path = self._project_dir / "protocols_historic" / protocol_filename
         data = json.loads(protocol_path.read_text(encoding="utf-8"))
-        sequence = self._parse_sequence(data)
-        run_id = self._run_store.try_start(protocol_filename)
-        if run_id is None:
-            return None
-        thread = threading.Thread(
-            target=self._execute,
-            args=(
-                run_id,
-                protocol_filename,
-                sequence,
-                data,
-                dry_run,
-                timeout_commands,
-                error_resilient,
-                record_monitoring,
-            ),
-            daemon=True,
+        plan = self._plan(data)
+        record = self._run_store.try_start_record(
+            protocol_filename,
+            protocol_plan=plan.summary(),
+            execution_active=True,
         )
-        thread.start()
-        return run_id
+        if record is None:
+            return None
+        try:
+            thread = threading.Thread(
+                target=self._execute,
+                args=(
+                    record.run_id,
+                    protocol_filename,
+                    plan,
+                    plan.source_document,
+                    dry_run,
+                    timeout_commands,
+                    error_resilient,
+                    record_monitoring,
+                    record,
+                ),
+                daemon=True,
+            )
+            thread.start()
+        except Exception:
+            self._run_store.set_state(success=False, record=record)
+            self._run_store.release_execution(record)
+            raise
+        return record.run_id
 
     def _validate_record_monitoring(self) -> None:
         """Fail fast, before try_start() claims the run slot, if recording can't work.
@@ -131,32 +162,42 @@ class RunnerService:
         self,
         run_id: str,
         protocol_filename: str,
-        sequence: list[tuple[str, int]],
+        sequence: ProtocolPlan | list[tuple[str, int]],
         data: dict,
         dry_run: bool,
         timeout_commands: str,
         error_resilient: bool,
         record_monitoring: bool,
+        run_record: RunRecord | None = None,
     ) -> None:
         # This run's record, kept rather than looked up again at the end: once
         # the run has ended, another one can start and replace it in the store.
-        run_record = self._run_store.get()
-        if run_record is not None and run_record.run_id != run_id:
-            run_record = None
-        started_at = run_record.started_at if run_record is not None else datetime.now()
-        log_path = create_run_log_path(self._project_dir, protocol_filename, started_at)
-        log_path.parent.mkdir(parents=True, exist_ok=True)
-        sink_id = logger.add(
-            log_path,
-            level="DEBUG",
-            format="{time:YYYY-MM-DDTHH:mm:ss} | {level: <8} | {message}",
-            colorize=False,
-            encoding="utf-8",
-        )
+        run_record = run_record if run_record is not None else self._run_store.get()
+        if run_record is None or not self._run_store.mark_execution(run_record):
+            return
+        started_at = run_record.started_at
+        try:
+            log_path = create_run_log_path(
+                self._project_dir, protocol_filename, started_at
+            )
+            log_path.parent.mkdir(parents=True, exist_ok=True)
+            sink_id = logger.add(
+                log_path,
+                level="DEBUG",
+                format="{time:YYYY-MM-DDTHH:mm:ss} | {level: <8} | {message}",
+                colorize=False,
+                encoding="utf-8",
+            )
+        except Exception:
+            self._run_store.set_state(success=False, record=run_record)
+            self._run_store.release_execution(run_record)
+            logger.exception("Could not initialize the run log")
+            return
         manifest_file = manifest_path(self._project_dir, run_id)
         manifest: dict[str, Any] | None = None
         background = BackgroundTasks()
-        cancellation_token: threading.Event | None = None
+        cancellation_token = run_record.cancel_event
+        plan = sequence if isinstance(sequence, ProtocolPlan) else None
         try:
             try:
                 manifest = build_run_manifest(
@@ -173,28 +214,58 @@ class RunnerService:
                     project_name=self._project_dir.name,
                     git=self._git_state,
                     head_at_start=self._head_if_moved(),
+                    protocol_plan=plan.summary() if plan is not None else None,
                 )
                 write_run_manifest(manifest_file, manifest)
+                if plan is None:
+                    assert isinstance(sequence, list)
+                    # Retain the private legacy execution entry point used by
+                    # integrations, but route it through the same validated model.
+                    selected = {"main_parameter": data.get("main_parameter", {})}
+                    for name, index in sequence:
+                        key = f"{name}_{index}"
+                        selected[key] = data.get(key, {})
+                    plan = self._plan(selected)
+                    manifest["protocol_plan"] = plan.summary()
+                    write_run_manifest(manifest_file, manifest)
+                self._run_store.set_protocol_plan(plan.summary(), record=run_record)
                 pool_dir = self._project_dir / "log" / "pool"
                 if pool_dir.exists():
                     for f in pool_dir.glob("*.jsonl"):
                         f.unlink(missing_ok=True)
-                cancellation_token = self._run_store.cancel_event()
-                pause_event = self._run_store.pause_event()
+                pause_event = run_record.pause_event
 
                 def request_input(
-                    node_id: str, message: str, timeout_seconds: float
+                    process_key: str,
+                    node_id: str,
+                    message: str,
+                    timeout_seconds: float,
                 ) -> str:
-                    event = self._run_store.request_input(node_id, message)
+                    input_key = f"{process_key}::{node_id}"
+                    event = self._run_store.request_input(
+                        input_key, message, record=run_record
+                    )
                     try:
                         wait_for_operator_input(
                             event, cancellation_token, timeout_seconds
                         )
                     except Exception:
-                        self._run_store.pop_input_value(node_id)
+                        self._run_store.pop_input_value(input_key, record=run_record)
                         raise
-                    return self._run_store.pop_input_value(node_id) or ""
+                    return (
+                        self._run_store.pop_input_value(input_key, record=run_record)
+                        or ""
+                    )
 
+                def record_occurrence_event(
+                    event: WorkflowExecutionEvent, *, metadata: dict[str, Any]
+                ) -> None:
+                    self._run_store.append_event(
+                        replace(event, occurrence=dict(metadata)), record=run_record
+                    )
+
+                if cancellation_token.is_set():
+                    return
                 platform = Platform.from_project_dir(
                     self._project_dir,
                     dry_run=dry_run,
@@ -213,41 +284,53 @@ class RunnerService:
                     self._monitoring_service.on_run_started(
                         run_id, record=record_monitoring
                     )
-                for process_name, process_index in sequence:
+                for occurrence in plan.iter_occurrences():
                     # Honor a pause requested between processes, not just mid-node.
                     wait_while_paused(pause_event, cancellation_token)
-                    record = self._run_store.get()
-                    if record is not None and record.state == RunState.CANCELLED:
+                    if cancellation_token.is_set():
                         return
-                    config_data = data.get(f"{process_name}_{process_index}", {})
-                    config = self._configs[process_name].model_validate(config_data)
+                    process_name = occurrence.process_name
+                    process_index = occurrence.process_index
+                    metadata = occurrence.metadata()
+                    self._run_store.set_current_occurrence(metadata, record=run_record)
+                    config = self._configs[process_name].model_validate(
+                        occurrence.parameters,
+                        by_name=True,
+                    )
                     process = self._processes[process_name](
                         config=config,
                         platform=platform,
                         process_index=process_index,
                     )
-                    process.load_parameters(protocol_filename)
+                    if self._main_parameter_class is not None:
+                        process.main_parameters = (
+                            self._main_parameter_class.model_validate(
+                                occurrence.main_parameters,
+                                by_name=True,
+                            )
+                        )
                     compiled = compile_workflow(process.build_workflow())
                     wf_logger = WorkflowLogger(process_name, process_index)
                     executor = WorkflowExecutor(
                         compiled,
                         max_workers=4,
                         event_listeners=[
-                            lambda e: self._run_store.append_event(e),
+                            partial(record_occurrence_event, metadata=metadata),
                             wf_logger.handle_event,
                         ],
                         error_resilient=error_resilient,
-                        process_key=f"{process_name}_{process_index}",
+                        process_key=occurrence.execution_key,
                         cancellation_check=(
                             cancellation_token.is_set
                             if cancellation_token is not None
                             else None
                         ),
-                        request_input=request_input,
+                        request_input=partial(request_input, occurrence.execution_key),
                         background=background,
                     )
                     result = executor.execute(process, start_node="start")
-                    self._run_store.append_result(result)
+                    result.occurrence = metadata
+                    self._run_store.append_result(result, record=run_record)
                     if not error_resilient and result.errors:
                         raise RuntimeError(
                             f"Process '{process_name}' step {process_index} failed "
@@ -258,17 +341,21 @@ class RunnerService:
                 # state is set, so the run reads as active until background
                 # nodes have actually stopped.
                 self._stop_background(background, cancellation_token)
-            self._run_store.set_state(success=True)
+            self._run_store.set_state(success=True, record=run_record)
         except Exception:
-            self._run_store.set_state(success=False)
+            logger.exception("Protocol execution failed")
+            self._run_store.set_state(success=False, record=run_record)
         finally:
-            if self._monitoring_service is not None:
-                self._monitoring_service.on_run_finished()
-            if manifest is not None and run_record is not None:
-                write_run_manifest(
-                    manifest_file, finish_run_manifest(manifest, run_record)
-                )
-            logger.remove(sink_id)
+            try:
+                if self._monitoring_service is not None:
+                    self._monitoring_service.on_run_finished()
+                if manifest is not None:
+                    write_run_manifest(
+                        manifest_file, finish_run_manifest(manifest, run_record)
+                    )
+            finally:
+                logger.remove(sink_id)
+                self._run_store.release_execution(run_record)
 
     def _head_if_moved(self) -> str | None:
         """HEAD now, if it moved since the project was loaded; None otherwise."""
@@ -314,6 +401,8 @@ class RunnerService:
     @staticmethod
     def _parse_sequence(data: dict) -> list[tuple[str, int]]:
         """Extract the ordered (process_name, index) list from protocol key order."""
+        if "schema_version" in data or "sequence" in data:
+            raise ValueError("Versioned protocols require the shared protocol planner.")
         sequence = []
         for key in data:
             if key == "main_parameter":

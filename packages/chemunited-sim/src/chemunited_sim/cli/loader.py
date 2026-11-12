@@ -215,6 +215,12 @@ def parse_historical_file(path: Path) -> tuple[dict, list[SequenceStep]]:
     """
     logger.debug("Parsing historical file: {}", path.name)
     data: dict = json.loads(path.read_text(encoding="utf-8"))
+    if "schema_version" in data or "sequence" in data:
+        raise ValueError(
+            "This simulator adapter does not support versioned/repeat protocols. "
+            "Run this protocol through the workflow dashboard/API. "
+            "No process steps have been executed."
+        )
     main_parameter = data.get("main_parameter", {})
 
     sequence: list[SequenceStep] = []

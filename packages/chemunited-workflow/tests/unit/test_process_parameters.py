@@ -7,6 +7,7 @@ import json
 import sys
 from pathlib import Path
 
+import pytest
 from tests.helpers import (
     make_project_tree,
     write_source,
@@ -184,3 +185,16 @@ def test_historic_json_invalid_json_fails(tmp_path):
     process = _load_process(dirs["process_dir"])
     result = process.load_parameters()
     assert result is False
+
+
+def test_standalone_loader_rejects_versioned_protocol_instead_of_ignoring_groups(
+    tmp_path,
+):
+    dirs = make_project_tree(tmp_path)
+    (dirs["historic_dir"] / "parameters.json").write_text(
+        json.dumps({"schema_version": 2, "main_parameter": {}, "sequence": []}),
+        encoding="utf-8",
+    )
+    process = _load_process(dirs["process_dir"])
+    with pytest.raises(ValueError, match="protocol planner"):
+        process.load_parameters()

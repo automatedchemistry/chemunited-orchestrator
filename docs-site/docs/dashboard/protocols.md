@@ -26,6 +26,38 @@ The right card is the sequence itself:
 Click **Save protocol** to write the sequence out as a new, timestamped protocol file — saved protocols are
 immutable, so saving again creates a new file rather than overwriting the one you loaded.
 
+## Repeat groups
+
+Select consecutive steps and choose **Repeat selected steps** to place them in a
+collapsible group. A new group starts at 2 repeats; enter any whole number greater
+than 1, without a fixed maximum. Each contained process stores its parameters
+once, and every cycle uses those same values.
+
+Move the group as a unit, reorder its children, or **Ungroup** to keep its body
+once. **Show cycles** displays a paged execution preview; opening groups or
+changing preview pages never duplicates the saved steps. Several sequential
+groups are supported. Nested groups and per-cycle parameter overrides are not.
+
+Save and run the grouped document normally. Saved files use schema version 2,
+with counts stored as decimal strings to preserve large integers exactly.
+Existing flat files remain readable and are not rewritten when opened or run;
+saving creates a new v2 file. Malformed groups fail validation before a run is
+accepted or any platform commands are issued.
+
+In **Run Control**, each repeat group shows the current cycle and the number of
+completed cycles. The active cycle contains the normal process/node cards;
+completed cycles remain expandable, and large cycle lists are paged. Errors and
+pending operator prompts remain visible in collapsed summaries. If a run stops,
+future cycles are marked **Not executed**. Results and manifests identify each
+execution separately, including its source step and cycle.
+
+The accepted protocol and resolved defaults are frozen at Start. Editing or
+deleting the saved file cannot change later cycles in that run. Repetition does
+not add delays: add an ordinary delay process inside or after a group as needed.
+
+The standalone chemistry simulator adapter currently rejects v2 documents with a
+descriptive error. Use the workflow dashboard/API to run native repeat groups.
+
 <div class="info-block">
 <strong>💡 Information</strong><br>
 To delete a saved protocol file, select it in <a href="run_control.md">Run Control</a> and click the trash icon

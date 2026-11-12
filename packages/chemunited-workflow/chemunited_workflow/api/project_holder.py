@@ -187,6 +187,7 @@ class ProjectHolder:
             monitoring_service=new_monitoring,
             device_state=new_device_state,
             git_state=git_state,
+            main_parameter_class=modules.main_parameter_class,
         )
         self._run_store.set_project_dir(modules.project_dir)
         self._monitoring_store.set_reading_listener(new_device_state.record_reading)

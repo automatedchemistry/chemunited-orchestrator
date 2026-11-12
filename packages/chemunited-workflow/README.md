@@ -15,6 +15,7 @@ A NetworkX-based workflow execution engine for conditional automation of chemist
 - **Physical unit handling** (volumes, temperatures, concentrations) using Pint
 - **Multiple deployment modes**: FastAPI REST API, MCP server, or direct Python execution
 - **Protocol versioning** with timestamped file history and schema validation
+- **Native repeat groups** in compact v2 protocols, shared cycle parameters, exact counts, lazy execution and bounded cycle previews; existing flat protocols remain readable
 - **Single-run execution model** — only one experiment at a time; `POST /run/` returns HTTP 409 if a run is already active, preventing accidental double-dispatch on physical hardware
 - **Browser-based dashboard** (Vue SPA) with live run monitoring, per-node progress bars, log viewer, and device status — its built assets ship with the package, no build step required to use it
 - **Human-in-the-loop checkpoints** — a node can pause and wait for an operator to reply on the dashboard before continuing, with a mandatory timeout so a run never blocks forever

@@ -137,7 +137,10 @@ def register_tools(mcp: FastMCP, holder: ProjectHolder) -> None:
 
     @mcp.tool()
     def get_protocol(filename: str) -> dict:
-        """Read the full contents of a specific protocol JSON file."""
+        """Read a validated v2 protocol document. Legacy flat files are
+        normalized to ordered process steps without changing the saved file.
+        Repeat groups retain their shared steps and exact decimal-string count.
+        """
         if not holder.is_loaded():
             return {"error": _NO_PROJECT}
         return _protocol(holder).read_protocol(filename)
@@ -153,8 +156,14 @@ def register_tools(mcp: FastMCP, holder: ProjectHolder) -> None:
             Short name, e.g. ``"suzuki_batch_14"``. The saved filename will be
             ``{name}_{timestamp}.json``.
         data:
-            Full protocol dict. Must contain ``"main_parameter"`` and one key per
-            process step in ``"{process_name}_{index}"`` format, in execution order.
+            V2 document with ``schema_version: 2``, ``main_parameter`` and an
+            ordered ``sequence``. Process items contain ``type: "process"``,
+            a unique ``id``, registry ``process`` and ``parameters``. Repeat
+            items contain ``type: "repeat"``, a unique ``id``, ``label``,
+            ``count`` as a canonical decimal string greater than 1, and
+            nonempty ``steps`` containing process items. Nested groups are not
+            supported. Legacy ``{process_name}_{index}`` dictionaries remain
+            accepted; every save emits a compact v2 document.
         """
         if not holder.is_loaded():
             return {"error": _NO_PROJECT}

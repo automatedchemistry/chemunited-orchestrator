@@ -22,8 +22,8 @@ When running with `--with-mcp` (MCP streamable-HTTP endpoint embedded in the Fas
 | Tool | Description |
 |------|-------------|
 | `list_protocols` | List protocol files in `protocols_historic/`. |
-| `get_protocol` | Read a protocol file's full JSON content. |
-| `create_protocol` | Validate and save a new versioned protocol file. |
+| `get_protocol` | Read a normalized v2 document, retaining ordered process steps and compact repeat groups. Reading a legacy source does not rewrite it. |
+| `create_protocol` | Validate and save a compact v2 protocol file; legacy flat input remains accepted. Repeat counts are canonical decimal strings greater than 1. |
 | `delete_protocol` | Permanently delete a protocol file. |
 
 ## Run control
