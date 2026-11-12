@@ -5,6 +5,7 @@ from __future__ import annotations
 import importlib.util
 import json
 import sys
+import threading
 import time
 from pathlib import Path
 
@@ -76,8 +77,37 @@ def _wait_until(predicate, timeout=5.0, interval=0.02):
     return predicate()
 
 
+@pytest.mark.parametrize("poll_after_process_started", [False, True])
 @resp_lib.activate
-def test_recorded_run_persists_readings_under_run_id(client, holder):
+def test_recorded_run_persists_readings_under_run_id(
+    client, holder, monkeypatch, poll_after_process_started
+):
+    process_started = threading.Event()
+    release_process = threading.Event()
+    polling_finished = threading.Event()
+
+    def wait_for_recording(self, ctx):
+        process_started.set()
+        assert release_process.wait(timeout=15.0), "Test did not release the process"
+        return True
+
+    # The no-op protocol can finish before the asynchronous poll loop starts.
+    # Keep this run active until its first recording has actually been written.
+    monkeypatch.setattr(
+        holder.runner_service._processes["my_process"], "start", wait_for_recording
+    )
+    poll_loop = holder.monitoring_service._poll_loop
+
+    def controlled_poll_loop(stop_event):
+        try:
+            if poll_after_process_started:
+                assert process_started.wait(timeout=5.0), "Process did not start"
+            poll_loop(stop_event)
+        finally:
+            polling_finished.set()
+
+    monkeypatch.setattr(holder.monitoring_service, "_poll_loop", controlled_poll_loop)
+
     resp_lib.add(
         resp_lib.GET,
         "http://device-server:8000/sim-ml600/pump/value",
@@ -93,27 +123,33 @@ def test_recorded_run_persists_readings_under_run_id(client, holder):
         },
     )
 
-    r = client.post(
-        "/run/",
-        json={"protocol": "run_monitoring.json", "record_monitoring": True},
-    )
-    assert r.status_code == 202
-    run_id = r.json()["run_id"]
+    try:
+        r = client.post(
+            "/run/",
+            json={"protocol": "run_monitoring.json", "record_monitoring": True},
+        )
+        assert r.status_code == 202
+        run_id = r.json()["run_id"]
+        assert process_started.wait(timeout=5.0)
 
-    run_dir = holder._tmp_path / "log" / "monitoring" / run_id
-    assert _wait_until(lambda: run_dir.exists() and any(run_dir.iterdir()))
+        run_dir = holder._tmp_path / "log" / "monitoring" / run_id
+        description_path = run_dir / "recording.json"
+        assert _wait_until(description_path.is_file)
+    finally:
+        release_process.set()
+        # A terminal run state can precede the monitoring cleanup hook.
+        assert _wait_until(lambda: holder.active_run_id() is None)
 
-    assert _wait_until(
-        lambda: client.get("/run/status").json()["state"] in ("finished", "failed")
-    )
-
+    # Read after the poll worker has closed its files, including any final tick.
+    assert polling_finished.wait(timeout=5.0)
     recording = client.get(f"/monitoring/recordings/{run_id}/pump/value")
     assert recording.status_code == 200
     assert recording.json()[0]["value"] == 1.0
-    description = json.loads((run_dir / "recording.json").read_text(encoding="utf-8"))
+    description = json.loads(description_path.read_text(encoding="utf-8"))
     assert description["run_id"] == run_id
     assert [var["file"] for var in description["variables"]] == ["pump__value.jsonl"]
 
+    assert client.get("/run/status").json()["state"] == "finished"
     state = client.get("/monitoring/state").json()
     assert state["run_active"] is False
     assert state["effective_on"] is False
