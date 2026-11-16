@@ -57,9 +57,11 @@ jobs:
           PY
 
       - name: Run tests
-        # tests/qt is skipped like in pre-commit.yml: PyQt5 teardown segfaults
+        # tests/qt is skipped like in pre-commit.yml: PySide6 teardown segfaults
         # on headless Linux runners that don't reproduce on a real machine.
-        run: python -m pytest --tb=short -q --ignore=tests/qt
+        # -p no:pytest-qt stops the plugin importing QtGui (needs libEGL,
+        # absent on the runner) for a suite that doesn't use qtbot anyway.
+        run: python -m pytest --tb=short -q --ignore=tests/qt -p no:pytest-qt
         env:
           QT_QPA_PLATFORM: offscreen
 
