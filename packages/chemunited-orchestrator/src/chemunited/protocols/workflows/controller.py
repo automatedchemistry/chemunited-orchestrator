@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from PyQt5.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
 
 from chemunited.shared.enums.protocols_enum import ProtocolBlock
 
@@ -16,16 +16,16 @@ from .workflow_rules import (
 
 
 class WorkflowController(QObject):
-    model_reset = pyqtSignal()
-    block_added = pyqtSignal(str)
-    block_updated = pyqtSignal(str)
-    block_removed = pyqtSignal(str)
+    model_reset = Signal()
+    block_added = Signal(str)
+    block_updated = Signal(str)
+    block_removed = Signal(str)
 
-    connection_added = pyqtSignal(str, str)
-    connection_updated = pyqtSignal(str, str)
-    connection_removed = pyqtSignal(str, str)
+    connection_added = Signal(str, str)
+    connection_updated = Signal(str, str)
+    connection_removed = Signal(str, str)
 
-    request_build_script = pyqtSignal()
+    request_build_script = Signal()
 
     def __init__(
         self, workflow: ProcessWorkflow | None = None, parent: QObject | None = None

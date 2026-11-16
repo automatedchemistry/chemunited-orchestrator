@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
+from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
 from qfluentwidgets import CaptionLabel, LineEdit, isDarkTheme
 
 

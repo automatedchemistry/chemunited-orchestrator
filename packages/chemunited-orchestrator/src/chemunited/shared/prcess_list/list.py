@@ -3,8 +3,8 @@ from __future__ import annotations
 from collections.abc import Callable
 
 from loguru import logger
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QAbstractItemView, QListWidgetItem, QVBoxLayout, QWidget
+from PySide6.QtCore import Signal
+from PySide6.QtWidgets import QAbstractItemView, QListWidgetItem, QVBoxLayout, QWidget
 from qfluentwidgets import ListWidget
 
 from .item import ProcessItem
@@ -13,8 +13,8 @@ from .item import ProcessItem
 class ProcessList(QWidget):
     """Foundation class designed to be subclassed. Owns all logic and dispatch."""
 
-    selection_changed = pyqtSignal(str)  # name of selected item, or "" if deselected
-    process_renamed = pyqtSignal(str, str)  # (old_name, new_name)
+    selection_changed = Signal(str)  # name of selected item, or "" if deselected
+    process_renamed = Signal(str, str)  # (old_name, new_name)
 
     def __init__(self, data: dict, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -25,7 +25,7 @@ class ProcessList(QWidget):
         self._dispatch: dict[str, Callable[[str], None]] = {}
 
         self._list_widget = ListWidget(self)
-        self._list_widget.setDragDropMode(QAbstractItemView.InternalMove)
+        self._list_widget.setDragDropMode(QAbstractItemView.DragDropMode.InternalMove)
 
         layout = QVBoxLayout(self)
         layout.setContentsMargins(0, 0, 0, 0)

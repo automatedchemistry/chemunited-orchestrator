@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from typing import TYPE_CHECKING
+from typing import TYPE_CHECKING, cast
 
-from PyQt5.QtCore import pyqtSignal
+from PySide6.QtCore import Signal
 from qfluentwidgets import FluentIcon
 
 from chemunited.shared.icon import OrchestratorIcon
@@ -15,14 +15,10 @@ if TYPE_CHECKING:
 class ProtocolsList(ProcessList):
     """Process list for protocols. Emits user intentions only — never self-mutates."""
 
-    rename_requested = pyqtSignal(
-        str, str
-    )  # (old_name, new_name) — forwarded intention
-    remove_requested = pyqtSignal(str)  # user chose Remove
-    duplicate_requested = pyqtSignal(str)  # user chose Duplicate — original name only
-    access_parameters_requested = pyqtSignal(
-        str
-    )  # user chose Access Process Parameters
+    rename_requested = Signal(str, str)  # (old_name, new_name) — forwarded intention
+    remove_requested = Signal(str)  # user chose Remove
+    duplicate_requested = Signal(str)  # user chose Duplicate — original name only
+    access_parameters_requested = Signal(str)  # user chose Access Process Parameters
 
     def __init__(self, data: dict, parent=None):
         super().__init__(data, parent)
@@ -87,8 +83,9 @@ class ProtocolsWidget(ProcessWidget):
 
     def _connect_signals(self) -> None:
         orch = self.parent_ref.orchestrator
-        self._list.selection_changed.connect(orch.select_process)  # type: ignore[attr-defined]
-        self._list.rename_requested.connect(orch.rename_process)
-        self._list.remove_requested.connect(orch.remove_process)
-        self._list.duplicate_requested.connect(orch.duplicate_process)
-        self._list.access_parameters_requested.connect(orch.access_process_parameters)
+        lst = cast(ProtocolsList, self._list)
+        lst.selection_changed.connect(orch.select_process)
+        lst.rename_requested.connect(orch.rename_process)
+        lst.remove_requested.connect(orch.remove_process)
+        lst.duplicate_requested.connect(orch.duplicate_process)
+        lst.access_parameters_requested.connect(orch.access_process_parameters)

@@ -1,8 +1,8 @@
 from typing import TYPE_CHECKING, ClassVar, cast
 
-from PyQt5.QtCore import QLineF
-from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import QGraphicsItem
+from PySide6.QtCore import QLineF
+from PySide6.QtGui import QColor
+from PySide6.QtWidgets import QGraphicsItem
 
 from chemunited.elements.component.component_parts import StatusOverlay
 from chemunited.elements.component.graph_item import GraphComponent

@@ -1,8 +1,8 @@
 from typing import TYPE_CHECKING
 
-from PyQt5.QtCore import QRectF
-from PyQt5.QtGui import QColor, QPainter, QPainterPath
-from PyQt5.QtWidgets import QGraphicsItem, QStyleOptionGraphicsItem, QWidget
+from PySide6.QtCore import QRectF
+from PySide6.QtGui import QColor, QPainter, QPainterPath
+from PySide6.QtWidgets import QGraphicsItem, QStyleOptionGraphicsItem, QWidget
 from qfluentwidgets import isDarkTheme
 
 from ..design import NodeState, get_node_color
@@ -96,7 +96,7 @@ class WorkflowAccessPoints(QGraphicsItem):
 
         # Clean up old port children
         for port in self.ports:
-            port.setParentItem(None)
+            port.setParentItem(None)  # type: ignore[arg-type]
         self.ports.clear()
 
         self._count = new_count

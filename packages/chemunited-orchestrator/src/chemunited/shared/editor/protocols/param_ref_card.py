@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import (
     QHBoxLayout,
     QSizePolicy,
     QStackedWidget,
@@ -79,7 +79,9 @@ class ParamRefCard(QWidget):
 
         # ── Stacked area: page 0 = wrapped card, page 1 = reference label ─
         self._stack = QStackedWidget(self)
-        self._stack.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Minimum)
+        self._stack.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum
+        )
 
         # Page 0: original card (re-parented into this widget)
         self._wrapped.setParent(self._stack)

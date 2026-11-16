@@ -2,9 +2,9 @@ import sys
 from pathlib import Path
 from typing import Any, override
 
-from PyQt5.QtCore import QStandardPaths, QTimer, pyqtSlot
-from PyQt5.QtGui import QKeySequence
-from PyQt5.QtWidgets import QFileDialog, QMessageBox
+from PySide6.QtCore import QStandardPaths, QTimer, Slot
+from PySide6.QtGui import QKeySequence
+from PySide6.QtWidgets import QFileDialog, QMessageBox
 from qfluentwidgets import (
     Action,
     FluentIcon,
@@ -184,7 +184,7 @@ class SetupWindow(MainWindowBase):
         self.project_menu.addAction(self.mcp_project_action)
 
         self.save_project_action = Action(FluentIcon.SAVE, "Save Project", self)
-        self.save_project_action.setShortcut(QKeySequence.Save)
+        self.save_project_action.setShortcut(QKeySequence.StandardKey.Save)
         self.save_project_action.triggered.connect(self.save)
         self.project_menu.addAction(self.save_project_action)
         self.addAction(self.save_project_action)
@@ -471,14 +471,16 @@ class SetupWindow(MainWindowBase):
             self.refresh_project_action.setEnabled(False)
 
     def create_desktop_shortcut(self) -> None:
-        desktop = QStandardPaths.writableLocation(QStandardPaths.DesktopLocation)
+        desktop = QStandardPaths.writableLocation(
+            QStandardPaths.StandardLocation.DesktopLocation
+        )
         if not desktop or not Path(desktop).is_dir():
             desktop = str(Path.home())
         destination = QFileDialog.getExistingDirectory(
             self,
             "Choose shortcut location",
             desktop,
-            QFileDialog.ShowDirsOnly,
+            QFileDialog.Option.ShowDirsOnly,
         )
         if not destination:
             return
@@ -489,10 +491,10 @@ class SetupWindow(MainWindowBase):
                 self,
                 "Replace shortcut?",
                 f"{shortcut_path.name} already exists. Replace it?",
-                QMessageBox.Yes | QMessageBox.No,
-                QMessageBox.No,
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
             )
-            if answer != QMessageBox.Yes:
+            if answer != QMessageBox.StandardButton.Yes:
                 return
 
         self.create_shortcut_action.setEnabled(False)
@@ -636,7 +638,7 @@ class SetupWindow(MainWindowBase):
         self.SimulateWindowReport.close()
         super().closeEvent(a0)
 
-    @pyqtSlot(str)
+    @Slot(str)
     def _on_current_widget_changed(self, _route_key: str) -> None:
         current_widget = self.SegmentWindow.stackedWidget.currentWidget()
         classification = getattr(current_widget, "classification", None)

@@ -1,6 +1,6 @@
 from typing import ClassVar
 
-from PyQt5.QtCore import QPointF, Qt
+from PySide6.QtCore import QPointF, Qt
 
 from chemunited.elements.component.graph_item import GraphComponent
 from chemunited_core.components import ComponentData

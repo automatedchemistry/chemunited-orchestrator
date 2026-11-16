@@ -4,7 +4,7 @@ import typing
 from collections.abc import Mapping
 
 from pydantic.fields import FieldInfo
-from PyQt5.QtWidgets import QWidget
+from PySide6.QtWidgets import QWidget
 
 from .cards.base_card import BaseFieldCard
 from .cards.bool_card import BoolFieldCard

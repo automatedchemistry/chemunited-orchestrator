@@ -1,6 +1,6 @@
 from enum import Enum
 
-from PyQt5.QtGui import QColor
+from PySide6.QtGui import QColor
 from qfluentwidgets import isDarkTheme
 
 

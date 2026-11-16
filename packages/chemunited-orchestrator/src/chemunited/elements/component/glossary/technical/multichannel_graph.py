@@ -1,8 +1,8 @@
 from typing import ClassVar
 
-from PyQt5.QtCore import QPointF, QRectF, Qt
-from PyQt5.QtGui import QBrush, QColor, QPen
-from PyQt5.QtWidgets import QGraphicsItem
+from PySide6.QtCore import QPointF, QRectF, Qt
+from PySide6.QtGui import QBrush, QColor, QPen
+from PySide6.QtWidgets import QGraphicsItem
 
 from chemunited.elements.component.component_parts import SceneItem
 from chemunited.elements.component.graph_item import GraphComponent

@@ -1,7 +1,7 @@
 import re
 from typing import ClassVar
 
-from PyQt5.QtGui import QFont
+from PySide6.QtGui import QFont
 
 from chemunited.elements.component.component_parts import TextElement
 from chemunited.elements.component.graph_item import GraphComponent

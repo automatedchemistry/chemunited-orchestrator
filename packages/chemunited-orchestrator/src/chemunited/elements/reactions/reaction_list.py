@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtWidgets import QVBoxLayout, QWidget
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import QVBoxLayout, QWidget
 from qfluentwidgets import (
     FluentIcon,
     InfoBar,
@@ -19,7 +19,7 @@ from .reaction_dialog import ReactionDialog
 
 
 class ReactionList(QWidget):
-    reactions_changed = pyqtSignal()
+    reactions_changed = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)

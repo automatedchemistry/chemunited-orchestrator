@@ -12,9 +12,9 @@ from loguru import logger
 from pydantic.config import JsonDict
 from pydantic.fields import FieldInfo
 from pydantic_core import PydanticUndefinedType
-from PyQt5.QtCore import QIODevice, QSaveFile
-from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QFrame, QHBoxLayout, QMainWindow, QVBoxLayout, QWidget
+from PySide6.QtCore import QIODevice, QSaveFile
+from PySide6.QtGui import QIcon
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QMainWindow, QVBoxLayout, QWidget
 from qfluentwidgets import (
     CheckBox,
     FluentIcon,
@@ -319,7 +319,7 @@ class MainParametersEditor(ThemedChromeMixin, QMainWindow):
         layout.addWidget(self.navigationInterface)
         outer.addWidget(content, stretch=1)
 
-        self.param_list.setFrameShape(QFrame.NoFrame)
+        self.param_list.setFrameShape(QFrame.Shape.NoFrame)
 
     def _init_navigation(self) -> None:
         self.navigationInterface.addItemHeader("NUMERIC")
@@ -518,7 +518,7 @@ class MainParametersEditor(ThemedChromeMixin, QMainWindow):
 if __name__ == "__main__":
     import sys
 
-    from PyQt5.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
     window = MainParametersEditor(

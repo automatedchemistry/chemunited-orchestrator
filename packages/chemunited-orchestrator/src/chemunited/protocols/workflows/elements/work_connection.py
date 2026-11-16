@@ -3,9 +3,9 @@ from collections.abc import Sequence
 from enum import Enum
 from typing import Callable, TypedDict, cast
 
-from PyQt5.QtCore import QPointF, Qt
-from PyQt5.QtGui import QBrush, QColor, QFont, QPainterPath, QPen
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import QPointF, Qt
+from PySide6.QtGui import QBrush, QColor, QFont, QPainterPath, QPen
+from PySide6.QtWidgets import (
     QGraphicsEllipseItem,
     QGraphicsItem,
     QGraphicsPathItem,
@@ -41,7 +41,7 @@ class WorkflowConnection(QGraphicsPathItem):
         self,
         start_item: WorkflowAccessPoints,
         end_item: WorkflowAccessPoints,
-        inflection_points: list[tuple[float, float] | QPointF] | None = None,
+        inflection_points: Sequence[tuple[float, float] | QPointF] | None = None,
         bend_point: tuple[float, float] | QPointF | None = None,
         edge_data: dict | None = None,
         on_geometry_changed: Callable[["WorkflowConnection"], None] | None = None,
@@ -572,12 +572,10 @@ class WorkflowInflectionHandle(QGraphicsEllipseItem):
         self.setPen(QPen(QColor("#FFFFFF"), 1.2))
         self.setZValue(2)
         self.setCursor(Qt.CursorShape.OpenHandCursor)
-        flags = cast(
-            QGraphicsItem.GraphicsItemFlags,
+        self.setFlags(
             QGraphicsItem.GraphicsItemFlag.ItemIsMovable
-            | QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges,
+            | QGraphicsItem.GraphicsItemFlag.ItemSendsGeometryChanges
         )
-        self.setFlags(flags)
         self.setVisible(False)
 
     def sync_to(self, scene_pos: QPointF):

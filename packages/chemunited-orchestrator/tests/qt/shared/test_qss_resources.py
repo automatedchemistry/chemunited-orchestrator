@@ -1,7 +1,7 @@
 from pathlib import Path
 
 import pytest
-from PyQt5.QtCore import QFile, QIODevice, QTextStream
+from PySide6.QtCore import QFile, QIODevice, QTextStream
 from pytestqt.qtbot import QtBot
 
 import chemunited.shared.resources as resources

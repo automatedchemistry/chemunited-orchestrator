@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QColor, QPainter
-from PyQt5.QtWidgets import QWidget
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QColor, QPainter
+from PySide6.QtWidgets import QWidget
 
 from chemunited_workflow.enums import NodeState
 

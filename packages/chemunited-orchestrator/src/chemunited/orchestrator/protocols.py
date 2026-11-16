@@ -3,7 +3,7 @@ from __future__ import annotations
 import re
 
 from loguru import logger
-from PyQt5.QtCore import Qt, pyqtSlot
+from PySide6.QtCore import Qt, Slot
 from qfluentwidgets import InfoBar, InfoBarPosition
 
 from chemunited.protocols.workflows import ProcessWorkflow
@@ -33,7 +33,7 @@ class OrchestratorProtocols(OrchestratorDraw):
     # Slots — called by ProtocolsWidget signals
     # ------------------------------------------------------------------
 
-    @pyqtSlot(str)
+    @Slot(str)
     def add_process(self, name: str) -> None:
         if not is_valid_name(name):
             self._warn_user(
@@ -47,7 +47,7 @@ class OrchestratorProtocols(OrchestratorDraw):
         self.parent_ref.workflows_protocol.add_process(name, self.protocols[name])
         self.parent_ref.protocols_widget.sync_list()
 
-    @pyqtSlot(str, str)
+    @Slot(str, str)
     def rename_process(self, old_name: str, new_name: str) -> None:
         if not is_valid_name(new_name):
             self._warn_user(
@@ -64,7 +64,7 @@ class OrchestratorProtocols(OrchestratorDraw):
         self.parent_ref.workflows_protocol.rename_process(old_name, new_name)
         self.parent_ref.protocols_widget.sync_list()
 
-    @pyqtSlot(str)
+    @Slot(str)
     def remove_process(self, name: str) -> None:
         if name not in self.protocols:
             logger.error(f"Process not found: {name!r}")
@@ -73,11 +73,11 @@ class OrchestratorProtocols(OrchestratorDraw):
         self.parent_ref.workflows_protocol.remove_process(name)
         self.parent_ref.protocols_widget.sync_list()
 
-    @pyqtSlot(str)
+    @Slot(str)
     def select_process(self, name: str) -> None:
         self.parent_ref.workflows_protocol.select_process(name)
 
-    @pyqtSlot(str)
+    @Slot(str)
     def duplicate_process(self, name: str) -> str:
         new_name = self._generate_process_name(base=name)
         self.protocols[new_name] = self._copy_workflow(self.protocols[name], new_name)
@@ -87,11 +87,11 @@ class OrchestratorProtocols(OrchestratorDraw):
         self.parent_ref.protocols_widget.sync_list()
         return new_name
 
-    @pyqtSlot()
+    @Slot()
     def save_protocols(self) -> None:
         self.parent_ref.save()
 
-    @pyqtSlot(str)
+    @Slot(str)
     def access_process_parameters(self, name: str) -> None:
         if name not in self.protocols:
             logger.error(f"Process not found: {name!r}")

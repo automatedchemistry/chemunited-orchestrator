@@ -25,9 +25,9 @@ dependencies = [
     "chemunited-core>=0.0.6",
     "chemunited-workflow>=0.0.8",
     "chemunited-sim[tray]>=0.0.5",
-    "PyQt-Fluent-Widgets>=1.7.0,<2.0",  # Qt UI
-    "QScintilla>=2.14.0",
-    "PyQtWebEngine>=5.15,<6",  # QWebEngineView, required by the Monaco editor
+    "PySide6>=6.7.2,<6.11",  # Qt UI (newer 6.x has shiboken lifetime fixes; check qfluentwidgets styling)
+    "PySide6-Addons>=6.7.2,<6.11",  # QtWebEngine, required by the Monaco editor
+    "PySide6-Fluent-Widgets>=1.11,<2.0",  # Qt UI
     "platformdirs>=4.0",
     "zeroconf>=0.131.0",
     "rich-click>=1.7",
@@ -61,7 +61,7 @@ chemunited-workflow = { workspace = true }
 chemunited-sim = { workspace = true }
 
 [tool.pytest.ini_options]
-qt_api = "pyqt5"
+qt_api = "pyside6"
 testpaths = ["tests"]
 
 [tool.setuptools]

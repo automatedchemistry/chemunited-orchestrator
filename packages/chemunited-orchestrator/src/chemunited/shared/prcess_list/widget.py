@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtWidgets import QFrame, QSizePolicy, QSpacerItem, QVBoxLayout
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import QFrame, QSizePolicy, QSpacerItem, QVBoxLayout
 from qfluentwidgets import PushButton
 
 from .list import ProcessList
@@ -10,8 +10,8 @@ from .list import ProcessList
 class ProcessWidget(QFrame):
     """Concrete visual shell: wraps any ProcessList with a separator and button bar."""
 
-    selection_changed = pyqtSignal(str)
-    process_renamed = pyqtSignal(str, str)
+    selection_changed = Signal(str)
+    process_renamed = Signal(str, str)
 
     def __init__(self, process_list: ProcessList, parent=None) -> None:
         super().__init__(parent)
@@ -26,8 +26,8 @@ class ProcessWidget(QFrame):
         self.main_layout.addWidget(self._list, stretch=1)
 
         separator = QFrame(self)
-        separator.setFrameShape(QFrame.HLine)
-        separator.setFrameShadow(QFrame.Sunken)
+        separator.setFrameShape(QFrame.Shape.HLine)
+        separator.setFrameShadow(QFrame.Shadow.Sunken)
         separator.setFixedHeight(1)
         self.main_layout.addWidget(separator)
 
@@ -35,7 +35,7 @@ class ProcessWidget(QFrame):
         self._btn_layout.setContentsMargins(8, 6, 8, 6)
         self._btn_layout.setSpacing(4)
         self._btn_layout.addItem(
-            QSpacerItem(0, 0, QSizePolicy.Expanding, QSizePolicy.Minimum)
+            QSpacerItem(0, 0, QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Minimum)
         )
         self.main_layout.addLayout(self._btn_layout)
 
@@ -49,8 +49,8 @@ class ProcessWidget(QFrame):
 
     def add_separator(self) -> None:
         sep = QFrame(self)
-        sep.setFrameShape(QFrame.VLine)
-        sep.setFrameShadow(QFrame.Sunken)
+        sep.setFrameShape(QFrame.Shape.VLine)
+        sep.setFrameShadow(QFrame.Shadow.Sunken)
         sep.setFixedWidth(1)
         count = self._btn_layout.count()
         self._btn_layout.insertWidget(count - 1, sep, alignment=Qt.AlignCenter)  # type: ignore[attr-defined]
@@ -62,7 +62,7 @@ class ProcessWidget(QFrame):
 if __name__ == "__main__":
     import sys
 
-    from PyQt5.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication
     from qfluentwidgets import FluentIcon
 
     class DemoList(ProcessList):
@@ -73,7 +73,7 @@ if __name__ == "__main__":
             self._dispatch["Remove"] = self._on_remove
 
         def _on_remove(self, name: str):
-            self.remove_process(name)
+            self.remove_process(name)  # type: ignore[attr-defined]
 
     app = QApplication(sys.argv)
 
@@ -85,7 +85,7 @@ if __name__ == "__main__":
         "Add",
         FluentIcon.ADD,
         "Add a new process",
-        lambda: lst.add_process(f"process_{len(data)}"),
+        lambda: lst.add_process(f"process_{len(data)}"),  # type: ignore[attr-defined]
     )
     widget.add_separator()
     widget.add_bottom_button(
@@ -93,7 +93,9 @@ if __name__ == "__main__":
         FluentIcon.DELETE,
         "Remove selected process",
         lambda: (
-            lst.remove_process(lst.selected_name()) if lst.selected_name() else None
+            lst.remove_process(lst.selected_name())  # type: ignore[attr-defined]
+            if lst.selected_name()
+            else None
         ),
     )
 

@@ -1,5 +1,5 @@
-from PyQt5.QtCore import QRectF, Qt
-from PyQt5.QtGui import QColor
+from PySide6.QtCore import QRectF, Qt
+from PySide6.QtGui import QColor
 
 from chemunited.elements.component.component_parts.scene_item import SceneItem
 from chemunited_core.components.internals import (

@@ -9,6 +9,7 @@ race (called before the Monaco page is ready must be replayed on ready).
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
@@ -56,9 +57,23 @@ class BetaProcess:
 
 
 def _run_js(page, expr: str, qtbot, timeout_ms: int = 10000):
-    """Run a JS expression in the page and wait for its callback value."""
+    """Run a JS expression in the page and wait for its callback value.
+
+    PySide6's runJavaScript callback only converts number/string results -
+    booleans and objects arrive as ''. JSON.stringify round-trips them.
+    """
     result: dict = {}
-    page.runJavaScript(expr, lambda value: result.update(value=value))
+
+    def _cb(raw):
+        if isinstance(raw, str) and raw:
+            try:
+                result["value"] = json.loads(raw)
+                return
+            except ValueError:
+                pass
+        result["value"] = raw
+
+    page.runJavaScript(f"JSON.stringify(eval({json.dumps(expr)}))", 0, _cb)
     qtbot.waitUntil(lambda: "value" in result, timeout=timeout_ms)
     return result["value"]
 

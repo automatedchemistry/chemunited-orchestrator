@@ -3,9 +3,9 @@ import math
 from dataclasses import asdict
 from typing import override
 
-from PyQt5.QtCore import QPointF, Qt
-from PyQt5.QtGui import QColor, QPainterPath, QPainterPathStroker, QPen
-from PyQt5.QtWidgets import QGraphicsItem
+from PySide6.QtCore import QPointF, Qt
+from PySide6.QtGui import QColor, QPainterPath, QPainterPathStroker, QPen
+from PySide6.QtWidgets import QGraphicsItem
 
 from chemunited.elements.component.component_parts.connection_point import (
     ConnectionPoint,

@@ -2,9 +2,9 @@ from typing import TYPE_CHECKING, Optional
 from urllib.parse import urlsplit, urlunsplit
 
 from loguru import logger
-from PyQt5.QtCore import QMimeData, Qt
-from PyQt5.QtGui import QColor, QDrag, QFont, QIcon, QPainter, QPixmap
-from PyQt5.QtWidgets import QHBoxLayout, QLabel, QListWidgetItem, QVBoxLayout, QWidget
+from PySide6.QtCore import QMimeData, Qt
+from PySide6.QtGui import QColor, QDrag, QFont, QIcon, QPainter, QPixmap
+from PySide6.QtWidgets import QHBoxLayout, QLabel, QListWidgetItem, QVBoxLayout, QWidget
 from qfluentwidgets import (
     EditableComboBox,
     FluentIcon,
@@ -62,7 +62,7 @@ class OnlineList(ListWidget):
             bg_color = (
                 QColor(40, 40, 40, 180) if isDarkTheme() else QColor(240, 240, 240, 200)
             )
-            painter.setRenderHint(QPainter.Antialiasing)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing)
             painter.setBrush(bg_color)
             painter.setPen(Qt.NoPen)  # type: ignore[attr-defined]
             painter.drawRoundedRect(0, 0, width, height, 8, 8)
@@ -355,7 +355,7 @@ class OnlineComponent(QWidget):
 if __name__ == "__main__":
     import sys
 
-    from PyQt5.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
     w = OnlineComponent(parent=None)

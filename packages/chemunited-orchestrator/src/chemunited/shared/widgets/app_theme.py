@@ -37,8 +37,8 @@ from pathlib import Path
 from typing import Callable
 from weakref import WeakMethod
 
-from PyQt5.QtGui import QColor, QPalette
-from PyQt5.QtWidgets import QApplication, QWidget
+from PySide6.QtGui import QColor, QPalette
+from PySide6.QtWidgets import QApplication, QWidget
 from qfluentwidgets import Theme, isDarkTheme, qconfig, themeColor
 from qfluentwidgets.common.style_sheet import setTheme
 
@@ -73,9 +73,13 @@ def _config_path() -> Path:
             appname="chemunited-orchestrator", appauthor=False
         )
     except Exception:
-        from PyQt5.QtCore import QStandardPaths
+        from PySide6.QtCore import QStandardPaths
 
-        base = str(QStandardPaths.writableLocation(QStandardPaths.AppDataLocation))
+        base = str(
+            QStandardPaths.writableLocation(
+                QStandardPaths.StandardLocation.AppDataLocation
+            )
+        )
     return Path(base) / _CONFIG_FILE_NAME
 
 
@@ -125,31 +129,35 @@ def _dark_palette(base: QPalette) -> QPalette:
     accent = themeColor()
 
     for role, color in (
-        (QPalette.Window, QColor(32, 32, 32)),
-        (QPalette.Base, QColor(39, 39, 39)),
-        (QPalette.AlternateBase, QColor(45, 45, 45)),
-        (QPalette.Button, QColor(45, 45, 45)),
-        (QPalette.WindowText, text),
-        (QPalette.Text, text),
-        (QPalette.ButtonText, text),
-        (QPalette.BrightText, QColor(255, 255, 255)),
+        (QPalette.ColorRole.Window, QColor(32, 32, 32)),
+        (QPalette.ColorRole.Base, QColor(39, 39, 39)),
+        (QPalette.ColorRole.AlternateBase, QColor(45, 45, 45)),
+        (QPalette.ColorRole.Button, QColor(45, 45, 45)),
+        (QPalette.ColorRole.WindowText, text),
+        (QPalette.ColorRole.Text, text),
+        (QPalette.ColorRole.ButtonText, text),
+        (QPalette.ColorRole.BrightText, QColor(255, 255, 255)),
         # Shading for frames and sunken separator lines.
-        (QPalette.Light, QColor(80, 80, 80)),
-        (QPalette.Midlight, QColor(60, 60, 60)),
-        (QPalette.Mid, QColor(50, 50, 50)),
-        (QPalette.Dark, QColor(20, 20, 20)),
-        (QPalette.Shadow, QColor(0, 0, 0)),
-        (QPalette.Highlight, accent),
-        (QPalette.HighlightedText, QColor(255, 255, 255)),
-        (QPalette.Link, accent),
-        (QPalette.ToolTipBase, QColor(43, 43, 43)),
-        (QPalette.ToolTipText, text),
-        (QPalette.PlaceholderText, QColor(255, 255, 255, 115)),
+        (QPalette.ColorRole.Light, QColor(80, 80, 80)),
+        (QPalette.ColorRole.Midlight, QColor(60, 60, 60)),
+        (QPalette.ColorRole.Mid, QColor(50, 50, 50)),
+        (QPalette.ColorRole.Dark, QColor(20, 20, 20)),
+        (QPalette.ColorRole.Shadow, QColor(0, 0, 0)),
+        (QPalette.ColorRole.Highlight, accent),
+        (QPalette.ColorRole.HighlightedText, QColor(255, 255, 255)),
+        (QPalette.ColorRole.Link, accent),
+        (QPalette.ColorRole.ToolTipBase, QColor(43, 43, 43)),
+        (QPalette.ColorRole.ToolTipText, text),
+        (QPalette.ColorRole.PlaceholderText, QColor(255, 255, 255, 115)),
     ):
         palette.setColor(role, color)
 
-    for role in (QPalette.WindowText, QPalette.Text, QPalette.ButtonText):
-        palette.setColor(QPalette.Disabled, role, disabled_text)
+    for role in (
+        QPalette.ColorRole.WindowText,
+        QPalette.ColorRole.Text,
+        QPalette.ColorRole.ButtonText,
+    ):
+        palette.setColor(QPalette.ColorGroup.Disabled, role, disabled_text)
     return palette
 
 
@@ -171,8 +179,12 @@ def apply_app_palette() -> None:
         # undo the dark swap (e.g. Link).
         current = QApplication.palette()
         _light_palette = QPalette()
-        for group in (QPalette.Active, QPalette.Inactive, QPalette.Disabled):
-            for role in range(QPalette.NColorRoles):
+        for group in (
+            QPalette.ColorGroup.Active,
+            QPalette.ColorGroup.Inactive,
+            QPalette.ColorGroup.Disabled,
+        ):
+            for role in range(QPalette.ColorRole.NColorRoles.value):
                 color_role = QPalette.ColorRole(role)
                 _light_palette.setBrush(
                     group, color_role, current.brush(group, color_role)
@@ -363,7 +375,7 @@ class ThemedChromeMixin:
     def setQss(self) -> None:
         from typing import cast
 
-        from PyQt5.QtWidgets import QWidget
+        from PySide6.QtWidgets import QWidget
 
         widget = cast(QWidget, self)
         apply_app_palette()

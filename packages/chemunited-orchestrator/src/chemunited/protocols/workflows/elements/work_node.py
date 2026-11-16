@@ -1,9 +1,9 @@
 from typing import Callable
 
-from PyQt5.QtCore import QPointF, QRectF, Qt
-from PyQt5.QtGui import QColor, QFont, QFontMetrics, QPainterPath, QPen
-from PyQt5.QtSvg import QSvgRenderer
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import QPointF, QRectF, Qt
+from PySide6.QtGui import QColor, QFont, QFontMetrics, QPainterPath, QPen
+from PySide6.QtSvg import QSvgRenderer
+from PySide6.QtWidgets import (
     QGraphicsDropShadowEffect,
     QGraphicsItem,
     QGraphicsItemGroup,

@@ -4,12 +4,12 @@ import threading
 from collections.abc import Callable
 from typing import Any, cast
 
-from PyQt5.QtCore import QObject, Qt, QThread, pyqtSignal, pyqtSlot
-from PyQt5.QtWidgets import QApplication
+from PySide6.QtCore import QObject, Qt, QThread, Signal, Slot
+from PySide6.QtWidgets import QApplication
 
 
 class QtMainThreadBridge(QObject):
-    _call_requested = pyqtSignal(object)
+    _call_requested = Signal(object)
 
     def __init__(self, parent: QObject | None = None):
         super().__init__(parent)
@@ -32,7 +32,7 @@ class QtMainThreadBridge(QObject):
             raise state["error"]
         return state.get("result")
 
-    @pyqtSlot(object)
+    @Slot(object)
     def _run_call(self, payload: object) -> None:
         func, done, state = cast(
             tuple[Callable[[], Any], threading.Event, dict[str, Any]],

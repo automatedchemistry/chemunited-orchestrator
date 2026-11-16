@@ -2,7 +2,7 @@ from pathlib import Path
 
 import black  # type: ignore[import-not-found]
 from loguru import logger
-from PyQt5.QtCore import QFile, QTextStream
+from PySide6.QtCore import QFile
 
 
 def _resource_fallback_path(path: str) -> Path | None:
@@ -24,11 +24,9 @@ def _read_lines(path: str, *, encoding: str = "utf-8") -> list[str]:
     """
     file = QFile(path)
     if file.open(QFile.ReadOnly | QFile.Text):  # type: ignore[attr-defined]
-        stream = QTextStream(file)
-        stream.setCodec(encoding)
-        text = stream.readAll()
+        data = bytes(file.readAll().data())
         file.close()
-        return text.splitlines(keepends=True)
+        return data.decode(encoding).splitlines(keepends=True)
 
     # Standalone runs do not automatically register the compiled Qt resources.
     fallback_path = _resource_fallback_path(path)

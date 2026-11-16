@@ -8,9 +8,9 @@ from dataclasses import dataclass
 from math import isfinite
 from typing import TYPE_CHECKING
 
-from PyQt5.QtCore import QItemSelectionModel, Qt, pyqtSignal
-from PyQt5.QtGui import QColor, QPainter, QPen
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import QItemSelectionModel, Qt, Signal
+from PySide6.QtGui import QColor, QPainter, QPen
+from PySide6.QtWidgets import (
     QAbstractItemView,
     QFrame,
     QGridLayout,
@@ -136,7 +136,7 @@ class _CapacityBar(QWidget):
         self._gas = 0.0
         self._capacity: float | None = None
         self.setFixedHeight(14)
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
     def set_values(
         self,
@@ -152,7 +152,7 @@ class _CapacityBar(QWidget):
     def paintEvent(self, event) -> None:
         super().paintEvent(event)
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         rect = self.rect().adjusted(1, 1, -1, -1)
         painter.setBrush(QColor(120, 120, 120, 28))
         painter.setPen(QPen(QColor(120, 120, 120, 100), 1))
@@ -197,8 +197,8 @@ class _CapacityBar(QWidget):
 
 
 class _CompositionRow(QFrame):
-    changed = pyqtSignal()
-    remove_requested = pyqtSignal(str)
+    changed = Signal()
+    remove_requested = Signal(str)
 
     def __init__(
         self,
@@ -330,8 +330,8 @@ class _CompositionRow(QFrame):
 
 
 class _PhaseEditor(CardWidget):
-    changed = pyqtSignal()
-    volume_changed = pyqtSignal(float)
+    changed = Signal()
+    volume_changed = Signal(float)
 
     def __init__(
         self,
@@ -585,9 +585,9 @@ class InventoryWorkspace(QWidget):
         self.table = TableWidget(overview)
         self.table.setColumnCount(len(self._HEADERS))
         self.table.setHorizontalHeaderLabels(self._HEADERS)
-        self.table.setEditTriggers(QAbstractItemView.NoEditTriggers)
-        self.table.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.table.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.table.setEditTriggers(QAbstractItemView.EditTrigger.NoEditTriggers)
+        self.table.setSelectionBehavior(QAbstractItemView.SelectionBehavior.SelectRows)
+        self.table.setSelectionMode(QAbstractItemView.SelectionMode.ExtendedSelection)
         self.table.verticalHeader().setVisible(False)
         self.table.setAlternatingRowColors(True)
         self.table.horizontalHeader().setStretchLastSection(True)
@@ -621,7 +621,7 @@ class InventoryWorkspace(QWidget):
 
         editor_scroll = QScrollArea(self.splitter)
         editor_scroll.setWidgetResizable(True)
-        editor_scroll.setFrameShape(QFrame.NoFrame)
+        editor_scroll.setFrameShape(QFrame.Shape.NoFrame)
         self.editor_content = QWidget(editor_scroll)
         editor_scroll.setWidget(self.editor_content)
         editor_layout = QVBoxLayout(self.editor_content)

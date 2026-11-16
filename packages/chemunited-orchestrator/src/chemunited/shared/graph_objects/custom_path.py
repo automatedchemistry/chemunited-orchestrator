@@ -1,6 +1,6 @@
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QBrush, QColor, QPainterPath, QPen
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QBrush, QColor, QPainterPath, QPen
+from PySide6.QtWidgets import (
     QGraphicsEllipseItem,
     QGraphicsItem,
     QGraphicsPathItem,
@@ -128,7 +128,7 @@ class MovablePathItem(PathElementItem):
     def _sync_handles(self) -> None:
         """Recreate handle items to match the current inflection points only."""
         for handle in self._handles:
-            handle.setParentItem(None)
+            handle.setParentItem(None)  # type: ignore[arg-type]
         self._handles.clear()
         for pt in self._inflection_points:
             handle = DraggablePoint(

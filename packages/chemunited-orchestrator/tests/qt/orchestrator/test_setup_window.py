@@ -12,8 +12,8 @@ import zipfile
 from pathlib import Path
 
 import pytest
-from PyQt5.QtGui import QKeySequence
-from PyQt5.QtWidgets import QFileDialog, QMessageBox
+from PySide6.QtGui import QKeySequence
+from PySide6.QtWidgets import QFileDialog, QMessageBox
 from pytestqt.qtbot import QtBot
 from qfluentwidgets import NavigationTreeWidget
 

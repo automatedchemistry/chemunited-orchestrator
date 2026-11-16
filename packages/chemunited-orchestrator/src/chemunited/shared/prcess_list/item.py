@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from PyQt5.QtCore import Qt, QTimer, pyqtSignal
-from PyQt5.QtGui import QColor, QPainter
-from PyQt5.QtWidgets import QHBoxLayout, QSizePolicy, QStackedWidget, QWidget
+from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtGui import QColor, QPainter
+from PySide6.QtWidgets import QHBoxLayout, QSizePolicy, QStackedWidget, QWidget
 from qfluentwidgets import (
     Action,
     BodyLabel,
@@ -80,7 +80,7 @@ class _StatusCircle(QWidget):
 
     def paintEvent(self, event) -> None:
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
         painter.setBrush(self._color)
         painter.setPen(QT_NO_PEN)
         painter.drawEllipse(1, 1, 10, 10)
@@ -89,8 +89,8 @@ class _StatusCircle(QWidget):
 class _EditLineEdit(LineEdit):
     """LineEdit with dedicated signals for Escape key and focus loss."""
 
-    escape_pressed = pyqtSignal()
-    focus_lost = pyqtSignal()
+    escape_pressed = Signal()
+    focus_lost = Signal()
 
     def keyPressEvent(self, event) -> None:
         if event.key() == QT_KEY_ESCAPE:
@@ -106,9 +106,9 @@ class _EditLineEdit(LineEdit):
 class ProcessItem(QWidget):
     """Passive, uniform row widget. Emits signals only — owns no logic."""
 
-    option_triggered = pyqtSignal(str, str)  # (option_name, process_name)
-    rename_requested = pyqtSignal(str, str)  # (current_name, proposed_name)
-    edit_started = pyqtSignal(str)  # (process_name)
+    option_triggered = Signal(str, str)  # (option_name, process_name)
+    rename_requested = Signal(str, str)  # (current_name, proposed_name)
+    edit_started = Signal(str)  # (process_name)
 
     def __init__(self, name: str, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -139,7 +139,9 @@ class ProcessItem(QWidget):
         display_layout.addWidget(self._status)
 
         self._name_label = BodyLabel(self._name, display_page)
-        self._name_label.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Preferred)
+        self._name_label.setSizePolicy(
+            QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Preferred
+        )
         display_layout.addWidget(self._name_label)
 
         self._menu_button = ToolButton(FluentIcon.MORE, display_page)

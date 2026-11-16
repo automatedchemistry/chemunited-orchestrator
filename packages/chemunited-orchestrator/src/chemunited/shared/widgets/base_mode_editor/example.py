@@ -21,7 +21,7 @@ import sys
 from typing import Annotated
 
 from pydantic import BaseModel, Field
-from PyQt5.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 from chemunited.shared.widgets.base_mode_editor import BaseModeEditorWidget
 from chemunited_quantities import ChemQuantityValidator, ChemUnitQuantity

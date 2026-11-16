@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from PyQt5.QtWidgets import QWidget
+from PySide6.QtWidgets import QWidget
 from qfluentwidgets import SpinBox
 
 from .base_card import BaseFieldCard

@@ -1,7 +1,7 @@
 from typing import ClassVar
 
-from PyQt5.QtCore import QPointF
-from PyQt5.QtGui import QColor, QPainterPath, QPolygonF
+from PySide6.QtCore import QPointF
+from PySide6.QtGui import QColor, QPainterPath, QPolygonF
 
 from chemunited.elements.component.graph_item import GraphComponent
 from chemunited.elements.connection.connection import paint_fluid_column
@@ -32,7 +32,7 @@ class PathSpring(PathElementItem):
         )
         # Build the path without Python loops (use a polygon)
         poly = QPolygonF(
-            QPointF(float(x), float(y)) for x, y in zip(x_coords, y_coords)
+            [QPointF(float(x), float(y)) for x, y in zip(x_coords, y_coords)]
         )
         path = QPainterPath()
         path.addPolygon(poly)

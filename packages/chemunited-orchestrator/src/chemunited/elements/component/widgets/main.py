@@ -3,7 +3,7 @@ from __future__ import annotations
 from typing import TYPE_CHECKING, Union, override
 
 from pydantic import BaseModel
-from PyQt5.QtCore import pyqtSlot
+from PySide6.QtCore import Slot
 from qfluentwidgets import FluentIcon, NavigationItemPosition
 
 from chemunited.shared.icon import OrchestratorIcon
@@ -60,7 +60,7 @@ class ComponentWidget(WindowBase):
                 position=NavigationItemPosition.TOP,
             )
 
-    @pyqtSlot(BaseModel)
+    @Slot(BaseModel)
     def save(self, model: BaseModel):
         self.component.graph.sync(model)
         self.close()
