@@ -1,10 +1,10 @@
 import math
 import sys
 
-from PyQt5.QtCore import QElapsedTimer, QRect, Qt, QTimer
-from PyQt5.QtGui import QColor, QPainter, QPen
-from PyQt5.QtSvg import QSvgWidget
-from PyQt5.QtWidgets import QApplication, QVBoxLayout, QWidget
+from PySide6.QtCore import QElapsedTimer, QRect, Qt, QTimer
+from PySide6.QtGui import QColor, QPainter, QPen
+from PySide6.QtSvgWidgets import QSvgWidget
+from PySide6.QtWidgets import QApplication, QVBoxLayout, QWidget
 
 
 class SmoothWaitingArc(QWidget):
@@ -32,7 +32,7 @@ class SmoothWaitingArc(QWidget):
 
     def paintEvent(self, a0):
         painter = QPainter(self)
-        painter.setRenderHint(QPainter.Antialiasing)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
         rect = QRect(50, 40, 200, 200)
 

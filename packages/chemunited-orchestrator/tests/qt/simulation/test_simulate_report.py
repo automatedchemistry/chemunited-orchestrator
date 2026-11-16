@@ -5,7 +5,7 @@ from pathlib import Path
 
 import pytest
 from matplotlib.colors import to_hex
-from PyQt5.QtCore import QObject, pyqtSignal
+from PySide6.QtCore import QObject, Signal
 from pytestqt.qtbot import QtBot
 
 from chemunited.elements.component.glossary.valve.solenoid_valve_graph import (
@@ -28,10 +28,10 @@ _THROTTLE_WAIT_MS = 80  # comfortably above the 33ms scrub-timer interval
 
 
 class _ExportJob(QObject):
-    progress = pyqtSignal(int, str)
-    completed = pyqtSignal(str)
-    failed = pyqtSignal(str)
-    cancelled = pyqtSignal()
+    progress = Signal(int, str)
+    completed = Signal(str)
+    failed = Signal(str)
+    cancelled = Signal()
 
     def __init__(self, playback, scene, components, connections, parent):
         super().__init__(parent)
@@ -846,7 +846,9 @@ class TestSimulateWindowReportPlayback:
                     bottle.liq_content.initial_species["red_dye"],
                     tube.content[0].initial_species["blue_dye"],
                     valve.opened,
-                    platform_image.constBits().asstring(platform_image.sizeInBytes()),
+                    platform_image.constBits()[
+                        : platform_image.sizeInBytes()
+                    ].tobytes(),
                 )
             )
             return image

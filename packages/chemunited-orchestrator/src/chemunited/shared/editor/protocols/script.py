@@ -5,10 +5,9 @@ from typing import TYPE_CHECKING
 
 import black  # type: ignore[import-not-found]
 from loguru import logger
-from PyQt5.Qsci import QsciScintilla
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtGui import QDropEvent, QIcon
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QIcon
+from PySide6.QtWidgets import (
     QDockWidget,
     QHBoxLayout,
     QMainWindow,
@@ -22,7 +21,6 @@ from qfluentwidgets import (
     isDarkTheme,
 )
 
-from chemunited.shared.editor.base import EditorBase
 from chemunited.shared.editor.parameters.drag_list import ParameterDragableList
 from chemunited.shared.editor.protocols.command_list import (
     CommandList,
@@ -40,23 +38,6 @@ def _process_parameter_class_name(class_name: str | None) -> str:
     if class_name == "CustomProcess":
         return "ProcessConfig"
     return f"{class_name}Config" if class_name else "MainParameter"
-
-
-def _drop_position_to_line_index(
-    editor: EditorBase,
-    event: QDropEvent,
-) -> tuple[int, int]:
-    pos = editor.SendScintilla(
-        QsciScintilla.SCI_POSITIONFROMPOINT,
-        event.pos().x(),
-        event.pos().y(),
-    )
-    if pos < 0:
-        return editor.getCursorPosition()
-
-    line = editor.SendScintilla(QsciScintilla.SCI_LINEFROMPOSITION, pos)
-    line_start = editor.SendScintilla(QsciScintilla.SCI_POSITIONFROMLINE, line)
-    return int(line), int(pos - line_start)
 
 
 def _drop_text_from_mime(mime_data) -> str | None:
@@ -131,55 +112,8 @@ def _build_statement_insert_text(snippet: str, indent: str, newline: str) -> str
     )
 
 
-class ScriptEditor(EditorBase):
-    drop_accepted = pyqtSignal()
-
-    def __init__(self, path: Path, parent=None):
-        super().__init__(parent, path=path)
-
-    def dropEvent(self, event: QDropEvent | None) -> None:
-        if event is None:
-            return
-        mime_data = event.mimeData()
-        if mime_data is None:
-            return
-        if mime_data.hasFormat(ParameterDragableList.MIME) and mime_data.hasFormat(
-            ParameterDragableList.PATH_MIME
-        ):
-            source_path = Path(
-                bytes(mime_data.data(ParameterDragableList.PATH_MIME)).decode("utf-8")
-            ).resolve()
-            current_path = self.path.resolve()
-            if source_path != current_path and source_path.name != "main_parameters.py":
-                event.ignore()
-                return
-
-        snippet = _drop_text_from_mime(mime_data)
-        if snippet is None:
-            event.ignore()
-            return
-
-        line, _index = _drop_position_to_line_index(self, event)
-        source = self.text()
-        insertion = _insertion_for_method_end_drop(source, line)
-        if insertion is None:
-            event.ignore()
-            return
-
-        insert_line, indent = insertion
-        newline = "\r\n" if "\r\n" in source else "\n"
-        self.insertAt(
-            _build_statement_insert_text(snippet, indent, newline),
-            insert_line,
-            0,
-        )
-        event.acceptProposedAction()
-        if mime_data.hasFormat(CommandList.MIME):
-            self.drop_accepted.emit()  # type: ignore[attr-defined]
-
-
 class ScriptEditorWindow(ThemedChromeMixin, QMainWindow):
-    metadata_saved = pyqtSignal(str, str, str)
+    metadata_saved = Signal(str, str, str)
 
     def __init__(
         self,
@@ -281,8 +215,10 @@ class ScriptEditorWindow(ThemedChromeMixin, QMainWindow):
             self.main_parameter_editor = None
             self.main_parameter_dock = None
 
-    def _make_editor(self, path: Path) -> ScriptEditor:
-        return ScriptEditor(path=path, parent=self)
+    def _make_editor(self, path: Path):
+        from chemunited.shared.editor.monaco_script import MonacoScriptEditor
+
+        return MonacoScriptEditor(path=path, parent=self)
 
     def initlayout(self):
 
@@ -374,7 +310,7 @@ class ScriptEditorWindow(ThemedChromeMixin, QMainWindow):
         self.node_metadata_editor.set_values(label, description)
 
     def format_with_black(self):
-        """Apply Black formatting to the code in a QsciScintilla editor."""
+        """Apply Black formatting to the code in the editor."""
         try:
             code = self.editor.text()
             # Apply Black formatting
@@ -442,7 +378,7 @@ class ScriptEditorWindow(ThemedChromeMixin, QMainWindow):
 if __name__ == "__main__":
     import sys
 
-    from PyQt5.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
     window = ScriptEditorWindow(

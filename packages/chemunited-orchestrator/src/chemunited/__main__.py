@@ -2,13 +2,13 @@ import sys
 from pathlib import Path
 
 import rich_click as click
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QApplication
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtGui import QIcon
+from PySide6.QtWidgets import QApplication
 
 # Import WebEngine BEFORE any Qt widgets - required for Monaco Editor
 try:
-    import PyQt5.QtWebEngineWidgets  # noqa: F401
+    import PySide6.QtWebEngineWidgets  # noqa: F401
 except ImportError:
     pass  # Will fail later with better error if Monaco is used
 

@@ -1,4 +1,13 @@
+import os
+
 import pytest
+
+# QtWebEngine under the offscreen QPA platform has no usable GL context;
+# without software rendering its GPU process loses the context and the whole
+# test process aborts. Harmless on real-GPU runs too.
+os.environ.setdefault(
+    "QTWEBENGINE_CHROMIUM_FLAGS", "--disable-gpu --disable-gpu-compositing"
+)
 
 
 @pytest.fixture(autouse=True)

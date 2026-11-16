@@ -1,13 +1,13 @@
 from __future__ import annotations
 
-from PyQt5.QtCore import QByteArray
-from PyQt5.QtSvg import QGraphicsSvgItem, QSvgRenderer
-from PyQt5.QtWidgets import QGraphicsItem
+from PySide6.QtCore import QByteArray, QPointF, QRectF
+from PySide6.QtSvg import QSvgRenderer
+from PySide6.QtWidgets import QGraphicsItem, QStyleOptionGraphicsItem
 
 from chemunited_core.common.constant import PATTERN_DIMENSION
 
 
-class SvgLayer(QGraphicsSvgItem):
+class SvgLayer(QGraphicsItem):
     """
     Renders a single SVG figure inside a GraphComponent group.
 
@@ -24,7 +24,8 @@ class SvgLayer(QGraphicsSvgItem):
     """
 
     def __init__(self, svg_path, scale=PATTERN_DIMENSION, parent=None):
-        super().__init__(svg_path, parent=parent)
+        super().__init__(parent)
+        self._renderer = QSvgRenderer(svg_path)
 
         # Explicitly disable caching — ensures SVG re-renders at every zoom level
         # Never use DeviceCoordinateCache or ItemCoordinateCache here
@@ -42,16 +43,35 @@ class SvgLayer(QGraphicsSvgItem):
     ) -> "SvgLayer":
         """Construct an SvgLayer from raw SVG bytes (e.g. from a package resource)."""
         instance = cls.__new__(cls)
-        QGraphicsSvgItem.__init__(instance, parent=parent)
+        QGraphicsItem.__init__(instance, parent=parent)
         instance.setCacheMode(QGraphicsItem.NoCache)  # type: ignore[attr-defined]
         instance.setFlag(QGraphicsItem.ItemIsSelectable, False)  # type: ignore[attr-defined]
         instance.setFlag(QGraphicsItem.ItemIsMovable, False)  # type: ignore[attr-defined]
+        instance._renderer = QSvgRenderer(QByteArray(svg_bytes))
         instance._scale = scale
-        instance.setSharedRenderer(QSvgRenderer(QByteArray(svg_bytes)))
         instance._apply_scale()
         return instance
 
+    # ── QGraphicsItem interface ──────────────────────────────────
+
+    def boundingRect(self) -> QRectF:
+        size = self._renderer.defaultSize()
+        if size.isEmpty():
+            return QRectF()
+        return QRectF(QPointF(0, 0), size)
+
+    def paint(self, painter, option: QStyleOptionGraphicsItem, widget=None) -> None:
+        if self._renderer.isValid():
+            self._renderer.render(painter, self.boundingRect())
+
     # ── public API ────────────────────────────────────────────────
+
+    def setSharedRenderer(self, renderer: QSvgRenderer) -> None:
+        """Swap the underlying renderer (Qt6 replacement for QGraphicsSvgItem API)."""
+        self.prepareGeometryChange()
+        self._renderer = renderer
+        self._apply_scale()
+        self.update()
 
     def update_angle(self, angle: int) -> None:
         """No-op: rotation is owned by the parent GraphComponent group."""
@@ -60,7 +80,6 @@ class SvgLayer(QGraphicsSvgItem):
         """Swap the SVG figure. Called by GraphComponent.sync()."""
         self._svg_path = svg_path
         self.setSharedRenderer(QSvgRenderer(svg_path))
-        self._apply_scale()
         self._centre()
 
     # ── internal ──────────────────────────────────────────────────
@@ -81,7 +100,7 @@ class SvgLayer(QGraphicsSvgItem):
     def _centre(self) -> None:
         """
         Shift the item so its visual centre sits at (0, 0).
-        QGraphicsSvgItem renders from its top-left corner by default.
+        The SVG renders from its top-left corner by default.
         """
         br = self.boundingRect()
         self.setTransformOriginPoint(br.center())

@@ -3,9 +3,9 @@ from __future__ import annotations
 from pathlib import Path
 
 import pytest
-from PyQt5.QtCore import QObject, QProcess, pyqtSignal
-from PyQt5.QtGui import QColor, QImage
-from PyQt5.QtWidgets import QGraphicsItem, QGraphicsScene
+from PySide6.QtCore import QObject, QProcess, Signal
+from PySide6.QtGui import QColor, QImage
+from PySide6.QtWidgets import QGraphicsItem, QGraphicsScene
 
 from chemunited.simulation import playback_export
 from chemunited.simulation.playback_export import (
@@ -84,12 +84,12 @@ def platform(qtbot):
 class _Process(QObject):
     """An encoder that only consumes bytes when the test explicitly drains it."""
 
-    started = pyqtSignal()
-    bytesWritten = pyqtSignal(int)
-    readyReadStandardError = pyqtSignal()
-    readyReadStandardOutput = pyqtSignal()
-    errorOccurred = pyqtSignal(object)
-    finished = pyqtSignal(int, object)
+    started = Signal()
+    bytesWritten = Signal(int)
+    readyReadStandardError = Signal()
+    readyReadStandardOutput = Signal()
+    errorOccurred = Signal(object)
+    finished = Signal(int, object)
     Running, NotRunning = QProcess.Running, QProcess.NotRunning
     NormalExit, CrashExit = QProcess.NormalExit, QProcess.CrashExit
     FailedToStart = QProcess.FailedToStart
@@ -324,7 +324,7 @@ def test_frame_render_is_opaque_rgba_and_preserves_framing(platform, tmp_path):
     assert image.pixelColor(159, 89).alpha() == 255
     # RGBA bytes must retain red/blue channel order at the encoder boundary.
     offset = 24 * image.bytesPerLine() + 44 * 4
-    assert image.constBits().asstring(image.sizeInBytes())[
+    assert image.constBits()[: image.sizeInBytes()][
         offset : offset + 4
     ] == bytes((255, 0, 0, 255))
 

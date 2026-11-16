@@ -3,9 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 
 from loguru import logger
-from PyQt5.QtCore import QMimeData, QSize, Qt, pyqtSignal
-from PyQt5.QtGui import QDrag, QIcon
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import QMimeData, QSize, Qt, Signal
+from PySide6.QtGui import QDrag, QIcon
+from PySide6.QtWidgets import (
     QAbstractItemView,
     QFrame,
     QHBoxLayout,
@@ -80,7 +80,7 @@ class _CommandCard(QFrame):
 
         self.setObjectName("commandCard")
         self.setAttribute(Qt.WA_TransparentForMouseEvents, True)  # type: ignore[attr-defined]
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.setMinimumHeight(56)
 
         root = QVBoxLayout(self)
@@ -142,7 +142,7 @@ class _ComponentCard(QFrame):
         )
         self.setObjectName("componentCard")
         self.setAttribute(Qt.WA_TransparentForMouseEvents, True)  # type: ignore[attr-defined]
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.setMinimumHeight(62)
 
         root = QHBoxLayout(self)
@@ -189,8 +189,8 @@ class CommandList(TreeWidget):
     ROLE_SEARCH_TEXT = Qt.UserRole + 3  # type: ignore[attr-defined]
     MIME = "application/x-chemunited-command"
 
-    command_activated = pyqtSignal(str)
-    snippet_activated = pyqtSignal(str)
+    command_activated = Signal(str)
+    snippet_activated = Signal(str)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -201,9 +201,9 @@ class CommandList(TreeWidget):
         self.setAnimated(True)
         self.setIndentation(12)
         self.setUniformRowHeights(False)
-        self.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.setDragEnabled(True)
-        self.setDragDropMode(QAbstractItemView.DragOnly)
+        self.setDragDropMode(QAbstractItemView.DragDropMode.DragOnly)
         self.setDefaultDropAction(QT_COPY_ACTION)
         self.setExpandsOnDoubleClick(True)
         self.itemDoubleClicked.connect(self._on_item_double_clicked)  # type: ignore[attr-defined]
@@ -464,7 +464,7 @@ class CommandListPanel(QWidget):
 if __name__ == "__main__":
     import sys
 
-    from PyQt5.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
     command_list = CommandList()

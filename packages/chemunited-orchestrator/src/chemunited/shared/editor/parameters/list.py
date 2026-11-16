@@ -6,8 +6,8 @@ import copy
 from collections.abc import Callable, Generator
 from contextlib import contextmanager
 
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QVBoxLayout, QWidget
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QVBoxLayout, QWidget
 from qfluentwidgets import SmoothScrollArea
 
 from chemunited.shared.widgets.base_mode_editor.cards.builder_models import (

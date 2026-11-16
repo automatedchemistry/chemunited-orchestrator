@@ -1,5 +1,5 @@
-from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import QGraphicsScene
+from PySide6.QtGui import QColor
+from PySide6.QtWidgets import QGraphicsScene
 from qfluentwidgets import isDarkTheme
 
 

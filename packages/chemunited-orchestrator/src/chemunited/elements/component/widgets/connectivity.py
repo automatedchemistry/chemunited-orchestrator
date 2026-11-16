@@ -1,7 +1,7 @@
 from typing import TYPE_CHECKING
 
 from loguru import logger
-from PyQt5.QtWidgets import QWidget
+from PySide6.QtWidgets import QWidget
 
 from chemunited.elements.component.connectivity import ComponentConnnectivity
 from chemunited.shared.widgets.base_mode_editor import BaseModeEditorWidget

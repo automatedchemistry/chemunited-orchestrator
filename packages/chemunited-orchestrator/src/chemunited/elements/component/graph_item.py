@@ -22,13 +22,13 @@ from math import ceil
 from pathlib import Path
 from typing import ClassVar, Generic, TypeVar
 
+import shiboken6
 from loguru import logger
 from pydantic import BaseModel
-from PyQt5 import sip
-from PyQt5.QtCore import QRectF, QSize, Qt, QTimer
-from PyQt5.QtGui import QColor, QPainter, QPen, QTransform
-from PyQt5.QtSvg import QSvgGenerator
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import QRectF, QSize, Qt, QTimer
+from PySide6.QtGui import QColor, QPainter, QPen, QTransform
+from PySide6.QtSvg import QSvgGenerator
+from PySide6.QtWidgets import (
     QGraphicsDropShadowEffect,
     QGraphicsItem,
     QGraphicsItemGroup,
@@ -511,9 +511,9 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
             for pt in self._points.values():
                 pt.setGraphicsEffect(_make_shadow())
         else:
-            self._svg.setGraphicsEffect(None)
+            self._svg.setGraphicsEffect(None)  # type: ignore[arg-type]
             for pt in self._points.values():
-                pt.setGraphicsEffect(None)
+                pt.setGraphicsEffect(None)  # type: ignore[arg-type]
 
     def flash(self, duration_ms: int = 4000) -> None:
         """Briefly apply the highlight effect, e.g. to show a pool command landed here."""
@@ -522,7 +522,7 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
         QTimer.singleShot(duration_ms, self._end_flash)
 
     def _end_flash(self) -> None:
-        if sip.isdeleted(self):
+        if not shiboken6.isValid(self):
             return
         self._flash_active = False
         self.highlight(self._hover_active)
@@ -600,9 +600,9 @@ class GraphComponent(QGraphicsItemGroup, Generic[DataT]):
             if not painter.begin(generator):
                 raise OSError(f"Could not create SVG export at '{path}'.")
             try:
-                painter.setRenderHint(QPainter.Antialiasing, True)
-                painter.setRenderHint(QPainter.TextAntialiasing, True)
-                painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
+                painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+                painter.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
+                painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
                 self._paint_item_tree(painter, self, root_to_export)
             finally:
                 painter.end()

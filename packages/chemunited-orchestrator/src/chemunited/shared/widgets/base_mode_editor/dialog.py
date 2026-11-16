@@ -1,7 +1,7 @@
 from collections.abc import Mapping
 
 from pydantic import BaseModel
-from PyQt5.QtWidgets import QVBoxLayout
+from PySide6.QtWidgets import QVBoxLayout
 from qfluentwidgets import BodyLabel
 from qframelesswindow import FramelessDialog
 

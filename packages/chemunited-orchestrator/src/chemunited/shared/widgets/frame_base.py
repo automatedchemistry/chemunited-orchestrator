@@ -3,8 +3,8 @@ from __future__ import annotations
 from collections.abc import Callable
 from typing import Any
 
-from PyQt5.QtCore import Qt, QTimer
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import Qt, QTimer
+from PySide6.QtWidgets import (
     QApplication,
     QFrame,
     QHBoxLayout,
@@ -62,7 +62,7 @@ class FrameBase(QFrame):
 
     def _build_host_frame(self) -> tuple[QFrame, QVBoxLayout]:
         frame = QFrame(self)
-        frame.setFrameShape(QFrame.NoFrame)
+        frame.setFrameShape(QFrame.Shape.NoFrame)
 
         layout = QVBoxLayout(frame)
         layout.setContentsMargins(0, 0, 0, 0)

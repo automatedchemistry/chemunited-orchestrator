@@ -8,11 +8,11 @@ from pathlib import Path
 from typing import override
 
 import black  # type: ignore[import-not-found]
+import shiboken6
 from loguru import logger
-from PyQt5 import sip
-from PyQt5.QtCore import QPointF, QRectF, Qt
-from PyQt5.QtGui import QColor, QPainter, QPen
-from PyQt5.QtWidgets import QFrame, QGraphicsItem, QGraphicsView
+from PySide6.QtCore import QPointF, QRect, QRectF, Qt
+from PySide6.QtGui import QColor, QPainter, QPen
+from PySide6.QtWidgets import QFrame, QGraphicsItem, QGraphicsView
 from qfluentwidgets import (
     Action,
     FluentIcon,
@@ -436,12 +436,12 @@ class WorkflowGraph(GraphCore):
         )
         self.scene_attribute = SceneCore(self)
         self.setScene(self.scene_attribute)
-        self.setRenderHint(QPainter.Antialiasing)
-        self.setRenderHint(QPainter.SmoothPixmapTransform)
-        self.setFrameShape(QFrame.NoFrame)
+        self.setRenderHint(QPainter.RenderHint.Antialiasing)
+        self.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
+        self.setFrameShape(QFrame.Shape.NoFrame)
         self.setFocusPolicy(Qt.FocusPolicy.StrongFocus)
 
-        self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
+        self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
 
         self._nodes: dict[str, WorkflowNode] = {}
         self._connections: dict[tuple[str, str], WorkflowConnection] = {}
@@ -474,9 +474,10 @@ class WorkflowGraph(GraphCore):
         self.controller.connection_removed.connect(self._on_connection_removed)
 
     @override
-    def drawBackground(self, painter: QPainter | None, rect: QRectF) -> None:
+    def drawBackground(self, painter: QPainter | None, rect: QRectF | QRect) -> None:
         if painter is None:
             return
+        rect = QRectF(rect)
         background = QColor(39, 39, 39) if isDarkTheme() else QColor(249, 249, 249)
         grid = QColor(255, 255, 255, 18) if isDarkTheme() else QColor(0, 0, 0, 16)
         painter.fillRect(rect, background)
@@ -643,7 +644,7 @@ class WorkflowGraph(GraphCore):
 
         setattr(self, attr_name, None)
         try:
-            if sip.isdeleted(window):
+            if not shiboken6.isValid(window):
                 return
             window.close()
             window.deleteLater()

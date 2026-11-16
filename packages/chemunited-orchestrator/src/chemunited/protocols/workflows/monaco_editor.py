@@ -6,8 +6,8 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 from loguru import logger
-from PyQt5.QtCore import QTimer
-from PyQt5.QtWidgets import QWidget
+from PySide6.QtCore import QTimer
+from PySide6.QtWidgets import QWidget
 
 from chemunited.shared.editor.monaco_script import MonacoScriptEditor
 from chemunited.shared.editor.protocols.script import ScriptEditorWindow
@@ -291,7 +291,7 @@ class MonacoProcessScriptEditorWindow(ScriptEditorWindow):
 if __name__ == "__main__":
     import sys
 
-    from PyQt5.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
     window = MonacoProcessScriptEditorWindow(

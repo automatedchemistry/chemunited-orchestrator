@@ -17,8 +17,8 @@ from math import ceil
 
 import numpy as np
 import pytest
-from PyQt5.QtCore import QPointF, QSize
-from PyQt5.QtWidgets import QGraphicsScene
+from PySide6.QtCore import QPointF, QSize
+from PySide6.QtWidgets import QGraphicsScene
 
 from chemunited.elements.component.component_factory import create_component
 from chemunited.elements.component.glossary.valve.rotary_valve_graph import (

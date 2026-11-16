@@ -5,7 +5,7 @@ from __future__ import annotations
 from pathlib import Path
 from typing import Literal, Sequence
 
-from PyQt5.QtWidgets import QDialog, QFormLayout, QHBoxLayout, QVBoxLayout
+from PySide6.QtWidgets import QDialog, QFormLayout, QHBoxLayout, QVBoxLayout
 from qfluentwidgets import (
     BodyLabel,
     ComboBox,

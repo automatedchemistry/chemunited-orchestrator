@@ -8,6 +8,7 @@ tests (see ``tests/qt/conftest.py`` for the QtWebEngine import order).
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 from typing import TYPE_CHECKING
 
@@ -16,13 +17,27 @@ import pytest
 from chemunited.shared.editor.monaco_base import MonacoEditorBase
 
 if TYPE_CHECKING:
-    from PyQt5.QtWebEnginePage import QWebEnginePage  # noqa: F401
+    from PySide6.QtWebEngineCore import QWebEnginePage  # noqa: F401
 
 
 def _run_js(page, expr: str, qtbot, timeout_ms: int = 10000):
-    """Run a JS expression in the page and wait for its callback value."""
+    """Run a JS expression in the page and wait for its callback value.
+
+    PySide6's runJavaScript callback only converts number/string results -
+    booleans and objects arrive as ''. JSON.stringify round-trips them.
+    """
     result: dict = {}
-    page.runJavaScript(expr, lambda value: result.update(value=value))
+
+    def _cb(raw):
+        if isinstance(raw, str) and raw:
+            try:
+                result["value"] = json.loads(raw)
+                return
+            except ValueError:
+                pass
+        result["value"] = raw
+
+    page.runJavaScript(f"JSON.stringify(eval({json.dumps(expr)}))", 0, _cb)
     qtbot.waitUntil(lambda: "value" in result, timeout=timeout_ms)
     return result["value"]
 

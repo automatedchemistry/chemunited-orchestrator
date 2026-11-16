@@ -1,6 +1,6 @@
 import numpy as np
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QPainterPath
+from PySide6.QtCore import Qt
+from PySide6.QtGui import QPainterPath
 
 from chemunited.elements.component.component_parts import SceneItem
 from chemunited.utils.math_functions import multi_peak

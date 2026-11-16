@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 from pydantic.fields import FieldInfo
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
+from PySide6.QtCore import Signal
+from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
 from qfluentwidgets import (
     ComboBox,
     FluentIcon,
@@ -45,7 +45,7 @@ class _ParameterRow(QWidget):
     """Key name + type picker + a typed value card, rebuilt whenever the
     key or the chosen type changes."""
 
-    removed = pyqtSignal(object)
+    removed = Signal(object)
 
     def __init__(
         self,
@@ -131,7 +131,7 @@ class NodeParametersDialog(FramelessDialog):
     ``BlockData.parameters`` / ``ctx.node_config.parameters`` at execution time.
     """
 
-    parameters_saved = pyqtSignal(str, dict)
+    parameters_saved = Signal(str, dict)
 
     def __init__(
         self,

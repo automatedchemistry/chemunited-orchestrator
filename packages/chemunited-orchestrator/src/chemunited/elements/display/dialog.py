@@ -7,7 +7,7 @@ from collections.abc import Collection, Mapping, Sequence
 from typing import Any
 
 from pydantic import ValidationError
-from PyQt5.QtWidgets import QFormLayout, QHBoxLayout, QVBoxLayout
+from PySide6.QtWidgets import QFormLayout, QHBoxLayout, QVBoxLayout
 from qfluentwidgets import (
     BodyLabel,
     CaptionLabel,

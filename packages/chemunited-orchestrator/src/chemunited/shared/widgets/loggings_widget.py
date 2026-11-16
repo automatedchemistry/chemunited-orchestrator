@@ -6,9 +6,9 @@ from datetime import datetime
 from html import escape
 from typing import Any
 
-from PyQt5.QtCore import QFile, Qt, QTextStream
-from PyQt5.QtGui import QTextCursor
-from PyQt5.QtWidgets import QFrame, QHBoxLayout, QVBoxLayout
+from PySide6.QtCore import QFile, Qt, QTextStream
+from PySide6.QtGui import QTextCursor
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QVBoxLayout
 from qfluentwidgets import FluentIcon, PushButton, TextBrowser, isDarkTheme
 
 from .app_theme import register_theme_observer
@@ -247,7 +247,7 @@ class FrameLoggings(QFrame):
         sb = tb.verticalScrollBar()
         at_bottom = sb.value() >= sb.maximum() - 5
 
-        tb.moveCursor(QTextCursor.End)
+        tb.moveCursor(QTextCursor.MoveOperation.End)
         tb.insertHtml(html)
         tb.insertPlainText("\n")
 

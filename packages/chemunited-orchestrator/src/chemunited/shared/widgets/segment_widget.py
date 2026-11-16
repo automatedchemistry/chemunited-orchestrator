@@ -1,13 +1,13 @@
 from typing import Any
 
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QStackedWidget, QVBoxLayout, QWidget
+from PySide6.QtCore import Signal
+from PySide6.QtGui import QIcon
+from PySide6.QtWidgets import QStackedWidget, QVBoxLayout, QWidget
 from qfluentwidgets import FluentIconBase, SegmentedWidget
 
 
 class SegmentWindow(QWidget):
-    current_widget_changed = pyqtSignal(str)
+    current_widget_changed = Signal(str)
 
     def __init__(self, parent):
         super().__init__(parent)

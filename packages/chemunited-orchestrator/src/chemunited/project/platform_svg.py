@@ -6,10 +6,10 @@ from math import ceil
 from pathlib import Path
 from typing import Any, Iterable
 
-from PyQt5.QtCore import QPointF, QRectF, QSize, Qt
-from PyQt5.QtGui import QBrush, QPainter
-from PyQt5.QtSvg import QSvgGenerator
-from PyQt5.QtWidgets import QGraphicsItem, QGraphicsScene
+from PySide6.QtCore import QPointF, QRectF, QSize, Qt
+from PySide6.QtGui import QBrush, QPainter
+from PySide6.QtSvg import QSvgGenerator
+from PySide6.QtWidgets import QGraphicsItem, QGraphicsScene
 
 PLATFORM_SVG_RELATIVE_PATH = Path("draw") / "platform.svg"
 PLATFORM_DEVICES_RELATIVE_PATH = Path("draw") / "platform-devices.json"
@@ -84,9 +84,9 @@ def export_platform_svg(
         if not painter.begin(generator):
             raise OSError(f"Could not create platform SVG export at '{path}'.")
         try:
-            painter.setRenderHint(QPainter.Antialiasing, True)
-            painter.setRenderHint(QPainter.TextAntialiasing, True)
-            painter.setRenderHint(QPainter.SmoothPixmapTransform, True)
+            painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
+            painter.setRenderHint(QPainter.RenderHint.TextAntialiasing, True)
+            painter.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform, True)
             scene.render(
                 painter,
                 QRectF(0, 0, float(size.width()), float(size.height())),

@@ -6,7 +6,7 @@ GraphComponent.__init_subclass__ requires FIGURE to already exist in
 figure_registry.COMPONENTS at class-definition (i.e. import) time.
 
 Kept separate from chemunited_core's component loader because this file
-imports GraphComponent (PyQt5) — chemunited-sim's headless project loader
+imports GraphComponent (PySide6) — chemunited-sim's headless project loader
 must never import it.
 """
 

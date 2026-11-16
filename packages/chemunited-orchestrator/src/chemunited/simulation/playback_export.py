@@ -10,17 +10,21 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal, Sequence
 
+import shiboken6
 from imageio_ffmpeg import get_ffmpeg_exe
 from loguru import logger
-from PyQt5 import sip
-from PyQt5.QtCore import QObject, QProcess, QRectF, Qt, QTimer, pyqtSignal
-from PyQt5.QtGui import QColor, QFont, QImage, QPainter
-from PyQt5.QtWidgets import QGraphicsItem, QGraphicsScene
+from PySide6.QtCore import QObject, QProcess, QRectF, Qt, QTimer, Signal
+from PySide6.QtGui import QColor, QFont, QImage, QPainter
+from PySide6.QtWidgets import QGraphicsItem, QGraphicsScene
 
 from chemunited.elements.access import Components, Connections
 from chemunited.project.platform_svg import _export_rect, _visible_edit_handles
 
 from .playback import SimulationPlayback
+
+# Tests monkeypatch the module-level QProcess with a fake; keep the real
+# class reachable so deleteLater() is only used on actual QProcess objects.
+_REAL_QPROCESS = QProcess
 
 FPS = 20
 _DIAGNOSTIC_LIMIT = 16_384
@@ -81,7 +85,7 @@ def render_playback_frame(
     last_time: float,
 ) -> QImage:
     """Render scene content, including live parts, without view chrome or grid."""
-    image = QImage(options.width, options.height, QImage.Format_RGBA8888)
+    image = QImage(options.width, options.height, QImage.Format.Format_RGBA8888)
     if image.isNull():
         raise MemoryError("Could not allocate the export frame.")
     background = scene.backgroundBrush().color()
@@ -92,9 +96,9 @@ def render_playback_frame(
     painter = QPainter(image)
     try:
         painter.setRenderHints(
-            QPainter.Antialiasing
-            | QPainter.TextAntialiasing
-            | QPainter.SmoothPixmapTransform
+            QPainter.RenderHint.Antialiasing
+            | QPainter.RenderHint.TextAntialiasing
+            | QPainter.RenderHint.SmoothPixmapTransform
         )
         footer = max(32, options.height // 15)
         scene.render(
@@ -124,10 +128,10 @@ class PlaybackExporter(QObject):
     frame production is scheduled by bytesWritten instead of blocking writes.
     """
 
-    progress = pyqtSignal(int, str)
-    completed = pyqtSignal(str)
-    failed = pyqtSignal(str)
-    cancelled = pyqtSignal()
+    progress = Signal(int, str)
+    completed = Signal(str)
+    failed = Signal(str)
+    cancelled = Signal()
 
     def __init__(
         self,
@@ -241,7 +245,7 @@ class PlaybackExporter(QObject):
         )
 
     def _read_stderr(self, process: QProcess) -> None:
-        data = bytes(process.readAllStandardError())
+        data = bytes(process.readAllStandardError())  # type: ignore[call-overload]
         if process is self._process:
             self._diagnostics = (self._diagnostics + data)[-_DIAGNOSTIC_LIMIT:]
 
@@ -292,7 +296,7 @@ class PlaybackExporter(QObject):
                     bits = image.constBits()
                     if bits is None:
                         raise MemoryError("Could not read the export frame.")
-                    self._cached_bytes = bits.asstring(image.sizeInBytes())
+                    self._cached_bytes = bytes(bits[: image.sizeInBytes()])
                     self._cached_time = t
                 self._pending_bytes = self._cached_bytes
             written = process.write(self._pending_bytes)
@@ -404,7 +408,8 @@ class PlaybackExporter(QObject):
         except Exception as exc:
             self._fail(str(exc))
         finally:
-            process.deleteLater()
+            if isinstance(process, _REAL_QPROCESS):
+                process.deleteLater()
 
     def _finish(self) -> None:
         if not self._active:
@@ -412,10 +417,10 @@ class PlaybackExporter(QObject):
         self._active = False
         self._pump_timer.stop()
         for item in self._hidden_handles:
-            if not sip.isdeleted(item):
+            if shiboken6.isValid(item):
                 item.show()
         for item in self._selected_items:
-            if not sip.isdeleted(item):
+            if shiboken6.isValid(item):
                 item.setSelected(True)
         if self._temp_dir is not None:
             try:

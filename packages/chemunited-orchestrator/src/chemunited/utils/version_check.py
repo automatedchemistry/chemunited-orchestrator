@@ -4,7 +4,7 @@ from json import loads
 from urllib.request import Request, urlopen
 
 from packaging.version import Version
-from PyQt5.QtCore import QThread, pyqtSignal
+from PySide6.QtCore import QThread, Signal
 
 TRACKED = [
     "chemunited-core",
@@ -23,7 +23,7 @@ class UpdateAvailable:
 
 
 class VersionCheckThread(QThread):
-    updates_found: pyqtSignal = pyqtSignal(list)
+    updates_found: Signal = Signal(list)
 
     def __init__(self, parent=None) -> None:
         super().__init__(parent)

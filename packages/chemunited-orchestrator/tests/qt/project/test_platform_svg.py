@@ -15,8 +15,8 @@ import re
 from math import ceil
 
 import pytest
-from PyQt5.QtCore import QSize
-from PyQt5.QtWidgets import QGraphicsScene
+from PySide6.QtCore import QSize
+from PySide6.QtWidgets import QGraphicsScene
 
 from chemunited.elements.component.component_factory import (
     create_component,

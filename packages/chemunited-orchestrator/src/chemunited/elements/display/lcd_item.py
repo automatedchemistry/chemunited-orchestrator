@@ -2,9 +2,9 @@
 
 from __future__ import annotations
 
-from PyQt5.QtCore import QRectF, Qt
-from PyQt5.QtGui import QColor, QFont, QFontMetricsF, QPainter, QPen
-from PyQt5.QtWidgets import QGraphicsItem, QGraphicsObject
+from PySide6.QtCore import QRectF, Qt
+from PySide6.QtGui import QColor, QFont, QFontMetricsF, QPainter, QPen
+from PySide6.QtWidgets import QGraphicsItem, QGraphicsObject
 
 from .model import LcdDisplay
 
@@ -19,7 +19,7 @@ _NO_VALUE = "--"
 def _font(pixel_size: int, *, monospace: bool = False) -> QFont:
     font = QFont()
     if monospace:
-        font.setStyleHint(QFont.TypeWriter)
+        font.setStyleHint(QFont.StyleHint.TypeWriter)
         font.setFamily("Consolas")
         font.setBold(True)
     font.setPixelSize(pixel_size)
@@ -72,7 +72,7 @@ class LcdDisplayItem(QGraphicsObject):
 
     def paint(self, painter, option, widget=None) -> None:
         rect = self.boundingRect().adjusted(1, 1, -1, -1)
-        painter.setRenderHint(QPainter.Antialiasing, True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
         painter.setPen(
             QPen(_SELECTED_COLOR, 2) if self.isSelected() else Qt.NoPen  # type: ignore[attr-defined]
         )

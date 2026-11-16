@@ -1,8 +1,8 @@
 from typing import override
 
-from PyQt5.QtCore import QFile, Qt, QTextStream, QTimer
-from PyQt5.QtGui import QIcon
-from PyQt5.QtWidgets import QApplication, QHBoxLayout, QStackedWidget, QWidget
+from PySide6.QtCore import QFile, Qt, QTextStream, QTimer
+from PySide6.QtGui import QIcon
+from PySide6.QtWidgets import QApplication, QHBoxLayout, QStackedWidget, QWidget
 from qfluentwidgets import (
     FluentIcon,
     NavigationInterface,
@@ -195,9 +195,13 @@ class MainWindowBase(WindowBase):
         """Initialize the window"""
         super().initWindow()
         self.resize(900, 700)
-        desktop = QApplication.desktop().availableGeometry()  # type: ignore[union-attr]
+        screen = QApplication.primaryScreen()
+        desktop = screen.availableGeometry() if screen else self.rect()
         w, h = desktop.width(), desktop.height()
-        self.move(w // 2 - self.width() // 2, h // 2 - self.height() // 2)
+        self.move(
+            desktop.x() + w // 2 - self.width() // 2,
+            desktop.y() + h // 2 - self.height() // 2,
+        )
 
 
 if __name__ == "__main__":

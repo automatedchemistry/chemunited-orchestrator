@@ -1,8 +1,8 @@
 from __future__ import annotations
 
 import pytest
-from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QFrame
+from PySide6.QtCore import Qt
+from PySide6.QtWidgets import QFrame
 from pytestqt.qtbot import QtBot
 
 from chemunited.elements.compounds import CompoundDialog, CompoundList, CompoundsWidget

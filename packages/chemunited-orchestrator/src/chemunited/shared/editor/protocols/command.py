@@ -2,8 +2,8 @@ from __future__ import annotations
 
 from typing import Mapping
 
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtWidgets import QFrame, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 from qfluentwidgets import PrimaryPushButton, PushButton, SmoothScrollArea, isDarkTheme
 from qframelesswindow import FramelessDialog
 
@@ -26,8 +26,8 @@ _HIDDEN_COMMAND_FIELDS = {
 
 
 class CommandEditorDialog(ThemedChromeMixin, FramelessDialog):
-    saved = pyqtSignal(object)
-    metadata_saved = pyqtSignal(str, str, str)
+    saved = Signal(object)
+    metadata_saved = Signal(str, str, str)
 
     def __init__(
         self,
@@ -113,7 +113,7 @@ class CommandEditorDialog(ThemedChromeMixin, FramelessDialog):
             ref_card = ParamRefCard(name=name, wrapped_card=card, parent=scroll_content)
             ref_card.enable_reference_mode(options)
             cards_layout.insertWidget(idx, ref_card)
-            self._editor.cards[name] = ref_card
+            self._editor.cards[name] = ref_card  # type: ignore[assignment]
 
         for name, ref in (command_model.param_refs or {}).items():
             if name in self._editor.cards:
@@ -193,8 +193,8 @@ class CommandEditorDialog(ThemedChromeMixin, FramelessDialog):
 
     def _make_separator(self) -> QFrame:
         line = QFrame(self)
-        line.setFrameShape(QFrame.HLine)
-        line.setFrameShadow(QFrame.Plain)
+        line.setFrameShape(QFrame.Shape.HLine)
+        line.setFrameShadow(QFrame.Shadow.Plain)
         line.setStyleSheet(
             "color: rgba(255, 255, 255, 0.12);"
             if isDarkTheme()
@@ -272,7 +272,7 @@ class CommandEditorDialog(ThemedChromeMixin, FramelessDialog):
 if __name__ == "__main__":
     import sys
 
-    from PyQt5.QtWidgets import QApplication, QDialog
+    from PySide6.QtWidgets import QApplication, QDialog
 
     from chemunited_core.protocols.technical import SetTemperatureParameter
     from chemunited_quantities import ChemUnitQuantity
@@ -290,7 +290,7 @@ if __name__ == "__main__":
     )
     dialog.saved.connect(print)
 
-    if dialog.exec_() == QDialog.Accepted:
+    if dialog.exec_() == QDialog.DialogCode.Accepted:
         print(dialog.get_result_instance())
 
     sys.exit(0)

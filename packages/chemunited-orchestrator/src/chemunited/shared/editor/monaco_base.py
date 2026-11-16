@@ -1,19 +1,16 @@
-"""Monaco Editor integration with PyQt5 using QWebEngineView."""
+"""Monaco Editor integration with PySide6 using QWebEngineView."""
 
 import json
 from pathlib import Path
 from typing import Any, Callable
 
-from PyQt5.QtCore import QMimeData, QObject, QPoint, QTimer, QUrl, pyqtSignal, pyqtSlot
-from PyQt5.QtWidgets import QVBoxLayout, QWidget
+from PySide6.QtCore import QMimeData, QObject, QPoint, QTimer, QUrl, Signal, Slot
+from PySide6.QtWidgets import QVBoxLayout, QWidget
 
 try:
-    from PyQt5.QtWebChannel import QWebChannel
-    from PyQt5.QtWebEngineWidgets import (
-        QWebEnginePage,
-        QWebEngineScript,
-        QWebEngineView,
-    )
+    from PySide6.QtWebChannel import QWebChannel
+    from PySide6.QtWebEngineCore import QWebEnginePage, QWebEngineScript
+    from PySide6.QtWebEngineWidgets import QWebEngineView
 
     WEBENGINE_AVAILABLE = True
 except ImportError:
@@ -29,10 +26,10 @@ from loguru import logger
 class MonacoBridge(QObject):
     """Bridge object for Python-JavaScript communication."""
 
-    textChanged = pyqtSignal(str)  # full editor content
-    cursorPositionChanged = pyqtSignal(int, int)  # line, column (0-based)
-    editorFocused = pyqtSignal()
-    saveFileRequested = pyqtSignal(str, str)  # content, path
+    textChanged = Signal(str)  # full editor content
+    cursorPositionChanged = Signal(int, int)  # line, column (0-based)
+    editorFocused = Signal()
+    saveFileRequested = Signal(str, str)  # content, path
 
     def __init__(self, editor: "MonacoEditorBase"):
         super().__init__()
@@ -45,10 +42,10 @@ class MonacoBridge(QObject):
         """Set callback for file save operations."""
         self._save_callback = callback
 
-    # NOTE: every method callable from JavaScript must be a @pyqtSlot —
+    # NOTE: every method callable from JavaScript must be a @Slot —
     # QWebChannel only exposes slots and signals, not plain Python methods.
 
-    @pyqtSlot(str, str)
+    @Slot(str, str)
     def onTextChanged(self, path: str, content: str) -> None:
         """Called when editor content changes (file path + new content)."""
         try:
@@ -56,7 +53,7 @@ class MonacoBridge(QObject):
         except Exception:
             logger.exception("onTextChanged slot failed")
 
-    @pyqtSlot(str, str)
+    @Slot(str, str)
     def onActiveFileChanged(self, path: str, content: str) -> None:
         """Called when the user switches tabs in the JS tab bar."""
         try:
@@ -64,7 +61,7 @@ class MonacoBridge(QObject):
         except Exception:
             logger.exception("onActiveFileChanged slot failed")
 
-    @pyqtSlot(int, int)
+    @Slot(int, int)
     def onCursorPositionChanged(self, line: int, column: int) -> None:
         """Called when cursor moves. QWebChannel entry point."""
         try:
@@ -72,7 +69,7 @@ class MonacoBridge(QObject):
         except Exception:
             logger.exception("onCursorPositionChanged slot failed")
 
-    @pyqtSlot(int, int, int, int)
+    @Slot(int, int, int, int)
     def onSelectionChanged(
         self, start_line: int, start_col: int, end_line: int, end_col: int
     ) -> None:
@@ -85,11 +82,11 @@ class MonacoBridge(QObject):
         )
 
     # NOTE: slots that return a value to JavaScript MUST declare the return
-    # type via ``result=`` — without it PyQt5 registers the slot as void and
+    # type via ``result=`` — without it PySide6 registers the slot as void and
     # QWebChannel resolves the JS promise with ``null`` instead of the JSON
     # string (which made readFile consumers crash on `res.ok`).
 
-    @pyqtSlot(str, result=str)  # type: ignore[arg-type]
+    @Slot(str, result=str)  # type: ignore[arg-type]
     def readFile(self, path: str) -> str:
         """Read a file for opening in a new tab. Returns JSON {ok, content/error}."""
         try:
@@ -98,12 +95,12 @@ class MonacoBridge(QObject):
         except (OSError, UnicodeError) as exc:
             return json.dumps({"ok": False, "error": str(exc)})
 
-    @pyqtSlot()
+    @Slot()
     def onEditorFocused(self) -> None:
         """Called when editor receives focus. QWebChannel entry point."""
         self.editorFocused.emit()
 
-    @pyqtSlot(str, str)
+    @Slot(str, str)
     def saveFile(self, content: str, path: str) -> None:
         """Save file content to disk. Called from JavaScript."""
         if self._save_callback:
@@ -165,11 +162,11 @@ class MonacoEditorBase(QWidget):
     - Dark/Light theme support
     """
 
-    textChanged = pyqtSignal()
-    editorFocused = pyqtSignal()
-    active_file_changed = pyqtSignal(str)  # new active file path (tabs)
-    editor_ready = pyqtSignal()  # emitted once the Monaco page is usable
-    text_replaced = pyqtSignal()  # setText() replaced the whole content
+    textChanged = Signal()
+    editorFocused = Signal()
+    active_file_changed = Signal(str)  # new active file path (tabs)
+    editor_ready = Signal()  # emitted once the Monaco page is usable
+    text_replaced = Signal()  # setText() replaced the whole content
 
     AUTOSAVE_INTERVAL_MS = 2000
     # Drag payloads handled in Python (_handle_qt_drop) instead of the page.
@@ -184,10 +181,10 @@ class MonacoEditorBase(QWidget):
 
         if not WEBENGINE_AVAILABLE:
             raise ImportError(
-                "PyQt5.QtWebEngineWidgets is required for Monaco Editor. "
-                "Install it with: pip install PyQtWebEngine. "
+                "PySide6.QtWebEngineWidgets is required for Monaco Editor. "
+                "Install it with: pip install PySide6-Addons. "
                 "Note: it must be imported BEFORE QApplication is created "
-                "(import PyQt5.QtWebEngineWidgets early in your entry point)."
+                "(import PySide6.QtWebEngineWidgets early in your entry point)."
             )
 
         self.path = path
@@ -195,7 +192,7 @@ class MonacoEditorBase(QWidget):
         self._current_file_changed = False
         self._autosave_enabled = True
 
-        # Synchronous caches (runJavaScript callbacks are async in PyQt5,
+        # Synchronous caches (runJavaScript callbacks are async in PySide6,
         # so Python-side getters read these caches instead)
         self._cached_text: str = ""
         self._cached_line: int = 0
@@ -285,8 +282,11 @@ class MonacoEditorBase(QWidget):
 
         page = self.web_view.page()
         if page is not None:
+            # NOTE: PySide6's runJavaScript callback only converts number/string
+            # results correctly - booleans arrive as ''. Return 1/0 instead.
             page.runJavaScript(
-                "typeof monacoEditor !== 'undefined' && !!monacoEditor.openFile",
+                "(typeof monacoEditor !== 'undefined' && !!monacoEditor.openFile) ? 1 : 0",
+                0,
                 on_ready,
             )
 
@@ -500,7 +500,7 @@ class MonacoEditorBase(QWidget):
 if __name__ == "__main__":
     import sys
 
-    from PyQt5.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication
     from qfluentwidgets import Theme, setTheme
 
     app = QApplication(sys.argv)

@@ -4,7 +4,7 @@ left-to-right on the canvas.
 """
 
 import pytest
-from PyQt5.QtCore import QPointF
+from PySide6.QtCore import QPointF
 
 from chemunited.elements.component.component_factory import (
     create_component,

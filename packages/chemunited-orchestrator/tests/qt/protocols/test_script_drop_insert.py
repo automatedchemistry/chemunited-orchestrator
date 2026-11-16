@@ -1,6 +1,6 @@
 from __future__ import annotations
 
-from PyQt5.QtCore import QMimeData
+from PySide6.QtCore import QMimeData
 
 from chemunited.shared.editor.protocols.command_list import CommandList
 from chemunited.shared.editor.protocols.script import (

@@ -8,8 +8,8 @@ from typing import Callable
 from urllib.parse import urlsplit
 
 from loguru import logger
-from PyQt5.QtCore import QThread, QTimer, pyqtSignal, pyqtSlot
-from PyQt5.QtWidgets import QFileDialog, QMessageBox
+from PySide6.QtCore import QThread, QTimer, Signal, Slot
+from PySide6.QtWidgets import QFileDialog, QMessageBox
 
 from chemunited.connectivity.openapi_commands import reset_protocol_to_default
 from chemunited.elements.component.component_factory import (
@@ -149,8 +149,8 @@ class ProjectLoadPayload:
 
 
 class ProjectLoadThread(QThread):
-    loaded = pyqtSignal(object)
-    failed = pyqtSignal(object)
+    loaded = Signal(object)
+    failed = Signal(object)
 
     def __init__(
         self,
@@ -441,7 +441,7 @@ class OrchestratorProjectFile(OrchestratorConnectivity):
         if self._session.source_file is not None:
             self._record_recent_project(self._session.source_file)
 
-    @pyqtSlot(str, str)
+    @Slot(str, str)
     def rename_process(self, old_name: str, new_name: str) -> None:
         # override OrchestratorProtocols.rename_process
         if not is_valid_name(new_name):
@@ -470,7 +470,7 @@ class OrchestratorProjectFile(OrchestratorConnectivity):
         if self._persist_renamed_process_file(old_name, new_name):
             super().rename_process(old_name, new_name)
 
-    @pyqtSlot(str)
+    @Slot(str)
     def remove_process(self, name: str) -> None:
         # override OrchestratorProtocols.remove_process
         if name not in self.protocols:
@@ -485,9 +485,9 @@ class OrchestratorProjectFile(OrchestratorConnectivity):
         *,
         confirm_overwrite: bool = True,
     ) -> Path | None:
-        options = QFileDialog.Options()
+        options = QFileDialog.Option(0)
         if not confirm_overwrite:
-            options |= QFileDialog.DontConfirmOverwrite
+            options |= QFileDialog.Option.DontConfirmOverwrite
 
         path, _ = QFileDialog.getSaveFileName(
             self.parent_ref,
@@ -584,10 +584,10 @@ class OrchestratorProjectFile(OrchestratorConnectivity):
             self.parent_ref,
             "Replace current project?",
             "The current canvas will be cleared before the project is changed.",
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No,
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
         )
-        return reply == QMessageBox.Yes
+        return reply == QMessageBox.StandardButton.Yes
 
     def _confirm_refresh_project(self) -> bool:
         reply = QMessageBox.question(
@@ -595,10 +595,10 @@ class OrchestratorProjectFile(OrchestratorConnectivity):
             "Refresh project?",
             "Reload the project from disk? "
             "Unsaved changes in the app will be discarded.",
-            QMessageBox.Yes | QMessageBox.No,
-            QMessageBox.No,
+            QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+            QMessageBox.StandardButton.No,
         )
-        return reply == QMessageBox.Yes
+        return reply == QMessageBox.StandardButton.Yes
 
     def _sync_project_views_after_refresh(self) -> None:
         protocols_widget = getattr(self.parent_ref, "protocols_widget", None)
