@@ -324,9 +324,9 @@ def test_frame_render_is_opaque_rgba_and_preserves_framing(platform, tmp_path):
     assert image.pixelColor(159, 89).alpha() == 255
     # RGBA bytes must retain red/blue channel order at the encoder boundary.
     offset = 24 * image.bytesPerLine() + 44 * 4
-    assert image.constBits()[: image.sizeInBytes()][
-        offset : offset + 4
-    ] == bytes((255, 0, 0, 255))
+    assert image.constBits()[: image.sizeInBytes()][offset : offset + 4] == bytes(
+        (255, 0, 0, 255)
+    )
 
 
 @pytest.mark.parametrize("format", ["mp4", "gif"])
