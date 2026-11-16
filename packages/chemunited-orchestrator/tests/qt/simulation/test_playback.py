@@ -113,3 +113,30 @@ def test_close_makes_further_queries_fail(tmp_path: Path) -> None:
 
     with pytest.raises(sqlite3.ProgrammingError):
         playback._conn.execute("SELECT 1")
+
+
+def test_strict_playback_propagates_read_errors(tmp_path: Path) -> None:
+    db_path = tmp_path / "sim.db"
+    _connect(db_path).close()
+    playback = SimulationPlayback.open(db_path)
+    assert playback is not None
+    playback.close()
+    playback.apply_at_time(0, {}, _FakeConnections({}))  # normal scrubbing logs it
+    with pytest.raises(sqlite3.ProgrammingError):
+        playback.apply_at_time(0, {}, _FakeConnections({}), strict=True)
+
+
+def test_strict_playback_accepts_older_recordings_without_component_state(
+    tmp_path: Path,
+) -> None:
+    db_path = tmp_path / "old.db"
+    conn = _connect(db_path)
+    conn.execute("DROP TABLE component_state")
+    conn.commit()
+    conn.close()
+    playback = SimulationPlayback.open(db_path)
+    assert playback is not None
+    try:
+        playback.apply_at_time(0, {}, _FakeConnections({}), strict=True)
+    finally:
+        playback.close()

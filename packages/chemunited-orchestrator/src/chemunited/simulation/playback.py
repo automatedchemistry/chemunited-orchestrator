@@ -47,12 +47,19 @@ class SimulationPlayback:
         return len(self.times)
 
     def apply_at_time(
-        self, t: float, components: Components, connections: Connections
+        self,
+        t: float,
+        components: Components,
+        connections: Connections,
+        *,
+        strict: bool = False,
     ) -> None:
-        """Render the recorded snapshot at exactly *t* onto the canvas."""
+        """Render an exact snapshot; exporters use *strict* to propagate errors."""
         try:
             apply_simulation_state_at(self._conn, t, components, connections)
         except Exception:
+            if strict:
+                raise
             logger.opt(exception=True).warning(
                 f"Failed to apply simulation state at t={t} from '{self.db_path}'"
             )

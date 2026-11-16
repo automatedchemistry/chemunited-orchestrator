@@ -5,6 +5,7 @@ from pathlib import Path
 
 import pytest
 from matplotlib.colors import to_hex
+from PyQt5.QtCore import QObject, pyqtSignal
 from pytestqt.qtbot import QtBot
 
 from chemunited.elements.component.glossary.valve.solenoid_valve_graph import (
@@ -12,6 +13,7 @@ from chemunited.elements.component.glossary.valve.solenoid_valve_graph import (
 )
 from chemunited.setup import SetupWindow
 from chemunited.simulation import simulate_report
+from chemunited.simulation.playback_export import PlaybackExportOptions
 from chemunited.simulation.simulate_report import (
     _LENGTH_PROFILE_KEY,
     ProfilePlot,
@@ -23,6 +25,41 @@ from chemunited_core.compounds import COMPOUNDS, ChemicalEntity
 from chemunited_sim.recorder.schema import create_all_tables
 
 _THROTTLE_WAIT_MS = 80  # comfortably above the 33ms scrub-timer interval
+
+
+class _ExportJob(QObject):
+    progress = pyqtSignal(int, str)
+    completed = pyqtSignal(str)
+    failed = pyqtSignal(str)
+    cancelled = pyqtSignal()
+
+    def __init__(self, playback, scene, components, connections, parent):
+        super().__init__(parent)
+        self.cancel_requested = False
+
+    def start(self, options):
+        self.options = options
+
+    def cancel(self):
+        # Delayed completion tests that close waits for process exit/cleanup.
+        self.cancel_requested = True
+
+
+@pytest.fixture
+def export_messages(monkeypatch):
+    messages = {"saved": [], "errors": []}
+    monkeypatch.setattr(simulate_report, "PlaybackExporter", _ExportJob)
+    monkeypatch.setattr(
+        simulate_report.QMessageBox,
+        "information",
+        lambda parent, title, text: messages["saved"].append(text),
+    )
+    monkeypatch.setattr(
+        simulate_report.QMessageBox,
+        "warning",
+        lambda parent, title, text: messages["errors"].append(text),
+    )
+    return messages
 
 
 def _connect(db_path: Path) -> sqlite3.Connection:
@@ -630,6 +667,217 @@ class TestSimulateWindowReportPlayback:
 
         # What Save would persist is untouched by the completed/scrubbed run.
         assert window.orchestrator.snapshot_draw_data() == design_snapshot_before
+
+    @pytest.mark.parametrize("outcome", ["success", "failure", "cancel"])
+    def test_export_locks_then_restores_report_and_design(
+        self, qtbot: QtBot, tmp_path: Path, export_messages, outcome
+    ) -> None:
+        window = self._build_window(qtbot)
+        self._add_platform(window)
+        before = window.orchestrator.snapshot_draw_data()
+        report = window.SimulateWindowReport
+        assert not report._export_action.isEnabled()
+        db_path = tmp_path / "sim.db"
+        self._build_two_frame_db(db_path)
+        report._on_sim_done(str(db_path))
+        assert report._export_action.isEnabled()
+        report.widget_profiles._scrub_slider.setValue(0)  # still pending throttle
+        options = PlaybackExportOptions(tmp_path / "run.mp4")
+        report._start_playback_export(options)
+        job = report._exporter
+        assert report.export_in_progress
+        assert not report.central.isEnabled()
+        assert report._playback_time == 0  # pending scrub was flushed
+        assert not report.widget_profiles._scrub_timer.isActive()
+        report._playback.apply_at_time(
+            24,
+            report.orchestrator.components,
+            report.orchestrator.connections,
+            strict=True,
+        )
+        report._on_scrub_requested(24)  # ignored during export
+        assert report._playback_time == 0
+        if outcome == "success":
+            job.completed.emit(str(options.destination))
+        elif outcome == "failure":
+            job.failed.emit("injected encoder error")
+        else:
+            report.cancel_export()
+            assert job.cancel_requested
+            assert report.export_in_progress
+            job.cancelled.emit()
+        assert not report.export_in_progress
+        assert report.central.isEnabled()
+        assert report._export_action.isEnabled()
+        assert report.widget_profiles._scrub_slider.value() == 0
+        assert report._playback_time == 0
+        inventory = report.orchestrator.components["BottleA"].inf.internal_inventory
+        assert inventory.liq_content.initial_species == {"red_dye": 0.01}
+        assert report.orchestrator.components["Sol1"].inf.opened
+        assert window.orchestrator.snapshot_draw_data() == before
+        assert bool(export_messages["saved"]) == (outcome == "success")
+        assert bool(export_messages["errors"]) == (outcome == "failure")
+
+    def test_export_blocks_new_run_and_recording_replacement(
+        self, qtbot: QtBot, tmp_path: Path, export_messages
+    ) -> None:
+        window = self._build_window(qtbot)
+        self._add_platform(window)
+        report = window.SimulateWindowReport
+        db_path = tmp_path / "sim.db"
+        self._build_two_frame_db(db_path)
+        report._on_sim_done(str(db_path))
+        playback = report._playback
+        report._start_playback_export(PlaybackExportOptions(tmp_path / "run.mp4"))
+        report.simulate("ShouldNotRun", tmp_path)
+        report._on_sim_done(str(tmp_path / "missing.db"))
+        report._close_playback()
+        assert report._worker is None
+        assert report._playback is playback
+        report._exporter.cancelled.emit()
+
+    @pytest.mark.parametrize("close_setup", [False, True])
+    def test_closing_waits_for_export_cancellation(
+        self, qtbot: QtBot, tmp_path: Path, export_messages, close_setup
+    ) -> None:
+        window = self._build_window(qtbot)
+        self._add_platform(window)
+        report = window.SimulateWindowReport
+        report.show()
+        db_path = tmp_path / "sim.db"
+        self._build_two_frame_db(db_path)
+        report._on_sim_done(str(db_path))
+        report._start_playback_export(PlaybackExportOptions(tmp_path / "run.mp4"))
+        job = report._exporter
+        closing_window = window if close_setup else report
+        closing_window.close()
+        assert closing_window.isVisible()
+        assert job.cancel_requested
+        assert report._playback is not None
+        job.cancelled.emit()
+        qtbot.waitUntil(lambda: not closing_window.isVisible())
+        assert report._playback is None
+
+    def test_single_snapshot_and_failed_run_results_are_exportable(
+        self, qtbot: QtBot, tmp_path: Path, export_messages
+    ) -> None:
+        window = self._build_window(qtbot)
+        self._add_platform(window)
+        report = window.SimulateWindowReport
+        db_path = tmp_path / "sim.db"
+        self._build_two_frame_db(db_path)
+        with sqlite3.connect(db_path) as conn:
+            conn.execute("DELETE FROM node_pressure WHERE time = 24")
+        report._on_sim_done(str(db_path))
+        report._on_run_failed("a process stopped early")
+        assert report._playback.times == [0.0]
+        assert report.widget_profiles._scrub_bar.isHidden()
+        assert report._export_action.isEnabled()
+        report._start_playback_export(PlaybackExportOptions(tmp_path / "run.mp4"))
+        report._exporter.cancelled.emit()
+
+    @pytest.mark.parametrize("replace", [False, True])
+    def test_export_save_dialog_defaults_and_overwrite_confirmation(
+        self, qtbot: QtBot, tmp_path: Path, export_messages, monkeypatch, replace
+    ) -> None:
+        window = self._build_window(qtbot)
+        self._add_platform(window)
+        report = window.SimulateWindowReport
+        db_path = tmp_path / "sim.db"
+        self._build_two_frame_db(db_path)
+        report._on_sim_done(str(db_path))
+        destination = tmp_path / "chosen.mp4"
+        destination.write_bytes(b"original")
+        seen = []
+
+        def choose(parent, title, initial, filter, **kwargs):
+            seen.append(initial)
+            return str(destination.with_suffix(".gif")), ""
+
+        monkeypatch.setattr(
+            simulate_report.PlaybackExportDialog,
+            "exec_",
+            lambda self: simulate_report.QDialog.Accepted,
+        )
+        monkeypatch.setattr(simulate_report.QFileDialog, "getSaveFileName", choose)
+        monkeypatch.setattr(
+            simulate_report.QMessageBox,
+            "question",
+            lambda *args: (
+                simulate_report.QMessageBox.Yes
+                if replace
+                else simulate_report.QMessageBox.No
+            ),
+        )
+        report._choose_playback_export()
+        assert seen == [str(db_path.with_suffix(".mp4"))]
+        assert report.export_in_progress == replace
+        assert destination.read_bytes() == b"original"
+        if replace:
+            assert report._exporter.options.destination == destination
+            report._exporter.cancelled.emit()
+
+    def test_real_export_renders_platform_states_and_restores_selection(
+        self, qtbot: QtBot, tmp_path: Path, monkeypatch
+    ) -> None:
+        from chemunited.simulation import playback_export
+
+        window = self._build_window(qtbot)
+        self._add_platform(window)
+        before = window.orchestrator.snapshot_draw_data()
+        report = window.SimulateWindowReport
+        db_path = tmp_path / "sim.db"
+        self._build_two_frame_db(db_path)
+        report._on_sim_done(str(db_path))
+        report.orchestrator.components["BottleA"].graph.setSelected(True)
+        report.widget_profiles._scrub_slider.setValue(0)
+        capture = []
+        original_render = playback_export.render_playback_frame
+
+        def render(scene, bounds, options, t, last_time):
+            bottle = report.orchestrator.components["BottleA"].inf.internal_inventory
+            tube = report.orchestrator.connections["PumpA_2_PumpB_1"].inf
+            valve = report.orchestrator.components["Sol1"].inf
+            image = original_render(scene, bounds, options, t, last_time)
+            platform_image = image.copy(0, 0, image.width(), image.height() - 32)
+            capture.append(
+                (
+                    t,
+                    bottle.liq_content.initial_species["red_dye"],
+                    tube.content[0].initial_species["blue_dye"],
+                    valve.opened,
+                    platform_image.constBits().asstring(platform_image.sizeInBytes()),
+                )
+            )
+            return image
+
+        monkeypatch.setattr(playback_export, "render_playback_frame", render)
+        messages = []
+        monkeypatch.setattr(
+            simulate_report.QMessageBox, "information", lambda *args: None
+        )
+        monkeypatch.setattr(
+            simulate_report.QMessageBox,
+            "warning",
+            lambda *args: messages.append(args[-1]),
+        )
+        options = PlaybackExportOptions(
+            tmp_path / "platform.mp4", width=640, height=360, speed=1000
+        )
+        report._start_playback_export(options)
+        qtbot.waitUntil(lambda: not report.export_in_progress, timeout=30000)
+        assert not messages, messages
+        assert options.destination.stat().st_size > 0
+        assert [frame[:4] for frame in capture] == [
+            (0, 0.01, 0.002, True),
+            (24, 0.05, 0.009, False),
+        ]
+        assert (
+            capture[0][4] != capture[1][4]
+        )  # changes within the platform, excluding the clock
+        assert report._playback_time == 0
+        assert report.orchestrator.components["BottleA"].graph.isSelected()
+        assert window.orchestrator.snapshot_draw_data() == before
 
 
 class TestSimulateWindowReportLayout:

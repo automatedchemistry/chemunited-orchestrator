@@ -27,4 +27,14 @@ The **0.5 mL** setting describes each pump stroke. The liquid reaching B also de
 
 The report uses its own copy of the setup. Exploring its timeline preserves the saved drawing and initial inventory. See [Digital twins and simulation profiles](../simulation/digital_twins.md) for the other profile tabs and recording behavior.
 
+## Export the playback
+
+Once the recording is available, choose **Export animation…** in the Simulation Report's navigation rail. Select **MP4** or **GIF**, a resolution, and a playback speed, then choose where to save the file. The estimated duration includes a one-second hold on the final recorded state. Recorded results from a process that stopped early can also be exported.
+
+The animation includes the complete platform and the timestamp of the displayed snapshot, including recorded fluid contents, vessel levels, and valve positions. It uses the report's drawing, independently of its current zoom, and leaves the design canvas untouched. The report returns to your selected snapshot after export or cancellation.
+
+Export uses the full recording at 20 frames per second. Each state remains visible until the next recorded instant; there is no interpolation. The default recording interval is two simulation seconds, so a higher video frame rate would not add fluid-motion detail. Increasing playback speed shortens the video and can skip intermediate snapshots. GIF files loop continuously; MP4 files are suitable for ordinary video playback. FFmpeg is supplied with the application, so no separate installation is needed.
+
+You can cancel while frames are rendered or encoded. An existing destination file is replaced only after export succeeds.
+
 [← Previous: Build the protocol](protocols_tutorial.md) · [Next: Connect the devices →](connectivity_tutorial.md)

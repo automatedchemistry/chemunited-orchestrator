@@ -624,6 +624,15 @@ class SetupWindow(MainWindowBase):
         UpdateDialog(self._pending_updates, parent=self).exec_()
 
     def closeEvent(self, a0):
+        if self.SimulateWindowReport.export_in_progress:
+            a0.ignore()
+            if not getattr(self, "_waiting_for_playback_export", False):
+                self._waiting_for_playback_export = True
+                self.SimulateWindowReport.export_finished.connect(
+                    self._resume_close_after_export
+                )
+            self.SimulateWindowReport.cancel_export()
+            return
         if self.mcp_service.is_running:
             self.mcp_service.stop()
         if self._version_check_thread is not None:
@@ -635,6 +644,13 @@ class SetupWindow(MainWindowBase):
             self._version_check_thread.wait()
         self.SimulateWindowReport.close()
         super().closeEvent(a0)
+
+    def _resume_close_after_export(self) -> None:
+        self._waiting_for_playback_export = False
+        self.SimulateWindowReport.export_finished.disconnect(
+            self._resume_close_after_export
+        )
+        QTimer.singleShot(0, self.close)  # type: ignore[arg-type]  # Qt discards the bool return
 
     @pyqtSlot(str)
     def _on_current_widget_changed(self, _route_key: str) -> None:

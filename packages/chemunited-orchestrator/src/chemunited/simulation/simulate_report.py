@@ -16,8 +16,12 @@ from loguru import logger
 from PyQt5 import sip
 from PyQt5.QtCore import Qt, QThread, QTimer, pyqtSignal
 from PyQt5.QtWidgets import (
+    QDialog,
+    QFileDialog,
     QHBoxLayout,
     QMainWindow,
+    QMessageBox,
+    QProgressDialog,
     QStackedWidget,
     QVBoxLayout,
     QWidget,
@@ -25,6 +29,7 @@ from PyQt5.QtWidgets import (
 from qfluentwidgets import (
     BodyLabel,
     CaptionLabel,
+    FluentIcon,
     IndeterminateProgressRing,
     NavigationItemPosition,
     SegmentedWidget,
@@ -42,6 +47,8 @@ from chemunited_core.compounds import COMPOUNDS
 from .final_state import load_edge_cells
 from .graph_simulation import SimGraphicView
 from .playback import SimulationPlayback
+from .playback_export import PlaybackExporter, PlaybackExportOptions
+from .playback_export_dialog import PlaybackExportDialog
 from .pool_log_tailer import PoolLogTailer
 
 if TYPE_CHECKING:
@@ -870,6 +877,8 @@ class ProfilesWidget(QWidget):
 
 class SimulateWindowReport(QMainWindow):
 
+    export_finished = pyqtSignal()
+
     def __init__(self, graph: SimGraphicView, parent: "SetupWindow") -> None:
         super().__init__(parent)
         self._setup_window = parent
@@ -877,6 +886,10 @@ class SimulateWindowReport(QMainWindow):
         self._worker: SimRunWorker | None = None
         self._playback: SimulationPlayback | None = None
         self._pool_tailer: PoolLogTailer | None = None
+        self._exporter: PlaybackExporter | None = None
+        self._export_progress: QProgressDialog | None = None
+        self._playback_time: float | None = None
+        self._close_after_export = False
 
         # Own Orchestrator over the independent scene `graph` was built with
         # (see setup.py) - the simulation window must render and mutate its own
@@ -915,10 +928,21 @@ class SimulateWindowReport(QMainWindow):
             position=NavigationItemPosition.TOP,
             tooltip="Recenter the view",
         )
+        self._export_action = self.central.addNavigationAction(
+            icon=FluentIcon.SAVE_AS,
+            text="Export animation…",
+            onClick=self._choose_playback_export,
+            position=NavigationItemPosition.TOP,
+            tooltip="Export recorded platform playback to MP4 or GIF",
+        )
+        self._update_export_action()
         self.central.workflowFrame.setMinimumHeight(100)
 
     def simulate(self, process: str, project_path: Path | str) -> None:
         """Start a workflow simulation for *process* against *project_path*."""
+        if self.export_in_progress:
+            logger.warning("Playback export is running; ignoring simulation request.")
+            return
         if self._worker is not None and self._worker.isRunning():
             logger.warning("Simulation already running; ignoring new request.")
             return
@@ -926,6 +950,7 @@ class SimulateWindowReport(QMainWindow):
         self._process = process
         project_path = Path(project_path)
 
+        self._close_playback()
         self._load_design_snapshot()
         self._start_pool_tailer(project_path)
 
@@ -937,10 +962,14 @@ class SimulateWindowReport(QMainWindow):
         self._worker.simulation_done.connect(self._on_sim_done)
         self._worker.simulation_failed.connect(self._on_sim_failed)
         self._worker.run_failed.connect(self._on_run_failed)
+        self._worker.finished.connect(self._update_export_action)
         self._worker.start()
+        self._update_export_action()
 
     def _load_design_snapshot(self) -> None:
         """Copy the design canvas into this window's own scene, without edit handles."""
+        if self.export_in_progress:
+            return
         draw_data = self._setup_window.orchestrator.snapshot_draw_data()
         self.orchestrator.load_draw_data(draw_data)
         self.orchestrator.switch_to_step(SimGraphicView.MODE)
@@ -969,6 +998,8 @@ class SimulateWindowReport(QMainWindow):
             self._pool_tailer = None
 
     def _on_sim_done(self, db_path: str) -> None:
+        if self.export_in_progress:
+            return
         self._stop_pool_tailer()
         self.widget_profiles.on_sim_done()
         self.widget_profiles.set_db(Path(db_path))
@@ -981,6 +1012,7 @@ class SimulateWindowReport(QMainWindow):
         self.widget_profiles.set_scrub_times(times)
         if times:
             self._apply_scrub(times[-1])
+        self._update_export_action()
 
     def _on_run_failed(self, message: str) -> None:
         logger.error(f"Simulated run failed: {message}")
@@ -990,14 +1022,20 @@ class SimulateWindowReport(QMainWindow):
         self._stop_pool_tailer()
         logger.error(f"Simulation failed: {message}")
         self.widget_profiles.show_sim_error(message)
+        self._update_export_action()
 
     def _close_playback(self) -> None:
+        if self.export_in_progress:
+            return
         if self._playback is not None:
             self._playback.close()
             self._playback = None
+        self._playback_time = None
+        self._update_export_action()
 
     def _on_scrub_requested(self, t: float) -> None:
-        self._apply_scrub(t)
+        if not self.export_in_progress:
+            self._apply_scrub(t)
 
     def _apply_scrub(self, t: float) -> None:
         if self._playback is None:
@@ -1008,13 +1046,141 @@ class SimulateWindowReport(QMainWindow):
             self.orchestrator.connections,
         )
         self.widget_profiles.set_cursor_time(t)
+        self._playback_time = t
+
+    @property
+    def export_in_progress(self) -> bool:
+        # Remains true until restoration, even after the encoder has exited.
+        return self._exporter is not None
+
+    def _can_export(self) -> bool:
+        return bool(
+            self._playback is not None
+            and self._playback.times
+            and not self.export_in_progress
+            and not (self._worker is not None and self._worker.isRunning())
+        )
+
+    def _update_export_action(self) -> None:
+        self._export_action.setEnabled(self._can_export())
+
+    def _choose_playback_export(self) -> None:
+        playback = self._playback
+        if playback is None or not self._can_export():
+            return
+        dialog = PlaybackExportDialog(playback.times, self)
+        if dialog.exec_() != QDialog.Accepted:
+            return
+        suffix = dialog.selected_format
+        filename, _ = QFileDialog.getSaveFileName(
+            self,
+            "Export animation",
+            str(playback.db_path.with_suffix(f".{suffix}")),
+            f"{suffix.upper()} animation (*.{suffix})",
+            options=QFileDialog.DontConfirmOverwrite,
+        )
+        if not filename:
+            return
+        destination = Path(filename).with_suffix(f".{suffix}")
+        if (
+            destination.exists()
+            and QMessageBox.question(
+                self,
+                "Replace animation?",
+                f"Replace {destination}?",
+                QMessageBox.Yes | QMessageBox.No,
+                QMessageBox.No,
+            )
+            != QMessageBox.Yes
+        ):
+            return
+        self._start_playback_export(dialog.options(destination))
+
+    def _start_playback_export(self, options: PlaybackExportOptions) -> None:
+        playback = self._playback
+        if playback is None or not self._can_export():
+            return
+        self.widget_profiles._flush_scrub()
+        self._export_restore_time = self._playback_time
+        self._export_restore_enabled = self.central.isEnabled()
+        exporter = PlaybackExporter(
+            playback,
+            self.scene_attribute,
+            self.orchestrator.components,
+            self.orchestrator.connections,
+            self,
+        )
+        self._exporter = exporter
+        self.central.setEnabled(False)
+        self._update_export_action()
+        progress = QProgressDialog("Preparing animation…", "Cancel", 0, 100, self)
+        self._export_progress = progress
+        progress.setWindowTitle("Export animation")
+        # A modal QProgressDialog.setValue() calls processEvents(), which can
+        # reenter frame production. The report's controls are disabled instead.
+        progress.setWindowModality(Qt.WindowModality.NonModal)
+        progress.setMinimumDuration(0)
+        progress.setAutoClose(False)
+        progress.setAutoReset(False)
+        progress.canceled.connect(self.cancel_export)
+        exporter.progress.connect(self._on_export_progress)
+        exporter.completed.connect(lambda path: self._finish_playback_export(path=path))
+        exporter.failed.connect(lambda error: self._finish_playback_export(error=error))
+        exporter.cancelled.connect(self._finish_playback_export)
+        progress.show()
+        exporter.start(options)
+
+    def _on_export_progress(self, value: int, message: str) -> None:
+        if self._export_progress is not None:
+            self._export_progress.setLabelText(message)
+            self._export_progress.setValue(value)
+
+    def cancel_export(self) -> None:
+        if self._exporter is not None:
+            self._exporter.cancel()
+
+    def _finish_playback_export(self, path: str = "", error: str = "") -> None:
+        exporter = self._exporter
+        if exporter is None:
+            return
+        try:
+            if self._export_restore_time is not None:
+                self._apply_scrub(self._export_restore_time)
+        except Exception as exc:
+            logger.exception("Could not restore the report after playback export")
+            error = f"{error}\nCould not restore the report: {exc}".strip()
+        finally:
+            self._exporter = None
+            self.central.setEnabled(self._export_restore_enabled)
+            if self._export_progress is not None:
+                self._export_progress.close()
+                self._export_progress.deleteLater()
+                self._export_progress = None
+            exporter.deleteLater()
+            self._update_export_action()
+            self._on_selection_changed()
+            self.export_finished.emit()
+        if self._close_after_export:
+            self._close_after_export = False
+            QTimer.singleShot(0, self.close)  # type: ignore[arg-type]  # Qt discards the bool return
+        elif error:
+            QMessageBox.warning(self, "Animation export failed", error)
+        elif path:
+            QMessageBox.information(self, "Animation saved", f"Saved to:\n{path}")
 
     def closeEvent(self, a0) -> None:
+        if self.export_in_progress:
+            a0.ignore()
+            self._close_after_export = True
+            self.cancel_export()
+            return
         self._stop_pool_tailer()
         self._close_playback()
         super().closeEvent(a0)
 
     def _on_selection_changed(self) -> None:
+        if self.export_in_progress:
+            return
         from chemunited.elements.component.graph_item import GraphComponent
         from chemunited.elements.connection.connection import HydraulicConnectionItem
         from chemunited_core.components.plugflow import PlugFlowComponentData

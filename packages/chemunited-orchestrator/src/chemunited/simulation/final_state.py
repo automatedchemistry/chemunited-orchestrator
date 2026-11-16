@@ -156,8 +156,10 @@ def _apply_discrete_state(
         rows = conn.execute(
             "SELECT component, state FROM component_state WHERE time = ?", (t,)
         ).fetchall()
-    except sqlite3.Error:
-        return
+    except sqlite3.OperationalError as exc:
+        if "no such table: component_state" in str(exc):
+            return  # compatibility with recordings predating discrete state
+        raise
 
     for row in rows:
         component = components.get(str(row["component"]))
