@@ -38,6 +38,9 @@ class Delay(Process[DelayConfig]):
         )
         return graph
 
+    def estimate_duration(self):
+        return self.config.seconds
+
     def delay(self, ctx):
         self.calls.append(self.config.seconds)
         ctx.report_progress(0, "Waiting", wait_seconds=self.config.seconds)
@@ -96,6 +99,15 @@ def test_repeat_delay_save_preview_run_report_and_snapshot_reload(tmp_path):
         assert client.get(f"/protocols/{filename}").json() == _document()
         summary = client.get(f"/protocols/{filename}/plan").json()
         assert summary["total_executions"] == "4"
+        estimate = {
+            "step_ms": {"inner": "1000", "closing": "2000"},
+            "total_ms": "5000",
+            "unestimated_executions": "0",
+            "errors": {},
+        }
+        assert summary["estimate"] == estimate
+        draft = client.post("/protocols/estimate", json={"data": _document()})
+        assert draft.json() == estimate
         preview = client.post(
             "/protocols/preview", json={"data": _document(), "offset": "2", "limit": 2}
         ).json()
@@ -105,6 +117,7 @@ def test_repeat_delay_save_preview_run_report_and_snapshot_reload(tmp_path):
         run_id = start.json()["run_id"]
         active = client.get("/run/active").json()
         assert active["protocol_plan"]["document"] == _document()
+        assert active["protocol_plan"]["estimate"] == estimate
         # Active UI/reporting and future cycles must survive this file deletion.
         (tmp_path / "protocols_historic" / filename).unlink()
         deadline = time.monotonic() + 12
@@ -145,4 +158,5 @@ def test_repeat_delay_save_preview_run_report_and_snapshot_reload(tmp_path):
     assert manifest["protocol_plan"]["resolved_document"]["main_parameter"] == {
         "label": "resolved default"
     }
+    assert manifest["protocol_plan"]["estimate"] == estimate
     assert len(manifest["results"]) == 4

@@ -6,6 +6,7 @@ import { createRequire } from 'node:module'
 import { parse, compileScript } from '@vue/compiler-sfc'
 import { transform } from 'sucrase'
 import * as plan from '../src/lib/protocolPlan.ts'
+import * as estimates from '../src/lib/protocolEstimate.ts'
 
 const require = createRequire(import.meta.url)
 const Vue = require('vue')
@@ -28,6 +29,7 @@ function component(relative) {
   const modules = {
     vue: runtime,
     '../lib/protocolPlan': plan,
+    '../lib/protocolEstimate': estimates,
     '../composables/useNotification': { useNotification: () => ({ notify: (...message) => notifications.push(message) }) },
     '../extensions/manifest': { customization: { manifest: { protocols: { process_categories: {}, other_label: 'Processes' } } } },
   }
@@ -43,6 +45,7 @@ function component(relative) {
 const originalFetch = globalThis.fetch
 const originalWindow = globalThis.window
 const previewRequests = []
+const estimateRequests = []
 const saved = []
 let rejectSave = false
 const source = { main_parameter: { scale: 2 }, command_delay_sec_0: { duration: '1 s' }, command_delay_sec_1: { duration: '2 s' }, hidden_process_0: {} }
@@ -77,6 +80,24 @@ globalThis.fetch = async (url, options = {}) => {
     }
     return json({ document, total_executions: total.toString(), offset: request.offset, limit: request.limit, next_offset: null, occurrences })
   }
+  if (url === '/protocols/estimate') {
+    // Stand-in for the server: delay steps take their `duration`, others have no estimate.
+    const request = JSON.parse(options.body)
+    estimateRequests.push(request)
+    const step_ms = {}
+    let total = 0n
+    let unestimated = 0n
+    for (const item of plan.canonicalDocument(request.data).sequence) {
+      const count = item.type === 'repeat' ? BigInt(item.count) : 1n
+      for (const step of item.type === 'repeat' ? item.steps : [item]) {
+        const seconds = /^(\d+) s$/.exec(String(step.parameters.duration ?? ''))?.[1]
+        step_ms[step.id] = seconds ? (BigInt(seconds) * 1000n).toString() : null
+        if (seconds) total += BigInt(seconds) * 1000n * count
+        else unestimated += count
+      }
+    }
+    return json({ step_ms, total_ms: total.toString(), unestimated_executions: unestimated.toString(), errors: { hidden_process_0: 'ValueError: no estimate' } })
+  }
   throw new Error(`Unexpected test request: ${url}`)
 }
 
@@ -102,12 +123,21 @@ const app = renderer.createApp(component('views/ProtocolsView.vue'))
 const find = predicate => all(root, predicate)[0]
 const button = label => find(node => node.type === 'button' && text(node).trim() === label)
 const flush = async () => { await new Promise(setImmediate); await Vue.nextTick() }
+// Past the editor's pause before it asks the server for an estimate.
+const settleEstimate = async () => { await new Promise(resolve => setTimeout(resolve, 450)); await flush() }
+const estimateTotal = () => { const node = find(node => node.props.class === 'estimate-total'); return node ? text(node).trim() : undefined }
 try {
   app.mount(root)
   await flush()
   assert.equal(all(root, node => node.type === 'button' && node.props.class?.includes('library-process')).length, 1, 'historic-only processes stay out of the add library')
   find(node => node.props.id === 'protocol-select').props.onChange({ target: { value: 'legacy.json' } })
   await flush()
+  assert.equal(estimateRequests.length, 0, 'edits are batched before asking for an estimate')
+  await settleEstimate()
+  assert.equal(estimateRequests.length, 1)
+  assert.equal(estimateTotal(), '≈ 3 s', 'the toolbar shows the draft estimate')
+  assert.equal(find(node => node.props.class === 'estimate-note')?.props.title, 'hidden_process: ValueError: no estimate', 'unestimated steps say why, by process')
+  assert.ok(text(root).includes('1 execution not estimated'))
   const checks = all(root, node => node.type === 'input' && node.props.type === 'checkbox')
   assert.equal(checks.length, 3)
   checks[0].props.onChange({ target: { checked: true } })
@@ -122,6 +152,9 @@ try {
   count.props.onInput({ target: { value: huge } })
   await flush()
   assert.ok(text(root).includes((BigInt(huge) * 2n + 1n).toLocaleString()))
+  await settleEstimate()
+  assert.equal(estimateRequests.at(-1).data.sequence[0].count, huge, 'the estimate follows the edited repeat count')
+  assert.equal(estimateTotal(), '> 100 years')
   button('Show cycles').props.onClick()
   await new Promise(resolve => setTimeout(resolve, 220))
   await flush()

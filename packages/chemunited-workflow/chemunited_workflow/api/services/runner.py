@@ -17,6 +17,7 @@ from chemunited_workflow import Process, WorkflowExecutor, compile_workflow
 from chemunited_workflow.background import STOP_TIMEOUT_SECONDS, BackgroundTasks
 from chemunited_workflow.cancellation import wait_for_operator_input, wait_while_paused
 from chemunited_workflow.durations import parse_timeout_commands
+from chemunited_workflow.estimates import estimate_plan
 from chemunited_workflow.models import WorkflowExecutionEvent
 from chemunited_workflow.platform import Platform
 from chemunited_workflow.protocol_plan import ProtocolPlan, build_protocol_plan
@@ -67,6 +68,15 @@ class RunnerService:
             self._main_parameter_class,
         )
 
+    def _summary(self, plan: ProtocolPlan) -> dict[str, Any]:
+        """The plan summary a run records, with its duration estimate."""
+        return {
+            **plan.summary(),
+            "estimate": estimate_plan(
+                plan, self._processes, self._configs, self._main_parameter_class
+            ),
+        }
+
     def start(
         self,
         protocol_filename: str,
@@ -105,9 +115,11 @@ class RunnerService:
         protocol_path = self._project_dir / "protocols_historic" / protocol_filename
         data = json.loads(protocol_path.read_text(encoding="utf-8"))
         plan = self._plan(data)
+        # Computed once per run: the estimate evaluates process code.
+        summary = self._summary(plan)
         record = self._run_store.try_start_record(
             protocol_filename,
-            protocol_plan=plan.summary(),
+            protocol_plan=summary,
             execution_active=True,
         )
         if record is None:
@@ -125,6 +137,7 @@ class RunnerService:
                     error_resilient,
                     record_monitoring,
                     record,
+                    summary,
                 ),
                 daemon=True,
             )
@@ -169,6 +182,7 @@ class RunnerService:
         error_resilient: bool,
         record_monitoring: bool,
         run_record: RunRecord | None = None,
+        plan_summary: dict[str, Any] | None = None,
     ) -> None:
         # This run's record, kept rather than looked up again at the end: once
         # the run has ended, another one can start and replace it in the store.
@@ -200,6 +214,8 @@ class RunnerService:
         plan = sequence if isinstance(sequence, ProtocolPlan) else None
         try:
             try:
+                if plan is not None and plan_summary is None:
+                    plan_summary = self._summary(plan)
                 manifest = build_run_manifest(
                     run_id=run_id,
                     started_at=started_at,
@@ -214,10 +230,10 @@ class RunnerService:
                     project_name=self._project_dir.name,
                     git=self._git_state,
                     head_at_start=self._head_if_moved(),
-                    protocol_plan=plan.summary() if plan is not None else None,
+                    protocol_plan=plan_summary if plan is not None else None,
                 )
                 write_run_manifest(manifest_file, manifest)
-                if plan is None:
+                if plan is None or plan_summary is None:
                     if not isinstance(sequence, list):
                         raise TypeError(
                             "Expected a ProtocolPlan or a list of process steps."
@@ -229,9 +245,10 @@ class RunnerService:
                         key = f"{name}_{index}"
                         selected[key] = data.get(key, {})
                     plan = self._plan(selected)
-                    manifest["protocol_plan"] = plan.summary()
+                    plan_summary = self._summary(plan)
+                    manifest["protocol_plan"] = plan_summary
                     write_run_manifest(manifest_file, manifest)
-                self._run_store.set_protocol_plan(plan.summary(), record=run_record)
+                self._run_store.set_protocol_plan(plan_summary, record=run_record)
                 pool_dir = self._project_dir / "log" / "pool"
                 if pool_dir.exists():
                     for f in pool_dir.glob("*.jsonl"):

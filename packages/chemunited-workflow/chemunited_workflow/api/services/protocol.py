@@ -20,6 +20,7 @@ from pydantic_core import PydanticUndefined
 from chemunited_workflow import Process
 from chemunited_workflow.clients.base import _pop_thread_resilient_errors
 from chemunited_workflow.clients.http import ComponentClient
+from chemunited_workflow.estimates import estimate_plan
 from chemunited_workflow.platform import Platform
 from chemunited_workflow.protocol_plan import ProtocolPlan, build_protocol_plan
 
@@ -158,6 +159,20 @@ class ProtocolService:
 
     def read_plan(self, filename: str) -> ProtocolPlan:
         return self.build_plan(self._read_protocol_data(filename))
+
+    def _estimate(self, plan: ProtocolPlan) -> dict[str, Any]:
+        return estimate_plan(
+            plan, self._processes, self._configs, self._main_parameter_class
+        )
+
+    def plan_summary(self, filename: str) -> dict[str, Any]:
+        """A saved protocol's plan summary, with its duration estimate."""
+        plan = self.read_plan(filename)
+        return {**plan.summary(), "estimate": self._estimate(plan)}
+
+    def estimate_protocol(self, data: dict[str, Any]) -> dict[str, Any]:
+        """Duration estimate of an unsaved draft, validated as a save would be."""
+        return self._estimate(self.build_plan(data))
 
     def read_protocol(self, filename: str) -> dict[str, Any]:
         """Return the normalized editable document without rewriting its source."""

@@ -3,6 +3,7 @@ import { computed, onMounted, onUnmounted, ref } from 'vue'
 import { RouterLink } from 'vue-router'
 import { type NodeCard, type ProcessCard, type RunState, useRunStatusStore } from '../stores/runStatus'
 import { type AcceptedProtocolPlan, operatorInputKey, protocolFileExists } from '../lib/runPresentation'
+import { formatEstimate, formatEta, hasEstimate, remainingEstimate, unestimatedNote } from '../lib/protocolEstimate'
 import { useRunOptions } from '../composables/useRunOptions'
 import ExtensionSlot from '../extensions/ExtensionSlot.vue'
 import PageActions from '../extensions/PageActions.vue'
@@ -19,7 +20,10 @@ const runId = ref<string | null>(store.activeRunId)
 const isDeleting = ref(false)
 const isLoadingPlan = ref(false)
 const inputDrafts = ref<Record<string, string>>({})
+// Run time: frozen while paused, so countdowns and elapsed time hold still.
 const nowSeconds = ref(Date.now() / 1000)
+// Wall-clock time, for the finish time, which keeps moving during a pause.
+const clockSeconds = ref(Date.now() / 1000)
 let waitTicker: ReturnType<typeof window.setInterval> | null = null
 let eventSource: EventSource | null = null
 let planRequest = 0
@@ -40,6 +44,35 @@ const stateCaption = computed(() => store.stoppedWithReason ? store.stopReason :
 const liveCycleCaption = computed(() => {
   const current = store.currentOccurrence
   return current?.group_id && current.cycle ? `${current.group_label || 'Repeat group'} · Cycle ${current.cycle} of ${current.count}` : ''
+})
+function withUnestimatedNote(text: string, unestimated: bigint): string {
+  const note = unestimatedNote(unestimated)
+  return note ? `${text} · ${note}` : text
+}
+const estimateText = computed(() => {
+  const estimate = store.protocolPlan?.estimate
+  return hasEstimate(estimate)
+    ? withUnestimatedNote(formatEstimate(BigInt(estimate.total_ms)), BigInt(estimate.unestimated_executions))
+    : ''
+})
+const remaining = computed(() => {
+  const plan = store.protocolPlan
+  const estimate = plan?.estimate
+  if (!plan || !hasEstimate(estimate) || !isActive.value) return null
+  const current = store.currentOccurrence
+  const timing = current && store.currentTiming?.key === current.execution_key ? store.currentTiming : null
+  const elapsedMs = timing ? (nowSeconds.value - timing.startedAt) * 1000 : 0
+  return remainingEstimate(plan.document.sequence, estimate, current, elapsedMs, timing?.finished ?? false)
+})
+const remainingText = computed(() => remaining.value
+  ? withUnestimatedNote(formatEstimate(remaining.value.ms), remaining.value.unestimated)
+  : '')
+const finishText = computed(() => {
+  if (!remaining.value) return ''
+  const eta = formatEta(clockSeconds.value * 1000, remaining.value.ms)
+  if (!eta) return '—'
+  // Steps without an estimate can only push the finish later.
+  return remaining.value.unestimated > 0n ? `after ${eta}` : `≈ ${eta}`
 })
 function ordinaryCard(sourceId: string): ProcessCard | undefined { return store.processCards.find(card => card.sourceId === sourceId && !card.occurrence?.group_id) }
 async function loadProtocols() {
@@ -129,6 +162,7 @@ function openStream() {
       if (wasPaused) {
         const pausedFor = Date.now() / 1000 - nowSeconds.value
         for (const card of store.processCards) for (const node of card.nodes) if (node.waitStartedAt !== null) node.waitStartedAt += pausedFor
+        if (store.currentTiming) store.currentTiming.startedAt += pausedFor
         store.setMessage('Run resumed.', 'info')
       }
       return
@@ -201,7 +235,11 @@ async function submitOperatorInput(card: ProcessCard, node: NodeCard) {
   } catch { store.setMessage('Could not reach the run endpoint.', 'error') }
 }
 onMounted(async () => {
-  waitTicker = window.setInterval(() => { if (store.runState !== 'paused') nowSeconds.value = Date.now() / 1000 }, 250)
+  waitTicker = window.setInterval(() => {
+    const now = Date.now() / 1000
+    clockSeconds.value = now
+    if (store.runState !== 'paused') nowSeconds.value = now
+  }, 250)
   await Promise.all([loadProtocols(), loadProcessDescriptions(), store.checkActiveRun()])
   runId.value = store.activeRunId
   if (isActive.value && store.activeRunId) {
@@ -370,6 +408,18 @@ onUnmounted(() => { closeStream(); if (waitTicker !== null) window.clearInterval
             <span class="meta-label">Stream</span>
             <span class="meta-value">{{ streamStatus }}</span>
           </div>
+          <div v-if="estimateText" class="meta-row">
+            <span class="meta-label">Estimate</span>
+            <span class="meta-value" :title="estimateText">{{ estimateText }}</span>
+          </div>
+          <div v-if="remainingText" class="meta-row">
+            <span class="meta-label">Remaining</span>
+            <span class="meta-value" :title="remainingText">{{ remainingText }}</span>
+          </div>
+          <div v-if="finishText" class="meta-row">
+            <span class="meta-label">Finish</span>
+            <span class="meta-value">{{ finishText }}</span>
+          </div>
         </div>
       </section>
     </div>
@@ -528,7 +578,7 @@ onUnmounted(() => { closeStream(); if (waitTicker !== null) window.clearInterval
 }
 
 .meta-label {
-  min-width: 64px;
+  min-width: 76px;
   flex-shrink: 0;
   color: var(--color-text-muted);
   font-weight: 600;

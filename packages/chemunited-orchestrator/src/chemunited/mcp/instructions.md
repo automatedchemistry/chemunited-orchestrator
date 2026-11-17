@@ -266,6 +266,21 @@ def <method_name>(self, ctx: NodeExecutionContext) -> bool:
     return True   # return False to trigger condition=False edges
 ```
 
+**Estimated duration (optional):**
+State how long one run of the process takes, and the dashboard shows the
+protocol's estimated total, time remaining and finish time. Use either a class
+attribute or a method that works it out from the step's parameters:
+```python
+class CustomProcess(Process[ProcessConfig]):
+    estimated_duration = "15 min"   # a time with a unit, or a number of seconds
+
+    def estimate_duration(self):    # optional: overrides estimated_duration
+        return self.config.volume / self.config.flow_rate   # a time quantity
+```
+`estimate_duration()` runs when the protocol is planned, not during the run:
+don't use `self.platform` in it, and keep it quick. Leave both out when the
+time is unknown; the dashboard reports those steps as not estimated.
+
 **Rules:**
 - Class names `ProcessConfig` and `CustomProcess` are fixed — do not rename them.
 - Every `node_id` in `add_node()` must have a matching method in `CustomProcess`.

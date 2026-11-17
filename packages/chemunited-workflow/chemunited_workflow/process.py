@@ -7,7 +7,7 @@ import inspect
 import json
 from abc import ABC, abstractmethod
 from pathlib import Path
-from typing import Generic, TypeVar
+from typing import Any, ClassVar, Generic, TypeVar
 
 import networkx as nx
 from loguru import logger
@@ -42,6 +42,12 @@ def _load_class(path: Path, class_name: str) -> type:
 class Process(ABC, Generic[ConfigT]):
     """Base class for user-defined workflow processes."""
 
+    #: How long one execution of this process is expected to take, such as
+    #: ``"15 min"`` or ``"1.5 h"`` (a plain number means seconds). Optional:
+    #: the dashboard adds the estimates of a protocol's steps into its
+    #: expected duration, time remaining and finish time. Nothing enforces it.
+    estimated_duration: ClassVar[str | float | None] = None
+
     def __init__(
         self,
         config: ConfigT,
@@ -56,6 +62,21 @@ class Process(ABC, Generic[ConfigT]):
     @abstractmethod
     def build_workflow(self) -> nx.DiGraph:
         """Return the authored workflow graph."""
+
+    def estimate_duration(self) -> Any:
+        """Return how long this step is expected to take, or ``None``.
+
+        The default returns :attr:`estimated_duration`. Override it when the
+        time depends on the step's parameters, for example
+        ``return self.config.volume / self.config.flow_rate``. Return what
+        :attr:`estimated_duration` accepts, a time quantity, or a
+        :class:`~datetime.timedelta`.
+
+        Called when a protocol is planned, not while it runs:
+        ``self.platform`` is empty, so don't talk to devices here, and keep
+        it quick.
+        """
+        return self.estimated_duration
 
     def run_workflow(self, start_node: str) -> WorkflowResult:
         """Compile and execute the workflow from ``start_node``."""

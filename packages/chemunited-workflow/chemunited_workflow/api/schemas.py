@@ -27,6 +27,12 @@ class ProtocolIn(BaseModel):
     data: dict[str, Any]
 
 
+class ProtocolEstimateIn(BaseModel):
+    """Request body for POST /protocols/estimate: an unsaved protocol draft."""
+
+    data: dict[str, Any]
+
+
 class ProtocolPreviewIn(BaseModel):
     """Bounded execution preview of an unsaved document, with an exact offset."""
 

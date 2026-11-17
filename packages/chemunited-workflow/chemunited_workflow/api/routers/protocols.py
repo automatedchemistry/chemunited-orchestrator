@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends, HTTPException
 
 from ..dependencies import get_project_holder, get_protocol_service
 from ..project_holder import ProjectHolder
-from ..schemas import ProtocolIn, ProtocolPreviewIn
+from ..schemas import ProtocolEstimateIn, ProtocolIn, ProtocolPreviewIn
 from ..services.protocol import ProtocolService
 
 read_router = APIRouter(prefix="/protocols", tags=["protocols"])
@@ -40,14 +40,20 @@ async def get_protocol(
         raise HTTPException(status_code=404, detail=str(exc))
 
 
+# A plain ``def``, like ``/estimate``: evaluating the estimate runs process
+# code, which belongs in the threadpool rather than on the event loop.
 @read_router.get("/{filename}/plan")
-async def get_protocol_plan(
+def get_protocol_plan(
     filename: str,
     svc: ProtocolService = Depends(get_protocol_service),
 ):
-    """Get the compact source/resolved snapshot and exact execution total."""
+    """Get the compact source/resolved snapshot and exact execution total.
+
+    `estimate` is the protocol's advisory duration estimate, worked out from
+    the process files (see `POST /protocols/estimate`).
+    """
     try:
-        return svc.read_plan(filename).summary()
+        return svc.plan_summary(filename)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
     except FileNotFoundError as exc:
@@ -78,6 +84,29 @@ async def preview_protocol(
     """Validate and preview an unsaved draft; this does not write a file."""
     try:
         return svc.preview_protocol(body.data, body.offset, body.limit)
+    except ValueError as exc:
+        raise HTTPException(status_code=422, detail=str(exc))
+
+
+@write_router.post("/estimate")
+def estimate_protocol(
+    body: ProtocolEstimateIn,
+    svc: ProtocolService = Depends(get_protocol_service),
+):
+    """Estimate how long an unsaved draft would take; this does not write a file.
+
+    A process can declare how long one execution takes: `estimated_duration`
+    in its class, or `estimate_duration()` worked out from the step's
+    parameters. Returns `step_ms` (one execution of each source step, in
+    milliseconds, or `null` when it has no estimate), the exact `total_ms`
+    over every estimated execution, how many `unestimated_executions` there
+    are, and `errors` saying why an estimate could not be evaluated.
+    Durations are decimal strings so huge repeat counts stay exact. The
+    estimate is advisory: nothing enforces it. Invalid drafts return 422,
+    like `POST /protocols/preview`.
+    """
+    try:
+        return svc.estimate_protocol(body.data)
     except ValueError as exc:
         raise HTTPException(status_code=422, detail=str(exc))
 

@@ -3,11 +3,13 @@
 import json
 from copy import deepcopy
 
+import networkx as nx
 import pytest
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from pydantic import BaseModel, Field
 
+from chemunited_workflow import Process
 from chemunited_workflow.api.dependencies import get_protocol_service
 from chemunited_workflow.api.routers.protocols import read_router, write_router
 from chemunited_workflow.api.services.protocol import ProtocolService
@@ -78,6 +80,13 @@ def test_v2_save_reopen_preserves_compact_groups_parameters_and_ids(setup):
     assert summary["source_schema_version"] == 2
     assert summary["planner_version"] == 1
     assert summary["source_document"] == source
+    # Processes without an estimate are counted, never guessed.
+    assert summary["estimate"] == {
+        "step_ms": {"shared-work": None, "after": None},
+        "total_ms": "0",
+        "unestimated_executions": "9007199254740994",
+        "errors": {},
+    }
     page = client.get(
         f"/protocols/{filename}/preview",
         params={"offset": "9007199254740992", "limit": 2},
@@ -161,6 +170,7 @@ def test_invalid_settings_fail_save_and_preview_with_source_field(setup):
     for endpoint, body in (
         ("/protocols/", {"name": "bad", "data": source}),
         ("/protocols/preview", {"data": source}),
+        ("/protocols/estimate", {"data": source}),
     ):
         response = client.post(endpoint, json=body)
         assert response.status_code == 422
@@ -181,6 +191,41 @@ def test_saved_invalid_version_and_missing_files_are_explicit_errors(setup):
         assert response.status_code == 422
         assert "schema_version" in response.json()["detail"]
         assert client.get(f"/protocols/missing.json{suffix}").status_code == 404
+
+
+def test_saved_and_draft_estimates_multiply_repeat_counts_without_writing(tmp_path):
+    class Timed(Process[Config]):
+        def build_workflow(self):
+            return nx.DiGraph()
+
+        def estimate_duration(self):
+            return f"{self.config.amount} min"
+
+    (tmp_path / "protocols_historic").mkdir()
+    service = ProtocolService(tmp_path, {"work": Timed}, {"work": Config}, Main)
+    app = FastAPI()
+    app.dependency_overrides[get_protocol_service] = lambda: service
+    app.include_router(read_router)
+    app.include_router(write_router)
+    expected = {
+        "step_ms": {"shared-work": "420000", "after": "540000"},
+        "total_ms": str(9007199254740993 * 420000 + 540000),
+        "unestimated_executions": "0",
+        "errors": {},
+    }
+    with TestClient(app) as client:
+        draft = client.post(
+            "/protocols/estimate", json={"data": document("9007199254740993")}
+        )
+        assert draft.status_code == 200, draft.text
+        assert draft.json() == expected
+        assert list((tmp_path / "protocols_historic").iterdir()) == []
+        saved = client.post(
+            "/protocols/",
+            json={"name": "timed", "data": document("9007199254740993")},
+        ).json()["filename"]
+        summary = client.get(f"/protocols/{saved}/plan").json()
+        assert summary["estimate"] == expected
 
 
 def test_hidden_processes_remain_registered_but_marked_out_of_add_library(tmp_path):

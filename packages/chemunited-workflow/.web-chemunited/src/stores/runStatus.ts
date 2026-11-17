@@ -29,6 +29,12 @@ export interface ProcessCard {
   errorMessage: string
   nodes: NodeCard[]
 }
+/** When the execution in progress started (server seconds), for time-remaining estimates. */
+export interface OccurrenceTiming {
+  key: string
+  startedAt: number
+  finished: boolean
+}
 export function makeProcessCard(step: ProcessStep, key: string, description = '', occurrence: OccurrenceMetadata | null = null): ProcessCard {
   return { stepKey: key, sourceId: step.id, occurrence, displayName: processDisplayName(step.process), description, parameters: step.parameters, status: 'waiting', hasFailed: false, interrupted: false, errorMessage: '', nodes: [] }
 }
@@ -55,6 +61,7 @@ export const useRunStatusStore = defineStore('runStatus', () => {
   const processCards = ref<ProcessCard[]>([])
   const protocolPlan = ref<AcceptedProtocolPlan | null>(null)
   const currentOccurrence = ref<OccurrenceMetadata | null>(null)
+  const currentTiming = ref<OccurrenceTiming | null>(null)
   const descriptions = ref<Record<string, string>>({})
   const formMessage = ref('')
   const formMessageType = ref<'' | 'error' | 'success' | 'info'>('')
@@ -66,6 +73,7 @@ export const useRunStatusStore = defineStore('runStatus', () => {
     if (!reset) return
     processCards.value = []
     currentOccurrence.value = null
+    currentTiming.value = null
     pendingInputs.value = {}
     if (!plan) return
     for (const { item, offset } of locateProtocolItems(plan)) {
@@ -99,12 +107,19 @@ export const useRunStatusStore = defineStore('runStatus', () => {
     const card = ensureOccurrence(key, metadata)
     if (eventType === 'EXECUTION_STARTED') {
       if (card.status === 'waiting') card.status = 'running'
-      if (metadata && (!currentOccurrence.value || BigInt(metadata.execution_index) >= BigInt(currentOccurrence.value.execution_index))) currentOccurrence.value = metadata
+      if (metadata && (!currentOccurrence.value || BigInt(metadata.execution_index) >= BigInt(currentOccurrence.value.execution_index))) {
+        currentOccurrence.value = metadata
+        const startedAt = typeof data.timestamp === 'number' ? data.timestamp : Date.now() / 1000
+        currentTiming.value = { key: metadata.execution_key, startedAt, finished: false }
+      }
     } else if (eventType === 'NODE_FAILED') {
       card.hasFailed = true
       if (typeof data.message === 'string' && data.message.includes('Run was cancelled.')) card.interrupted = true
       if (data.message && !card.errorMessage) card.errorMessage = String(data.message)
-    } else if (eventType === 'EXECUTION_FINISHED') card.status = card.hasFailed ? 'failed' : 'completed'
+    } else if (eventType === 'EXECUTION_FINISHED') {
+      card.status = card.hasFailed ? 'failed' : 'completed'
+      if (currentTiming.value?.key === key) currentTiming.value.finished = true
+    }
     const nodeKey = data.node_key as [string, number] | null
     if (!nodeKey) return
     const [nodeId, iteration] = nodeKey
@@ -202,7 +217,7 @@ export const useRunStatusStore = defineStore('runStatus', () => {
 
   return {
     activeRunId, runState, stopReason, stoppedWithReason, stateStyle, pendingInputs,
-    selectedProtocol, processCards, protocolPlan, currentOccurrence, descriptions, totalExecutions, locatedItems,
+    selectedProtocol, processCards, protocolPlan, currentOccurrence, currentTiming, descriptions, totalExecutions, locatedItems,
     formMessage, formMessageType, checkActiveRun, setRunState, applyStopReason, restoreFromReport,
     restoreRunSnapshot, setMessage, setPlan, applyEvent, applyPendingInputs,
   }

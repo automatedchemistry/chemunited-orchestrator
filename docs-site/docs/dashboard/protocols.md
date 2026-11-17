@@ -22,6 +22,11 @@ The right card is the sequence itself:
 * **Duplicate** inserts a copy of the selected step directly below it, with the process parameters already set on it,
   under the next free index (for example `React_2`). Edit the copy freely — the original keeps its values.
 * The status badge (e.g. `Editing`) reflects whether the currently loaded sequence has unsaved changes.
+* The line above the steps counts the source steps and the executions they expand to. When the processes declare
+  an [estimated duration](../protocols/script_editor.md#estimated-duration), it also shows the protocol's
+  estimated total, such as `≈ 2 h 30 min`, updated as you edit. Executions of processes without an estimate are
+  counted, never guessed, for example `2 executions not estimated`. Hover over that note to see why a step has
+  no estimate.
 
 Click **Save protocol** to write the sequence out as a new, timestamped protocol file — saved protocols are
 immutable, so saving again creates a new file rather than overwriting the one you loaded.

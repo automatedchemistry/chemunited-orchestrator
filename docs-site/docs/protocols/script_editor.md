@@ -66,6 +66,41 @@ def script_1(self, ctx: NodeExecutionContext) -> bool:
     return True
 ```
 
+## Estimated duration
+
+You can tell the dashboard how long one run of a process takes. It then adds up every step of a protocol,
+repeat groups included, and shows the expected duration while you build the protocol and before you start it,
+then the time remaining and the finish time while it runs (see [Run Control](../dashboard/run_control.md)). The
+estimate is optional and only informs: nothing waits for it, and nothing stops when it runs out.
+
+New processes come with a commented-out line under the class docstring. Remove the `#` and set the time:
+
+```python
+class CustomProcess(Process[ProcessConfig]):
+    """User-defined workflow process."""
+
+    estimated_duration = "15 min"
+```
+
+Write a time with a unit (`"90 s"`, `"15 min"`, `"1.5 h"`) or a plain number of seconds (`90`). A number in
+quotes without a unit, such as `"90"`, is not accepted, because it could mean seconds or minutes.
+
+When the time depends on the step's parameters, add an `estimate_duration` method instead. It sees the same
+`self.config` and `self.main_parameters` that the step runs with, so each step of a protocol gets its own
+estimate:
+
+```python
+    def estimate_duration(self):
+        # 10 ml at 2 ml/min gives 5 min
+        return self.config.volume / self.config.flow_rate
+```
+
+The method can return anything `estimated_duration` accepts, or a time quantity like the volume divided by the
+flow rate above. It runs when the protocol is planned, before any device is used, so don't use `self.platform`
+in it, and keep it quick. If it fails, or returns something that is not a time, the dashboard counts that step
+as not estimated. Hover over the "not estimated" note on the [Protocols](../dashboard/protocols.md) page to
+see why.
+
 ## Special blocks
 
 Every module script returns a **boolean** (`True` or `False`), but only two [module types](module_workflows.md#module-types)

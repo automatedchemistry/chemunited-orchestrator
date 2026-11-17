@@ -13,7 +13,7 @@ of truth for exact request/response schemas, so it is not duplicated here. The e
 |---|---|
 | Project | Load/inspect the currently open project. |
 | Processes | List processes, inspect a process's parameter schema and source code. |
-| Protocols | List, create, retrieve, and delete saved protocol script files. |
+| Protocols | List, create, retrieve, and delete saved protocol script files, and estimate how long one takes (`POST /protocols/estimate` for a draft; a saved protocol's plan and a run's status carry the same `estimate`). |
 | Run control | Start/cancel a run, check status, fetch the run report, and stream live run events (Server-Sent Events). |
 | Logs | List, search, tail, and archive log files. |
 | Components | List associated components and ping them for connectivity. |

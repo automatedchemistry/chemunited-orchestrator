@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import json
 import threading
+import time
 from unittest.mock import MagicMock
 
 import networkx as nx
@@ -163,7 +164,40 @@ def test_repeats_keep_order_defaults_fresh_state_and_unique_provenance(runner):
     assert manifest["protocol_plan"]["resolved_document"]["main_parameter"] == {
         "solvent": "DMF"
     }
+    assert manifest["protocol_plan"]["estimate"]["unestimated_executions"] == "5"
     assert manifest["results"][2]["occurrence"]["cycle"] == "2"
+
+
+def test_a_run_records_its_estimate_and_evaluates_it_once(runner, monkeypatch):
+    svc, store, tmp_path = runner
+    calls = []
+
+    def two_minutes(self):
+        calls.append(self.config.name)
+        return "2 min"
+
+    monkeypatch.setattr(RecordingProcess, "estimate_duration", two_minutes)
+    (tmp_path / "protocols_historic" / "repeat.json").write_text(
+        json.dumps(document("4")), encoding="utf-8"
+    )
+    run_id = svc.start("repeat.json", dry_run=True, timeout_commands="1 s")
+    assert run_id is not None
+    deadline = time.monotonic() + 10
+    while store.get().execution_active and time.monotonic() < deadline:
+        time.sleep(0.01)
+    record = store.get()
+    assert record.state == RunState.FINISHED
+    estimate = record.protocol_plan["estimate"]
+    assert estimate["step_ms"] == {
+        "before": "120000",
+        "body": "120000",
+        "after": "120000",
+    }
+    assert estimate["total_ms"] == "720000"  # six executions of 2 min
+    manifest = json.loads(manifest_path(tmp_path, run_id).read_text())
+    assert manifest["protocol_plan"]["estimate"] == estimate
+    # Once per source step for the whole run, not per execution or per write.
+    assert calls == ["before", "body", "after"]
 
 
 def test_huge_repeat_can_stop_after_few_occurrences(runner):

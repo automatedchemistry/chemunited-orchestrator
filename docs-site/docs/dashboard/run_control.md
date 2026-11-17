@@ -26,3 +26,16 @@ refresh:
 * **Status badge** — `Idle`, `Running`, or an error state.
 * **Run ID** — the identifier of the active run, once one is dispatched.
 * **Stream** — whether the live event connection is `open` or `closed`.
+
+When the protocol's processes declare an [estimated duration](../protocols/script_editor.md#estimated-duration),
+three more rows appear. Projects that don't use estimates don't show them.
+
+* **Estimate** — the protocol's estimated total, shown as soon as you select a protocol. Executions without an
+  estimate are counted rather than guessed, for example `≈ 2 h 30 min · 2 executions not estimated`.
+* **Remaining** — during a run, the estimated time left: every execution not started yet, plus what is left of
+  the current one. It holds still while the run is paused.
+* **Finish** — during a run, the clock time the run should end. It moves later while the run is paused. It reads
+  `after 14:35` rather than `≈ 14:35` when some of the remaining executions have no estimate.
+
+Estimates only inform: a step that takes longer than its estimate keeps running. Until it ends, **Remaining**
+counts only the steps after it, and **Finish** keeps moving later.

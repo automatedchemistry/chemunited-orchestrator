@@ -42,6 +42,10 @@ class NodeParameters(NodeConfig):
 class CustomProcess(Process[ProcessConfig]):
     """User-defined workflow process."""
 
+    # Optional: how long one run of this process takes, shown on the dashboard
+    # as the protocol's estimated duration. See ESTIMATED DURATION below.
+    # estimated_duration = "15 min"
+
     def build_workflow(self) -> nx.DiGraph:
         """Build the workflow graph automatically."""
         # Do not touch edit this method
@@ -136,4 +140,20 @@ class CustomProcess(Process[ProcessConfig]):
 #    def my_step(self, ctx: NodeExecutionContext) -> bool:
 #        rate = ctx.node_config.parameters["flow_rate"]
 #        return True
+#
+# ESTIMATED DURATION
+# ---------------------------------------------
+# Optional. Say how long one run of this process takes, and the dashboard
+# shows the protocol's total, the time remaining and the finish time:
+#
+#    class CustomProcess(Process[ProcessConfig]):
+#        estimated_duration = "15 min"     # or "1.5 h", or 90 (seconds)
+#
+# Or work it out from this step's parameters:
+#
+#    def estimate_duration(self):
+#        return self.config.volume / self.config.flow_rate
+#
+# The estimate is worked out before the run starts, so don't use
+# self.platform (the devices) inside estimate_duration().
 # =============================================

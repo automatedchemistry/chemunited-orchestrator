@@ -11,6 +11,7 @@ import {
   sourceItems, totalExecutions, ungroupItem,
   type ProcessStep, type ProtocolDocument, type RepeatGroup,
 } from '../lib/protocolPlan'
+import { formatEstimate, hasEstimate, unestimatedNote, type ProtocolEstimate } from '../lib/protocolEstimate'
 
 interface ProcessInfo { name: string, description: string, library_visible?: boolean }
 interface ProtocolMeta { filename: string, modified: string }
@@ -39,10 +40,14 @@ const pageError = ref('')
 const schemaError = ref('')
 const schemaLoading = ref(false)
 const stepSchema = ref<ProcessSchema | null>(null)
+const draftEstimate = ref<ProtocolEstimate | null>(null)
 let loadRequest = 0
 let schemaRequest = 0
+let estimateRequest = 0
+let estimateTimer: ReturnType<typeof setTimeout> | undefined
 let disposed = false
 const schemaCache = new Map<string, ProcessSchema>()
+const ESTIMATE_DELAY_MS = 400
 
 const ALL = '\u0000all'
 const OTHER = '\u0000other'
@@ -76,6 +81,13 @@ const canRemove = computed(() => !busy.value && Boolean(selectedLocation.value
   && (!selectedLocation.value.parent || selectedLocation.value.siblings.length > 1)))
 const sourceCount = computed(() => sourceItems(document.value).filter(item => item.type === 'process').length)
 const executionTotal = computed(() => Object.keys(errors.value).length ? '—' : totalExecutions(document.value).toLocaleString())
+const estimateText = computed(() => hasEstimate(draftEstimate.value) ? formatEstimate(BigInt(draftEstimate.value.total_ms)) : '')
+const estimateNote = computed(() => hasEstimate(draftEstimate.value)
+  ? unestimatedNote(BigInt(draftEstimate.value.unestimated_executions)) : '')
+const estimateProblems = computed(() => Object.entries(draftEstimate.value?.errors ?? {}).map(([id, message]) => {
+  const item = locateItem(document.value, id)?.item
+  return `${item?.type === 'process' ? item.process : id}: ${message}`
+}).join('\n'))
 const canSave = computed(() => !busy.value && isModified.value && Boolean(newName.value.trim())
   && sourceCount.value > 0 && !Object.keys(errors.value).length)
 const processProperties = computed<FormProperties>(() => stepSchema.value?.config_schema?.properties ?? {})
@@ -280,9 +292,33 @@ async function saveProtocol() {
   } finally { if (!disposed) saving.value = false }
 }
 
+// Ask the server, which evaluates the processes' estimates, once edits pause.
+function scheduleEstimate() {
+  clearTimeout(estimateTimer)
+  const request = ++estimateRequest
+  if (!document.value.sequence.length || Object.keys(errors.value).length) {
+    draftEstimate.value = null
+    return
+  }
+  estimateTimer = setTimeout(() => { void loadEstimate(request) }, ESTIMATE_DELAY_MS)
+}
+async function loadEstimate(request: number) {
+  let estimate: ProtocolEstimate | null = null
+  try {
+    const response = await fetch('/protocols/estimate', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: canonicalDocument(document.value) }),
+    })
+    // An invalid draft (422) simply has no estimate yet.
+    if (response.ok) estimate = await response.json() as ProtocolEstimate
+  } catch { /* The estimate is optional; the editor works without it. */ }
+  if (!disposed && request === estimateRequest) draftEstimate.value = estimate
+}
+
 watch(() => selectedProcess.value?.process, process => { void loadSchema(process) })
+watch(document, scheduleEstimate, { deep: true })
 onMounted(() => { void loadLists() })
-onBeforeUnmount(() => { disposed = true; ++loadRequest; ++schemaRequest })
+onBeforeUnmount(() => { disposed = true; ++loadRequest; ++schemaRequest; ++estimateRequest; clearTimeout(estimateTimer) })
 </script>
 
 <template>
@@ -316,7 +352,7 @@ onBeforeUnmount(() => { disposed = true; ++loadRequest; ++schemaRequest })
         <div class="panel-heading"><div><span class="panel-index">02</span><h2 id="sequence-title">Protocol sequence</h2></div><span class="mode-badge" :class="{ modified: isModified }">{{ isModified ? 'Editing' : selectedFilename ? 'Saved' : 'New protocol' }}</span></div>
         <label class="protocol-field" for="protocol-select">Saved protocol<select id="protocol-select" :value="selectedFilename" :disabled="busy" @change="onProtocolChange"><option value="">New protocol</option><option v-for="protocol in protocols" :key="protocol.filename" :value="protocol.filename">{{ protocol.filename }}</option></select></label>
         <label class="protocol-field" for="protocol-name">Protocol name<input id="protocol-name" v-model="newName" placeholder="Enter a protocol name" :disabled="busy" @input="markModified"></label>
-        <div class="sequence-toolbar"><span><strong>{{ sourceCount }}</strong> source steps · <strong>{{ executionTotal }}</strong> executions</span><div class="step-actions" aria-label="Selected item actions"><button type="button" class="icon-button" :disabled="!canMoveUp" title="Move selected item up" aria-label="Move selected item up" @click="moveSelected(-1)">↑</button><button type="button" class="icon-button" :disabled="!canMoveDown" title="Move selected item down" aria-label="Move selected item down" @click="moveSelected(1)">↓</button><button type="button" class="icon-button" :disabled="!selectedItem || busy" title="Duplicate selected item" aria-label="Duplicate selected item" @click="duplicateSelected">⧉</button><button type="button" class="icon-button danger" :disabled="!canRemove" title="Remove selected item (keep at least one step per repeat group)" aria-label="Remove selected item" @click="removeSelected">×</button></div></div>
+        <div class="sequence-toolbar"><span><strong>{{ sourceCount }}</strong> source steps · <strong>{{ executionTotal }}</strong> executions<template v-if="estimateText"> · <strong class="estimate-total" title="Estimated duration, from the process files">{{ estimateText }}</strong><template v-if="estimateNote"> · <span class="estimate-note" :title="estimateProblems || undefined">{{ estimateNote }}</span></template></template></span><div class="step-actions" aria-label="Selected item actions"><button type="button" class="icon-button" :disabled="!canMoveUp" title="Move selected item up" aria-label="Move selected item up" @click="moveSelected(-1)">↑</button><button type="button" class="icon-button" :disabled="!canMoveDown" title="Move selected item down" aria-label="Move selected item down" @click="moveSelected(1)">↓</button><button type="button" class="icon-button" :disabled="!selectedItem || busy" title="Duplicate selected item" aria-label="Duplicate selected item" @click="duplicateSelected">⧉</button><button type="button" class="icon-button danger" :disabled="!canRemove" title="Remove selected item (keep at least one step per repeat group)" aria-label="Remove selected item" @click="removeSelected">×</button></div></div>
         <div class="repeat-toolbar"><button type="button" class="button compact" :disabled="!canGroup || busy" @click="repeatSelected">Repeat selected steps</button><span v-if="repeatSelection.size && !canGroup" class="selection-hint">Select consecutive process steps outside repeat groups.</span><span v-else class="selection-hint">Use the checkboxes to group consecutive processes.</span></div>
         <p v-if="loadingProtocol" class="panel-help" role="status">Loading protocol…</p>
         <p v-if="saveError" class="notice error" role="alert">{{ saveError }}</p>

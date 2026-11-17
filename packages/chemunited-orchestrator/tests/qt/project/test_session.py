@@ -311,6 +311,47 @@ def test_sync_process_creates_new_process_file(tmp_path):
     assert '    "React": ReactConfig,' in init_content
 
 
+def test_sync_process_keeps_the_duration_estimate(tmp_path):
+    session = ProjectSession()
+    session.new(name="demo", location=tmp_path)
+    workflow = ProcessWorkflow("React")
+    workflow.add_block(node_id="script_1", method="script_1", position=(100.0, 100.0))
+    workflow.add_connection("start", "script_1")
+    workflow.add_connection("script_1", "end")
+    assert session.sync_process("React", workflow) is True
+    process_path = tmp_path / "demo" / "protocols" / "React.py"
+    content = process_path.read_text(encoding="utf-8")
+    assert (
+        '    # estimated_duration = "15 min"\n' in content
+    ), "new processes show the optional estimate, commented out"
+
+    # The author sets a fixed estimate and a formula, then edits the workflow.
+    content = content.replace(
+        '    # estimated_duration = "15 min"', '    estimated_duration = "15 min"', 1
+    ).replace(
+        "    def build_workflow(self) -> nx.DiGraph:",
+        "    def estimate_duration(self):\n"
+        "        return self.estimated_duration\n\n"
+        "    def build_workflow(self) -> nx.DiGraph:",
+        1,
+    )
+    process_path.write_text(content, encoding="utf-8")
+    workflow.add_block(node_id="script_2", method="script_2", position=(200.0, 100.0))
+    workflow.remove_connection("script_1", "end")
+    workflow.add_connection("script_1", "script_2")
+    workflow.add_connection("script_2", "end")
+    assert session.sync_process("React", workflow) is True
+
+    updated = process_path.read_text(encoding="utf-8")
+    assert "def script_2(self, ctx: NodeExecutionContext) -> bool:" in updated
+    assert '\n    estimated_duration = "15 min"\n' in updated
+    assert (
+        "    def estimate_duration(self):\n        return self.estimated_duration\n"
+    ) in updated
+    process_cls = load_class(process_path, "CustomProcess")
+    assert process_cls.estimated_duration == "15 min"
+
+
 def test_sync_process_updates_existing_file_in_place(tmp_path):
     session = ProjectSession()
     session.new(name="demo", location=tmp_path)

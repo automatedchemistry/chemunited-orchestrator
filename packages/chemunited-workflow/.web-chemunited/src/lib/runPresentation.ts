@@ -1,4 +1,5 @@
 import type { ProtocolDocument, ProtocolItem } from './protocolPlan'
+import type { ProtocolEstimate } from './protocolEstimate'
 
 export interface OccurrenceMetadata {
   execution_key: string
@@ -17,6 +18,8 @@ export interface AcceptedProtocolPlan {
   source_document?: Record<string, unknown>
   source_schema_version?: number
   total_executions: string
+  /** Advisory duration estimate from the process files. */
+  estimate?: ProtocolEstimate
 }
 
 export interface LocatedProtocolItem { item: ProtocolItem; offset: string }
