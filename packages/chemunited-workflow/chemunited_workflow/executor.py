@@ -129,7 +129,8 @@ class WorkflowExecutor:
         if owns_background:
             self._background = BackgroundTasks()
             self._background_stop.clear()
-        assert self._background is not None
+        if self._background is None:
+            raise RuntimeError("No background task host is available for this run.")
 
         execution_error: Exception | None = None
         try:
