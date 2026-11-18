@@ -17,7 +17,13 @@ from typing import TYPE_CHECKING, Any, Callable, Sequence
 import networkx as nx
 from loguru import logger
 
-from .background import STOP_TIMEOUT_SECONDS, BackgroundTasks
+from .background import (
+    STOP_TIMEOUT_SECONDS,
+    BackgroundCommandError,
+    BackgroundTasks,
+    CommandOrigin,
+    command_origin_scope,
+)
 from .clients import _pop_thread_resilient_errors
 from .command_events import set_current_node
 from .enums import NodeState, WorkflowEventType
@@ -119,15 +125,17 @@ class WorkflowExecutor:
 
         # Standalone run (no host passed in): background nodes live for this
         # process only, and are stopped once its workflow finishes.
-        owns_background = self._background is None and bool(
-            self._compiled.background_nodes
-        )
+        owns_background = self._background is None
         if owns_background:
             self._background = BackgroundTasks()
             self._background_stop.clear()
+        assert self._background is not None
 
         execution_error: Exception | None = None
         try:
+            if hasattr(process.platform, "bind_background_tasks"):
+                process.platform.bind_background_tasks(self._background)
+            self._background.check_command_errors()
             with ThreadPoolExecutor(
                 max_workers=self._max_workers, thread_name_prefix="workflow"
             ) as pool:
@@ -135,6 +143,7 @@ class WorkflowExecutor:
                 self._initialize_iteration(start_node=start_node, iteration=0)
 
                 while self._future_to_key:
+                    self._background.check_command_errors()
                     if self._is_cancelled():
                         self._stop_scheduling = True
                         for pending in self._future_to_key:
@@ -149,11 +158,29 @@ class WorkflowExecutor:
                     for future in done:
                         node_key = self._future_to_key.pop(future)
                         self._handle_completed_future(node_key=node_key, future=future)
+                self._background.check_command_errors()
         except Exception as exc:
             execution_error = exc
             raise
         finally:
+            cleanup_error = None
             if owns_background and self._background is not None:
+                try:
+                    self._background.close_commands(
+                        cancel=bool(
+                            execution_error
+                            or self._state.errors
+                            or self._is_cancelled()
+                        ),
+                        checkpoint=(
+                            process.platform._command_checkpoint
+                            if hasattr(process.platform, "_command_checkpoint")
+                            else None
+                        ),
+                    )
+                except Exception as exc:
+                    if execution_error is None:
+                        execution_error = cleanup_error = exc
                 self._background_stop.set()
                 stuck = self._background.join(STOP_TIMEOUT_SECONDS)
                 if stuck:
@@ -184,6 +211,8 @@ class WorkflowExecutor:
                 event_type=WorkflowEventType.EXECUTION_FINISHED,
                 message=final_message,
             )
+            if cleanup_error is not None:
+                raise cleanup_error
 
         return WorkflowResult(
             node_state=dict(self._state.node_state),
@@ -197,7 +226,11 @@ class WorkflowExecutor:
         return bool(self._cancellation_check and self._cancellation_check())
 
     def _is_stopping(self) -> bool:
-        return self._is_cancelled() or self._background_stop.is_set()
+        return (
+            self._is_cancelled()
+            or self._background_stop.is_set()
+            or bool(self._background and self._background.commands_cancelled)
+        )
 
     def _initialize_iteration(self, start_node: str, iteration: int) -> None:
         if self._process is None or self._pool is None:
@@ -447,7 +480,18 @@ class WorkflowExecutor:
         _pop_thread_resilient_errors()  # clear stale errors from thread pool reuse
         set_current_node(node_id)  # lets device command events name their node
         try:
-            result = method(ctx)
+            with command_origin_scope(
+                CommandOrigin(
+                    process=self._process_key or type(self._process).__name__,
+                    node=node_id,
+                    iteration=iteration,
+                )
+            ):
+                if self._background is not None:
+                    self._background.check_command_errors()
+                result = method(ctx)
+                if self._background is not None:
+                    self._background.check_command_errors()
             if self._is_cancelled():
                 raise RunCancelledError("Run was cancelled.")
             if not isinstance(result, bool):
@@ -465,6 +509,12 @@ class WorkflowExecutor:
                     f"Method '{method_name}' completed with result {result}."
                 )
             return _NodeOutcome(node_key=node_key, result=result)
+        except BackgroundCommandError:
+            # The retained error identifies the command's submitting node.
+            # This node merely observed it; do not attribute that failure here.
+            with self._lock:
+                runtime.status_message = "Stopped because a background command failed."
+            raise
         except Exception as exc:
             with self._lock:
                 runtime.error = exc
@@ -480,6 +530,9 @@ class WorkflowExecutor:
     ) -> None:
         try:
             outcome = future.result()
+        except BackgroundCommandError:
+            self._stop_scheduling = True
+            raise
         except CancelledError:
             exc = RunCancelledError("Run was cancelled.")
             self._state.errors[node_key] = exc

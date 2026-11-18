@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+import threading
 import time
+from concurrent.futures import CancelledError, Future, wait
+from copy import deepcopy
 from pathlib import Path
 from typing import Any
 from urllib.parse import urlsplit
@@ -11,9 +14,14 @@ import requests
 from loguru import logger
 from pydantic import AnyHttpUrl
 
+from ..background import BackgroundTasks, current_command_origin
 from ..device_locks import hold_device
-from ..exceptions import DeviceCommunicationError
-from .base import DeviceClientMixin, _push_thread_resilient_error
+from ..exceptions import DeviceCommunicationError, RunCancelledError
+from .base import (
+    DeviceClientMixin,
+    _pop_thread_resilient_errors,
+    _push_thread_resilient_error,
+)
 from .envelope import CommandResponse
 
 _IS_IDLE_PATH = "is-idle"
@@ -294,6 +302,155 @@ class ComponentClient(DeviceClientMixin, BaseClient):
             wait_for_completion=wait_for_completion,
         )
         self._is_idle_supported: bool | None = None
+        self._background: BackgroundTasks | None = None
+        self._owns_background = False
+        self._dispatch_condition = threading.Condition()
+        self._direct_active = 0
+        self._completion_policy = threading.local()
+
+    def bind_background_tasks(self, background: BackgroundTasks) -> None:
+        with self._dispatch_condition:
+            if self._background is background:
+                return
+            if (
+                self._background is not None
+                and self._background.has_command_queue(self)
+                and not self._background.commands_finished
+            ):
+                raise RuntimeError(
+                    "Cannot rebind a client with an active command queue"
+                )
+            self._background = background
+            self._owns_background = False
+            self._background_error_check = self._check_background
+
+    def _check_background(self) -> None:
+        if self._background is not None:
+            self._background.check_command_errors()
+            if self._background.commands_cancelled:
+                raise RunCancelledError("Background commands were stopped.")
+
+    def _command_host(self) -> BackgroundTasks:
+        # Called under _dispatch_condition, so first submission is atomic with
+        # switching ordinary calls from inline dispatch to the FIFO worker.
+        if self._background is None:
+            self._background = BackgroundTasks()
+            self._owns_background = True
+            self._background_error_check = self._check_background
+        return self._background
+
+    def _run_queued(self, invoke, *, completion=None, critical=False):
+        # An inline call that started before queue activation must finish first.
+        while True:
+            with self._dispatch_condition:
+                if not self._direct_active:
+                    break
+                self._dispatch_condition.wait(timeout=0.1)
+            # Inline requests need the condition to finish while we are paused.
+            self._checkpoint()
+        _pop_thread_resilient_errors()
+        self._completion_policy.value = completion
+        try:
+            value = invoke()
+            errors = _pop_thread_resilient_errors()
+            if critical and errors:
+                raise errors[0]
+            return value if critical else (value, errors)
+        finally:
+            self._completion_policy.value = None
+            _pop_thread_resilient_errors()
+
+    def put_async(
+        self,
+        path: str,
+        *,
+        wait_for_completion: bool = False,
+        raw_response: bool = False,
+        params=None,
+        json=None,
+        **command_params,
+    ) -> Future:
+        """Submit a PUT locally and return its future without awaiting HTTP.
+
+        Completion policy belongs to this request and is never sent to the server.
+        Critical failures are retained by the run's existing background host.
+        """
+        self._checkpoint()
+        params, json_body, command_params = deepcopy((params, json, command_params))
+        origin = current_command_origin()
+        with self._dispatch_condition:
+            host = self._command_host()
+            return host.submit_command(
+                lambda: self._run_queued(
+                    lambda: self._call_inline(
+                        "put",
+                        path,
+                        raw_response=raw_response,
+                        params=params,
+                        json_body=json_body,
+                        command_params=command_params,
+                    ),
+                    completion=wait_for_completion,
+                    critical=True,
+                ),
+                name=self.component_ui,
+                key=self,
+                component=self.component_ui,
+                command=path,
+                origin=origin,
+            )
+
+    def _dispatch_call(self, invoke, *, verb, path):
+        if self._background is not None and self._background.in_command_worker(self):
+            return invoke()
+        with self._dispatch_condition:
+            host = self._background
+            queued = host is not None and host.has_command_queue(self)
+            if queued:
+                future = host.submit_command(
+                    lambda: self._run_queued(invoke),
+                    name=self.component_ui,
+                    key=self,
+                    component=self.component_ui,
+                    command=path,
+                    critical=False,
+                )
+            else:
+                self._direct_active += 1
+        if not queued:
+            try:
+                return invoke()
+            finally:
+                with self._dispatch_condition:
+                    self._direct_active -= 1
+                    self._dispatch_condition.notify_all()
+        while not future.done():
+            self._checkpoint()
+            wait([future], timeout=0.1)
+        self._checkpoint()
+        try:
+            value, errors = future.result()
+        except CancelledError as exc:
+            raise RunCancelledError("Pending command was cancelled.") from exc
+        for error in errors:
+            _push_thread_resilient_error(error)
+        return value
+
+    def _request(self, method, path, **kwargs):
+        if self._background is not None and self._background.in_command_worker(self):
+            kwargs.setdefault("timeout", 30.0)
+        return BaseClient._request(self, method, path, **kwargs)
+
+    def close(self) -> None:
+        try:
+            if (
+                self._owns_background
+                and self._background is not None
+                and not self._background.commands_finished
+            ):
+                self._background.close_commands(checkpoint=self._checkpoint)
+        finally:
+            BaseClient.close(self)
 
     def _raise_for_status(self, response: requests.Response, *args, **kwargs) -> None:
         if not self._error_resilient:
@@ -333,7 +490,10 @@ class ComponentClient(DeviceClientMixin, BaseClient):
     # with wait_for_completion=False skips the wait.
 
     def _execute_post_command(self, verb: str) -> None:
-        if verb in ("put", "post") and not self._dry_run and self._wait_for_completion:
+        completion = getattr(self._completion_policy, "value", None)
+        if completion is None:
+            completion = self._wait_for_completion
+        if verb in ("put", "post") and not self._dry_run and completion:
             self._wait_until_idle()
 
     def _wait_until_idle(self) -> None:
@@ -345,6 +505,8 @@ class ComponentClient(DeviceClientMixin, BaseClient):
             else time.monotonic() + self._feedback_timeout
         )
         while True:
+            if self._background_error_check is not None:
+                self._background_error_check()
             if self._pause_event is not None and self._pause_event.is_set():
                 paused_at = time.monotonic()
                 self._wait_if_paused()

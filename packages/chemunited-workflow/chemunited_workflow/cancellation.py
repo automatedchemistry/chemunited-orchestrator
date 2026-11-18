@@ -4,6 +4,7 @@ from __future__ import annotations
 
 import threading
 import time
+from typing import Callable
 
 from .exceptions import OperatorInputTimeoutError, RunCancelledError
 
@@ -16,36 +17,49 @@ def raise_if_cancelled(cancellation_token: threading.Event | None) -> None:
 def wait_while_paused(
     pause_event: threading.Event | None,
     cancellation_token: threading.Event | None,
+    *,
+    check_error: Callable[[], None] | None = None,
 ) -> None:
     """Block cooperatively while ``pause_event`` is set.
 
     Re-checks ``cancellation_token`` on every poll so a cancel issued while
     paused wakes the caller immediately instead of waiting out the hold.
     """
+    if check_error is not None:
+        check_error()
     if pause_event is None:
         return
     while pause_event.is_set():
+        if check_error is not None:
+            check_error()
         if cancellation_token is not None and cancellation_token.is_set():
             return
-        pause_event.wait(timeout=0.1)
+        # Event.wait() returns immediately while the pause event is set.
+        time.sleep(0.1)
 
 
 def sleep_interruptibly(
     duration: float,
     cancellation_token: threading.Event | None,
     pause_event: threading.Event | None = None,
+    *,
+    check_error: Callable[[], None] | None = None,
 ) -> None:
+    if check_error is not None:
+        check_error()
     if duration <= 0:
         return
-    if cancellation_token is None and pause_event is None:
+    if cancellation_token is None and pause_event is None and check_error is None:
         time.sleep(duration)
         return
 
     deadline = time.monotonic() + duration
     while True:
+        if check_error is not None:
+            check_error()
         if pause_event is not None and pause_event.is_set():
             paused_at = time.monotonic()
-            wait_while_paused(pause_event, cancellation_token)
+            wait_while_paused(pause_event, cancellation_token, check_error=check_error)
             # Time spent paused doesn't count against the wait duration.
             deadline += time.monotonic() - paused_at
         raise_if_cancelled(cancellation_token)

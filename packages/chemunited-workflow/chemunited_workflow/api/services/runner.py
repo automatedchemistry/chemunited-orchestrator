@@ -210,6 +210,8 @@ class RunnerService:
         manifest_file = manifest_path(self._project_dir, run_id)
         manifest: dict[str, Any] | None = None
         background = BackgroundTasks()
+        platform = None
+        commands_finished = False
         cancellation_token = run_record.cancel_event
         plan = sequence if isinstance(sequence, ProtocolPlan) else None
         try:
@@ -300,13 +302,18 @@ class RunnerService:
                         else None
                     ),
                 )
+                platform.bind_background_tasks(background)
                 if self._monitoring_service is not None:
                     self._monitoring_service.on_run_started(
                         run_id, record=record_monitoring
                     )
                 for occurrence in plan.iter_occurrences():
                     # Honor a pause requested between processes, not just mid-node.
-                    wait_while_paused(pause_event, cancellation_token)
+                    wait_while_paused(
+                        pause_event,
+                        cancellation_token,
+                        check_error=platform.check_pending_errors,
+                    )
                     if cancellation_token.is_set():
                         return
                     process_name = occurrence.process_name
@@ -356,11 +363,22 @@ class RunnerService:
                             f"Process '{process_name}' step {process_index} failed "
                             f"with {len(result.errors)} node error(s)."
                         )
+                commands_finished = True
             finally:
                 # Runs on finish, failure and cancel alike — before the final
                 # state is set, so the run reads as active until background
                 # nodes have actually stopped.
-                self._stop_background(background, cancellation_token)
+                try:
+                    background.close_commands(
+                        cancel=not commands_finished or cancellation_token.is_set(),
+                        checkpoint=(
+                            platform._command_checkpoint
+                            if platform is not None
+                            else None
+                        ),
+                    )
+                finally:
+                    self._stop_background(background, cancellation_token)
             self._run_store.set_state(success=True, record=run_record)
         except Exception:
             logger.exception("Protocol execution failed")

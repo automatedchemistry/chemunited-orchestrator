@@ -8,7 +8,8 @@ from collections.abc import Callable, Mapping
 from pathlib import Path
 from typing import Any
 
-from .cancellation import sleep_interruptibly
+from .background import BackgroundTasks
+from .cancellation import raise_if_cancelled, sleep_interruptibly, wait_while_paused
 from .clients import ComponentClient
 from .command_events import CommandObserver
 
@@ -86,6 +87,47 @@ class Platform(Mapping[str, ComponentClient]):
         self._registry: dict[str, ComponentClient] = dict(components or {})
         self._cancellation_token = cancellation_token
         self._pause_event = pause_event
+        self._background = BackgroundTasks()
+        for client in self._registry.values():
+            self._bind_client(client)
+
+    def _bind_client(self, client) -> None:
+        if isinstance(client, ComponentClient):
+            client.bind_background_tasks(self._background)
+        elif hasattr(client, "_background_error_check"):
+            client._background_error_check = self.check_pending_errors
+
+    def bind_background_tasks(self, background: BackgroundTasks) -> None:
+        """Use the execution's existing host, shared across process transitions."""
+        for client in self._registry.values():
+            if isinstance(client, ComponentClient):
+                client.bind_background_tasks(background)
+        self._background = background
+        for client in self._registry.values():
+            self._bind_client(client)
+
+    def check_pending_errors(self) -> None:
+        self._background.check_command_errors()
+
+    def _command_checkpoint(self) -> None:
+        wait_while_paused(
+            self._pause_event,
+            self._cancellation_token,
+            check_error=self.check_pending_errors,
+        )
+        raise_if_cancelled(self._cancellation_token)
+
+    def wait_for_pending(self, component: str | None = None) -> None:
+        self._background.wait_for_commands(
+            key=None if component is None else self[component],
+            checkpoint=self._command_checkpoint,
+        )
+
+    def close_pending_commands(self, cancel: bool = False) -> None:
+        self._background.close_commands(
+            cancel=cancel,
+            checkpoint=self._command_checkpoint,
+        )
 
     def _wait(self, seconds: float) -> None:
         """Block for ``seconds``, interruptible by run cancellation or pause.
@@ -94,7 +136,12 @@ class Platform(Mapping[str, ComponentClient]):
         endpoint to poll) — device commands themselves already wait for the
         device to report idle and don't need this.
         """
-        sleep_interruptibly(seconds, self._cancellation_token, self._pause_event)
+        sleep_interruptibly(
+            seconds,
+            self._cancellation_token,
+            self._pause_event,
+            check_error=self.check_pending_errors,
+        )
 
     def __getitem__(self, name: str) -> ComponentClient:
         try:
@@ -112,6 +159,7 @@ class Platform(Mapping[str, ComponentClient]):
         return len(self._registry)
 
     def register(self, name: str, client: ComponentClient) -> None:
+        self._bind_client(client)
         self._registry[name] = client
 
     @classmethod

@@ -8,7 +8,7 @@ import threading
 from collections.abc import Mapping
 from dataclasses import asdict, is_dataclass
 from pathlib import Path
-from typing import Any
+from typing import Any, Callable
 
 from loguru import logger
 
@@ -100,6 +100,7 @@ class DeviceClientMixin(abc.ABC):
         # False: a PUT/POST returns once the device accepts it, without
         # waiting for the device to finish (the dashboard's device panel).
         self._wait_for_completion = wait_for_completion
+        self._background_error_check: Callable[[], None] | None = None
 
     base_url: str
 
@@ -153,7 +154,11 @@ class DeviceClientMixin(abc.ABC):
         raise_if_cancelled(self._cancellation_token)
 
     def _wait_if_paused(self) -> None:
-        wait_while_paused(self._pause_event, self._cancellation_token)
+        wait_while_paused(
+            self._pause_event,
+            self._cancellation_token,
+            check_error=self._background_error_check,
+        )
 
     def _checkpoint(self) -> None:
         """Hold while paused, then raise if the run was cancelled."""
@@ -161,7 +166,12 @@ class DeviceClientMixin(abc.ABC):
         self._raise_if_cancelled()
 
     def _sleep_interruptibly(self, duration: float) -> None:
-        sleep_interruptibly(duration, self._cancellation_token, self._pause_event)
+        sleep_interruptibly(
+            duration,
+            self._cancellation_token,
+            self._pause_event,
+            check_error=self._background_error_check,
+        )
 
     @staticmethod
     def _merge_query_params(
@@ -199,7 +209,34 @@ class DeviceClientMixin(abc.ABC):
 
     # ── shared verb orchestration ─────────────────────────────────────────────
 
+    def _dispatch_call(self, invoke: Callable[[], Any], *, verb: str, path: str) -> Any:
+        """Default inline dispatch; HTTP clients may serialize through a worker."""
+        return invoke()
+
     def _call(
+        self,
+        verb: str,
+        path: str,
+        *,
+        raw_response: bool,
+        params: Any | None,
+        json_body: Any | None,
+        command_params: dict[str, Any],
+    ) -> Any:
+        return self._dispatch_call(
+            lambda: self._call_inline(
+                verb,
+                path,
+                raw_response=raw_response,
+                params=params,
+                json_body=json_body,
+                command_params=command_params,
+            ),
+            verb=verb,
+            path=path,
+        )
+
+    def _call_inline(
         self,
         verb: str,
         path: str,
