@@ -24,10 +24,10 @@ from pathlib import Path
 if sys.platform != "win32":  # windows plugin renders fonts; no window is shown
     os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 
-from PyQt5.QtCore import QByteArray, QRectF, Qt  # noqa: E402
-from PyQt5.QtGui import QColor, QFont, QImage, QPainter, QPen  # noqa: E402
-from PyQt5.QtSvg import QSvgRenderer  # noqa: E402
-from PyQt5.QtWidgets import QApplication, QGraphicsScene  # noqa: E402
+from PySide6.QtCore import QByteArray, QRectF, Qt  # noqa: E402
+from PySide6.QtGui import QColor, QFont, QImage, QPainter, QPen  # noqa: E402
+from PySide6.QtSvg import QSvgRenderer  # noqa: E402
+from PySide6.QtWidgets import QApplication, QGraphicsScene  # noqa: E402
 
 from chemunited.elements.component.component_factory import (  # noqa: E402
     list_components,
@@ -99,13 +99,13 @@ def _render_component_tile(
     source = source.adjusted(-8, -8, 8, 8)
 
     size = int(CELL * scale)
-    image = QImage(size, size + int(CAPTION_H * scale), QImage.Format_ARGB32)
+    image = QImage(size, size + int(CAPTION_H * scale), QImage.Format.Format_ARGB32)
     image.fill(DARK_BG if dark else LIGHT_BG)
     painter = QPainter(image)
     painter.setRenderHints(
-        QPainter.Antialiasing
-        | QPainter.TextAntialiasing
-        | QPainter.SmoothPixmapTransform
+        QPainter.RenderHint.Antialiasing
+        | QPainter.RenderHint.TextAntialiasing
+        | QPainter.RenderHint.SmoothPixmapTransform
     )
     # keep 1 scene px == `scale` image px, unless the figure is too big
     fit = min(1.0, (CELL - 8) / max(source.width(), source.height()))
@@ -126,7 +126,7 @@ def _render_component_tile(
 
 def _render_svg_tile(name: str, dark: bool, scale: float) -> QImage:
     size = int(CELL * scale)
-    image = QImage(size, size + int(CAPTION_H * scale), QImage.Format_ARGB32)
+    image = QImage(size, size + int(CAPTION_H * scale), QImage.Format.Format_ARGB32)
     image.fill(DARK_BG if dark else LIGHT_BG)
     renderer = QSvgRenderer(QByteArray(get_figure_path(name).read_bytes()))
     vb = renderer.viewBoxF()
@@ -134,7 +134,9 @@ def _render_svg_tile(name: str, dark: bool, scale: float) -> QImage:
     factor = min((size - 2 * pad) / vb.width(), (size - 2 * pad) / vb.height())
     w, h = vb.width() * factor, vb.height() * factor
     painter = QPainter(image)
-    painter.setRenderHints(QPainter.Antialiasing | QPainter.SmoothPixmapTransform)
+    painter.setRenderHints(
+        QPainter.RenderHint.Antialiasing | QPainter.RenderHint.SmoothPixmapTransform
+    )
     target = QRectF((size - w) / 2, (size - h) / 2, w, h)
     painter.setPen(QPen(QColor(128, 128, 128, 80), 1, Qt.DashLine))  # type: ignore[attr-defined]
     painter.drawRect(target)
@@ -167,7 +169,7 @@ def _compose(tiles: list[tuple[QImage, QImage]], out: Path, columns: int) -> Non
     tile_h = tiles[0][0].height()
     cols = min(columns, len(tiles))
     rows = (len(tiles) + cols - 1) // cols
-    sheet = QImage(cols * tile_w * 2, rows * tile_h, QImage.Format_ARGB32)
+    sheet = QImage(cols * tile_w * 2, rows * tile_h, QImage.Format.Format_ARGB32)
     sheet.fill(QColor(200, 200, 200))
     painter = QPainter(sheet)
     for i, (light, dark) in enumerate(tiles):

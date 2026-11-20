@@ -1,6 +1,6 @@
 from typing import ClassVar
 
-from PyQt5.QtCore import QRectF, Qt
+from PySide6.QtCore import QRectF, Qt
 
 from chemunited.elements.component.component_parts.svg_layer import SvgLayer
 from chemunited.elements.component.glossary.vessels.common import FlaskContent

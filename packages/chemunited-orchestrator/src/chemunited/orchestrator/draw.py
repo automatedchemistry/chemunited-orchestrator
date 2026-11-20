@@ -4,8 +4,8 @@ from pathlib import Path
 
 from loguru import logger
 from pydantic import BaseModel
-from PyQt5.QtCore import pyqtSlot
-from PyQt5.QtWidgets import QGraphicsItem
+from PySide6.QtCore import Slot
+from PySide6.QtWidgets import QGraphicsItem
 
 from chemunited.elements.component import create_component, list_components
 from chemunited.elements.component.component_parts.connection_point import (
@@ -228,7 +228,7 @@ class OrchestratorDraw(OrchestratorCore):
         if callable(sync):
             sync()
 
-    @pyqtSlot(ConnectionPoint, ConnectionPoint)
+    @Slot(ConnectionPoint, ConnectionPoint)
     def request_add_connection(self, origin: ConnectionPoint, destiny: ConnectionPoint):
         if origin.parent_ref._data.name == destiny.parent_ref._data.name:
             _log_draw_error(self.parent_ref, "Cannot connect a component to itself.")

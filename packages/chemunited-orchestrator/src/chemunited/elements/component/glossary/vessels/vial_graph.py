@@ -1,7 +1,7 @@
 from typing import ClassVar
 
-from PyQt5.QtCore import QPointF, QRectF, Qt
-from PyQt5.QtGui import QColor, QFont, QPen
+from PySide6.QtCore import QPointF, QRectF, Qt
+from PySide6.QtGui import QColor, QFont, QPainter, QPen
 
 from chemunited.elements.component.component_parts import SceneItem, SvgLayer
 from chemunited.elements.component.graph_item import GraphComponent
@@ -55,7 +55,7 @@ class FramePanel(SceneItem):
         self._data = data
 
     def paint(self, painter, option, widget=None):
-        painter.setRenderHint(painter.Antialiasing, True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
         contour_color = QColor("#000000")
         grid_color = QColor("#BFC7D1")
 

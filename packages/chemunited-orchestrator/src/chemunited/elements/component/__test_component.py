@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import sys
 
-from PyQt5.QtWidgets import QApplication
+from PySide6.QtWidgets import QApplication
 
 from chemunited.elements.component.component_factory import list_components
 from chemunited.elements.component.graph_item import GraphComponent

@@ -1,9 +1,9 @@
 from typing import Generic, TypeVar
 
 import numpy as np
-from PyQt5.QtCore import QPointF, QRectF, Qt
-from PyQt5.QtGui import QPainterPath, QPen
-from PyQt5.QtWidgets import QGraphicsItem, QGraphicsObject, QGraphicsPathItem
+from PySide6.QtCore import QPointF, QRectF, Qt
+from PySide6.QtGui import QPainterPath, QPen
+from PySide6.QtWidgets import QGraphicsItem, QGraphicsObject, QGraphicsPathItem
 
 from chemunited.elements.component.graph_item import GraphComponent
 from chemunited_core.components.live_state import rotor_links

@@ -12,7 +12,7 @@ import json
 from pathlib import Path
 
 from loguru import logger
-from PyQt5.QtCore import QObject, QTimer
+from PySide6.QtCore import QObject, QTimer
 
 from chemunited.elements.access import Components
 from chemunited.elements.pool_commands import apply_pool_command

@@ -1,6 +1,6 @@
-from PyQt5.QtCore import QRectF, Qt
-from PyQt5.QtGui import QColor, QPainter, QPen
-from PyQt5.QtWidgets import QGraphicsView
+from PySide6.QtCore import QRect, QRectF, Qt
+from PySide6.QtGui import QColor, QPainter, QPen
+from PySide6.QtWidgets import QGraphicsView
 from qfluentwidgets import Action, FluentIcon, RoundMenu
 
 from chemunited.shared.enums import SetupStepMode
@@ -24,11 +24,11 @@ class GraphCore(QGraphicsView):
         self.setScene(self.scene_attribute)
 
         # Zoom anchored to the position of the mouse cursor.
-        self.setTransformationAnchor(QGraphicsView.AnchorUnderMouse)
-        self.setResizeAnchor(QGraphicsView.AnchorUnderMouse)
-        self.setViewportUpdateMode(QGraphicsView.FullViewportUpdate)
-        self.setRenderHint(QPainter.Antialiasing)
-        self.setRenderHint(QPainter.SmoothPixmapTransform)
+        self.setTransformationAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
+        self.setResizeAnchor(QGraphicsView.ViewportAnchor.AnchorUnderMouse)
+        self.setViewportUpdateMode(QGraphicsView.ViewportUpdateMode.FullViewportUpdate)
+        self.setRenderHint(QPainter.RenderHint.Antialiasing)
+        self.setRenderHint(QPainter.RenderHint.SmoothPixmapTransform)
 
         self._grid_enabled = False
         self._grid_step = 28
@@ -171,9 +171,10 @@ class GraphCore(QGraphicsView):
             y += step
 
     # === Rendering ===
-    def drawBackground(self, painter: QPainter | None, rect: QRectF) -> None:
+    def drawBackground(self, painter: QPainter | None, rect: QRectF | QRect) -> None:
         if painter is None:
             return
+        rect = QRectF(rect)
 
         if self._grid_enabled:
             self.draw_grid_background(painter, rect)

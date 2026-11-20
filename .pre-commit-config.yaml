@@ -87,37 +87,42 @@ repos:
       # two packages happening to have an identically-named test file (e.g.
       # test_custom_components.py in both core and orchestrator) collide as
       # the same imported module. Separate invocations sidestep both.
+      #
+      # `-p no:pytest-qt` keeps the pytest-qt plugin from loading in these
+      # Qt-free suites: its pytest_configure imports QtGui unconditionally,
+      # which needs system GL libs (libEGL.so.1) that headless CI runners
+      # don't have. Only the orchestrator qt/ hook below needs the plugin.
       - id: pytest-quantities
         name: pytest (chemunited-quantities)
-        entry: uv run --package chemunited-quantities pytest packages/chemunited-quantities/tests
+        entry: uv run --package chemunited-quantities pytest packages/chemunited-quantities/tests -p no:pytest-qt
         language: system
         pass_filenames: false
         stages: [manual]
 
       - id: pytest-core
         name: pytest (chemunited-core)
-        entry: uv run --package chemunited-core pytest packages/chemunited-core/tests
+        entry: uv run --package chemunited-core pytest packages/chemunited-core/tests -p no:pytest-qt
         language: system
         pass_filenames: false
         stages: [manual]
 
       - id: pytest-workflow
         name: pytest (chemunited-workflow)
-        entry: uv run --package chemunited-workflow pytest packages/chemunited-workflow/tests
+        entry: uv run --package chemunited-workflow pytest packages/chemunited-workflow/tests -p no:pytest-qt
         language: system
         pass_filenames: false
         stages: [manual]
 
       - id: pytest-sim
         name: pytest (chemunited-sim)
-        entry: uv run --package chemunited-sim pytest packages/chemunited-sim/tests
+        entry: uv run --package chemunited-sim pytest packages/chemunited-sim/tests -p no:pytest-qt
         language: system
         pass_filenames: false
         stages: [manual]
 
       - id: pytest-orchestrator
         name: pytest (chemunited-orchestrator)
-        entry: uv run --package chemunited pytest packages/chemunited-orchestrator/tests --ignore=packages/chemunited-orchestrator/tests/qt
+        entry: uv run --package chemunited pytest packages/chemunited-orchestrator/tests --ignore=packages/chemunited-orchestrator/tests/qt -p no:pytest-qt
         language: system
         pass_filenames: false
         stages: [manual]

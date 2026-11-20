@@ -7,7 +7,7 @@ from typing import cast
 
 import pytest
 from loguru import logger
-from PyQt5.QtWidgets import QLineEdit
+from PySide6.QtWidgets import QLineEdit
 from pytestqt.qtbot import QtBot
 
 from chemunited.pre_run import dashboard_launcher

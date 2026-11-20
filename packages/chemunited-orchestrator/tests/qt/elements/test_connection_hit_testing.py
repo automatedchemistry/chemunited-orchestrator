@@ -4,8 +4,8 @@ from math import hypot
 from types import SimpleNamespace
 
 import pytest
-from PyQt5.QtCore import QPointF, QRectF, Qt
-from PyQt5.QtGui import QContextMenuEvent
+from PySide6.QtCore import QPointF, QRectF, Qt
+from PySide6.QtGui import QContextMenuEvent
 from qfluentwidgets import RoundMenu
 
 from chemunited.draw.graph import DrawGraphicView

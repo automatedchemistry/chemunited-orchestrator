@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 
-from PyQt5.QtWidgets import QWidget
+from PySide6.QtWidgets import QWidget
 from qfluentwidgets import DoubleSpinBox
 
 from .base_card import BaseFieldCard

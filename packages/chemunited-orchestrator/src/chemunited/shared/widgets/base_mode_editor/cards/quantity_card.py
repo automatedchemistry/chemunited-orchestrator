@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import math
 
-from PyQt5.QtWidgets import QHBoxLayout, QWidget
+from PySide6.QtWidgets import QHBoxLayout, QWidget
 from qfluentwidgets import ComboBox, DoubleSpinBox
 
 from chemunited_quantities import (

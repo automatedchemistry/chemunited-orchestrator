@@ -12,10 +12,10 @@ from pathlib import Path
 from typing import TYPE_CHECKING
 
 import requests
+import shiboken6
 from loguru import logger
-from PyQt5 import sip
-from PyQt5.QtCore import Qt, QThread, QTimer, pyqtSignal
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import Qt, QThread, QTimer, Signal
+from PySide6.QtWidgets import (
     QDialog,
     QFileDialog,
     QHBoxLayout,
@@ -290,12 +290,12 @@ def _compound_series_style(label: str) -> tuple[str | None, float]:
 class SimRunWorker(QThread):
     """Background thread that drives the full simulation pipeline."""
 
-    status_changed = pyqtSignal(str)
-    time_updated = pyqtSignal(float)
-    simulation_done = pyqtSignal(str)
-    simulation_failed = pyqtSignal(str)
+    status_changed = Signal(str)
+    time_updated = Signal(float)
+    simulation_done = Signal(str)
+    simulation_failed = Signal(str)
     # The run ended early, but what it recorded is still there to look at.
-    run_failed = pyqtSignal(str)
+    run_failed = Signal(str)
 
     def __init__(self, process: str, project_path: Path, parent=None) -> None:
         super().__init__(parent)
@@ -589,7 +589,7 @@ _PLOT_META = {
 class ProfilesWidget(QWidget):
     """Panel that shows per-component simulation profiles below the graph."""
 
-    scrub_requested = pyqtSignal(float)
+    scrub_requested = Signal(float)
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)
@@ -877,7 +877,7 @@ class ProfilesWidget(QWidget):
 
 class SimulateWindowReport(QMainWindow):
 
-    export_finished = pyqtSignal()
+    export_finished = Signal()
 
     def __init__(self, graph: SimGraphicView, parent: "SetupWindow") -> None:
         super().__init__(parent)
@@ -1069,7 +1069,7 @@ class SimulateWindowReport(QMainWindow):
         if playback is None or not self._can_export():
             return
         dialog = PlaybackExportDialog(playback.times, self)
-        if dialog.exec_() != QDialog.Accepted:
+        if dialog.exec_() != QDialog.DialogCode.Accepted:
             return
         suffix = dialog.selected_format
         filename, _ = QFileDialog.getSaveFileName(
@@ -1077,7 +1077,7 @@ class SimulateWindowReport(QMainWindow):
             "Export animation",
             str(playback.db_path.with_suffix(f".{suffix}")),
             f"{suffix.upper()} animation (*.{suffix})",
-            options=QFileDialog.DontConfirmOverwrite,
+            options=QFileDialog.Option.DontConfirmOverwrite,
         )
         if not filename:
             return
@@ -1088,10 +1088,10 @@ class SimulateWindowReport(QMainWindow):
                 self,
                 "Replace animation?",
                 f"Replace {destination}?",
-                QMessageBox.Yes | QMessageBox.No,
-                QMessageBox.No,
+                QMessageBox.StandardButton.Yes | QMessageBox.StandardButton.No,
+                QMessageBox.StandardButton.No,
             )
-            != QMessageBox.Yes
+            != QMessageBox.StandardButton.Yes
         ):
             return
         self._start_playback_export(dialog.options(destination))
@@ -1186,7 +1186,7 @@ class SimulateWindowReport(QMainWindow):
         from chemunited_core.components.plugflow import PlugFlowComponentData
 
         scene = self.central._graph.scene_attribute  # type: ignore
-        if sip.isdeleted(scene):
+        if not shiboken6.isValid(scene):
             return
         for item in scene.selectedItems():
             if isinstance(item, GraphComponent):

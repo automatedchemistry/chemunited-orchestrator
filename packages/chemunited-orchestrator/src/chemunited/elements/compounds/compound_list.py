@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from PyQt5.QtCore import QSize, Qt, pyqtSignal
-from PyQt5.QtGui import QColor
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import QSize, Qt, Signal
+from PySide6.QtGui import QColor
+from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -34,7 +34,7 @@ _SWATCH_SIZE = 14
 class CompoundList(QWidget):
     """Runtime editor for the project-wide in-memory compound registry."""
 
-    compounds_changed = pyqtSignal()
+    compounds_changed = Signal()
 
     def __init__(self, parent: QWidget | None = None) -> None:
         super().__init__(parent)

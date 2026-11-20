@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from PyQt5.QtCore import pyqtSignal
-from PyQt5.QtGui import QColor, QPainter
-from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
+from PySide6.QtCore import Signal
+from PySide6.QtGui import QColor, QPainter
+from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
 from qfluentwidgets import (
     CaptionLabel,
     CardWidget,
@@ -14,7 +14,7 @@ from qfluentwidgets import (
 class BaseFieldCard(CardWidget):
     """Abstract base for all typed field cards rendered inside BaseModeEditorWidget."""
 
-    value_changed = pyqtSignal(object)
+    value_changed = Signal(object)
 
     def __init__(self, field_name: str, field_info, parent: QWidget | None = None):
         super().__init__(parent)

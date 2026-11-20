@@ -2,12 +2,13 @@
 
 from __future__ import annotations
 
+import json
 from pathlib import Path
 
 import pytest
-from PyQt5.QtCore import QMimeData, QPoint, Qt
-from PyQt5.QtGui import QDragEnterEvent, QDropEvent
-from PyQt5.QtWidgets import QApplication
+from PySide6.QtCore import QMimeData, QPoint, Qt
+from PySide6.QtGui import QDragEnterEvent, QDropEvent
+from PySide6.QtWidgets import QApplication
 
 from chemunited.protocols.workflows.monaco_editor import (
     MonacoProcessScriptEditorWindow,
@@ -36,7 +37,17 @@ COMMAND = 'self.platform["P1"].stop()'
 
 def _run_js(page, expr: str, qtbot, timeout_ms: int = 10000):
     result: dict = {}
-    page.runJavaScript(expr, lambda value: result.update(value=value))
+
+    def _cb(raw):
+        if isinstance(raw, str) and raw:
+            try:
+                result["value"] = json.loads(raw)
+                return
+            except ValueError:
+                pass
+        result["value"] = raw
+
+    page.runJavaScript(f"JSON.stringify(eval({json.dumps(expr)}))", 0, _cb)
     qtbot.waitUntil(lambda: "value" in result, timeout=timeout_ms)
     return result["value"]
 

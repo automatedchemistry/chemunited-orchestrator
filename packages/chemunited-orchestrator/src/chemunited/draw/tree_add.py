@@ -1,9 +1,9 @@
 from __future__ import annotations
 
-from PyQt5.QtCore import QByteArray, QFile, QMimeData, QRectF, QSize, Qt
-from PyQt5.QtGui import QColor, QDrag, QFont, QIcon, QPainter, QPixmap
-from PyQt5.QtSvg import QSvgRenderer
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import QByteArray, QFile, QMimeData, QRectF, QSize, Qt
+from PySide6.QtGui import QColor, QDrag, QFont, QIcon, QPainter, QPixmap
+from PySide6.QtSvg import QSvgRenderer
+from PySide6.QtWidgets import (
     QAbstractItemView,
     QFrame,
     QHBoxLayout,
@@ -68,7 +68,7 @@ def _lcd_icon(size: int = 64) -> QIcon:
     pixmap = QPixmap(size, size)
     pixmap.fill(Qt.transparent)  # type: ignore[attr-defined]
     painter = QPainter(pixmap)
-    painter.setRenderHint(QPainter.Antialiasing, True)
+    painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
     painter.setPen(Qt.NoPen)  # type: ignore[attr-defined]
     painter.setBrush(QColor("#000000"))
     body = QRectF(2, size * 0.25, size - 4, size * 0.5)
@@ -97,7 +97,7 @@ class AppCard(QFrame):
         self.setObjectName("appCard")
         self.setAttribute(Qt.WA_StyledBackground, True)  # type: ignore[attr-defined]
         self.setAttribute(Qt.WA_TransparentForMouseEvents, True)  # type: ignore[attr-defined]
-        self.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Fixed)
+        self.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
         self.setMinimumHeight(72)
 
         root = QHBoxLayout(self)
@@ -178,9 +178,9 @@ class TreeAddItem(TreeWidget):
         self.setIconSize(self._icon_size)
         self.setIndentation(12)
         self.setUniformRowHeights(False)
-        self.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self.setDragEnabled(True)
-        self.setDragDropMode(QAbstractItemView.DragOnly)
+        self.setDragDropMode(QAbstractItemView.DragDropMode.DragOnly)
         self.setDefaultDropAction(Qt.CopyAction)  # type: ignore[attr-defined]
         self.setExpandsOnDoubleClick(True)
 
@@ -323,7 +323,7 @@ class TreeAddItem(TreeWidget):
 if __name__ == "__main__":
     import sys
 
-    from PyQt5.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
     tree = TreeAddItem()

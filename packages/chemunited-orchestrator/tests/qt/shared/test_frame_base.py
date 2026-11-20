@@ -1,4 +1,4 @@
-from PyQt5.QtWidgets import QLabel
+from PySide6.QtWidgets import QLabel
 from pytestqt.qtbot import QtBot
 from qfluentwidgets import FluentIcon
 

@@ -1,5 +1,5 @@
-from PyQt5.QtGui import QColor, QPalette
-from PyQt5.QtWidgets import QApplication
+from PySide6.QtGui import QColor, QPalette
+from PySide6.QtWidgets import QApplication
 from pytestqt.qtbot import QtBot
 from qfluentwidgets import Theme, setTheme
 

@@ -4,8 +4,8 @@ import subprocess
 import sys
 from typing import TYPE_CHECKING
 
-from PyQt5.QtCore import QThread, pyqtSignal
-from PyQt5.QtWidgets import QPlainTextEdit, QVBoxLayout
+from PySide6.QtCore import QThread, Signal
+from PySide6.QtWidgets import QPlainTextEdit, QVBoxLayout
 from qfluentwidgets import FluentIcon, PushButton, StrongBodyLabel
 from qframelesswindow import FramelessDialog
 
@@ -16,8 +16,8 @@ if TYPE_CHECKING:
 
 
 class PipUpgradeThread(QThread):
-    output_line: pyqtSignal = pyqtSignal(str)
-    finished_with_code: pyqtSignal = pyqtSignal(int)
+    output_line: Signal = Signal(str)
+    finished_with_code: Signal = Signal(int)
 
     def __init__(self, packages: list[str], parent=None) -> None:
         super().__init__(parent)

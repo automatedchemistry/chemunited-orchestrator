@@ -1,7 +1,7 @@
 from __future__ import annotations
 
-from PyQt5.QtCore import QStringListModel, Qt
-from PyQt5.QtWidgets import QCompleter, QHBoxLayout
+from PySide6.QtCore import QStringListModel, Qt
+from PySide6.QtWidgets import QCompleter, QHBoxLayout
 from qfluentwidgets import FluentIcon, InfoBar, InfoBarPosition, PushButton
 
 from chemunited.shared.widgets.base_mode_editor import BaseModeDialog

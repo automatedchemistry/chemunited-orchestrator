@@ -1,8 +1,16 @@
 from typing import ClassVar
 
-from PyQt5.QtCore import QPointF, QRectF, Qt, QTimer
-from PyQt5.QtGui import QBrush, QColor, QFont, QFontMetricsF, QPainterPath, QPen
-from PyQt5.QtWidgets import QGraphicsObject
+from PySide6.QtCore import QPointF, QRectF, Qt, QTimer
+from PySide6.QtGui import (
+    QBrush,
+    QColor,
+    QFont,
+    QFontMetricsF,
+    QPainter,
+    QPainterPath,
+    QPen,
+)
+from PySide6.QtWidgets import QGraphicsObject
 from qfluentwidgets import isDarkTheme
 
 from chemunited_core.common.constant import PATTERN_DIMENSION
@@ -301,7 +309,7 @@ class WarningDisplay(SceneItem):
     # ── painting ──────────────────────────────────────────────────
 
     def paint(self, painter, option, widget=None):
-        painter.setRenderHint(painter.Antialiasing, True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
 
         w, h = self.width, self.height
         r = min(w * self.CORNER_RATIO, w / 2, h / 2)
@@ -373,7 +381,7 @@ class StatusOverlay(SceneItem):
     # ── painting ──────────────────────────────────────────────────
 
     def paint(self, painter, option, widget=None) -> None:
-        painter.setRenderHint(painter.Antialiasing, True)
+        painter.setRenderHint(QPainter.RenderHint.Antialiasing, True)
         painter.setPen(QT_NO_PEN)
         painter.setBrush(QBrush(self._color))
         w, h = self.width, self.height

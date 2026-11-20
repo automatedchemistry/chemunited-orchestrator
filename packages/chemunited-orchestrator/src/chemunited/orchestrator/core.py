@@ -1,6 +1,6 @@
 from typing import TYPE_CHECKING, Any
 
-from PyQt5.QtCore import QObject, Qt
+from PySide6.QtCore import QObject, Qt
 from qfluentwidgets import InfoBar, InfoBarPosition
 
 from chemunited.elements.access import Components, Connections

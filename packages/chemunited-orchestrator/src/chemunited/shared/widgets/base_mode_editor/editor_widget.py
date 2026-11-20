@@ -3,9 +3,9 @@ from __future__ import annotations
 from collections.abc import Mapping
 
 from pydantic import BaseModel, ValidationError
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtGui import QColor, QPainter
-from PyQt5.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QColor, QPainter
+from PySide6.QtWidgets import QHBoxLayout, QVBoxLayout, QWidget
 from qfluentwidgets import (
     CaptionLabel,
     PrimaryPushButton,
@@ -59,8 +59,8 @@ class BaseModeEditorWidget(QWidget):
         widget.cancelled.connect(on_cancel)
     """
 
-    saved = pyqtSignal(object)  # emits the updated BaseModel instance
-    cancelled = pyqtSignal()
+    saved = Signal(object)  # emits the updated BaseModel instance
+    cancelled = Signal()
 
     def __init__(
         self,

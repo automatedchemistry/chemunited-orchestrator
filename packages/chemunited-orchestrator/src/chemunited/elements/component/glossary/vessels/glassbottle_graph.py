@@ -1,6 +1,6 @@
 from typing import ClassVar
 
-from PyQt5.QtCore import QRectF, Qt
+from PySide6.QtCore import QRectF, Qt
 
 from chemunited.elements.component.component_parts import SvgLayer
 from chemunited.elements.component.graph_item import GraphComponent

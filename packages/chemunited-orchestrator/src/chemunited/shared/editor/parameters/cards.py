@@ -8,9 +8,9 @@ from typing import Any, get_origin
 from pydantic import ValidationError
 from pydantic.config import JsonDict
 from pydantic.fields import FieldInfo
-from PyQt5.QtCore import Qt, pyqtSignal
-from PyQt5.QtGui import QMouseEvent
-from PyQt5.QtWidgets import (
+from PySide6.QtCore import Qt, Signal
+from PySide6.QtGui import QMouseEvent
+from PySide6.QtWidgets import (
     QFrame,
     QHBoxLayout,
     QLabel,
@@ -255,9 +255,9 @@ class TypeBadge(QLabel):
 
 
 class _ClickableHeader(QWidget):
-    clicked = pyqtSignal()
+    clicked = Signal()
 
-    def mousePressEvent(self, event: QMouseEvent | None) -> None:
+    def mousePressEvent(self, event: QMouseEvent) -> None:
         self.clicked.emit()
         super().mousePressEvent(event)
 
@@ -270,9 +270,9 @@ class _ClickableHeader(QWidget):
 class VariableCard(QWidget):
     """Expandable card for one field definition."""
 
-    changed = pyqtSignal()
-    deleted = pyqtSignal(object)
-    duplicate = pyqtSignal(object)
+    changed = Signal()
+    deleted = Signal(object)
+    duplicate = Signal(object)
 
     def __init__(
         self, mode: BasicVariableBuildMode, parent: QWidget | None = None
@@ -738,7 +738,7 @@ class VariableCard(QWidget):
 if __name__ == "__main__":
     import sys
 
-    from PyQt5.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication
 
     from chemunited.shared.widgets.base_mode_editor.cards.builder_models import (
         PhysicalQuantitiesMode,

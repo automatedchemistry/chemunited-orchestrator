@@ -1,4 +1,4 @@
-from PyQt5.QtGui import QColor
+from PySide6.QtGui import QColor
 from pytestqt.qtbot import QtBot
 
 from chemunited.shared.graph import GraphCore, SceneCore

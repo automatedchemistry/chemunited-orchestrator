@@ -1,6 +1,6 @@
 from typing import ClassVar
 
-from PyQt5.QtWidgets import QGraphicsItem
+from PySide6.QtWidgets import QGraphicsItem
 
 from chemunited.elements.component.component_parts import StatusOverlay
 from chemunited.elements.component.graph_item import GraphComponent

@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 from pydantic import ValidationError
-from PyQt5.QtWidgets import QFormLayout, QHBoxLayout, QVBoxLayout
+from PySide6.QtWidgets import QFormLayout, QHBoxLayout, QVBoxLayout
 from qfluentwidgets import (
     BodyLabel,
     ComboBox,

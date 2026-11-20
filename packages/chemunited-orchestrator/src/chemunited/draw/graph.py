@@ -1,8 +1,8 @@
 from functools import partial
 from typing import TYPE_CHECKING, cast, override
 
-from PyQt5.QtCore import Qt, QTimer, pyqtSignal
-from PyQt5.QtWidgets import QGraphicsItem
+from PySide6.QtCore import Qt, QTimer, Signal
+from PySide6.QtWidgets import QGraphicsItem
 from qfluentwidgets import Action, FluentIcon, RoundMenu
 
 from chemunited.elements.component.component_parts.connection_point import (
@@ -38,7 +38,7 @@ BRING_COMPONENT_TO_FRONT_ACTION_KEY = "bring_component_to_front"
 class DrawGraphicView(GraphCore):
     MODE = SetupStepMode.DESIGN
 
-    connection_requested = pyqtSignal(ConnectionPoint, ConnectionPoint)
+    connection_requested = Signal(ConnectionPoint, ConnectionPoint)
 
     def __init__(self, scene: SceneCore | None = None, parent=None):
         super().__init__(scene, parent)
@@ -462,7 +462,6 @@ class DrawGraphicView(GraphCore):
 
         event.acceptProposedAction()
 
-    @override
     def reset_view(self):
         self.recenter_view()
         self.apply_layer_order()

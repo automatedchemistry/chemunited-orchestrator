@@ -1,9 +1,10 @@
 """Monaco-based ScriptEditor with drop support."""
 
+import json
 from pathlib import Path
 from typing import Any
 
-from PyQt5.QtCore import QMimeData, QPoint, pyqtSignal
+from PySide6.QtCore import QMimeData, QPoint, Signal
 
 from chemunited.shared.editor.monaco_base import MonacoEditorBase
 from chemunited.shared.editor.parameters.drag_list import ParameterDragableList
@@ -18,7 +19,7 @@ from chemunited.shared.editor.protocols.script import (
 class MonacoScriptEditor(MonacoEditorBase):
     """Monaco-based ScriptEditor with drop support for commands and parameters."""
 
-    drop_accepted = pyqtSignal()
+    drop_accepted = Signal()
 
     DROP_MIME_TYPES = (CommandList.MIME, ParameterDragableList.MIME)
 
@@ -31,7 +32,9 @@ class MonacoScriptEditor(MonacoEditorBase):
             ParameterDragableList.PATH_MIME
         ):
             source_path = Path(
-                bytes(mime_data.data(ParameterDragableList.PATH_MIME)).decode("utf-8")
+                bytes(mime_data.data(ParameterDragableList.PATH_MIME).data()).decode(
+                    "utf-8"
+                )
             ).resolve()
             if (
                 source_path != self.path.resolve()
@@ -49,13 +52,21 @@ class MonacoScriptEditor(MonacoEditorBase):
         page = self.web_view.page()
         if page is None:
             return
+        # NOTE: PySide6's runJavaScript callback does not convert JS objects -
+        # stringify on the JS side and parse back here.
         page.runJavaScript(
-            f"monacoEditor.lineAtPoint({pos.x()}, {pos.y()})",
+            f"JSON.stringify(monacoEditor.lineAtPoint({pos.x()}, {pos.y()}))",
+            0,
             lambda target: self._insert_drop(snippet, is_command, target),
         )
 
     def _insert_drop(self, snippet: str, is_command: bool, target: Any) -> None:
         line = -1
+        if isinstance(target, str):
+            try:
+                target = json.loads(target)
+            except ValueError:
+                target = None
         if isinstance(target, dict):
             if not target.get("editable", True):
                 return  # dropped on a locked line
@@ -80,7 +91,7 @@ class MonacoScriptEditor(MonacoEditorBase):
 if __name__ == "__main__":
     import sys
 
-    from PyQt5.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication
     from qfluentwidgets import Theme, setTheme
 
     app = QApplication(sys.argv)

@@ -6,9 +6,9 @@ from pathlib import Path
 from typing import Any
 
 from loguru import logger
-from PyQt5.QtCore import QMimeData, Qt
-from PyQt5.QtGui import QDrag, QIcon
-from PyQt5.QtWidgets import QAbstractItemView, QListWidgetItem, QVBoxLayout, QWidget
+from PySide6.QtCore import QMimeData, Qt
+from PySide6.QtGui import QDrag, QIcon
+from PySide6.QtWidgets import QAbstractItemView, QListWidgetItem, QVBoxLayout, QWidget
 from qfluentwidgets import FluentIcon, ListWidget, isDarkTheme
 
 from chemunited.shared.editor.parameters.main import field_info_to_build_mode
@@ -53,9 +53,9 @@ class _DragListWidget(ListWidget):
     def __init__(self, path: Path, parent: QWidget | None = None) -> None:
         super().__init__(parent)
         self.setDragEnabled(True)
-        self.setDragDropMode(QAbstractItemView.DragOnly)
+        self.setDragDropMode(QAbstractItemView.DragDropMode.DragOnly)
         self.setDefaultDropAction(Qt.CopyAction)  # type: ignore[attr-defined]
-        self.setSelectionMode(QAbstractItemView.SingleSelection)
+        self.setSelectionMode(QAbstractItemView.SelectionMode.SingleSelection)
         self._path = path
 
     def startDrag(self, _supported_actions) -> None:  # type: ignore[override]
@@ -153,7 +153,7 @@ class ParameterDragableList(QWidget):
 if __name__ == "__main__":
     import sys
 
-    from PyQt5.QtWidgets import QApplication
+    from PySide6.QtWidgets import QApplication
 
     app = QApplication(sys.argv)
     window = ParameterDragableList(

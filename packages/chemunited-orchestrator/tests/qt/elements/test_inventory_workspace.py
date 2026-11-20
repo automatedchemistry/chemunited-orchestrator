@@ -3,8 +3,8 @@ from __future__ import annotations
 from types import SimpleNamespace
 
 import pytest
-from PyQt5.QtCore import QItemSelectionModel
-from PyQt5.QtWidgets import QWidget
+from PySide6.QtCore import QItemSelectionModel
+from PySide6.QtWidgets import QWidget
 from pytestqt.qtbot import QtBot
 from qfluentwidgets import ToolButton
 
