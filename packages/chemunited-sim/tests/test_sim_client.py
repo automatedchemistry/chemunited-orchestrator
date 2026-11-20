@@ -7,6 +7,8 @@ Covers:
   what a workflow protocol block sends) actually mutates rotor_ports -
   regression test for the bug where apply() silently no-op'd on
   tuple("[[0, 2]]") instead of a real pair.
+- SimClient.put_async(): runs put() and returns a finished future, so a
+  SimPlatform's wait_for_pending() returns at once (AGA's chiller pattern).
 """
 
 from __future__ import annotations
@@ -16,11 +18,13 @@ import queue
 import threading
 import time
 
+import pytest
+
 from chemunited_core.components import PutResult, ScheduledCommand
 from chemunited_core.figure_registry import COMPONENTS
 from chemunited_core.figure_registry.rotary_valve import RotaryValveData
 from chemunited_sim.cli.clock import SimClock
-from chemunited_sim.cli.sim_client import SimClient, iter_apply_kwargs
+from chemunited_sim.cli.sim_client import SimClient, SimPlatform, iter_apply_kwargs
 from chemunited_workflow import RunCancelledError
 
 
@@ -273,3 +277,64 @@ class TestSimClientCommandCompletion:
 
         assert not thread.is_alive()
         assert calls == ["start", "early", "late"]
+
+
+class TestSimClientPutAsync:
+    """In simulation put_async() is put(): nothing is ever left pending."""
+
+    def _peltier(self, tmp_path):
+        peltier = _component("PeltierCoolerTemperatureControl", "Peltier")
+        clock = SimClock()
+        cmd_queue: queue.Queue = queue.Queue()
+        client = SimClient(
+            name=peltier.name,
+            component=peltier,
+            clock=clock,
+            cmd_queue=cmd_queue,
+            project_path=tmp_path,
+        )
+        return peltier, client, clock, cmd_queue
+
+    def test_put_async_applies_like_put_and_returns_finished_future(self, tmp_path):
+        peltier, client, _, cmd_queue = self._peltier(tmp_path)
+
+        future = client.put_async(
+            "temperature", wait_for_completion=False, temperature="5.0 degC"
+        )
+
+        assert future.done()
+        assert future.result() is None
+        assert peltier.get("temperature") == pytest.approx(5.0)
+        command = cmd_queue.get_nowait()
+        assert command.command == "temperature"
+        assert command.kwargs == {"temperature": "5.0 degC"}
+        assert command.pre_applied
+        assert cmd_queue.empty()
+        log_path = tmp_path / "log" / "pool" / "Peltier.jsonl"
+        entry = json.loads(log_path.read_text(encoding="utf-8"))
+        assert entry["method"] == "PUT"
+        assert entry["params"] == {"temperature": "5.0 degC"}
+
+    def test_wait_for_pending_returns_at_once_after_put_async(self, tmp_path):
+        """AGA's set_temperature(): put_async(), then wait_for_pending()."""
+        peltier, client, clock, _ = self._peltier(tmp_path)
+        platform = SimPlatform({"Peltier": client}, clock, threading.Event())
+        errors = []
+
+        def set_temperature() -> None:
+            try:
+                platform["Peltier"].put_async(
+                    "temperature", wait_for_completion=True, temperature="20 degC"
+                )
+                platform.wait_for_pending("Peltier")
+            except BaseException as exc:  # pragma: no cover - asserted below
+                errors.append(exc)
+
+        # A daemon thread, so a regression that blocks fails instead of hanging.
+        thread = threading.Thread(target=set_temperature, daemon=True)
+        thread.start()
+        thread.join(timeout=1.0)
+
+        assert not thread.is_alive()
+        assert errors == []
+        assert peltier.get("temperature") == pytest.approx(20.0)

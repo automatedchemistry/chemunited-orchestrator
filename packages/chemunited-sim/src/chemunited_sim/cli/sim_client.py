@@ -7,6 +7,7 @@ import json
 import queue
 import threading
 import time
+from concurrent.futures import Future
 from dataclasses import dataclass, field
 from itertools import count
 from pathlib import Path
@@ -81,6 +82,7 @@ class SimClient:
     and waits on SimClock for scheduled follow-ups (e.g. auto-stop after a
     volume dispense). This mirrors a real synchronous device client: the call
     returns only after the simulated component has finished its finite work.
+    put_async() runs put() and returns an already-finished future.
     get() delegates directly to ComponentData.get().
     """
 
@@ -162,6 +164,20 @@ class SimClient:
 
         minimum_deadline = started_at + max(0.0, float(wait_time))
         _wait_until_sim_time(self._clock, minimum_deadline, self._stop_event)
+
+    def put_async(
+        self, command: str, *, wait_for_completion: bool = False, **kwargs: Any
+    ) -> Future[None]:
+        """Run the command as put() does and return an already-finished future.
+
+        Simulated commands finish on SimClock before put() returns, so nothing
+        is left pending and Platform.wait_for_pending() returns at once.
+        """
+        del wait_for_completion  # only matters to a real device
+        self.put(command, **kwargs)
+        future: Future[None] = Future()
+        future.set_result(None)
+        return future
 
     def get(
         self,
