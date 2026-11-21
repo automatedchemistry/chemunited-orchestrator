@@ -533,7 +533,7 @@ provides-extras = ["dev"]
 
 [[package]]
 name = "chemunited-sim"
-version = "0.0.5"
+version = "0.0.6"
 source = { editable = "packages/chemunited-sim" }
 dependencies = [
     { name = "chemunited-core" },
@@ -581,7 +581,7 @@ provides-extras = ["dev", "tray"]
 
 [[package]]
 name = "chemunited-workflow"
-version = "0.1.1"
+version = "0.1.14"
 source = { editable = "packages/chemunited-workflow" }
 dependencies = [
     { name = "chemunited-quantities" },

@@ -47,6 +47,17 @@ def test_load_custom_routes_loads_registered_dict(tmp_path):
     assert routes["double"](x=3) == 6
 
 
+def test_load_custom_routes_hook_can_import_a_module_next_to_it(tmp_path):
+    _write_hook(
+        tmp_path, "from .doubling import double\n\nCUSTOM_ROUTES = {'double': double}\n"
+    )
+    (tmp_path / "customizations" / "routers" / "doubling.py").write_text(
+        "def double(x):\n    return x * 2\n", encoding="utf-8"
+    )
+    routes = load_custom_routes(tmp_path)
+    assert routes["double"](x=3) == 6
+
+
 def test_load_custom_routes_missing_export_returns_empty(tmp_path):
     _write_hook(tmp_path, "NOT_THE_RIGHT_NAME = {}\n")
     assert load_custom_routes(tmp_path) == {}

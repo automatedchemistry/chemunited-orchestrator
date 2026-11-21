@@ -23,8 +23,8 @@ dependencies = [
     # sub-packages (provide the entire runtime engine)
     "chemunited-quantities>=0.0.3",
     "chemunited-core>=0.0.6",
-    "chemunited-workflow>=0.0.8",
-    "chemunited-sim[tray]>=0.0.5",
+    "chemunited-workflow>=0.1.14",
+    "chemunited-sim[tray]>=0.0.6",
     "PyQt-Fluent-Widgets>=1.7.0,<2.0",  # Qt UI
     "QScintilla>=2.14.0",
     "PyQtWebEngine>=5.15,<6",  # QWebEngineView, required by the Monaco editor

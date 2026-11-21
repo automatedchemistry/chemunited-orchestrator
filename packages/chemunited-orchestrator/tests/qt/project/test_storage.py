@@ -367,6 +367,46 @@ def test_load_process_classes_reloads_external_process_file_changes(tmp_path):
     assert "first_node" not in second_graph.nodes
 
 
+def test_load_process_classes_supports_relative_imports(tmp_path):
+    protocols_dir = tmp_path / "protocols"
+    (protocols_dir / "_lib").mkdir(parents=True)
+    (protocols_dir / "__init__.py").write_text("", encoding="utf-8")
+    (protocols_dir / "_lib" / "__init__.py").write_text("", encoding="utf-8")
+    (protocols_dir / "_lib" / "nodes.py").write_text(
+        'FIRST_NODE = "shared_node"\n', encoding="utf-8"
+    )
+    (protocols_dir / "React.py").write_text(
+        dedent("""
+            from __future__ import annotations
+
+            import networkx as nx
+            from pydantic import BaseModel, ConfigDict
+
+            from chemunited_workflow import Process
+
+            from ._lib.nodes import FIRST_NODE
+
+
+            class ProcessConfig(BaseModel):
+                model_config = ConfigDict(frozen=True)
+
+
+            class CustomProcess(Process[ProcessConfig]):
+                def build_workflow(self) -> nx.DiGraph:
+                    graph = nx.DiGraph()
+                    graph.add_node(FIRST_NODE)
+                    return graph
+            """).strip() + "\n",
+        encoding="utf-8",
+    )
+
+    process_cls = load_process_classes(tmp_path)["React"]
+    config_cls = process_cls.__orig_bases__[0].__args__[0]
+
+    assert process_cls.__module__ == "protocols.React"
+    assert "shared_node" in process_cls(config_cls()).build_workflow().nodes
+
+
 def test_load_process_classes_skips_invalid_process_file(tmp_path):
     records = []
     sink_id = logger.add(

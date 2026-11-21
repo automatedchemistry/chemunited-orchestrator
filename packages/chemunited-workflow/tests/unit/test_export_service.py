@@ -104,6 +104,17 @@ def test_load_export_hooks_loads_registered_dict(tmp_path):
     assert hooks["build_zip"](tmp_path, []) == b"custom"
 
 
+def test_load_export_hooks_hook_can_import_a_module_next_to_it(tmp_path):
+    _write_hook(
+        tmp_path,
+        "from .archive import build_zip\n\nEXPORT_HOOKS = {'build_zip': build_zip}\n",
+    )
+    (tmp_path / "customizations" / "export" / "archive.py").write_text(
+        "def build_zip(project_dir, logs):\n    return b'custom'\n", encoding="utf-8"
+    )
+    assert load_export_hooks(tmp_path)["build_zip"](tmp_path, []) == b"custom"
+
+
 def test_load_export_hooks_missing_export_returns_empty(tmp_path):
     _write_hook(tmp_path, "NOT_THE_RIGHT_NAME = {}\n")
     assert load_export_hooks(tmp_path) == {}

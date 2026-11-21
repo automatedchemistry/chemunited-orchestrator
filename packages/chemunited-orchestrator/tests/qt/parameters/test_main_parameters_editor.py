@@ -69,6 +69,20 @@ def test_startup_does_not_modify_file(parameters_file: Path, qtbot: QtBot) -> No
     assert not hasattr(window, "pivot")
 
 
+def test_opens_a_process_config_that_uses_relative_imports(
+    process_with_relative_imports: Path,
+    qtbot: QtBot,
+) -> None:
+    window = MainParametersEditor(
+        path=process_with_relative_imports, class_name="ProcessConfig"
+    )
+    qtbot.addWidget(window)
+
+    [card] = window.param_list._cards
+    assert card.mode.name == "cycles"
+    assert card.mode.le == 9
+
+
 def test_valid_edits_write_and_invalid_edits_do_not_write(
     parameters_file: Path,
     qtbot: QtBot,

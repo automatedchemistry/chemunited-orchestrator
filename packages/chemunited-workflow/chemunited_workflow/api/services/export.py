@@ -35,7 +35,6 @@ docs/api-reference.md#export.
 
 from __future__ import annotations
 
-import importlib.util
 import io
 import json
 import re
@@ -47,6 +46,7 @@ from typing import Any, Callable
 
 from loguru import logger
 
+from ...project_imports import import_project_file
 from ..run_manifest import manifest_path, read_run_manifest
 from .monitoring import RECORDING_DESCRIPTION
 from .monitoring_export import add_monitoring_tables
@@ -301,11 +301,7 @@ def load_export_hooks(project_dir: Path) -> dict[str, Callable[..., Any]]:
     if not path.exists():
         return {}
     try:
-        spec = importlib.util.spec_from_file_location("export_hook", path)
-        if spec is None or spec.loader is None:
-            raise ImportError(f"Cannot create a module spec from {path}")
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)  # type: ignore[union-attr]
+        module = import_project_file(path)
         hooks = getattr(module, "EXPORT_HOOKS", None)
         if not isinstance(hooks, dict):
             raise AttributeError("export_hook.py does not export an EXPORT_HOOKS dict")

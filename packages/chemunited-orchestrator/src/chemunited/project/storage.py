@@ -1,11 +1,7 @@
 from __future__ import annotations
 
 import ast
-import importlib
-import importlib.util
 import json
-import sys
-import types
 import zipfile
 from datetime import datetime, timezone
 from pathlib import Path
@@ -92,11 +88,7 @@ def load_draw(working_dir: Path) -> dict:
             "canvas": {},
             "port_closures": {},
         }
-    build_draw = load_attribute(
-        path,
-        "build_draw",
-        f"_chemunited_draw_setup_{abs(hash(path.resolve()))}",
-    )
+    build_draw = load_attribute(path, "build_draw")
     if not callable(build_draw):
         raise ValueError(f"Draw setup file must define build_draw(platform): {path}")
 
@@ -427,46 +419,31 @@ def list_processes(working_dir: Path) -> list[str]:
 
 def load_process_classes(working_dir: Path) -> dict:
     """
-    Dynamically import process files and return the loadable process classes.
+    Import the process files and return the loadable process classes.
 
-    Invalid process files are skipped so one broken protocol does not hide every
-    other protocol in the project.
+    Each file is imported inside the ``protocols`` package, under the name the
+    runtime gives it, so process files can import each other and helper
+    modules relatively. Invalid process files are skipped so one broken
+    protocol does not hide every other protocol in the project.
     """
     protocols_dir = working_dir / "protocols"
     if not protocols_dir.exists():
         return {}
 
-    pkg_name = f"_chemunited_protocols_{abs(hash(working_dir.resolve()))}"
-    importlib.invalidate_caches()
-    _clear_imported_protocol_modules(pkg_name)
-    package = types.ModuleType(pkg_name)
-    package.__path__ = [str(protocols_dir)]  # type: ignore[attr-defined]
-    sys.modules[pkg_name] = package
     processes = {}
-    try:
-        for path in sorted(protocols_dir.glob("*.py")):
-            if path.stem in _PROTOCOLS_SKIP:
-                continue
-            process_cls = _load_process_class(pkg_name, path)
-            if process_cls is not None:
-                processes[path.stem] = process_cls
-        return processes
-    finally:
-        _clear_imported_protocol_modules(pkg_name)
+    for path in sorted(protocols_dir.glob("*.py")):
+        if path.stem in _PROTOCOLS_SKIP:
+            continue
+        process_cls = _load_process_class(path)
+        if process_cls is not None:
+            processes[path.stem] = process_cls
+    return processes
 
 
-def _load_process_class(package_name: str, path: Path):
-    module_name = f"{package_name}.{path.stem}"
+def _load_process_class(path: Path):
     try:
-        spec = importlib.util.spec_from_file_location(module_name, path)
-        if spec is None or spec.loader is None:
-            raise ImportError(f"Could not load module spec for {path}")
-        module = importlib.util.module_from_spec(spec)
-        sys.modules[module_name] = module
-        spec.loader.exec_module(module)
-        return getattr(module, process_class_name(path.stem))
+        return load_attribute(path, process_class_name(path.stem))
     except Exception as exc:
-        sys.modules.pop(module_name, None)
         logger.bind(window=WindowCategory.SETUP).warning(
             "Could not load protocol {!r} from {}: {}",
             path.stem,
@@ -474,13 +451,6 @@ def _load_process_class(package_name: str, path: Path):
             exc,
         )
         return None
-
-
-def _clear_imported_protocol_modules(package_name: str) -> None:
-    prefix = f"{package_name}."
-    for module_name in list(sys.modules):
-        if module_name == package_name or module_name.startswith(prefix):
-            sys.modules.pop(module_name, None)
 
 
 # ── Main parameters ────────────────────────────────────────────────────────────

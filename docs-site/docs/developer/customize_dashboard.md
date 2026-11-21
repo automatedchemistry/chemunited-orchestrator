@@ -66,6 +66,9 @@ lints the files.
 Keep pages thin: pages show data and call Python, and Python decides and validates. Anything that drives hardware
 belongs in a `router_hook.py` function.
 
+A hook file can import helper modules from its own folder, for example `from . import calculations` in
+`router_hook.py` for a `calculations.py` next to it.
+
 `examples/custom_project/customizations/ui/` in `chemunited-workflow` is a working example, and the package's
 `docs/html-ui.md` is the full reference: every `ui_hook.py` entry, the slots and page contexts, and the `chemunited`
 module that pages import.

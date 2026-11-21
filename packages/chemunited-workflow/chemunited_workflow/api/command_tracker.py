@@ -10,7 +10,6 @@ tracker follows it through the commands the device clients report.
 
 from __future__ import annotations
 
-import importlib.util
 import threading
 from collections.abc import Mapping
 from pathlib import Path
@@ -18,6 +17,7 @@ from typing import Any
 
 from loguru import logger
 
+from ..project_imports import import_project_file
 from .device_state import UnknownPicture
 
 INSTALL_HINT = "pip install chemunited-workflow[live]"
@@ -101,12 +101,7 @@ def _ignore(*args: Any, **kwargs: Any) -> None:
 
 
 def _run_build_draw(setup_path: Path, platform: _DrawRecorder) -> None:
-    spec = importlib.util.spec_from_file_location("_chemunited_live_draw", setup_path)
-    if spec is None or spec.loader is None:
-        raise ImportError(f"Cannot load {setup_path}")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
-    module.build_draw(platform)
+    import_project_file(setup_path).build_draw(platform)
 
 
 def load_command_tracker(project_dir: Path) -> CommandTracker | None:

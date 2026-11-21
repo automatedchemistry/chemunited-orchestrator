@@ -12,7 +12,6 @@ still applies. See docs/html-ui.md#runtime-customizations.
 from __future__ import annotations
 
 import difflib
-import importlib.util
 import json
 import re
 import traceback
@@ -23,6 +22,7 @@ from typing import Any
 from loguru import logger
 from pydantic import ValidationError
 
+from ...project_imports import import_project_file
 from ...ui.models import (
     ACTION_PAGES,
     BUILTIN_PAGES,
@@ -164,11 +164,7 @@ def _hook_error(exc: BaseException, path: Path) -> dict[str, Any]:
 
 
 def _import_dashboard(path: Path) -> Dashboard:
-    spec = importlib.util.spec_from_file_location("ui_hook", path)
-    if spec is None or spec.loader is None:
-        raise ImportError(f"Cannot create a module spec from {path}")
-    module = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(module)
+    module = import_project_file(path)
     dashboard = getattr(module, "DASHBOARD", None)
     if not isinstance(dashboard, Dashboard):
         raise TypeError("ui_hook.py must define DASHBOARD = Dashboard(...)")

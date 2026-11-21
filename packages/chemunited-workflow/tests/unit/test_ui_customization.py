@@ -114,6 +114,21 @@ def test_hook_syntax_error_reports_its_line(tmp_path):
     assert isinstance(error["line"], int)
 
 
+def test_hook_can_import_a_module_next_to_it(tmp_path):
+    _write_file(tmp_path, "branding.py", 'TITLE = "Flow Lab"\n')
+    _write_hook(
+        tmp_path,
+        """
+        from .branding import TITLE
+
+        DASHBOARD = Dashboard(brand=Brand(title=TITLE))
+        """,
+    )
+    manifest = load_ui(tmp_path).manifest
+    assert manifest["errors"] == []
+    assert manifest["brand"]["title"] == "Flow Lab"
+
+
 def test_hook_without_dashboard_is_reported(tmp_path):
     _write_hook(tmp_path, "X = 1\n")
     assert "must define DASHBOARD" in _messages(load_ui(tmp_path).manifest)[0]

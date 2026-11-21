@@ -721,6 +721,17 @@ def test_load_custom_sources_loads_registered_dict(svc, tmp_path):
     assert sources["double"](x=3) == 6
 
 
+def test_load_custom_sources_hook_can_import_a_module_next_to_it(svc, tmp_path):
+    _write_hook(
+        tmp_path,
+        "from .doubling import double\n\nCUSTOM_SOURCES = {'double': double}\n",
+    )
+    (tmp_path / "customizations" / "monitoring" / "doubling.py").write_text(
+        "def double(x):\n    return x * 2\n", encoding="utf-8"
+    )
+    assert svc._load_custom_sources()["double"](x=3) == 6
+
+
 def test_load_custom_sources_missing_export_returns_empty(svc, tmp_path):
     _write_hook(tmp_path, "NOT_THE_RIGHT_NAME = {}\n")
     assert svc._load_custom_sources() == {}

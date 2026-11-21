@@ -6,7 +6,6 @@ See docs/api-reference.md#custom-routes.
 
 from __future__ import annotations
 
-import importlib.util
 import inspect
 import time
 from pathlib import Path
@@ -18,6 +17,7 @@ from pydantic import TypeAdapter
 from ...command_events import CommandObserver
 from ...custom_route_context import CustomRouteContext
 from ...platform import Platform
+from ...project_imports import import_project_file
 
 
 def _safe_close(client: Any, component_name: str) -> None:
@@ -44,11 +44,7 @@ def load_custom_routes(project_dir: Path) -> dict[str, Callable[..., Any]]:
     if not path.exists():
         return {}
     try:
-        spec = importlib.util.spec_from_file_location("router_hook", path)
-        if spec is None or spec.loader is None:
-            raise ImportError(f"Cannot create a module spec from {path}")
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)  # type: ignore[union-attr]
+        module = import_project_file(path)
         routes = getattr(module, "CUSTOM_ROUTES", None)
         if not isinstance(routes, dict):
             raise AttributeError("router_hook.py does not export a CUSTOM_ROUTES dict")

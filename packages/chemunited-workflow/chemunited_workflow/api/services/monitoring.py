@@ -33,7 +33,6 @@ offset.
 from __future__ import annotations
 
 import hashlib
-import importlib.util
 import json
 import os
 import re
@@ -59,6 +58,7 @@ from ...clients.http import ComponentClient, device_not_served
 from ...exceptions import DeviceBusyError
 from ...monitoring_context import MonitoringContext
 from ...platform import Platform
+from ...project_imports import import_project_file
 from ..monitoring_store import MonitoringStore
 
 _DEFAULT_CONFIG: dict[str, Any] = {
@@ -511,11 +511,7 @@ class MonitoringService:
         if not path.exists():
             return {}
         try:
-            spec = importlib.util.spec_from_file_location("monitoring_hook", path)
-            if spec is None or spec.loader is None:
-                raise ImportError(f"Cannot create a module spec from {path}")
-            module = importlib.util.module_from_spec(spec)
-            spec.loader.exec_module(module)  # type: ignore[union-attr]
+            module = import_project_file(path)
             sources = getattr(module, "CUSTOM_SOURCES", None)
             if not isinstance(sources, dict):
                 raise AttributeError(
