@@ -398,7 +398,8 @@ onBeforeUnmount(() => { disposed = true; ++loadRequest; ++schemaRequest; ++estim
 .category-tab { padding: 0.28rem 0.65rem; color: var(--color-text-muted); border: 1px solid var(--color-border); border-radius: 999px; background: var(--color-background-mute); font-size: 0.72rem; cursor: pointer; }
 .category-tab.active { color: var(--color-primary); border-color: var(--color-primary); background: var(--color-primary-soft); }
 .process-list, .sequence-tree, .group-steps { list-style: none; padding: 0; margin: 0; }
-.process-list { display: grid; gap: 0.45rem; }
+.process-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.45rem; }
+.process-list > li { min-width: 0; }
 .library-process { width: 100%; display: flex; align-items: center; gap: 0.7rem; padding: 0.7rem; text-align: left; border: 1px solid transparent; border-radius: var(--radius-sm); background: var(--color-background-soft); cursor: pointer; }
 .library-process:hover { background: var(--color-background-mute); }
 .library-process.active { border-color: var(--color-primary); background: var(--color-primary-soft); }
@@ -450,5 +451,5 @@ onBeforeUnmount(() => { disposed = true; ++loadRequest; ++schemaRequest; ++estim
 .notice { display: flex; flex-wrap: wrap; gap: 0.7rem; align-items: center; justify-content: space-between; margin: 0.75rem 0; padding: 0.75rem; font-size: 0.8rem; border: 1px solid var(--color-border); border-radius: var(--radius-sm); overflow-wrap: anywhere; }
 .notice.error { color: var(--color-danger); background: var(--color-danger-soft); }
 @media(max-width: 900px) { .builder-grid { grid-template-columns: 1fr; } .workspace-panel { min-height: auto; } .process-list { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
-@media(max-width: 640px) { .save-header { display: none; } .save-mobile { display: inline-flex; } .workspace-panel, .schema-panel { padding: 1rem; border-radius: var(--radius-md); } .process-list { grid-template-columns: 1fr; } .schema-heading { flex-direction: column; } .selected-step-chip { max-width: 100%; } .group-fields { grid-template-columns: minmax(0, 1fr); gap: 0; } }
+@media(max-width: 640px) { .save-header { display: none; } .save-mobile { display: inline-flex; } .workspace-panel, .schema-panel { padding: 1rem; border-radius: var(--radius-md); } .process-list { grid-template-columns: minmax(0, 1fr); } .schema-heading { flex-direction: column; } .selected-step-chip { max-width: 100%; } .group-fields { grid-template-columns: minmax(0, 1fr); gap: 0; } }
 </style>
